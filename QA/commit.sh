@@ -23,4 +23,5 @@ cd $github
 git add .
 git status
 git commit -m "${comment}"
+git push origin master
 cd $wdir
