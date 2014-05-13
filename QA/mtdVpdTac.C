@@ -1,4 +1,3 @@
-#include "Output/mtdQAData.h"
 #include "map.h"
 
 const char *triggerName[3] = {"di-muon","single-muon","e-mu"};
@@ -18,21 +17,21 @@ void mtdVpdTac()
   gStyle->SetStatH(0.13); 
 
   //MTDhits();
-  MtdVpdTacDiff();
-  //CompareDays();
+  //MtdVpdTacDiff();
+  CompareDays();
 }
   
 //================================================
-void CompareDays(const Int_t save = 0)
+void CompareDays(const Int_t save = 1)
 {
-  const Int_t nDay = 3;
-  const char *days[nDay] = {"077","088","089"};
+  const Int_t nDay = 4;
+  const char *days[nDay] = {"077","088","089","121"};
 
   TFile *f[nDay];
   TH1F *hTacDiff[9][nDay];
   for(Int_t i=0; i<nDay; i++)
     {
-      f[i] = TFile::Open(Form("Rootfiles/output.%s.root",days[i]),"read");
+      f[i] = TFile::Open(Form("Output/output.%s.root",days[i]),"read");
       for(Int_t j=0; j<9; j++)
 	{
 	  hTacDiff[j][i] = (TH1F*)f[i]->Get(Form("hTacDiff_%s_all",tacDiffName[j]));
@@ -61,9 +60,9 @@ void CompareDays(const Int_t save = 0)
 
 
 //================================================
-void MTDhits(const char *day = "077", const Int_t save = 0)
+void MTDhits(const char *day = "121", const Int_t save = 0)
 {
-  TFile *f = TFile::Open(Form("Rootfiles/output.%s.root",day),"read");
+  TFile *f = TFile::Open(Form("Output/output.%s.root",day),"read");
   TList *list = new TList;
   TString legName3[3];
   TH1F *hVertexZ[3];
@@ -115,7 +114,6 @@ void MTDhits(const char *day = "077", const Int_t save = 0)
   line->Draw();
   if(save) c->SaveAs(Form("~/Work/STAR/QA/Plots/MtdVpdTac/%s/MtdHitTrigTimeWest_%s.png",day,day));
 
-  return;
 
   TH1F *hTrigTimeBL5 = (TH1F*)hMtdHitTrigTimeWest->ProjectionY("hTrigTimeBL5",241,300);
   TH1F *hTrigTimeBL1 = (TH1F*)hMtdHitTrigTimeWest->ProjectionY("hTrigTimeBL1",1,240);
@@ -193,9 +191,9 @@ void MTDhits(const char *day = "077", const Int_t save = 0)
 }
 
 //================================================
-void MtdVpdTacDiff(const char *day = "077", const Int_t save = 1)
+void MtdVpdTacDiff(const char *day = "121", const Int_t save = 0)
 {
-  TFile *f = TFile::Open(Form("Rootfiles/output.%s.root",day),"read");
+  TFile *f = TFile::Open(Form("Output/output.%s.root",day),"read");
   TList *list = new TList;
   TString legName3[3];
 
@@ -229,26 +227,25 @@ void MtdVpdTacDiff(const char *day = "077", const Int_t save = 1)
   leg->Draw();
   if(save) c->SaveAs(Form("~/Work/STAR/QA/Plots/MtdVpdTac/%s/ZeroTacFraction_%s.png",day,day));
 
-  const Int_t qt = 1, pos = 4;
-  TH1F *hTac = (TH1F*)f->Get(Form("hQTtac__QT%d_pos%d",qt,pos));
+  TH1F *hTac = (TH1F*)f->Get(Form("hQTtac__all"));
   hTac->GetXaxis()->SetRangeUser(0,2100);
   hTac->SetXTitle("TAC");
-  c = draw1D(hTac,"",kTRUE,kFALSE);
+  c = draw1D(hTac,"All QT: tac distribution",kTRUE,kFALSE);
   TLine *line = GetLine(20,0,20,hTac->GetMaximum());
   line->Draw();
-  if(save) c->SaveAs(Form("~/Work/STAR/QA/Plots/MtdVpdTac/%s/QTtdc_QT%d_pos%d_%s.png",day,qt,pos,day));
+  if(save) c->SaveAs(Form("~/Work/STAR/QA/Plots/MtdVpdTac/%s/QTtdc_all_%s.png",day,day));
 
   TH1F *hAdc[4];
   for(Int_t i=0; i<4; i++)
     {
-      hAdc[i] = (TH1F*)f->Get(Form("hQTadc_%s_QT%d_pos%d",adcName[i],qt,pos));
+      hAdc[i] = (TH1F*)f->Get(Form("hQTadc_%s_all",adcName[i]));
       list->Add(hAdc[i]);
     }
   TString legName4[4] = { "No cut on TAC", "100 < TAC < 1300", "20 < TAC < 100", "TAC < 20"};  
-  c = drawHistos(list,list->At(0)->GetName(),Form("QT %d - pos %d - J%d: ADC distribution;ADC",qt,(pos-1)/2+1,(pos-1)%2+2),kFALSE,0,10,kFALSE,-0.01,0.03,kTRUE,kTRUE,legName4,kTRUE,"TAC cut",0.5,0.65,0.6,0.85,kFALSE);
-  if(save) c->SaveAs(Form("~/Work/STAR/QA/Plots/MtdVpdTac/%s/QTadc_QT%d_pos%d_%s.png",day,qt,pos,day));
+  c = drawHistos(list,list->At(0)->GetName(),Form("All QT: ADC distribution;ADC"),kFALSE,0,10,kFALSE,-0.01,0.03,kTRUE,kTRUE,legName4,kTRUE,"TAC cut",0.5,0.65,0.6,0.85,kFALSE);
+  if(save) c->SaveAs(Form("~/Work/STAR/QA/Plots/MtdVpdTac/%s/QTadc_all_%s.png",day,day));
   list->Clear();
-
+  
   TH1F *hMtdHitTrigTime[4];
   for(Int_t i=0; i<4; i++)
     {
@@ -262,7 +259,7 @@ void MtdVpdTacDiff(const char *day = "077", const Int_t save = 1)
   c = drawHistos(list,list->At(0)->GetName(),"Trigger time of MTD hits;hptdc-thub (ns)",kFALSE,0,10,kTRUE,10,1e6,kTRUE,kTRUE,legName4,kTRUE,"TAC cut",0.6,0.75,0.6,0.85,kFALSE);
   if(save) c->SaveAs(Form("~/Work/STAR/QA/Plots/MtdVpdTac/%s/MtdHitTrigTime_TACcut_%s.png",day,day));
   list->Clear(); 
-
+  
   // VPD - MTD tac difference
   TH2F *hMtdVpdTacDiff[9];
   char tmpname[256];
@@ -279,13 +276,13 @@ void MtdVpdTacDiff(const char *day = "077", const Int_t save = 1)
       if(i<5) c = draw2D(hMtdVpdTacDiff[i],"");
       else    c = draw2D(hMtdVpdTacDiff[i],"",0.03);
       gPad->SetBottomMargin(0.15);
-      if(save) c->SaveAs(Form("~/Work/STAR/QA/Plots/MtdVpdTac/%s/MtdVpdTacDiff2D_%s_%s.png",tacDiffName[i],day));
+      if(save) c->SaveAs(Form("~/Work/STAR/QA/Plots/MtdVpdTac/%s/MtdVpdTacDiff2D_%s_%s.png",day,tacDiffName[i],day));
     }
 
   TH1F *hTacDiff[9][33];
   TH1F *hFraction[9];
   const Int_t lowDiff = -1912;
-  const Int_t upDiff  = -1608;
+  const Int_t upDiff  = -1500;
   for(Int_t i=0; i<9; i++)
     {
       hFraction[i] = new TH1F(Form("hFraction_%d",i),Form("Fraction of the signals in the trigger window [%d,%d];;fraction",lowDiff,upDiff),33,0,33);
@@ -310,7 +307,7 @@ void MtdVpdTacDiff(const char *day = "077", const Int_t save = 1)
 	}
     }
 
-  const char *hTitle[7] = {"Raw","Matched p_{T} > 1 GeV/c    && -1<n#sigma_{#pi}<3","Matched p_{T} > 1.5 GeV/c && -1<n#sigma_{#pi}<3","Matched p_{T} > 2 GeV/c    && -1<n#sigma_{#pi}<3","Matched p_{T} > 2 GeV/c    && 0<n#sigma_{#pi}<3","Matched p_{T} > 2 GeV/c    && 0<n#sigma_{#pi}<3 && |#Deltaz|<20 cm","Matched p_{T} > 3 GeV/c    && 0<n#sigma_{#pi}<3 && |#Deltaz|<20 cm"};
+  const char *hTitle[6] = {"Raw","p_{T,mth} > 1 GeV/c    && -1<n#sigma_{#pi}<3","p_{T,mth} > 1.5 GeV/c && -1<n#sigma_{#pi}<3","p_{T,mth} > 2 GeV/c    && -1<n#sigma_{#pi}<3","p_{T,mth} > 2 GeV/c    && 0<n#sigma_{#pi}<3","p_{T,mth} > 2 GeV/c    && 0<n#sigma_{#pi}<3 && |#Deltaz|<20 cm"};
   TString legName6[6];
   TH1F *hTacDiffClone[6];
 
@@ -329,7 +326,7 @@ void MtdVpdTacDiff(const char *day = "077", const Int_t save = 1)
       hTacDiffClone[i]->Rebin(4);
       hTacDiffClone[i]->Scale(1./hTacDiffClone[i]->GetMaximum());
     }
-  c = drawHistos(list,"MtdVpdTacDiff","",kTRUE,-2200,-1600,kTRUE,1,1e9,kTRUE,kTRUE,legName6,kTRUE,Form("Match cuts, trigger window [%d,%d]",lowDiff,upDiff),0.15,0.58,0.62,0.95,kFALSE);
+  c = drawHistos(list,"MtdVpdTacDiff","",kTRUE,-2100,-1450,kTRUE,1,1e9,kTRUE,kTRUE,legName6,kTRUE,Form("Match cuts, trigger window [%d,%d]",lowDiff,upDiff),0.15,0.58,0.62,0.95,kFALSE);
   gPad->SetTopMargin(0.03);
   if(save) c->SaveAs(Form("~/Work/STAR/QA/Plots/MtdVpdTac/%s/Compare_MtdVpdTacDiff_%s.png",day,day));
   
@@ -341,7 +338,7 @@ void MtdVpdTacDiff(const char *day = "077", const Int_t save = 1)
       legName6[i] = Form("%s",hTitle[i]);
     }
   hTacDiffClone[0]->SetTitle("");
-  c = drawHistos(list,"MtdVpdTacDiff_scaled","",kTRUE,-2200,-1600,kTRUE,1e-2,10,kTRUE,kTRUE,legName6,kTRUE,"Match cuts",0.15,0.3,0.7,0.99,kFALSE);
+  c = drawHistos(list,"MtdVpdTacDiff_scaled","",kTRUE,-2100,-1600,kTRUE,1e-2,10,kTRUE,kTRUE,legName6,kTRUE,"Match cuts",0.15,0.3,0.7,0.99,kFALSE);
   if(save) c->SaveAs(Form("~/Work/STAR/QA/Plots/MtdVpdTac/%s/Compare_MtdVpdTacDiff_Scaled_%s.png",day,day));
   list->Clear();
 
@@ -353,7 +350,7 @@ void MtdVpdTacDiff(const char *day = "077", const Int_t save = 1)
 	  if(j>0) hTacDiff[i][j]->Rebin(4);
 	  if(i==0 && j==0)    hTacDiff[i][j]->SetMaximum(1e6);
 	  hTacDiff[i][j]->SetLineColor(j+1);
-	  if(j==0) c = draw1D(hTacDiff[i][j],Form("MTD-VPD tac differece (%s)",hTitle[i]),kTRUE,kFALSE);
+	  if(j==0) c = draw1D(hTacDiff[i][j],Form("MTD-VPD tac difference (%s)",hTitle[i]),kTRUE,kFALSE);
 	  else     hTacDiff[i][j]->Draw("sames HIST");
 	}
       TLine *line = GetLine(lowDiff,0,lowDiff,hTacDiff[i][0]->GetMaximum());
@@ -411,14 +408,14 @@ void MtdVpdTacDiff(const char *day = "077", const Int_t save = 1)
     }
 
   Int_t lowBound[4] = {-1912,-1888,-1880,-1864};
-  printf("trigger window | [%d,-1600] | [%d,-1600] | [%d,-1600] | [%d,-1600]\n",lowBound[0],lowBound[1],lowBound[2],lowBound[3]);
+  printf("trigger window | [%d,-1500] | [%d,-1500] | [%d,-1500] | [%d,-1500]\n",lowBound[0],lowBound[1],lowBound[2],lowBound[3]);
   printf("Entry counting\n");
   for(Int_t i=0; i<3; i++)
     {
       printf("pt>%1.1f GeV/c   ",1+i*0.5);
       for(Int_t j=0; j<4; j++)
 	{
-	  printf("| %2.2f%%        ",hdiff[i][1]->Integral(hdiff[i][1]->FindFixBin(lowBound[j]+0.5),hdiff[i][1]->FindFixBin(-1600-0.5))/hdiff[i][1]->Integral(1,3000)*100); 
+	  printf("| %2.2f%%        ",hdiff[i][1]->Integral(hdiff[i][1]->FindFixBin(lowBound[j]+0.5),hdiff[i][1]->FindFixBin(-1500-0.5))/hdiff[i][1]->Integral(1,3000)*100); 
 	}
       printf("\n");
     }
@@ -435,7 +432,7 @@ void MtdVpdTacDiff(const char *day = "077", const Int_t save = 1)
 
       for(Int_t j=0; j<4; j++)
 	{
-	  printf("| %2.2f%%        ",func1->Integral(lowBound[j],-1600)/func1->Integral(func1->GetParameter(1)-3*func1->GetParameter(2),-1600)*100); 
+	  printf("| %2.2f%%        ",func1->Integral(lowBound[j],-1500)/func1->Integral(func1->GetParameter(1)-3*func1->GetParameter(2),-1500)*100); 
 	}
       printf("\n");
     }
