@@ -1,76 +1,55 @@
+TFile *f;
+const char *cut = "GlobalTrk.HLT";
+Int_t hlt_index = 0;
+Int_t trk_index = 0;
 
 //================================================
 void qa_Match()
 {						
   gStyle->SetOptStat(0);
 
-  //MtdHit();
-  //Track();
-  DeltaZ();
+  TString cut_name = cut;
+  if(cut_name.Contains("HLT"))
+    hlt_index = 1;
+  if(cut_name.Contains("Global"))
+    trk_index = 1;
+
+  f = TFile::Open(Form("~/Work/STAR/analysis/Output/jpsi.AuAu200.Run14.%s.root",cut),"read");
+
+  Track();
+  //DeltaZ();
 }
 
 //================================================
 void DeltaZ(const Int_t save = 0)
 {
-  TFile *f = TFile::Open("~/Work/STAR/analysis/Output/jpsi.AuAu200.Run14.NoDzCut.root","read");
+  TH2F *hTrkDzVsPt = (TH2F*)f->Get(Form("hTrkDz_%s",trigName[kTrigType]));
+  hTrkDzVsPt->GetXaxis()->SetRangeUser(0,6);
+  hTrkDzVsPt->GetYaxis()->SetRangeUser(-100,100);
+  draw2D(hTrkDzVsPt,Form("Au+Au %s: #Deltaz of matched %s track-hit pairs%s",trigName[kTrigType],trk_name[trk_index],hlt_name[hlt_index]));
 
-  TH1F *hPrimTrkDz[3];
-  for(Int_t i=0; i<3; i++)
-    {
-      TH2F *h2 = (TH2F*)f->Get(Form("hPrimTrkDz_%s",trigName[i]));
-      draw2D(h2);
-      h2->GetXaxis()->SetRangeUser(1,100);
-      hPrimTrkDz[i] = (TH1F*)h2->ProjectionY(Form("hPrimTrkDz_%s_proj",trigName[i]));
-      draw1D(hPrimTrkDz[i]);
-    }
+  hTrkDzVsPt->GetXaxis()->SetRangeUser(1,100);
+  TH1F *hMthDz = (TH1F*)hTrkDzVsPt->ProjectionY(Form("hTrkDzVsPt_%s_proj",trigName[kTrigType]));
+  draw1D(hMthDz);
  
 }
 
-
 //================================================
-void Track(const Int_t save = 1)
+void Track(const Int_t save = 0)
 {
- TFile *f = TFile::Open("~/Work/STAR/analysis/Output/jpsi.AuAu200.Run14.DzCut.root","read");
- TH1F *hStat = (TH1F*)f->Get("mhEventStat");
+  TH1F *hStat = (TH1F*)f->Get("hEventStat");
 
-  // pt distribution
-  TH1F *hMthPrimTrkPt[3];
+  // track multiplicity
+  TH1F *hNTrk       = (TH1F*)f->Get(Form("hNTrk_%s",trigName[kTrigType]));
+  TH1F *hMthMtdHitN = (TH1F*)f->Get(Form("hMthMtdHitN_%s",trigName[kTrigType]));
+  scaleHisto( hNTrk,    hStat->GetBinContent(kTrigType+7), 1);
+  scaleHisto( hMthMtdHitN, hStat->GetBinContent(kTrigType+7), 1);
   TList *list = new TList;
-  for(Int_t i=0; i<3; i++)
-    {
-      hMthPrimTrkPt[i] = (TH1F*)f->Get(Form("hMthPrimTrkPt_%s",trigName[i]));
-      scaleHisto( hMthPrimTrkPt[i], hStat->GetBinContent(i+4), 1, kTRUE);
-      list->Add(hMthPrimTrkPt[i]);
-    }
-  c = drawHistos(list,"hMthPrimTrkPt","Au+Au: p_{T} distribution of matched primary tracks;p_{T} (GeV/c);1/N dN/dp_{T}",kFALSE,0,pi/2,kFALSE,-0.005,0.02,kTRUE,kTRUE,legName,kTRUE,"",0.5,0.68,0.6,0.85);
-  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_Match/PrimTrkPt.png"));
-}
-
-//================================================
-void MtdHit(const Int_t save = 1)
-{
-  TFile *f = TFile::Open("~/Work/STAR/analysis/Output/jpsi.AuAu200.Run14.DzCut.root","read");
-  TH1F *hStat = (TH1F*)f->Get("mhEventStat");
-
-  // hit multiplicity
-  TH1F *hMthMtdHitN[3];
-  TList *list = new TList;
-  for(Int_t i=0; i<3; i++)
-    {
-      hMthMtdHitN[i] = (TH1F*)f->Get(Form("hMthMtdHitN_%s",trigName[i]));
-      scaleHisto( hMthMtdHitN[i], hStat->GetBinContent(i+4), 1, kTRUE);
-      list->Add(hMthMtdHitN[i]);
-    }
-  c = drawHistos(list,"hMtdHitN","Au+Au: matched MTD hit multiplicity with trigger window cut;N_{hit};1/N_{evt} dN_{hit}",kFALSE,0,pi/2,kFALSE,-0.005,0.02,kTRUE,kTRUE,legName,kTRUE,"",0.5,0.68,0.6,0.85);
-  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_Match/Mth_MtdGoodHitN.png"));
-
-  // hit map
-  TH2F *hMtdMtdHitMap[3];
-  for(Int_t i=0; i<3; i++)
-    {
-      hMtdMtdHitMap[i] = (TH2F*)f->Get(Form("hMtdMtdHitMap_%s",trigName[i]));
-      c = draw2D(hMtdMtdHitMap[i]);
-      if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_Match/Mth_MtdGoodHitMap_%s.png",trigName[i]));
-    }
-
+  list->Add(hNTrk);
+  list->Add(hMthMtdHitN);
+  TString legName[2];
+  legName[0] = Form("Good tracks <N> = %2.2f",hNTrk->GetMean());
+  legName[1] = Form("Matached tracks <N> = %2.2f",hMthMtdHitN->GetMean());
+  c = drawHistos(list,"Track_multiplicity",Form("Au+Au %s: multiplicity of %s tracks%s;N_{trk};1/N_{evt} dN_{trk}",trigName[kTrigType],trk_name[trk_index],hlt_name[hlt_index]),kFALSE,0,100,kTRUE,1e-8,10,kTRUE,kTRUE,legName,kTRUE,"",0.5,0.7,0.6,0.8);
+  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_MtdHit/%s.NMthTrk_%s.png",cut,trigName[kTrigType]));
 }

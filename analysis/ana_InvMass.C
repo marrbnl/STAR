@@ -41,7 +41,7 @@ void InvMass(Int_t save = 0)
 	  if(i==0) hInvMass[j] = (TH1F*)hInvM[i][j]->Clone(Form("%s_InvMass",hName[j]));
 	  else     hInvMass[j]->Add(hInvM[i][j]);
 	}
-      hInvMass[j]->Rebin(10);
+      hInvMass[j]->Rebin(5);
     }
 
   hInvMass[1]->Add(hInvMass[2]);
