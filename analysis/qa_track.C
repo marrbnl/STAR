@@ -1,5 +1,4 @@
 TFile *f;
-const char *cut = "GlobalTrk.HLT";
 Int_t hlt_index = 0;
 Int_t trk_index = 0;
 
@@ -8,13 +7,13 @@ void qa_track()
 {
   gStyle->SetOptStat(0);
 
-  TString cut_name = cut;
+  TString cut_name = run_config;
   if(cut_name.Contains("HLT"))
     hlt_index = 1;
   if(cut_name.Contains("Global"))
     trk_index = 1;
 
-  f = TFile::Open(Form("~/Work/STAR/analysis/Output/jpsi.AuAu200.Run14.%s.root",cut),"read");
+  f = TFile::Open(Form("~/Work/STAR/analysis/Output/jpsi.AuAu200.Run14.%s.root",),"read");
   //trackDistribution();
   qualityCuts();
 }
@@ -26,24 +25,24 @@ void trackDistribution(const Int_t save = 0)
   // eta vs pt
   TH2F *hTrkEta = (TH2F*)f->Get(Form("hTrkEta_%s",trigName[kTrigType]));
   c = draw2D(hTrkEta,Form("Au+Au %s: #eta vs p_{T} of %s tracks%s",trigName[kTrigType],trk_name[trk_index],hlt_name[hlt_index]));
-  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_track/%s.TrkEtaVsPt_%s.png",cut,trigName[kTrigType]));
+  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_track/%s.TrkEtaVsPt_%s.png",run_config,trigName[kTrigType]));
  
   // phi vs pt
   TH2F *hTrkPhi = (TH2F*)f->Get(Form("hTrkPhi_%s",trigName[kTrigType]));
   c = draw2D(hTrkPhi,Form("Au+Au %s: #phi vs p_{T} of %s tracks%s",trigName[kTrigType],trk_name[trk_index],hlt_name[hlt_index]));
-  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_track/%s.TrkPhiVsPt_%s.png",cut,trigName[kTrigType]));
+  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_track/%s.TrkPhiVsPt_%s.png",run_config,trigName[kTrigType]));
 
   // dE/dx vs pt
   TH2F *hTrkDedx = (TH2F*)f->Get(Form("hTrkDedx_%s",trigName[kTrigType]));
   c = draw2D(hTrkDedx,Form("Au+Au %s: dE/dx vs p_{T} of %s tracks%s",trigName[kTrigType],trk_name[trk_index],hlt_name[hlt_index]));
-  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_track/%s.TrkDedxVsPt_%s.png",cut,trigName[kTrigType]));
+  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_track/%s.TrkDedxVsPt_%s.png",run_config,trigName[kTrigType]));
 
   // pt distribution
   TH1F *hTrkPt = (TH1F*)f->Get(Form("hTrkPt_%s",trigName[kTrigType]));
   scaleHisto( hTrkPt, hStat->GetBinContent(kTrigType+7), 1, kTRUE);
   hTrkPt->SetMarkerStyle(21);
   c = draw1D(hTrkPt,Form("Au+Au %s: p_{T} distribution of %s tracks%s;p_{T} (GeV/c);1/N dN/dp_{T}",trigName[kTrigType],trk_name[trk_index],hlt_name[hlt_index]),kTRUE,kTRUE);
-  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_track/%s.TrkPt_%s.png",cut,trigName[kTrigType]));
+  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_track/%s.TrkPt_%s.png",run_config,trigName[kTrigType]));
 }
 
 //================================================
@@ -62,7 +61,7 @@ void qualityCuts(const Int_t save = 0)
   Double_t up_x  = hTrkDca->GetXaxis()->GetBinUpEdge(hTrkDca->GetNbinsX());
   TLine *line = GetLine(low_x,dcaCut,up_x,dcaCut,1,3);
   line->Draw();
-  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_track/%s.QualityCut_TrkDca_%s.png",cut,trigName[kTrigType]));
+  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_track/%s.QualityCut_TrkDca_%s.png",run_config,trigName[kTrigType]));
 
   // # of fit hits cut
   Double_t nHitCut = hCuts->GetBinContent(5)/scale;
@@ -72,7 +71,7 @@ void qualityCuts(const Int_t save = 0)
   Double_t up_x  = hTrkNhitsFit->GetXaxis()->GetBinUpEdge(hTrkNhitsFit->GetNbinsX());
   TLine *line = GetLine(low_x,nHitCut,up_x,nHitCut,1,3);
   line->Draw();
-  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_track/%s.QualityCut_TrkNhitsFit_%s.png",cut,trigName[kTrigType]));
+  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_track/%s.QualityCut_TrkNhitsFit_%s.png",run_config,trigName[kTrigType]));
 
   // # of de/dx hits cut
   Double_t nDedxHitCut = hCuts->GetBinContent(6)/scale;
@@ -82,7 +81,7 @@ void qualityCuts(const Int_t save = 0)
   Double_t up_x  = hTrkNhitsDedx->GetXaxis()->GetBinUpEdge(hTrkNhitsDedx->GetNbinsX());
   TLine *line = GetLine(low_x,nDedxHitCut,up_x,nDedxHitCut,1,3);
   line->Draw();
-  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_track/%s.QualityCut_TrkNhitsDedx_%s.png",cut,trigName[kTrigType]));
+  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_track/%s.QualityCut_TrkNhitsDedx_%s.png",run_config,trigName[kTrigType]));
 
   // fraction of fit hits cut
   Double_t minFracCut = hCuts->GetBinContent(10)/scale;
@@ -93,7 +92,7 @@ void qualityCuts(const Int_t save = 0)
   Double_t up_x  = hTrkFitHitFrac->GetXaxis()->GetBinUpEdge(hTrkFitHitFrac->GetNbinsX());
   TLine *line = GetLine(low_x,minFracCut,up_x,minFracCut,1,3);
   line->Draw();
-  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_track/%s.QualityCut_TrkFitHitFrac_%s.png",cut,trigName[kTrigType]));
+  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_track/%s.QualityCut_TrkFitHitFrac_%s.png",run_config,trigName[kTrigType]));
 
   // nSigmaPi cut
   TH2F *hTrkNsigmaPi = (TH2F*)f->Get(Form("hTrkNsigmaPi_qa_%s",trigName[kTrigType]));
@@ -106,7 +105,7 @@ void qualityCuts(const Int_t save = 0)
   line->Draw();
   line = GetLine(low_x,maxNsigmaCut,up_x,maxNsigmaCut,1,3);
   line->Draw();
-  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_track/%s.QualityCut_TrkNsigmaPi_%s.png",cut,trigName[kTrigType]));
+  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_track/%s.QualityCut_TrkNsigmaPi_%s.png",run_config,trigName[kTrigType]));
 
   // Track pt for various cuts
   TH2F *hTrkPt_cuts = (TH2F*)f->Get(Form("hTrkPt_cuts_qa_%s",trigName[kTrigType]));
@@ -144,7 +143,7 @@ void qualityCuts(const Int_t save = 0)
     }
   leg->Draw();
   leg1->Draw();
-  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_track/%s.TrkPt_cuts_%s.png",cut,trigName[kTrigType]));
+  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_track/%s.TrkPt_cuts_%s.png",run_config,trigName[kTrigType]));
 
 
   for(Int_t i=0; i<nCuts; i++)
@@ -175,7 +174,7 @@ void qualityCuts(const Int_t save = 0)
   c1->cd();
   leg->Draw();
   leg1->Draw();
-  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_track/%s.TrkFraction_cuts_%s.png",cut,trigName[kTrigType]));
-  if(save) c1->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_track/%s.TrkFraction_cuts_semilog_%s.png",cut,trigName[kTrigType]));
+  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_track/%s.TrkFraction_cuts_%s.png",run_config,trigName[kTrigType]));
+  if(save) c1->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_track/%s.TrkFraction_cuts_semilog_%s.png",run_config,trigName[kTrigType]));
   
 }

@@ -11,9 +11,7 @@ void ana_InvMass()
 //================================================
 void InvMass(Int_t save = 0)
 {
-  const char *cut = "GlobalTrk.HLT";
-
-  TFile *f = TFile::Open(Form("~/Work/STAR/analysis/Output/jpsi.AuAu200.Run14.%s.root",cut),"read");
+  TFile *f = TFile::Open(Form("~/Work/STAR/analysis/Output/jpsi.AuAu200.Run14.%s.root",run_config),"read");
 
   TH1F *hStat = (TH1F*)f->Get("hEventStat");
   printf("di-muon     events: %4.2e\n",hStat->GetBinContent(7));
@@ -41,7 +39,7 @@ void InvMass(Int_t save = 0)
 	  if(i==0) hInvMass[j] = (TH1F*)hInvM[i][j]->Clone(Form("%s_InvMass",hName[j]));
 	  else     hInvMass[j]->Add(hInvM[i][j]);
 	}
-      hInvMass[j]->Rebin(5);
+      //hInvMass[j]->Rebin(1);
     }
 
   hInvMass[1]->Add(hInvMass[2]);
@@ -62,7 +60,7 @@ void InvMass(Int_t save = 0)
   c = draw1D(hDiff,"Invariant mass of di-muon pairs (MTD trigger)");
   TLine *line = GetLine(2.5,1,3.5,1,1);
   line->Draw();
-  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/InvMass/%s.InvMass_US-LS_AuAu200_Run14.png",cut));
+  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/InvMass/%s.InvMass_US-LS_AuAu200_Run14.png",run_config));
 
 
   c = draw1D(hInvMass[0],"Invariant mass of di-muon pairs (MTD trigger)");
@@ -74,5 +72,5 @@ void InvMass(Int_t save = 0)
   leg->AddEntry(hInvMass[0],"Unlike sign","PLE");
   leg->AddEntry(hInvMass[1],"Like sign (++)+(--)","L");
   leg->Draw();
-  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/InvMass/%s.InvMass_AuAu200_Run14.png",cut));
+  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/InvMass/%s.InvMass_AuAu200_Run14.png",run_config));
 }
