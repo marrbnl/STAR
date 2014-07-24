@@ -16,6 +16,7 @@ void qa_MtdHit(const Int_t save = 0)
   // hit multiplicity
   TH1F *hMtdHitN    = (TH1F*)f->Get(Form("hMtdHitN_%s",trigName[kTrigType]));
   TH1F *hMthMtdHitN = (TH1F*)f->Get(Form("hMthMtdHitN_%s",trigName[kTrigType]));
+  printf("[i] %2.4f%% percent of the events with >2 MTD hits matched",100*hMthMtdHitN->Integral(3,100)/hMthMtdHitN->Integral(1,100));
   scaleHisto( hMtdHitN,    hStat->GetBinContent(kTrigType+7), 1);
   scaleHisto( hMthMtdHitN, hStat->GetBinContent(kTrigType+7), 1);
   TList *list = new TList;

@@ -16,6 +16,7 @@ void qa_TrackPairDca()
   f = TFile::Open(Form("~/Work/STAR/analysis/Output/jpsi.AuAu200.Run14.%s.root",run_config),"read");
 
   Dca();
+  //beamline();
 }
 
 //================================================
@@ -38,4 +39,12 @@ void Dca(const Int_t save = 0)
   line = GetLine(-4,0,-4,hTrkPairDcaDz->GetMaximum()*0.8);
   line->Draw();
   if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_TrackPairDca/%s.TrkPairDcaDz_%s.png",run_config,trigName[kTrigType]));
+}
+
+//================================================
+void beamline(const Int_t save = 0)
+{
+  TH2F *hBeamProfile = (TH2F*)f->Get("hBeamProfile");
+  c = draw2D(hBeamProfile,Form("Au+Au %s: y vs x of beam line",trigName[kTrigType]));
+  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_TrackPairDca/%s.hBeamProfile.png",run_config));
 }
