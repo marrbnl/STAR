@@ -20,9 +20,9 @@ void qa_Match()
   //Track();
   //DeltaZ();
   //qualityCuts();
-  //randomMatch();
+  randomMatch();
   //MonteCarlo();
-  makeHisto();
+  //makeHisto();
 }
 
 //================================================
@@ -42,6 +42,64 @@ void MonteCarlo(const Int_t save = 0)
 }
 
 //================================================
+void makeHisto(const Int_t save = 1)
+{
+  const char *title[2] = {"z","y"};
+  TFile *f1 = TFile::Open(Form("~/Work/STAR/analysis/output/AuAu200.Run14.jpsi.RotateMTD.HLT.root"),"read");
+  THnSparseF *hn = (THnSparseF*)f1->Get("hTrkDzDy_di-muon");
+  TH2F *hRes_All[2];
+  TH2F *hRes_BL[2][30];
+  TH2F *hRes_Mod[2][30][5];
+  for(Int_t i=0; i<2; i++)
+    {
+      hRes_All[i] = (TH2F*)hn->Projection(i+1,0);
+      hRes_All[i]->SetName(Form("hD%sVsPt_All",title[i]));
+      for(Int_t j=0; j<30; j++)
+	{
+	  hn->GetAxis(3)->SetRange(j*60+1, j*60+60);
+	  hRes_BL[i][j] = (TH2F*)hn->Projection(i+1,0);
+	  hRes_BL[i][j]->SetName(Form("hD%sVsPt_BL%d",title[i],j+1));
+	  for(Int_t k=0; k<5; k++)
+	    {
+	      hn->GetAxis(3)->SetRange(j*60+k*12+1, j*60+k*12+12);
+	      hRes_Mod[i][j][k] = (TH2F*)hn->Projection(i+1,0);
+	      hRes_Mod[i][j][k]->SetName(Form("hD%sVsPt_BL%d_Mod%d",title[i],j+1,k+1));
+	      hn->GetAxis(3)->SetRange(0,-1);
+	    }
+	  hn->GetAxis(3)->SetRange(0,-1);
+	}
+    }
+
+  if(save)
+    {
+      TFile *fout = TFile::Open("Rootfiles/AuAu200.RotateMTD.root","recreate");
+      for(Int_t i=0; i<2; i++)
+	{
+	  hRes_All[i]->Write();
+	}
+      for(Int_t i=0; i<2; i++)
+	{
+	  for(Int_t j=0; j<30; j++)
+	    {
+	      hRes_BL[i][j]->Write();
+	    }
+	}
+
+      for(Int_t i=0; i<2; i++)
+	{
+	  for(Int_t j=0; j<30; j++)
+	    {
+	      for(Int_t k=0; k<5; k++)
+		{
+		  hRes_Mod[i][j][k]->Write();
+		}
+	    }
+	}
+      
+    }
+}
+
+//================================================
 void randomMatch(const Int_t save = 0)
 {
   const char *title[2] = {"z","y"};
@@ -58,14 +116,35 @@ void randomMatch(const Int_t save = 0)
   c = draw2D(hMthMtdHitMap,Form("Au+Au di-muon: channel vs backleg of matched MTD hits%s",hlt_name[hlt_index]));
   if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_Match/%s.Rotate_MthMtdHitMap_%s.png",run_config,trigName[kTrigType]));
 
+  TFile *f2 = TFile::Open("Rootfiles/AuAu200.RotateMTD.root","read");
+  const Double_t pt_cut = 1;
+  TCanvas *cRes[2][6];
+  for(Int_t i=0; i<2; i++)
+    {
+      for(Int_t j=0; j<30; j++)
+	{
+	  if(j%5==0)
+	    {
+	      cRes[i][j/5] = new TCanvas(Form("D%s_Backleg%d-%d",title[i],j+1,j+5),Form("D%s_Backleg%d-%d",title[i],j+1,j+5),1350,800);
+	      cRes[i][j/5]->Divide(5,5);
+	    }
+	  for(Int_t k=0; k<5; k++)
+	    {
+	      cRes[i][j/5]->cd(j%5*5+k+1);
+	      TH2F *h2 = (TH2F*)f2->Get(Form("hD%sVsPt_BL%d_Mod%d",title[i],j+1,k+1));
+	      TH1F *h1 = (TH1F*)h2->ProjectionY(Form("%s_pro",h2->GetName()),h2->GetXaxis()->FindFixBin(pt_cut+0.1),-1);
+	      h1->Draw();
+	    }
+	}
+    }
 
   TH2F *hResi[2][2];
   hResi[0][0] = (TH2F*)f->Get("hTrkDz_di-muon");
-  hResi[0][1] = (TH2F*)f1->Get("hTrkDz_di-muon");
+  hResi[0][1] = (TH2F*)f2->Get("hDzVsPt_All");
   hResi[1][0] = (TH2F*)f->Get("hTrkDy_di-muon");
-  hResi[1][1] = (TH2F*)f1->Get("hTrkDy_di-muon");
+  hResi[1][1] = (TH2F*)f2->Get("hDyVsPt_All");
   TList *list[2];
-  Double_t pt_cut = 1;
+
   for(Int_t i=0; i<2; i++)
     {
       list[i] = new TList;
