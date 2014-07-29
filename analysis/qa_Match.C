@@ -177,7 +177,7 @@ void MonteCarlo(const Int_t save = 0)
 }
 
 //================================================
-void makeHisto(const Int_t save = 1)
+void makeHisto(const Int_t save = 0)
 {
   const char *title[2] = {"z","y"};
   TFile *f1 = TFile::Open(Form("~/Work/STAR/analysis/output/AuAu200.Run14.jpsi.RotateMTD.HLT.root"),"read");
@@ -265,7 +265,7 @@ void makeHisto(const Int_t save = 1)
 
 
 //================================================
-void randomMatch(const Int_t save = 1)
+void randomMatch(const Int_t save = 0)
 {
   const char *title[2] = {"z","y"};
   const char *trkname[2] = {"tracks","MTD hits"};
