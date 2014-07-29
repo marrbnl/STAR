@@ -29,14 +29,22 @@ void qa_Match()
 void MonteCarlo(const Int_t save = 0)
 {
   const char *title[2] = {"z","y"};
-  const Int_t type = 0;
+  const Int_t type = 1;
 
   TFile *fin = TFile::Open("Rootfiles/AuAu200.RotateMTD.root","read");
 
   TH2F *hHitYBL = (TH2F*)fin->Get(Form("h%sVsBL_hit",title[type]));
   TH2F *hTrkZBL = (TH2F*)fin->Get(Form("h%sVsBL_track",title[type]));
-  draw2D(hHitYBL);
-  draw2D(hTrkZBL);
+  if(type==1)
+    {
+      hHitYBL->GetYaxis()->SetRangeUser(-50,50);
+      hTrkZBL->GetYaxis()->SetRangeUser(-50,50);
+    }
+  c = draw2D(hHitYBL,Form("%s distribution of MTD hits per module;backleg*5+module",title[type]));
+  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_Match/MC_Rotate_Hit%s_vs_Module_%s.png",title[type],trigName[kTrigType]));
+  c = draw2D(hTrkZBL,Form("%s distribution of projected tracks per module;backleg*5+module",title[type]));
+  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_Match/MC_Rotate_Trk%s_vs_Module_%s.png",title[type],trigName[kTrigType]));
+
   hHitYBL->Sumw2();
   hTrkZBL->Sumw2();
 
@@ -55,9 +63,6 @@ void MonteCarlo(const Int_t save = 0)
     {
       for(Int_t j=0; j<150; j++)
 	{
-	  // TH1F *h11 = (TH1F*)fin->Get(Form("h%s_BL%d_hit",title[type],j+1));
-	  // TH1F *h12 = (TH1F*)fin->Get(Form("h%s_BL%d_track",title[type],j+1));
-
 	  TH1F *h11 = (TH1F*)hHitYBL->ProjectionY(Form("h%s_Mod%d_hit",title[type],j+1),j+1,j+1);
 	  TH1F *h12 = (TH1F*)hTrkZBL->ProjectionY(Form("h%s_Mod%d_track",title[type],j+1),j+1,j+1);
 	  Int_t bin_move = h11->FindFixBin(87.*TMath::Abs(j%5-2))-h11->FindFixBin(0);
@@ -97,13 +102,20 @@ void MonteCarlo(const Int_t save = 0)
 
   hHitY->Scale(1./hHitY->Integral());
   hTrkY->Scale(1./hTrkY->Integral());
+  if(type==1)
+    {
+      hHitY->GetXaxis()->SetRangeUser(-50,50);
+      hTrkY->GetXaxis()->SetRangeUser(-50,50);
+    }
   c1 = draw1D(hHitY,Form("%s distribution of MTD hits",title[type]),kFALSE,kFALSE);
   c2 = draw1D(hTrkY,Form("%s distribution of projected tracks",title[type]),kFALSE,kFALSE);
+  if(save) c1->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_Match/MC_Rotate_Hit%s_%s.png",title[type],trigName[kTrigType]));
+  if(save) c2->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_Match/MC_Rotate_Trk%s_%s.png",title[type],trigName[kTrigType]));
 
-  TH2F *hDyHitY = new TH2F(Form("hD%s_hit%s_MC",title[type],title[type]),Form("Monte Carlo: #Delta%s distribution; #Delta%s (cm)",title[type],title[type]),200,-100,100,500,-250,250);
+  TH2F *hDyHitY = new TH2F(Form("hD%s_hit%s_MC",title[type],title[type]),Form("Monte Carlo: hit %s vs #Delta%s distribution; #Delta%s (cm);%s_{hit} (cm)",title[type],title[type],title[type],title[type]),200,-100,100,500,-250,250);
   TH1F *hDy = new TH1F(Form("hD%s_MC",title[type]),Form("Monte Carlo: #Delta%s distribution; #Delta%s (cm)",title[type],title[type]),200,-100,100);
   //Double_t center[20] = {-24.2,-24.2,-24.2,-24.2,-19.8,-19.8,-15.4,-11,-6.6,-2.2,2.2,6.6,11,15.4,19.8,19.8,24.2,24.2,24.2,24.2};
-  const Int_t nExpr = 1e7;
+  const Int_t nExpr = 1e5;
 
   gRandom->SetSeed(0);
   Double_t hit_y, trk_y;
@@ -134,24 +146,38 @@ void MonteCarlo(const Int_t save = 0)
       hDyHitY->Fill(trk_y-hit_y,hit_y);
       hDy->Fill(trk_y-hit_y);
     }
-  draw2D(hDyHitY);
+  if(type==1)
+    {
+      hDyHitY->GetYaxis()->SetRangeUser(-30,30);
+    }
+  c = draw2D(hDyHitY,"",0.04,kFALSE);
   gPad->SetGridx();
+  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_Match/MC_Rotate_d%s_vs_hit%s_%s.png",title[type],title[type],trigName[kTrigType]));
 
-  TH1F *hHitYMC = (TH1F*)hDyHitY->ProjectionY(Form("h%s_hit_MC",title[type]));
-  c1->cd();
-  hHitYMC->Scale(1./hHitYMC->Integral());
-  hHitYMC->SetLineColor(2);
-  hHitYMC->Draw("HIST sames");
-  
+  // TH1F *hHitYMC = (TH1F*)hDyHitY->ProjectionY(Form("h%s_hit_MC",title[type]));
+  // c1->cd();
+  // hHitYMC->Scale(1./hHitYMC->Integral());
+  // hHitYMC->SetLineColor(2);
+  // hHitYMC->Draw("HIST sames");
+
   c3 = draw1D(hDyMea,Form("#Delta%s distribution of matched track-hit pairs",title[type]),kFALSE,kFALSE);
   c3->cd();
   hDy->Scale(1./hDy->Integral());
   hDy->SetLineColor(2);
   hDy->Draw("HIST sames");
+  TLegend *leg = new TLegend(0.6,0.6,0.8,0.8);
+  leg->SetHeader("Rotate MTD");
+  leg->SetTextSize(0.04);
+  leg->SetBorderSize(0);
+  leg->SetFillColor(0);
+  leg->AddEntry(hDyMea,"Data","L");
+  leg->AddEntry(hDy,"Monte Carlo","L");
+  leg->Draw();
+  if(save) c3->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_Match/MC_Rotate_compare_d%s_%s.png",title[type],trigName[kTrigType]));
 }
 
 //================================================
-void makeHisto(const Int_t save = 0)
+void makeHisto(const Int_t save = 1)
 {
   const char *title[2] = {"z","y"};
   TFile *f1 = TFile::Open(Form("~/Work/STAR/analysis/output/AuAu200.Run14.jpsi.RotateMTD.HLT.root"),"read");
@@ -239,10 +265,11 @@ void makeHisto(const Int_t save = 0)
 
 
 //================================================
-void randomMatch(const Int_t save = 0)
+void randomMatch(const Int_t save = 1)
 {
   const char *title[2] = {"z","y"};
-  const char *trkname[2] = {"track","hit"};
+  const char *trkname[2] = {"tracks","MTD hits"};
+  const char *name[2] = {"track","hit"};
   TString legName[2] = {"Standard","Rotated"};
   TFile *f1 = TFile::Open(Form("~/Work/STAR/analysis/output/AuAu200.Run14.jpsi.RotateMTD.HLT.root"),"read");
 
@@ -255,7 +282,6 @@ void randomMatch(const Int_t save = 0)
   TH2F *hMthMtdHitMap = (TH2F*)f1->Get(Form("hMthMtdHitMap_%s",trigName[kTrigType]));
   c = draw2D(hMthMtdHitMap,Form("Au+Au di-muon: channel vs backleg of matched MTD hits%s",hlt_name[hlt_index]));
   if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_Match/%s.Rotate_MthMtdHitMap_%s.png",run_config,trigName[kTrigType]));
-
   
   THnSparseF *hYZ[2];
   hYZ[0] = (THnSparseF*)f1->Get(Form("hTrkProjYZ_qa_%s",trigName[kTrigType]));
@@ -265,15 +291,64 @@ void randomMatch(const Int_t save = 0)
     {
       hYBL[i] = (TH2F*)hYZ[i]->Projection(0,2);
       hYBL[i]->SetName(Form("%s_YBL",trkname[i]));
+      hYBL[i]->GetYaxis()->SetRangeUser(-50,50);
 
       hZBL[i] = (TH2F*)hYZ[i]->Projection(1,2);
       hZBL[i]->SetName(Form("%s_ZBL",trkname[i]));
 
-      draw2D(hYBL[i]);
-      draw2D(hZBL[i]);
+      c1 = draw2D(hYBL[i],Form("y distribution of %s per module;backleg*5+module",trkname[i]));
+      c2 = draw2D(hZBL[i],Form("z distribution of %s per module;backleg*5+module",trkname[i]));
+      if(save) c1->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_Match/%s.Rotate_%sY_vs_Module_%s.png",run_config,name[i],trigName[kTrigType]));
+      if(save) c2->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_Match/%s.Rotate_%sZ_vs_Module_%s.png",run_config,name[i],trigName[kTrigType]));
     }
 
-  return;
+  TH1F *hHitZ[5];
+  TList *list1 = new TList;
+  TString legName1[5];
+  for(Int_t i=0; i<5; i++)
+    {
+      for(Int_t j=0; j<30; j++)
+	{
+	  TH1F *htmp = (TH1F*)hZBL[1]->ProjectionY(Form("hHitZ_BL%d_Mod%d",j+1,i+1),j*5+i+1,j*5+i+1);
+	  if(j==0) hHitZ[i] = (TH1F*)htmp->Clone(Form("hHitZ_Mod%d_AllBL",i+1));
+	  else     hHitZ[i]->Add(htmp);
+	}
+      hHitZ[i]->Sumw2();
+      hHitZ[i]->Scale(1./hHitZ[i]->Integral());
+      list1->Add(hHitZ[i]);
+      legName1[i] = Form("Module %d",i+1);
+    }
+  c = drawHistos(list1,list1->At(0)->GetName(),Form("Au+Au %s: z distribution of MTD hits in each module;z (cm)",trigName[kTrigType]),kFALSE,0,100,kTRUE,1e-6,0.018,kFALSE,kTRUE,legName1,kTRUE,"",0.6,0.8,0.68,0.88,kFALSE);
+  for(Int_t i=0; i<6; i++)
+    {
+      TLine *line = GetLine(-217.5+i*87, 0, -217.5+i*87, 0.0125, 2, 2, 2);
+      line->Draw();
+    }
+  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_Match/%s.Rotate_HitZ_per_Module_%s.png",run_config,trigName[kTrigType]));
+
+  list1->Clear();
+  THnSparseF *hn = (THnSparseF*)f1->Get(Form("hTrkDzDy_%s",trigName[kTrigType]));
+  TH1F *hDzDeltaMod[4];
+  TString legName2[4];
+  for(Int_t i=0; i<4; i++)
+    {
+      if(i==0) 
+	{
+	  hDzDeltaMod[i] = (TH1F*)hn->Projection(1);
+	  legName2[i] = "Sum";
+	}
+      else
+	{
+	  hn->GetAxis(4)->SetRange(i,i);
+	  hDzDeltaMod[i] = (TH1F*)hn->Projection(1);
+	  hn->GetAxis(4)->SetRange(0,-1);
+	  legName2[i] = Form("|Mod_{trk}-Mod_{hit}|=%d",i-1);
+	}
+      hDzDeltaMod[i]->SetName(Form("hDz_DeltaMod_%d",i-1));
+      list1->Add(hDzDeltaMod[i]);
+    }
+  c = drawHistos(list1,list1->At(0)->GetName(),Form("Au+Au %s: #Deltaz distribution of matched track-hit pair;#Deltaz (cm)",trigName[kTrigType]),kFALSE,0,100,kFALSE,1e-6,0.018,kFALSE,kTRUE,legName2,kTRUE,"",0.6,0.8,0.6,0.88,kFALSE);
+  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_Match/%s.Rotate_dZ_DeltaModule_%s.png",run_config,trigName[kTrigType]));
 
   TFile *f2 = TFile::Open("Rootfiles/AuAu200.RotateMTD.root","read");
   const Double_t pt_cut = 1;
@@ -314,6 +389,8 @@ void randomMatch(const Int_t save = 0)
       if(save)
 	c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_Match/%s.Rotate_D%s_Pt%1.0fGeV_%s.png",run_config,title[i],pt_cut,trigName[kTrigType]));
     }
+
+  
       
 }
 
