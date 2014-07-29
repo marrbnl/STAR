@@ -15,7 +15,7 @@ void ana_RotateMTD()
   if(cut_name.Contains("Global"))
     trk_index = 1;
 
-  f = TFile::Open(Form("~/Work/STAR/analysis/output/AuAu200.Run14.jpsi.%s.root",run_config),"read");
+  f = TFile::Open(Form("~/Work/STAR/analysis/output/jpsi.AuAu200.Run14.%s.root",run_config),"read");
 
   //randomMatch();
   MonteCarlo();
