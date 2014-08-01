@@ -20,12 +20,9 @@ void qa_Match()
   //Track();
   //DeltaZ();
   //qualityCuts();
-  //yzDistribution();
+  yzDistribution();
   //eLoss();
 }
-
-
-
 
 //================================================
 void yzDistribution(const Int_t save = 1)
@@ -82,6 +79,14 @@ void yzDistribution(const Int_t save = 1)
       if(save) c1->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_Match/%s.%s_y_%s.png",run_config,name[i],trigName[kTrigType]));
       if(save) c2->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_Match/%s.%s_z_%s.png",run_config,name[i],trigName[kTrigType]));
     }
+
+  TH2F *hTrkYZAll = (TH2F*)hYZ[0]->Projection(0,1);
+  hTrkYZAll->GetYaxis()->SetRangeUser(-50,50);
+  c = draw2D(hTrkYZAll,Form("Au+Au %s: local y vs global z of projected tracks at MTD radius;global z (cm);local y (cm)",trigName[kTrigType]),0.04,kFALSE);
+  gPad->SetRightMargin(0.13);
+  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_Match/%s.track_y_vs_z_%s.png",run_config,trigName[kTrigType]));
+
+  return;
 
   THnSparseF *hTrkYZ = (THnSparseF*)f->Get(Form("hTrkYZ_qa_%s",trigName[kTrigType]));
   const char *trkYZ_name[4] = {"start point","outer magnet","MTD (one module)","MTD (multiple modules)"};
