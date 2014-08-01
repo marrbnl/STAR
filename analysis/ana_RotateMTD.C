@@ -18,7 +18,7 @@ void ana_RotateMTD()
   f = TFile::Open(Form("~/Work/STAR/analysis/output/jpsi.AuAu200.Run14.%s.root",run_config),"read");
 
   //randomMatch();
-  MonteCarlo();
+  //MonteCarlo();
   //makeHisto();
 }
 
