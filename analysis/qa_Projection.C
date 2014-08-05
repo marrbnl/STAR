@@ -2,7 +2,8 @@ TFile *f;
 Int_t hlt_index = 0;
 Int_t trk_index = 0;
 
-const char *run_config = "NoEloss.Global.HLT";
+//const char *run_config = "NoEloss.Global.HLT";
+const char *run_config = "projection.Global.HLT";
 
 //================================================
 void qa_Projection()
@@ -19,8 +20,223 @@ void qa_Projection()
 
   //trackYZ();
   //EnergyLoss();
-  trackProjection();
+  //trackProjection();
+  trackProjection2();
+  //magneticField();
 }
+
+//================================================
+void magneticField(const Int_t save = 0)
+{
+  TFile *f1 = TFile::Open("jpsi.test.histos.root");
+  TH2F *hMag = (TH2F*)f1->Get("hMagneticMap");
+  TCanvas *c = new TCanvas("MagneticMap","MagneticMap",800,800);
+  TPaveText *t1 = GetTitleText(hMag->GetTitle());
+  hMag->SetTitle("");
+  hMag->GetYaxis()->SetTitleOffset(1.4);
+  hMag->Draw("colz");
+  t1->Draw();
+  SetPadMargin(gPad,0.12,0.12,0.12,0.12);
+  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_Projection/MagneticFieldMap.png"));
+}
+
+//================================================
+void trackProjection2(const Int_t save = 0)
+{
+  TList *list = new TList;
+
+  THnSparseF *hTrkYZ = (THnSparseF*)f->Get(Form("hTrkProjYZ_qa_%s",trigName[kTrigType]));
+  const char *trkYZ_title[4] = {"start point","outer emc","outer coil","outer magnet"};
+  const char *trkYZ_name[4] = {"OuterTPC","OuterEmc","OuterCoil","OuterMag"};
+
+  /*
+  TH1F *hTrkPhiInCharge[4][2];
+  TString legName_charge[2] = {"negative","positive"};
+  
+  for(Int_t i=0; i<4; i++)
+    {
+      Int_t low_bin = i+1; 
+      Int_t up_bin  = i+1;
+      if(i==3)
+	{
+	  up_bin = 14;
+	}
+
+      hTrkYZ->GetAxis(4)->SetRange(low_bin,up_bin);
+      TH2F *h2 = (TH2F*)hTrkYZ->Projection(2,1);
+      h2->SetName(Form("hTrkYZ_%s",trkYZ_name[i]));
+      c = draw2D(h2,Form("Au+Au %s: #varphi vs global z of %s tracks at %s",trigName[kTrigType],trk_name[trk_index],trkYZ_title[i]),0.04,kFALSE);
+      if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_Projection/%s.track_phi_vs_z_%s_%s.png",run_config,trkYZ_name[i],trigName[kTrigType]));
+
+      TH1F *h1 = (TH1F*)h2->ProjectionY(Form("hTrkY_%s",trkYZ_name[i]));
+      c = draw1D(h1,Form("Au+Au %s: #varphi distribution of %s tracks at %s",trigName[kTrigType],trk_name[trk_index],trkYZ_title[i]),kFALSE,kFALSE);
+      if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_Projection/%s.track_phi_%s_%s.png",run_config,trkYZ_name[i],trigName[kTrigType]));
+
+      for(Int_t j=0; j<2; j++)
+	{
+	  hTrkYZ->GetAxis(3)->SetRange(1+2*j,1+2*j);
+	  hTrkPhiInCharge[i][j] = (TH1F*)hTrkYZ->Projection(2);
+	  hTrkPhiInCharge[i][j]->SetName(Form("hTrkYPhi_%s_%s",legName_charge[j].Data(),trkYZ_name[i]));
+	  hTrkYZ->GetAxis(3)->SetRange(0,-1);
+	} 
+      hTrkYZ->GetAxis(4)->SetRange(0,-1);
+    }
+
+  // charge dependence
+  for(Int_t i=0; i<4; i++)
+    {
+      list->Clear();
+      for(Int_t j=0; j<2; j++)
+	{
+	  list->Add(hTrkPhiInCharge[i][j]);
+	}
+      c = drawHistos(list,Form("hTrkYPhi_%s",trkYZ_name[i]),Form("Au+Au %s: #varphi of projected tracks at %s;#varphi",trigName[kTrigType],trkYZ_title[i]),kFALSE,0,100,kTRUE,1e-1,hTrkPhiInCharge[i][1]->GetMaximum()*1.5,kFALSE,kTRUE,legName_charge,kTRUE,"p_{T} > 1 GeV/c",0.6,0.8,0.65,0.85,kFALSE);
+	if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_Projection/%s.track_phi_%s_InCharge_%s.png",run_config,trkYZ_name[i],trigName[kTrigType]));
+    }
+
+  // charge evolution
+  TString legName_det[4];
+  for(Int_t j=0; j<2; j++)
+    {
+      list->Clear();
+      for(Int_t i=0; i<3; i++)
+	{
+	  list->Add(hTrkPhiInCharge[i][j]);
+	  legName_det[i] = Form("%s",trkYZ_name[i]);
+	}
+      c = drawHistos(list,Form("hTrkYPhi_%s",legName_charge[j].Data()),Form("Au+Au %s: #varphi of projected %s tracks;#varphi",trigName[kTrigType],legName_charge[j].Data()),kFALSE,0,100,kTRUE,1e-1,1.6e6,kFALSE,kTRUE,legName_det,kTRUE,legName_charge[j].Data(),0.6,0.8,0.65,0.85,kFALSE);
+      if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_Projection/%s.track_phi_InDet_%s_%s.png",run_config,legName_charge[j].Data(),trigName[kTrigType]));
+    }
+  */
+  // Backleg gap structure
+  TH1F *hTrkPhiMag[3][11];
+  for(Int_t i=0; i<3; i++)
+    {
+      if(i>0) hTrkYZ->GetAxis(3)->SetRange(2*i-1,2*i-1);
+      for(Int_t j=0; j<11; j++)
+	{
+	  hTrkYZ->GetAxis(4)->SetRange(4+j,4+j);
+	  hTrkPhiMag[i][j] = (TH1F*)hTrkYZ->Projection(2);
+	  hTrkPhiMag[i][j]->SetName(Form("hTrkPhi_charge%d_zeroFiled%d",i,j));
+	  hTrkYZ->GetAxis(4)->SetRange(0,-1);
+	}
+      hTrkYZ->GetAxis(3)->SetRange(0,-1);
+    }
+
+  list->Clear();
+  list->Add(hTrkPhiMag[0][0]);
+  list->Add(hTrkPhiMag[0][2]);
+  list->Add(hTrkPhiMag[0][5]);
+  list->Add(hTrkPhiMag[0][7]);
+  list->Add(hTrkPhiMag[0][10]);
+  TString legName_zeroMag[5] = {"nZeroFieldStep = 0","nZeroFieldStep = 2","nZeroFieldStep = 5","nZeroFieldStep = 7","nZeroFieldStep = 10"};
+  c = drawHistos(list,"hTrkYPhi_ZeroFiled",Form("Au+Au %s: #varphi of projected tracks at outer magnet;#varphi",trigName[kTrigType]),kFALSE,0,100,kTRUE,1e3,50*hTrkPhiMag[0][0]->GetMaximum(),kTRUE,kTRUE,legName_zeroMag,kTRUE,"",0.5,0.7,0.65,0.88,kFALSE);
+  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_Projection/%s.track_phi_OuterMag_ZeroField_%s.png",run_config,trigName[kTrigType]));
+
+  c = drawHistos(list,"hTrkYPhi_ZeroFiled_zoomin",Form("Au+Au %s: #varphi of projected tracks at outer magnet;#varphi",trigName[kTrigType]),kTRUE,0,pi/4,kTRUE,1e3,hTrkPhiMag[0][0]->GetMaximum(),kTRUE,kTRUE,legName_zeroMag,kTRUE,"",0.5,0.7,0.65,0.88,kFALSE);
+  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_Projection/%s.track_phi_OuterMag_ZeroField_zoomin_%s.png",run_config,trigName[kTrigType]));
+  hTrkPhiMag[0][0]->SetMaximum(1./50*hTrkPhiMag[0][0]->GetMaximum());
+
+  TH1F *hTrkPhiMag_period[3][11];
+  TH1F *hTrkPhiMag_period_all[3];
+  for(Int_t i=0; i<3; i++)
+    {
+      for(Int_t j=0; j<11; j++)
+	{
+	  hTrkPhiMag_period[i][j] = new TH1F(Form("%s_period",hTrkPhiMag[i][j]->GetName()),hTrkPhiMag[i][j]->GetTitle(),hTrkPhiMag[i][j]->GetNbinsX()/2,0,pi);
+	  hTrkPhiMag_period[i][j]->Sumw2();
+	  for(Int_t ibin=1; ibin<=hTrkPhiMag[i][j]->GetNbinsX(); ibin++)
+	    {
+	      Int_t jbin = ibin-(ibin-1)/8*8;
+	      hTrkPhiMag_period[i][j]->Fill(hTrkPhiMag_period[i][j]->GetBinCenter(jbin),hTrkPhiMag[i][j]->GetBinContent(ibin));
+	    }
+
+	  if(j==0) hTrkPhiMag_period_all[i] = (TH1F*)hTrkPhiMag_period[i][j]->Clone(Form("hTrkPhi_charge%d_period_all",i));
+	  else     hTrkPhiMag_period_all[i]->Add(hTrkPhiMag_period[i][j]);
+	}
+    }
+  list->Clear();
+  list->Add(hTrkPhiMag_period_all[0]);
+  list->Add(hTrkPhiMag_period_all[1]);
+  list->Add(hTrkPhiMag_period_all[2]);
+  TString legName_period[14];
+  legName_period[0] = "Sum";
+  legName_period[1] = "Negative";
+  legName_period[2] = "Positive";
+  for(Int_t j=0; j<11; j++)
+    {
+      list->Add(hTrkPhiMag_period[0][j]);
+      legName_period[j+3] =  Form("nZeroFieldStep = %d", j);
+    }
+  c = drawHistos(list,"hTrkYPhi_ZeroFiled_period",Form("Au+Au %s: #varphi of projected tracks at outer magnet;#varphi",trigName[kTrigType]),kTRUE,0,0.35,kFALSE,1e3,50*hTrkPhiMag[0][0]->GetMaximum(),kFALSE,kTRUE,legName_period,kTRUE,"",0.7,0.85,0.3,0.88,kFALSE);
+  gPad->SetRightMargin(0.01);
+  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_Projection/%s.track_phi_OuterMag_period_%s.png",run_config,trigName[kTrigType]));
+
+  /*
+  TString legName_zeroMag_charge[3] = {"sum","negative","positive"};
+  for(Int_t j=0; j<11; j++)
+    {
+      list->Clear();
+      for(Int_t i=0; i<3; i++)
+	{
+	  list->Add(hTrkPhiMag[i][j]);
+	}
+      c = drawHistos(list,Form("hTrkYPhi_ZeroFiled_Bin%d_zoomin",j),Form("Au+Au %s: #varphi of projected tracks at outer magnet (nZeroFieldStep=%d);#varphi",trigName[kTrigType],j),kTRUE,0,pi/2,kTRUE,1,100*((TH1*)list->At(0))->GetMaximum(),kTRUE,kTRUE,legName_zeroMag_charge,kTRUE,"",0.5,0.7,0.7,0.88,kFALSE);
+      if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_Projection/%s.track_phi_OuterMag_ZeroField%d_zoomin_%s.png",run_config,j,trigName[kTrigType]));
+    }
+  */
+
+  
+}
+
+//================================================
+void trackProjection(const Int_t save = 1)
+{
+  TList *list = new TList;
+
+  THnSparseF *hTrkYZ = (THnSparseF*)f->Get(Form("hTrkYZ_qa_%s",trigName[kTrigType]));
+  const char *trkYZ_title[4] = {"start point","outer magnet","MTD (one module)","MTD (multiple modules)"};
+  const char *trkYZ_name[4] = {"OuterTPC","OuterMag","MTD_nonOverlapping","MTD"};
+
+  TH1F *hTrkPhiInCharge[4][2];
+  TString legName_charge[2] = {"negative","positive"};
+
+  for(Int_t i=0; i<4; i++)
+    {
+      hTrkYZ->GetAxis(4)->SetRange(i+1,i+1);
+      TH2F *h2 = (TH2F*)hTrkYZ->Projection(2,1);
+      h2->SetName(Form("hTrkYZ_%s",trkYZ_name[i]));
+      c = draw2D(h2,Form("Au+Au %s: #varphi vs global z of %s tracks at %s",trigName[kTrigType],trk_name[trk_index],trkYZ_title[i]),0.04,kFALSE);
+      if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_Projection/%s.track_phi_vs_z_%s_%s.png",run_config,trkYZ_name[i],trigName[kTrigType]));
+
+      TH1F *h1 = (TH1F*)h2->ProjectionY(Form("hTrkY_%s",trkYZ_name[i]));
+      c = draw1D(h1,Form("Au+Au %s: #varphi distribution of %s tracks at %s",trigName[kTrigType],trk_name[trk_index],trkYZ_title[i]),kFALSE,kFALSE);
+      if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_Projection/%s.track_phi_%s_%s.png",run_config,trkYZ_name[i],trigName[kTrigType]));
+
+      // charge dependence
+      for(Int_t j=0; j<2; j++)
+	{
+	  hTrkYZ->GetAxis(3)->SetRange(1+2*j,1+2*j);
+	  hTrkPhiInCharge[i][j] = (TH1F*)hTrkYZ->Projection(2);
+	  hTrkPhiInCharge[i][j]->SetName(Form("hTrkYPhi_%s_%s",legName_charge[j].Data(),trkYZ_name[i]));
+	  hTrkYZ->GetAxis(3)->SetRange(0,-1);
+	} 
+    }
+
+  // charge dependence
+  for(Int_t i=0; i<4; i++)
+    {
+      list->Clear();
+      for(Int_t j=0; j<2; j++)
+	{
+	  list->Add(hTrkPhiInCharge[i][j]);
+	}
+      c = drawHistos(list,Form("hTrkYPhi_%s_charge",trkYZ_name[i]),Form("Au+Au %s: #varphi of projected tracks at %s;#varphi",trigName[kTrigType],trkYZ_title[i]),kFALSE,0,100,kTRUE,1e-1,hTrkPhiInCharge[i][1]->GetMaximum()*1.5,kFALSE,kTRUE,legName_charge,kTRUE,"p_{T} > 1 GeV/c",0.6,0.8,0.65,0.85,kFALSE);
+	if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_Projection/%s.track_phi_%s_InCharge_%s.png",run_config,trkYZ_name[i],trigName[kTrigType]));
+    }
+  
+}
+
 
 //================================================
 void trackYZ(const Int_t save = 0)

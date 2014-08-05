@@ -2,7 +2,7 @@ TFile *f;
 Int_t hlt_index = 0;
 Int_t trk_index = 0;
 
-const char *run_config = "Match.Global.HLT";
+//const char *run_config = "Match.Global.HLT";
 
 //================================================
 void qa_Match()
@@ -18,9 +18,9 @@ void qa_Match()
   f = TFile::Open(Form("~/Work/STAR/analysis/output/jpsi.AuAu200.Run14.%s.root",run_config),"read");
 
   //Track();
-  //DeltaZ();
+  DeltaZ();
   //qualityCuts();
-  yzDistribution();
+  //yzDistribution();
   //eLoss();
 }
 
