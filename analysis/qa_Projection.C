@@ -172,20 +172,6 @@ void trackProjection2(const Int_t save = 0)
   gPad->SetRightMargin(0.01);
   if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_Projection/%s.track_phi_OuterMag_period_%s.png",run_config,trigName[kTrigType]));
 
-  /*
-  TString legName_zeroMag_charge[3] = {"sum","negative","positive"};
-  for(Int_t j=0; j<11; j++)
-    {
-      list->Clear();
-      for(Int_t i=0; i<3; i++)
-	{
-	  list->Add(hTrkPhiMag[i][j]);
-	}
-      c = drawHistos(list,Form("hTrkYPhi_ZeroFiled_Bin%d_zoomin",j),Form("Au+Au %s: #varphi of projected tracks at outer magnet (nZeroFieldStep=%d);#varphi",trigName[kTrigType],j),kTRUE,0,pi/2,kTRUE,1,100*((TH1*)list->At(0))->GetMaximum(),kTRUE,kTRUE,legName_zeroMag_charge,kTRUE,"",0.5,0.7,0.7,0.88,kFALSE);
-      if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_Projection/%s.track_phi_OuterMag_ZeroField%d_zoomin_%s.png",run_config,j,trigName[kTrigType]));
-    }
-  */
-
   
 }
 
