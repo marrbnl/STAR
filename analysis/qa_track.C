@@ -1,6 +1,7 @@
 TFile *f;
 Int_t hlt_index = 0;
 Int_t trk_index = 0;
+const char *run_config = "PrimTrk.ClosePrimVtx.40cm";
 
 //================================================
 void qa_track()
@@ -13,7 +14,7 @@ void qa_track()
   if(cut_name.Contains("Global"))
     trk_index = 1;
 
-  f = TFile::Open(Form("~/Work/STAR/analysis/Output/jpsi.AuAu200.Run14.%s.root",),"read");
+  f = TFile::Open(Form("~/Work/STAR/analysis/Output/jpsi.AuAu200.Run14.%s.root",run_config),"read");
   //trackDistribution();
   qualityCuts();
 }

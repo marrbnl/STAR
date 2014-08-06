@@ -41,7 +41,7 @@ void magneticField(const Int_t save = 0)
 }
 
 //================================================
-void trackProjection2(const Int_t save = 0)
+void trackProjection2(const Int_t save = 1)
 {
   TList *list = new TList;
 
@@ -108,6 +108,7 @@ void trackProjection2(const Int_t save = 0)
       if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_Projection/%s.track_phi_InDet_%s_%s.png",run_config,legName_charge[j].Data(),trigName[kTrigType]));
     }
   */
+
   // Backleg gap structure
   TH1F *hTrkPhiMag[3][11];
   for(Int_t i=0; i<3; i++)
@@ -172,6 +173,32 @@ void trackProjection2(const Int_t save = 0)
   gPad->SetRightMargin(0.01);
   if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_Projection/%s.track_phi_OuterMag_period_%s.png",run_config,trigName[kTrigType]));
 
+  // pt dependence
+  Int_t pt_cuts[4] = {1,2,5,20};
+  TH1F *hTrkPhiMag_pt[3];
+  hTrkYZ->GetAxis(4)->SetRange(4,14);
+  list->Clear();
+  TString legName_pt[3];
+  for(Int_t i=0; i<3; i++)
+    {
+      hTrkYZ->GetAxis(0)->SetRange(pt_cuts[i]+1,pt_cuts[i+1]);
+      TH1F *htmp = (TH1F*)hTrkYZ->Projection(2);
+      htmp->SetName(Form("hTrkPhiMag_pt_%d_%d_tmp",pt_cuts[i],pt_cuts[i+1]));
+      hTrkYZ->GetAxis(0)->SetRange(0,-1);
+
+      hTrkPhiMag_pt[i] = new TH1F(Form("hTrkPhiMag_pt_%d_%d",pt_cuts[i],pt_cuts[i+1]),htmp->GetTitle(),htmp->GetNbinsX()/2,0,pi);
+      for(Int_t ibin=1; ibin<=htmp->GetNbinsX(); ibin++)
+	{
+	  Int_t jbin = ibin-(ibin-1)/8*8;
+	  hTrkPhiMag_pt[i]->Fill(hTrkPhiMag_pt[i]->GetBinCenter(jbin),htmp->GetBinContent(ibin));
+	}
+      list->Add(hTrkPhiMag_pt[i]);;
+      legName_pt[i] = Form("%d < p_{T} < %d GeV/c",pt_cuts[i],pt_cuts[i+1]);
+    }  
+  hTrkYZ->GetAxis(4)->SetRange(0,-1);
+  c = drawHistos(list,"hTrkYPhi_ZeroFiled_pt",Form("Au+Au %s: #varphi of projected tracks at outer magnet;#varphi",trigName[kTrigType]),kTRUE,0,0.35,kTRUE,1e5,1e8,kTRUE,kTRUE,legName_pt,kTRUE,"",0.7,0.85,0.6,0.88,kFALSE);
+  gPad->SetRightMargin(0.01);
+  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_Projection/%s.track_phi_OuterMag_period_pt_%s.png",run_config,trigName[kTrigType]));
   
 }
 

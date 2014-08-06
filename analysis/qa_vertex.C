@@ -5,9 +5,9 @@ Int_t vtx_index = 0;
 const char *run_config = "PrimTrk.ClosePrimVtx";
 
 //================================================
-void qa_vertex(const Int_t save = 1)
+void qa_vertex(const Int_t save = 0)
 {
-  gStyle->SetOptStat(0);
+  gStyle->SetOptStat(1);
   gStyle->SetOptFit(1);
   gStyle->SetStatY(0.9);                
   gStyle->SetStatX(0.9);  
