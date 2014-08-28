@@ -2,7 +2,7 @@ TFile *f;
 Int_t hlt_index = 0;
 Int_t trk_index = 0;
 
-const char *run_config = "PrimTrk.ClosePrimVtx";
+const char *run_config = "PrimTrk.ClosePrimVtx.DCA1cm";
 
 //================================================
 void ana_InvMass()
@@ -15,7 +15,7 @@ void ana_InvMass()
   if(cut_name.Contains("Global"))
     trk_index = 1;
 
-  f = TFile::Open(Form("~/Work/STAR/analysis/Output/jpsi.AuAu200.Run14.%s.root",run_config),"read");
+  f = TFile::Open(Form("~/Work/STAR/analysis/output/jpsi.AuAu200.Run14.%s.root",run_config),"read");
 
   InvMass();
   //upsilon();
@@ -48,55 +48,73 @@ void daughters(Int_t save = 0)
     }
 
   // pt cut on daughter
-  Double_t pt1_cut[3] = {1,1.5,2};
-  Double_t pt2_cut[3] = {1,1,1};
-  TH1F *hInvMass[3][3];
+  TH2F *hInvMassVsPt[3];
   for(Int_t j=0; j<3; j++)
     {
       hnInvMass[j] = (THnSparseF*)f->Get(Form("%s_%s",hName[j],trigName[kTrigType]));
-      for(Int_t i=0; i<3; i++)
+      hnInvMass[j]->GetAxis(5)->SetRangeUser(1.2+0.01,100);
+      hInvMassVsPt[j] = (TH2F*)hnInvMass[j]->Projection(0,4);
+      hInvMassVsPt[j]->SetName(Form("%s_%s_InvMassVsPt",hName[j],trigName[kTrigType]));
+      hInvMassVsPt[j]->Sumw2();
+      hnInvMass[j]->GetAxis(5)->SetRange(0,-1);
+    }
+
+
+  Double_t pt_cuts[5] = {1.2,1.5,2.0,2.5,3.0};
+  TH1F *hInvMass[3][5];
+  for(Int_t j=0; j<3; j++)
+    {
+      for(Int_t i=0; i<5; i++)
 	{
-	  hnInvMass[j]->GetAxis(4)->SetRangeUser(pt1_cut[i]+0.01,100);
-	  hnInvMass[j]->GetAxis(5)->SetRangeUser(pt2_cut[i]+0.01,100);
-	  hInvMass[j][i] = (TH1F*)hnInvMass[j]->Projection(0);
-	  hInvMass[j][i]->SetName(Form("%s_%s_InvMass_pt1%1.1f_pt2%1.1f",hName[j],trigName[kTrigType],pt1_cut[i],pt2_cut[i]));
-	  hInvMass[j][i]->Sumw2();
-	  hnInvMass[j]->GetAxis(4)->SetRange(0,-1);
-	  hnInvMass[j]->GetAxis(5)->SetRange(0,-1);
+	  hInvMassVsPt[j]->GetXaxis()->SetRangeUser(pt_cuts[i]+0.01,100);
+	  hInvMass[j][i] = (TH1F*)hInvMassVsPt[j]->ProjectionY(Form("%s_%s_InvMass_pt1%1.1f_pt2%1.1f",hName[j],trigName[kTrigType],pt_cuts[i],1.2));
 	}
     }
-  
-  TList *list = new TList();
-  TString legName[3];
-  TH1F *hDiff[3];
-  for(Int_t i=0; i<3; i++)
+
+  TH1F *hDiff[5];
+  for(Int_t i=0; i<5; i++)
     {
-      hDiff[i] = (TH1F*)hInvMass[0][i]->Clone(Form("InvMass_US-LS_pt1%1.1f_pt2%1.1f",pt1_cut[i],pt2_cut[i]));
+      hDiff[i] = (TH1F*)hInvMass[0][i]->Clone(Form("InvMass_US-LS_pt1%1.1f_pt2%1.1f",pt_cuts[i],1.2));
       hInvMass[1][i]->Add(hInvMass[2][i]);
       hDiff[i]->Add(hInvMass[1][i],-1);
-      list->Add(hDiff[i]);
-      legName[i] = Form("p_{T,1}>%1.1f, p_{T,2}>%1.1f GeV/c",pt1_cut[i],pt2_cut[i]);
+      hDiff[i]->Rebin(4);
+      // list->Add(hDiff[i]);
+      // legName[i] = Form("p_{T,1}>%1.1f, p_{T,2}>%1.1f GeV/c",pt1_cut[i],pt2_cut[i]);
 
       hInvMass[0][i]->SetMarkerStyle(20);
       hInvMass[0][i]->SetMarkerColor(2);
       hInvMass[0][i]->SetLineColor(2);
-      hInvMass[0][i]->GetXaxis()->SetRangeUser(3.0,3.2);
-      hInvMass[0][i]->SetMaximum(1.1*hInvMass[0][i]->GetMaximum());
+      hInvMass[0][i]->GetXaxis()->SetRangeUser(2.5,3.5);
+      if(i>0) hInvMass[0][i]->SetMaximum(1.3*hInvMass[0][i]->GetMaximum());
       c = draw1D(hInvMass[0][i],Form("Au+Au %s: invariant mass of di-muon pairs%s;M_{#mu#mu} (GeV/c^{2})",trigName[kTrigType],hlt_name[hlt_index]),kFALSE);
       hInvMass[1][i]->Draw("HIST sames");
-      TLegend *leg = new TLegend(0.6,0.65,0.75,0.85);
+      TLegend *leg = new TLegend(0.55,0.65,0.7,0.85);
       leg->SetBorderSize(0);
       leg->SetFillColor(0);
       leg->SetTextSize(0.04);
-      leg->SetHeader(Form("p_{T,1}>%1.1f, p_{T,2}>%1.1f GeV/c",pt1_cut[i],pt2_cut[i]));
+      leg->SetHeader(Form("p_{T,1}>%1.1f, p_{T,2}>%1.1f GeV/c",pt_cuts[i],1.2));
       leg->AddEntry(hInvMass[0][i],"Unlike sign","PLE");
       leg->AddEntry(hInvMass[1][i],"Like sign (++)+(--)","L");
       leg->Draw();
-      if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/InvMass/%s.InvMass_pt1_%1.1f_pt2_%1.1f.png",run_config,pt1_cut[i],pt2_cut[i]));
+      if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/InvMass/%s.jpsi_InvMass_pt1_%1.1f_pt2_%1.1f.png",run_config,pt_cuts[i],1.2));
+
+      hDiff[i]->GetXaxis()->SetRangeUser(2.5,3.5);
+      hDiff[i]->SetMarkerStyle(21);
+      hDiff[i]->SetMarkerColor(2);
+      hDiff[i]->SetLineColor(2);
+      hDiff[i]->GetYaxis()->SetRangeUser(-400,500);
+      c = draw1D(hDiff[i],Form("Au+Au %s: invariant mass of di-muon pairs%s;M_{#mu#mu} (GeV/c^{2});US-LS",trigName[kTrigType],hlt_name[hlt_index]),kFALSE);
+      gPad->SetGridy();
+      TPaveText *t1 = GetPaveText(0.2,0.4,0.8,0.85,0.04);
+      t1->AddText(Form("p_{T,1} > %1.1f, p_{T,2} > %1.1f GeV/c",pt_cuts[i],1.2));
+      t1->Draw();
+      TLine *line = GetLine(3.097,hDiff[i]->GetMinimum(),3.097,hDiff[i]->GetMaximum()*0.8,1);
+      line->Draw();
+      if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/InvMass/%s.jpsi_US-LS_pt1_%1.1f_pt2_%1.1f.png",run_config,pt_cuts[i],1.2));
     }
-  c = drawHistos(list,"InvMass_ComparePt1Pt2Cuts",Form("Au+Au %s: invariant mass of di-muon pairs%s (US-LS);M_{#mu#mu} (GeV/c^{2})",trigName[kTrigType],hlt_name[hlt_index]),kTRUE,3.0,3.2,kTRUE,-200,300,kFALSE,kTRUE,legName,kTRUE,"",0.15,0.25,0.7,0.88);
-  gPad->SetGridy();
-  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/InvMass/%s.InvMass_ComparePt1Pt2Cut.png",run_config));
+  // c = drawHistos(list,"InvMass_ComparePt1Pt2Cuts",Form("Au+Au %s: invariant mass of di-muon pairs%s (US-LS);M_{#mu#mu} (GeV/c^{2})",trigName[kTrigType],hlt_name[hlt_index]),kTRUE,3.0,3.2,kTRUE,-200,300,kFALSE,kTRUE,legName,kTRUE,"",0.15,0.25,0.7,0.88);
+  // gPad->SetGridy();
+  // if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/InvMass/%s.InvMass_ComparePt1Pt2Cut.png",run_config));
 }
 
 
@@ -173,7 +191,7 @@ void InvMass(Int_t save = 1)
       hInvMass_jpsi[j]->GetXaxis()->SetRangeUser(2.5,3.5);
     }
   c = draw1D(hInvMass_jpsi[0],Form("Au+Au %s: invariant mass of di-muon pairs%s;M_{#mu#mu} (GeV/c^{2})",trigName[kTrigType],hlt_name[hlt_index]));
-  hInvMass[1][1]->Draw("HIST sames");
+  hInvMass_jpsi[1]->Draw("HIST sames");
   leg = new TLegend(0.2,0.63,0.4,0.83);
   leg->SetBorderSize(0);
   leg->SetFillColor(0);
@@ -204,7 +222,7 @@ void InvMass(Int_t save = 1)
 }
 
 //================================================
-void upsilon(Int_t save = 0)
+void upsilon(Int_t save = 1)
 {
   TH1F *hStat = (TH1F*)f->Get("hEventStat");
   printf("all di-muon events: %4.2e\n",hStat->GetBinContent(3));
@@ -246,11 +264,11 @@ void upsilon(Int_t save = 0)
   for(Int_t i=0; i<2; i++)
     {
       hInvMass_upsilon[i] = (TH1F*)hInvMass[i]->Clone(Form("%s_upsilon",hInvMass[i]->GetName()));
-      hInvMass_upsilon[i]->Rebin(5);
+      hInvMass_upsilon[i]->Rebin(10);
       hInvMass_upsilon[i]->GetXaxis()->SetRangeUser(8.5,11);
     }
   c = draw1D(hInvMass_upsilon[0],Form("Au+Au %s: invariant mass of di-muon pairs%s;M_{#mu#mu} (GeV/c^{2})",trigName[kTrigType],hlt_name[hlt_index]),kFALSE,kTRUE);
-  hInvMass[1]->Draw("HIST sames");
+  hInvMass_upsilon[1]->Draw("HIST sames");
   leg->Draw();
   if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/InvMass/%s.InvMass_upsion_pt1_%1.1f_pt2_%1.1f.png",run_config,pt1_cut,pt2_cut));
 

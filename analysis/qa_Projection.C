@@ -21,12 +21,12 @@ void qa_Projection()
   //trackYZ();
   //EnergyLoss();
   //trackProjection();
-  trackProjection2();
-  //magneticField();
+  //trackProjection2();
+  magneticField();
 }
 
 //================================================
-void magneticField(const Int_t save = 0)
+void magneticField(const Int_t save = 1)
 {
   TFile *f1 = TFile::Open("jpsi.test.histos.root");
   TH2F *hMag = (TH2F*)f1->Get("hMagneticMap");
@@ -37,11 +37,11 @@ void magneticField(const Int_t save = 0)
   hMag->Draw("colz");
   t1->Draw();
   SetPadMargin(gPad,0.12,0.12,0.12,0.12);
-  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_Projection/MagneticFieldMap.png"));
+  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_Projection/MagneticFieldMap.pdf"));
 }
 
 //================================================
-void trackProjection2(const Int_t save = 1)
+void trackProjection2(const Int_t save = 0)
 {
   TList *list = new TList;
 
@@ -148,7 +148,7 @@ void trackProjection2(const Int_t save = 1)
 	  hTrkPhiMag_period[i][j]->Sumw2();
 	  for(Int_t ibin=1; ibin<=hTrkPhiMag[i][j]->GetNbinsX(); ibin++)
 	    {
-	      Int_t jbin = ibin-(ibin-1)/8*8;
+	      Int_t jbin = ibin-(ibin-1)/80*80;
 	      hTrkPhiMag_period[i][j]->Fill(hTrkPhiMag_period[i][j]->GetBinCenter(jbin),hTrkPhiMag[i][j]->GetBinContent(ibin));
 	    }
 
@@ -189,14 +189,14 @@ void trackProjection2(const Int_t save = 1)
       hTrkPhiMag_pt[i] = new TH1F(Form("hTrkPhiMag_pt_%d_%d",pt_cuts[i],pt_cuts[i+1]),htmp->GetTitle(),htmp->GetNbinsX()/2,0,pi);
       for(Int_t ibin=1; ibin<=htmp->GetNbinsX(); ibin++)
 	{
-	  Int_t jbin = ibin-(ibin-1)/8*8;
+	  Int_t jbin = ibin-(ibin-1)/80*80;
 	  hTrkPhiMag_pt[i]->Fill(hTrkPhiMag_pt[i]->GetBinCenter(jbin),htmp->GetBinContent(ibin));
 	}
       list->Add(hTrkPhiMag_pt[i]);;
       legName_pt[i] = Form("%d < p_{T} < %d GeV/c",pt_cuts[i],pt_cuts[i+1]);
     }  
   hTrkYZ->GetAxis(4)->SetRange(0,-1);
-  c = drawHistos(list,"hTrkYPhi_ZeroFiled_pt",Form("Au+Au %s: #varphi of projected tracks at outer magnet;#varphi",trigName[kTrigType]),kTRUE,0,0.35,kTRUE,1e5,1e8,kTRUE,kTRUE,legName_pt,kTRUE,"",0.7,0.85,0.6,0.88,kFALSE);
+  c = drawHistos(list,"hTrkYPhi_ZeroFiled_pt",Form("Au+Au %s: #varphi of projected tracks at outer magnet;#varphi",trigName[kTrigType]),kTRUE,0,0.35,kTRUE,1e4,1e8,kTRUE,kTRUE,legName_pt,kTRUE,"",0.7,0.85,0.6,0.88,kFALSE);
   gPad->SetRightMargin(0.01);
   if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_Projection/%s.track_phi_OuterMag_period_pt_%s.png",run_config,trigName[kTrigType]));
   
