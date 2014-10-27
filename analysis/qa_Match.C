@@ -24,10 +24,10 @@ void qa_Match()
 
   //Track();
   //DeltaZ();
-  DeltaY();
+  //DeltaY();
   //qualityCuts();
   //yzDistribution();
-  //eLoss();
+  eLoss();
 }
 
 //================================================
@@ -297,10 +297,10 @@ void Track(const Int_t save = 0)
 void eLoss(const Int_t save = 0)
 {
   TCanvas *c = new TCanvas("energy_loss","energy_loss",800,600);
-  TF1 *fEloss = new TF1("f2","[0]*exp(-pow([1]/x,[2]))",0.,20);
+  TF1 *fEloss = new TF1("f2","[0]*exp(-pow([1]/x,[2]))",1.,20);
   fEloss->SetParameters(1.38147e+00,6.08655e-02,5.03337e-01);
   fEloss->SetMinimum(0);
-  fEloss->SetTitle(";E_{track} (GeV);#DeltaE (GeV)");
+  fEloss->SetTitle(";p_{track} (GeV/c);#DeltaE (GeV)");
   fEloss->Draw();
  
   TF1 *fEmc = new TF1("fEmc","pol0",0.,100.);
@@ -331,5 +331,9 @@ void eLoss(const Int_t save = 0)
 
   TPaveText *t1 = GetTitleText("Energy loss of tracks propagated to MTD",0.05);
   t1->Draw();
-  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_Match/EnergyLoss.png"));
+  if(save) 
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_Match/EnergyLoss.png"));
+      c->SaveAs("/Users/admin/Dropbox/STAR/MTD/figures/EnergyLoss.pdf");
+    }
 }

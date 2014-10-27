@@ -2,7 +2,7 @@ TFile *f;
 const char *signal_name[2] = {"J/#psi","#Upsilon(1S)"};
 Int_t trk_index = 0;
 Int_t signal_index = 0;
-const char *run_config = "Embed.Upsilon.GlobalTrk";
+const char *run_config = "Embed.Upsilon.PrimaryTrk";
 
 //================================================
 void ana_Embed()
@@ -24,14 +24,14 @@ void ana_Embed()
   TH1F *hStat = (TH1F*)f->Get("hEventStat");
   printf("# of di-muon events: %d\n",hStat->GetBinContent(7));
   
-  //MCtruth();
+  MCtruth();
   //embedded();
-  efficiency();
+  //efficiency();
 }
 
 
 //================================================
-void embedded(const Int_t save = 0)
+void embedded(const Int_t save = 1)
 {
   const char *hName[3] = {"hJpsiInfo","hBkgLSPos","hBkgLSNeg"};
   const char *name[4] = {"Hybrid","Data","MCone","MCtwo"};
@@ -95,8 +95,8 @@ void efficiency(const Int_t save = 1)
   TList *list = new TList;
   for(Int_t i=0; i<2; i++)
     {
-      hTrkPt[i+2]->SetMaximum(50.*hTrkPt[i+2]->GetMaximum());
-      list->Add(hTrkPt[i+2]);
+      hTrkPt[3-i]->SetMaximum(50.*hTrkPt[3-i]->GetMaximum());
+      list->Add(hTrkPt[3-i]);
     }
   const TString legName[2] = {"MC tracks","Matched to reconstructed tracks"};
   c = drawHistos(list,"MC_trkPt",Form("Au+Au %s embedding: p_{T} distribution of MC muons;p_{T,true} (GeV/c);dN/dp_{T}",trigName[kTrigType]),kTRUE,0,20,kFALSE,-200,300,kTRUE,kTRUE,legName,kTRUE,"",0.15,0.25,0.7,0.88);
@@ -151,7 +151,7 @@ void efficiency(const Int_t save = 1)
   hMthEff[0]->GetYaxis()->SetTitleOffset(1.1);
   list->Add(hMthEff[0]);
   list->Add(hMthEff[1]);
-  c = drawHistos(list,"MthEff",Form("Au+Au %s embedding: track matching efficiency to MTD hits;p_{T,reco} (GeV/c);efficiency",trigName[kTrigType]),kTRUE,0,20,kTRUE,0,0.05,kFALSE,kTRUE,legName3,kTRUE,"",0.35,0.5,0.6,0.8);
+  c = drawHistos(list,"MthEff",Form("Au+Au %s embedding: track matching efficiency to MTD hits;p_{T,reco} (GeV/c);efficiency",trigName[kTrigType]),kTRUE,0,20,kTRUE,0,0.5,kFALSE,kTRUE,legName3,kTRUE,"",0.35,0.5,0.6,0.8);
   SetPadMargin(gPad,0.11,0.11);
   if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/ana_Embed/%s.MthEff_vs_pt.png",run_config));
 }
@@ -196,10 +196,16 @@ void MCtruth(const Int_t save = 0)
 	}
       else
 	{
+	  if(j==1) hJpsi[0][j]->GetXaxis()->SetRangeUser(0,20);
 	  c = draw1D(hJpsi[0][j],Form("Au+Au %s embedding: %s distribution of embedded %s",trigName[kTrigType],title[j],signal_name[signal_index]),kFALSE,kFALSE);
+	}
+      if(j==2)
+	{
+	  printf("# of input signals within |eta|<0.5: %d\n",hJpsi[0][j]->Integral(hJpsi[0][j]->FindFixBin(-0.75),hJpsi[0][j]->FindFixBin(0.75)));
 	}
       if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/ana_Embed/%s.MC_Input_%s.png",run_config,variable[j]));
     }
+  return;
 
   for(Int_t j=0; j<4; j++)
     {
@@ -207,10 +213,12 @@ void MCtruth(const Int_t save = 0)
       for(Int_t i=0; i<3; i++)
 	{
 	  list->Add(hJpsi[i][j]);
-	  //printf("# of: %d\n",hJpsi[i][j]->Integral());
+	  printf("# of: %d\n",hJpsi[i][j]->Integral());
 	}
       if(j==0) c = drawHistos(list,Form("MC_signal_%s",variable[j]),Form("Au+Au %s embedding: invariant mass distribution of di-muon pairs;M_{#mu#mu} (GeV/c^{2})",trigName[kTrigType]),kTRUE,0,12,kFALSE,0.1,10,kTRUE,kTRUE,legName2,kTRUE,"",0.15,0.25,0.7,0.88,kFALSE);
-      else c = sysCompare(list,Form("MC_signal_%s",variable[j]),Form("Au+Au %s: %s distribution of embedded %s",trigName[kTrigType],title[j],signal_name[signal_index]),Form("Efficiency as a function of %s",title[j]),kFALSE,0,20,kFALSE,0.1,10,kTRUE,0,0.5,kFALSE,kTRUE,legName2,kTRUE,"",0.15,0.25,0.35,0.55,kFALSE);
+      else if(j==1) c = sysCompare(list,Form("MC_signal_%s",variable[j]),Form("Au+Au %s: %s distribution of embedded %s",trigName[kTrigType],title[j],signal_name[signal_index]),Form("Efficiency as a function of %s",title[j]),kTRUE,0,15,kFALSE,0.1,10,kTRUE,0,0.5,kFALSE,kTRUE,legName2,kTRUE,"",0.15,0.25,0.35,0.55,kFALSE);
+      else if(j==2) c = sysCompare(list,Form("MC_signal_%s",variable[j]),Form("Au+Au %s: %s distribution of embedded %s",trigName[kTrigType],title[j],signal_name[signal_index]),Form("Efficiency as a function of %s",title[j]),kFALSE,0,20,kFALSE,0.1,10,kTRUE,0,0.5,kFALSE,kTRUE,legName2,kTRUE,"",0.15,0.25,0.76,0.89,kFALSE);
+      else if(j==3) c = sysCompare(list,Form("MC_signal_%s",variable[j]),Form("Au+Au %s: %s distribution of embedded %s",trigName[kTrigType],title[j],signal_name[signal_index]),Form("Efficiency as a function of %s",title[j]),kFALSE,0,20,kFALSE,0.1,10,kTRUE,0,0.5,kFALSE,kTRUE,legName2,kTRUE,"",0.15,0.25,0.35,0.55,kFALSE);
       if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/ana_Embed/%s.MC_reco_%s.png",run_config,variable[j]));
     }
 
@@ -218,7 +226,7 @@ void MCtruth(const Int_t save = 0)
   TH1F *hReco = (TH1F*)hJpsi[1][0]->Clone("hRecoSignal_TPC");
   hReco->SetLineColor(1);
   hReco->GetXaxis()->SetRangeUser(7,12);
-  TF1 *func = new TF1("func","gaus",8,11);
+  TF1 *func = new TF1("func","gaus",9,10);
   hReco->Fit(func,"IR0");
   c = draw1D(hReco,Form("Au+Au %s embedding: reconstructed true di-muon pairs;M_{#mu#mu} (GeV/c^{2})",trigName[kTrigType]),kFALSE,kFALSE);
   func->SetLineColor(2);
