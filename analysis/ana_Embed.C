@@ -21,17 +21,19 @@ void ana_Embed()
     signal_index = 1;
 
   f = TFile::Open(Form("~/Work/STAR/analysis/Output/jpsi.AuAu200.Run14.%s.root",run_config),"read");
+  //f = TFile::Open(Form("~/Work/STAR/analysis/Output/jpsi.embed.test.histos.root"),"read");
   TH1F *hStat = (TH1F*)f->Get("hEventStat");
   printf("# of di-muon events: %d\n",hStat->GetBinContent(7));
   
-  MCtruth();
+  //MCtruth();
   //embedded();
-  //efficiency();
+  efficiency();
+  //fakeRate();
 }
 
 
 //================================================
-void embedded(const Int_t save = 1)
+void embedded(const Int_t save = 0)
 {
   const char *hName[3] = {"hJpsiInfo","hBkgLSPos","hBkgLSNeg"};
   const char *name[4] = {"Hybrid","Data","MCone","MCtwo"};
@@ -78,82 +80,82 @@ void embedded(const Int_t save = 1)
 }
 
 //================================================
-void efficiency(const Int_t save = 1)
+void efficiency(const Int_t save = 0)
 {
   // tracking efficiency
-  const char *trackType[5] = {"Hybrid","Data","MCreco","MCtruth","Reco"};
-  TH1F *hTrkPt[5];
-  TH1F *hMthTrkPt[5];
-  for(Int_t i=0; i<4; i++)
+  TH1F *hMcTrkPt[3];
+  hMcTrkPt[0] = (TH1F*)f->Get(Form("hMcTrkPt_%s",trigName[kTrigType]));
+  hMcTrkPt[1] = (TH1F*)f->Get(Form("hMcTrkPtTpc_%s",trigName[kTrigType]));
+  hMcTrkPt[2] = (TH1F*)f->Get(Form("hMcTrkPtMtd_%s",trigName[kTrigType]));
+
+  TList *list = new TList;
+  for(Int_t i=0; i<3; i++)
     {
-      hTrkPt[i] = (TH1F*)f->Get(Form("hTrkPt_%s_%s",trackType[i],trigName[kTrigType]));
-      hMthTrkPt[i] = (TH1F*)f->Get(Form("hMthTrkPt_%s_%s",trackType[i],trigName[kTrigType]));
+      scaleHisto( hMcTrkPt[i], 1, 1, kTRUE);
+      hMcTrkPt[i]->SetMaximum(10*hMcTrkPt[i]->GetMaximum());
+      list->Add(hMcTrkPt[i]);
+    }
+  const TString legName[3] = {"MC tracks","Matched to TPC","Matched to TPC+MTD"};
+  c = drawHistos(list,"MC_trkPt",Form("Au+Au %s embedding: p_{T} distribution of MC muons (|#eta|<0.5);p_{T,true} (GeV/c);dN/dp_{T}",trigName[kTrigType]),kTRUE,0,20,kFALSE,-200,300,kTRUE,kTRUE,legName,kTRUE,Form("%s #rightarrow #mu^{+}#mu^{-}",signal_name[signal_index]),0.55,0.75,0.65,0.88);
+  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/ana_Embed/%s.MC_muon_pt.png",run_config));
+
+  list->Clear();
+  TH1F *hMcTrkPtRatio[3];
+  for(Int_t i=1; i<3; i++)
+    {
+      hMcTrkPtRatio[i] = (TH1F*)hMcTrkPt[i]->Clone(Form("%s_ratio",hMcTrkPt[i]->GetName()));
+      hMcTrkPtRatio[i]->Divide(hMcTrkPt[0]);
+      hMcTrkPtRatio[i]->SetMarkerColor(color[i]);
+      hMcTrkPtRatio[i]->SetLineColor(color[i]);
+      list->Add(hMcTrkPtRatio[i]);
+    }
+  const TString legName2[2] = {"TPC","TPC+MTD"};
+  c = drawHistos(list,"MC_trkPt_eff",Form("Au+Au %s embedding: efficiency of MC muons (|#eta|<0.5);p_{T,true} (GeV/c);efficiency",trigName[kTrigType]),kTRUE,0,20,kTRUE,0.,1.5,kFALSE,kTRUE,legName2,kTRUE,Form("%s #rightarrow #mu^{+}#mu^{-}",signal_name[signal_index]),0.55,0.75,0.65,0.88,kTRUE,0.04,0.04,kFALSE,1,kTRUE,kFALSE);
+  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/ana_Embed/%s.MC_muon_eff_vs_pt.png",run_config));
+
+  // muon vs hadron
+  const char *trackType[3] = {"Hybrid","Data","MCreco"};
+  TH1F *hTrkPt[3];
+  TH1F *hMthTrkPt[3];
+  for(Int_t i=0; i<3; i++)
+    {
+      hTrkPt[i] = (TH1F*)f->Get(Form("hRcTrkPtTpc_%s_%s",trackType[i],trigName[kTrigType]));
+      hMthTrkPt[i] = (TH1F*)f->Get(Form("hRcTrkPtMtd_%s_%s",trackType[i],trigName[kTrigType]));
       scaleHisto( hTrkPt[i], 1, 1, kTRUE);
       scaleHisto( hMthTrkPt[i], 1, 1, kTRUE);
     }
 
-  TList *list = new TList;
-  for(Int_t i=0; i<2; i++)
-    {
-      hTrkPt[3-i]->SetMaximum(50.*hTrkPt[3-i]->GetMaximum());
-      list->Add(hTrkPt[3-i]);
-    }
-  const TString legName[2] = {"MC tracks","Matched to reconstructed tracks"};
-  c = drawHistos(list,"MC_trkPt",Form("Au+Au %s embedding: p_{T} distribution of MC muons;p_{T,true} (GeV/c);dN/dp_{T}",trigName[kTrigType]),kTRUE,0,20,kFALSE,-200,300,kTRUE,kTRUE,legName,kTRUE,"",0.15,0.25,0.7,0.88);
-  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/ana_Embed/%s.MC_muon_pt.png",run_config));
-
-  TH1F *hEff = (TH1F*)hTrkPt[2]->Clone("hTrkEff");
-  hEff->Divide(hTrkPt[3]);
-  hEff->SetMarkerStyle(21);
-  hEff->SetMarkerColor(1);
-  hEff->SetLineColor(1);
-  hEff->GetYaxis()->SetRangeUser(0,1);
-  c = draw1D(hEff,Form("Au+Au %s embedding: tracking efficiency of MC muons;p_{T,true} (GeV/c);tracking efficiency",trigName[kTrigType]));
-  SetPadMargin(gPad,0.11,0.11);
-  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/ana_Embed/%s.MC_muon_eff.png",run_config));
-
-  // Matching efficiency
-  TString legName2[3] = {"Data+embedding","Data","Matched to MC tracks"};
   list->Clear();
-  hTrkPt[4] = (TH1F*)hTrkPt[0]->Clone(Form("hTrkPt_%s_%s",trackType[4],trigName[kTrigType]));
-  hTrkPt[4]->Add(hTrkPt[1],-1);
-  for(Int_t ibin=1; ibin<=hTrkPt[4]->GetNbinsX(); ibin++)
+  TString legName3[3] = {"Data+embedding","Data (hadrons)","Embedded (muons)"};
+  for(Int_t i=0; i<3; i++)
     {
-      hTrkPt[4]->SetBinError(ibin,TMath::Sqrt(hTrkPt[4]->GetBinContent(ibin)));
+      list->Add(hTrkPt[i]);
     }
-  list->Add(hTrkPt[0]);
-  list->Add(hTrkPt[1]);
-  list->Add(hTrkPt[4]);
-  c = drawHistos(list,"Reco_trkPt",Form("Au+Au %s embedding: p_{T} distribution of tracks;p_{T,reco} (GeV/c);dN/dp_{T}",trigName[kTrigType]),kTRUE,0,20,kFALSE,-200,300,kTRUE,kTRUE,legName2,kTRUE,"",0.35,0.5,0.6,0.8);
-  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/ana_Embed/%s.Trk_pt.png",run_config));
+  c = drawHistos(list,"Reco_trkPt",Form("Au+Au %s embedding: p_{T} distribution of primary tracks;p_{T,reco} (GeV/c);dN/dp_{T}",trigName[kTrigType]),kTRUE,0,20,kFALSE,-200,300,kTRUE,kTRUE,legName3,kTRUE,"|#eta| < 0.8",0.5,0.6,0.6,0.85);
+  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/ana_Embed/%s.Trk_reco_pt.png",run_config));
 
   list->Clear();
-  hMthTrkPt[4] = (TH1F*)hMthTrkPt[0]->Clone(Form("hMthTrkPt_%s_%s",trackType[4],trigName[kTrigType]));
-  hMthTrkPt[4]->Add(hMthTrkPt[1],-1);
-  for(Int_t ibin=1; ibin<=hMthTrkPt[4]->GetNbinsX(); ibin++)
+  for(Int_t i=0; i<3; i++)
     {
-      hMthTrkPt[4]->SetBinError(ibin,TMath::Sqrt(hMthTrkPt[4]->GetBinContent(ibin)));
+      list->Add(hMthTrkPt[i]);
     }
-  list->Add(hMthTrkPt[0]);
-  list->Add(hMthTrkPt[1]);
-  list->Add(hMthTrkPt[4]);
-  c = drawHistos(list,"Reco_MthTrkPt",Form("Au+Au %s embedding: p_{T} distribution of tracks matched to MTD hits;p_{T,reco} (GeV/c);dN/dp_{T}",trigName[kTrigType]),kTRUE,0,20,kFALSE,-200,300,kTRUE,kTRUE,legName2,kTRUE,"",0.35,0.5,0.6,0.8);
-  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/ana_Embed/%s.MthTrk_pt.png",run_config));
+  c = drawHistos(list,"Reco_MthTrkPt",Form("Au+Au %s embedding: p_{T} of primary tracks matched to MTD hits;p_{T,reco} (GeV/c);dN/dp_{T}",trigName[kTrigType]),kTRUE,0,20,kFALSE,-200,300,kTRUE,kTRUE,legName3,kTRUE,"|#eta| < 0.8",0.5,0.6,0.6,0.85);
+  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/ana_Embed/%s.MthTrk_reco_pt.png",run_config));
 
   list->Clear();
-  TString legName3[2] = {"Data","Matched to MC tracks"};
+  TString legName4[2] = {"Data (hadrons)","Embedded (muons)"};
   TH1F *hMthEff[2];
   hMthEff[0] = (TH1F*)hMthTrkPt[1]->Clone("MthEff_Data");
   hMthEff[0]->Divide(hTrkPt[1]);
-  hMthEff[1] = (TH1F*)hMthTrkPt[4]->Clone("MthEff_McReco");
-  hMthEff[1]->Divide(hTrkPt[4]);
+  hMthEff[1] = (TH1F*)hMthTrkPt[2]->Clone("MthEff_McReco");
+  hMthEff[1]->Divide(hTrkPt[2]);
   hMthEff[0]->GetYaxis()->SetNdivisions(505);
   hMthEff[0]->GetYaxis()->SetTitleOffset(1.1);
   list->Add(hMthEff[0]);
   list->Add(hMthEff[1]);
-  c = drawHistos(list,"MthEff",Form("Au+Au %s embedding: track matching efficiency to MTD hits;p_{T,reco} (GeV/c);efficiency",trigName[kTrigType]),kTRUE,0,20,kTRUE,0,0.5,kFALSE,kTRUE,legName3,kTRUE,"",0.35,0.5,0.6,0.8);
+  c = drawHistos(list,"MthEff",Form("Au+Au %s embedding: track matching efficiency to MTD hits;p_{T,reco} (GeV/c);efficiency",trigName[kTrigType]),kTRUE,0,20,kTRUE,0,0.5,kFALSE,kTRUE,legName4,kTRUE,"|#eta| < 0.8",0.5,0.6,0.65,0.85);
   SetPadMargin(gPad,0.11,0.11);
-  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/ana_Embed/%s.MthEff_vs_pt.png",run_config));
+  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/ana_Embed/%s.MthEff_vs_reco_pt.png",run_config));
 }
 
 //================================================
@@ -201,11 +203,10 @@ void MCtruth(const Int_t save = 0)
 	}
       if(j==2)
 	{
-	  printf("# of input signals within |eta|<0.5: %d\n",hJpsi[0][j]->Integral(hJpsi[0][j]->FindFixBin(-0.75),hJpsi[0][j]->FindFixBin(0.75)));
+	  printf("# of input signals within |eta|<0.5: %d\n",hJpsi[0][j]->Integral(hJpsi[0][j]->FindFixBin(-0.5+0.01),hJpsi[0][j]->FindFixBin(0.5-0.01)));
 	}
       if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/ana_Embed/%s.MC_Input_%s.png",run_config,variable[j]));
     }
-  return;
 
   for(Int_t j=0; j<4; j++)
     {
@@ -213,7 +214,7 @@ void MCtruth(const Int_t save = 0)
       for(Int_t i=0; i<3; i++)
 	{
 	  list->Add(hJpsi[i][j]);
-	  printf("# of: %d\n",hJpsi[i][j]->Integral());
+	  if(j==2) printf("# of signals within |eta|<0.5: %d\n",hJpsi[i][j]->Integral(hJpsi[i][j]->FindFixBin(-0.5+0.01),hJpsi[i][j]->FindFixBin(0.5-0.01)));
 	}
       if(j==0) c = drawHistos(list,Form("MC_signal_%s",variable[j]),Form("Au+Au %s embedding: invariant mass distribution of di-muon pairs;M_{#mu#mu} (GeV/c^{2})",trigName[kTrigType]),kTRUE,0,12,kFALSE,0.1,10,kTRUE,kTRUE,legName2,kTRUE,"",0.15,0.25,0.7,0.88,kFALSE);
       else if(j==1) c = sysCompare(list,Form("MC_signal_%s",variable[j]),Form("Au+Au %s: %s distribution of embedded %s",trigName[kTrigType],title[j],signal_name[signal_index]),Form("Efficiency as a function of %s",title[j]),kTRUE,0,15,kFALSE,0.1,10,kTRUE,0,0.5,kFALSE,kTRUE,legName2,kTRUE,"",0.15,0.25,0.35,0.55,kFALSE);
@@ -233,3 +234,78 @@ void MCtruth(const Int_t save = 0)
   func->Draw("sames");
   if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/ana_Embed/%s.Fit_MC_reco_mass.png",run_config));
 }
+
+
+//================================================
+void fakeRate(const Int_t save = 1)
+{
+  const char *trackType[5] = {"Hybrid","Data","MCreco","MCreco_true","MCreco_fake"};
+  TH1F *hMthTrkPt[5];
+  TH2F *hDyVsPt[5];
+  TH1F *hDy[5];
+  TH2F *hDzVsPt[5];
+  TH1F *hDz[5];
+  for(Int_t i=0; i<5; i++)
+    {
+      hMthTrkPt[i] = (TH1F*)f->Get(Form("hRcTrkPtMtd_%s_%s",trackType[i],trigName[kTrigType]));
+      scaleHisto( hMthTrkPt[i], 1, 1, kTRUE);
+
+      hDyVsPt[i] = (TH2F*)f->Get(Form("hDyVsTrkPtMtd_%s_%s",trackType[i],trigName[kTrigType]));
+      hDzVsPt[i] = (TH2F*)f->Get(Form("hDzVsTrkPtMtd_%s_%s",trackType[i],trigName[kTrigType]));
+
+      hDy[i] = (TH1F*)hDyVsPt[i]->ProjectionY(Form("%s_proy",hDyVsPt[i]->GetName()));  
+      hDz[i] = (TH1F*)hDzVsPt[i]->ProjectionY(Form("%s_proy",hDzVsPt[i]->GetName()));
+    }
+
+  // fake rate
+  TList *list = new TList;
+  for(Int_t i=2; i<5; i++)
+    {
+      hMthTrkPt[i]->SetMinimum(0.1);
+      list->Add(hMthTrkPt[i]);
+    }  
+  
+  const TString legName[3] = {"Sum","Matched to MTD hits from embedding","Matched to MTD hits from data"};
+  c = drawHistos(list,"MC_trkPt",Form("Au+Au %s embedding: p_{T} of TPC muon tracks matched MTD hits;p_{T,rec} (GeV/c);dN/dp_{T}",trigName[kTrigType]),kTRUE,0,20,kFALSE,-200,300,kTRUE,kTRUE,legName,kTRUE,"",0.25,0.55,0.15,0.35);
+  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/ana_Embed/%s.Rec_muon_pt_matched.png",run_config));
+
+  list->Clear();
+  TH1F *hTrkPtRatio[2];
+  for(Int_t i=0; i<2; i++)
+    {
+      hTrkPtRatio[i] = (TH1F*)hMthTrkPt[i+3]->Clone(Form("%s_ratio",hMthTrkPt[i]->GetName()));
+      hTrkPtRatio[i]->Divide(hMthTrkPt[2]);
+      hTrkPtRatio[i]->SetMarkerColor(color[i+1]);
+      hTrkPtRatio[i]->SetLineColor(color[i+1]);
+      list->Add(hTrkPtRatio[i]);
+    }
+  const TString legName2[2] = {"Matched to MTD hits from embedding","Matched to MTD hits from data"};
+  c = drawHistos(list,"MC_trkPt_eff",Form("Au+Au %s embedding: fake rate of MTD matching;p_{T,rec} (GeV/c);efficiency",trigName[kTrigType]),kTRUE,0,20,kTRUE,0.01,1.5,kTRUE,kTRUE,legName2,kTRUE,"",0.3,0.5,0.5,0.7,kTRUE,0.04,0.04,kFALSE,1,kTRUE,kFALSE);
+  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/ana_Embed/%s.fake_rate_vs_pt.png",run_config));
+
+  c = draw2D(hDyVsPt[1],"Data: #Deltay vs p_{T} of charged hadrons (primary);p_{T,rec} (GeV/c)");
+  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/ana_Embed/%s.dy_vs_pt_hadron.png",run_config));
+
+  c = draw2D(hDyVsPt[3],"Embedding: #Deltay vs p_{T} of charged muons (primary);p_{T,rec} (GeV/c)");
+  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/ana_Embed/%s.dy_vs_pt_muon.png",run_config));
+
+  list->Clear();
+  list->Add(hDy[3]);
+  list->Add(hDy[1]);
+  const TString legName3[2] = {"Embedding: muons","Data: hadrons"};
+  c = drawHistos(list,"dy_dis",Form("Au+Au %s embedding: #Deltay distribution;#Deltay (cm)",trigName[kTrigType]),kTRUE,-50,50,kFALSE,0.01,1.5,kFALSE,kTRUE,legName3,kTRUE,"",0.6,0.7,0.5,0.7,kFALSE);
+  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/ana_Embed/%s.dy_hadron_vs_muon.png",run_config));
+
+  // c = draw2D(hDzVsPt[1],"Data: #Deltaz vs p_{T} of charged hadrons (primary);p_{T,rec} (GeV/c)");
+  // if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/ana_Embed/%s.dz_vs_pt_hadron.png",run_config));
+
+  // c = draw2D(hDzVsPt[3],"Embedding: #Deltaz vs p_{T} of charged muons (primary);p_{T,rec} (GeV/c)");
+  // if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/ana_Embed/%s.dz_vs_pt_muon.png",run_config));
+
+  // list->Clear();
+  // list->Add(hDz[3]);
+  // list->Add(hDz[1]);
+  // c = drawHistos(list,"dz_dis",Form("Au+Au %s embedding: #Deltaz distribution;#Deltaz (cm)",trigName[kTrigType]),kTRUE,-50,50,kFALSE,0.01,1.5,kFALSE,kTRUE,legName3,kTRUE,"",0.6,0.7,0.5,0.7,kFALSE);
+  // if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/ana_Embed/%s.dz_hadron_vs_muon.png",run_config));
+}
+
