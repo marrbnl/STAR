@@ -1,6 +1,7 @@
 {
   gROOT->SetStyle("Plain");
   gStyle->SetPalette(1);
+  gStyle->SetOptStat(0);
   const char *dir = "~/Work/ALICE/Utility";
   gROOT->LoadMacro(Form("%s/definitions.C",dir));
   gROOT->LoadMacro(Form("%s/drawHistos.C",dir));

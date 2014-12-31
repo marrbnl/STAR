@@ -6,7 +6,9 @@ const char *run_config = "PrimTrk.ClosePrimVtx.40cm";
 //================================================
 void qa_track()
 {
-  gStyle->SetOptStat(0);
+  gStyle->SetOptStat(1);
+  gStyle->SetStatY(0.9);                
+  gStyle->SetStatX(0.9);  
 
   TString cut_name = run_config;
   if(cut_name.Contains("HLT"))
@@ -14,36 +16,36 @@ void qa_track()
   if(cut_name.Contains("Global"))
     trk_index = 1;
 
-  f = TFile::Open(Form("~/Work/STAR/analysis/Output/jpsi.AuAu200.Run14.%s.root",run_config),"read");
-  //trackDistribution();
+  //f = TFile::Open(Form("~/Work/STAR/analysis/Output/jpsi.AuAu200.Run14.%s.root",run_config),"read");
+  f = TFile::Open("./output/Run13.pp500.jpsi.EventQA.root","read");
+
+  //qa();
   qualityCuts();
 }
 
 //================================================
-void trackDistribution(const Int_t save = 0)
+void qa(const Int_t save = 0)
 {
-  TH1F *hStat = (TH1F*)f->Get("hEventStat");
-  // eta vs pt
-  TH2F *hTrkEta = (TH2F*)f->Get(Form("hTrkEta_%s",trigName[kTrigType]));
-  c = draw2D(hTrkEta,Form("Au+Au %s: #eta vs p_{T} of %s tracks%s",trigName[kTrigType],trk_name[trk_index],hlt_name[hlt_index]));
-  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_track/%s.TrkEtaVsPt_%s.png",run_config,trigName[kTrigType]));
- 
-  // phi vs pt
-  TH2F *hTrkPhi = (TH2F*)f->Get(Form("hTrkPhi_%s",trigName[kTrigType]));
-  c = draw2D(hTrkPhi,Form("Au+Au %s: #phi vs p_{T} of %s tracks%s",trigName[kTrigType],trk_name[trk_index],hlt_name[hlt_index]));
-  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_track/%s.TrkPhiVsPt_%s.png",run_config,trigName[kTrigType]));
+  const char *hName[] = {"mhTrkEta_qa","mhTrkPhi_qa","mhTrkDca_qa","mhTrkDcaxy_qa",
+			 "mhTrkDcaz_qa","mhTrkNhitsFit_qa","mhTrkNhitsDedx_qa","mhTrkFitHitFrac_qa"};
 
-  // dE/dx vs pt
-  TH2F *hTrkDedx = (TH2F*)f->Get(Form("hTrkDedx_%s",trigName[kTrigType]));
-  c = draw2D(hTrkDedx,Form("Au+Au %s: dE/dx vs p_{T} of %s tracks%s",trigName[kTrigType],trk_name[trk_index],hlt_name[hlt_index]));
-  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_track/%s.TrkDedxVsPt_%s.png",run_config,trigName[kTrigType]));
+  for(Int_t i=0; i<8; i++)
+    {
+      TH1 *h = (TH1*)f->Get(Form("%s_%s",hName[i],trigName[kTrigType]));
+      if(h->IsA()->InheritsFrom("TH2")) 
+	{
+	  TH2F *h2 = (TH2F*)h;
+	  c = draw2D(h2,"");
+	}
 
-  // pt distribution
-  TH1F *hTrkPt = (TH1F*)f->Get(Form("hTrkPt_%s",trigName[kTrigType]));
-  scaleHisto( hTrkPt, hStat->GetBinContent(kTrigType+7), 1, kTRUE);
-  hTrkPt->SetMarkerStyle(21);
-  c = draw1D(hTrkPt,Form("Au+Au %s: p_{T} distribution of %s tracks%s;p_{T} (GeV/c);1/N dN/dp_{T}",trigName[kTrigType],trk_name[trk_index],hlt_name[hlt_index]),kTRUE,kTRUE);
-  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_track/%s.TrkPt_%s.png",run_config,trigName[kTrigType]));
+      TString outname = hName[i];
+      outname.ReplaceAll("mh","");
+      if(save) 
+	{
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_track/%s_%s.pdf",run_type,outname.Data(),trigName[kTrigType]));
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_track/%s_%s.png",run_type,outname.Data(),trigName[kTrigType]));
+	}
+    }
 }
 
 //================================================
@@ -53,63 +55,36 @@ void qualityCuts(const Int_t save = 0)
   Double_t scale = hCuts->GetBinContent(3)/1e4;
   cout << "scale = " << scale << endl;
 
-  // dca cut
-  Double_t dcaCut = hCuts->GetBinContent(7)/scale;
-  TH2F *hTrkDca = (TH2F*)f->Get(Form("hTrkDca_qa_%s",trigName[kTrigType]));
-  hTrkDca->GetYaxis()->SetRangeUser(0,0.05);
-  c = draw2D(hTrkDca,Form("Au+Au %s: dca vs p_{T} of %s tracks%s",trigName[kTrigType],trk_name[trk_index],hlt_name[hlt_index]));
-  Double_t low_x = hTrkDca->GetXaxis()->GetBinLowEdge(1);
-  Double_t up_x  = hTrkDca->GetXaxis()->GetBinUpEdge(hTrkDca->GetNbinsX());
-  TLine *line = GetLine(low_x,dcaCut,up_x,dcaCut,1,3);
-  line->Draw();
-  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_track/%s.QualityCut_TrkDca_%s.png",run_config,trigName[kTrigType]));
+  const char *hName[] = {"mhTrkDca_qa","mhTrkNhitsFit_qa","mhTrkNhitsDedx_qa","mhTrkFitHitFrac_qa"};
+  const Int_t cut_index[] = {7,5,6,10};
 
-  // # of fit hits cut
-  Double_t nHitCut = hCuts->GetBinContent(5)/scale;
-  TH2F *hTrkNhitsFit = (TH2F*)f->Get(Form("hTrkNhitsFit_qa_%s",trigName[kTrigType]));
-  c = draw2D(hTrkNhitsFit,Form("Au+Au %s: NHitsFit vs p_{T} of %s tracks%s",trigName[kTrigType],trk_name[trk_index],hlt_name[hlt_index]));
-  Double_t low_x = hTrkNhitsFit->GetXaxis()->GetBinLowEdge(1);
-  Double_t up_x  = hTrkNhitsFit->GetXaxis()->GetBinUpEdge(hTrkNhitsFit->GetNbinsX());
-  TLine *line = GetLine(low_x,nHitCut,up_x,nHitCut,1,3);
-  line->Draw();
-  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_track/%s.QualityCut_TrkNhitsFit_%s.png",run_config,trigName[kTrigType]));
+  for(Int_t i=0; i<4; i++)
+    {
+      TH2 *h2 = (TH2*)f->Get(Form("%s_%s",hName[i],trigName[kTrigType]));
+      TH1 *h1 = (TH1*)h2->ProjectionY(Form("%s_pro_%s",hName[i],trigName[kTrigType]));
+      Bool_t logy = kFALSE;
+      if(hName[i]=="mhTrkDca_qa") logy = kTRUE;
+      c = draw1D(h1,"",logy,kFALSE);
 
-  // # of de/dx hits cut
-  Double_t nDedxHitCut = hCuts->GetBinContent(6)/scale;
-  TH2F *hTrkNhitsDedx  = (TH2F*)f->Get(Form("hTrkNhitsDedx_qa_%s",trigName[kTrigType]));
-  c = draw2D(hTrkNhitsDedx,Form("Au+Au %s: NHitsDedx vs p_{T} of %s tracks%s",trigName[kTrigType],trk_name[trk_index],hlt_name[hlt_index]));
-  Double_t low_x = hTrkNhitsDedx->GetXaxis()->GetBinLowEdge(1);
-  Double_t up_x  = hTrkNhitsDedx->GetXaxis()->GetBinUpEdge(hTrkNhitsDedx->GetNbinsX());
-  TLine *line = GetLine(low_x,nDedxHitCut,up_x,nDedxHitCut,1,3);
-  line->Draw();
-  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_track/%s.QualityCut_TrkNhitsDedx_%s.png",run_config,trigName[kTrigType]));
+      Double_t cut = hCuts->GetBinContent(cut_index[i])/scale;
+      Double_t low_x = h1->GetXaxis()->GetBinLowEdge(1);
+      Double_t up_x  = h1->GetXaxis()->GetBinUpEdge(h1->GetNbinsX());
+      TLine *line = GetLine(cut,0,cut,0.8*h1->GetMaximum(),2,3);
+      line->Draw();
 
-  // fraction of fit hits cut
-  Double_t minFracCut = hCuts->GetBinContent(10)/scale;
-  TH2F *hTrkFitHitFrac = (TH2F*)f->Get(Form("hTrkFitHitFrac_qa_%s",trigName[kTrigType]));
-  hTrkFitHitFrac->SetYTitle("fraction");
-  c = draw2D(hTrkFitHitFrac,Form("Au+Au %s: hit fraction vs p_{T} of %s tracks%s",trigName[kTrigType],trk_name[trk_index],hlt_name[hlt_index]));
-  Double_t low_x = hTrkFitHitFrac->GetXaxis()->GetBinLowEdge(1);
-  Double_t up_x  = hTrkFitHitFrac->GetXaxis()->GetBinUpEdge(hTrkFitHitFrac->GetNbinsX());
-  TLine *line = GetLine(low_x,minFracCut,up_x,minFracCut,1,3);
-  line->Draw();
-  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_track/%s.QualityCut_TrkFitHitFrac_%s.png",run_config,trigName[kTrigType]));
-
-  // nSigmaPi cut
-  TH2F *hTrkNsigmaPi = (TH2F*)f->Get(Form("hTrkNsigmaPi_qa_%s",trigName[kTrigType]));
-  Double_t minNsigmaCut = hCuts->GetBinContent(8)/scale;
-  Double_t maxNsigmaCut = hCuts->GetBinContent(9)/scale;
-  c = draw2D(hTrkNsigmaPi,Form("Au+Au %s: n#sigma_{#pi} vs p_{T} of %s tracks%s;p_{T} (GeV/c);n#sigma_{#pi}",trigName[kTrigType],trk_name[trk_index],hlt_name[hlt_index]));
-  Double_t low_x = hTrkNsigmaPi->GetXaxis()->GetBinLowEdge(1);
-  Double_t up_x  = hTrkNsigmaPi->GetXaxis()->GetBinUpEdge(hTrkNsigmaPi->GetNbinsX());
-  TLine *line = GetLine(low_x,minNsigmaCut,up_x,minNsigmaCut,1,3);
-  line->Draw();
-  line = GetLine(low_x,maxNsigmaCut,up_x,maxNsigmaCut,1,3);
-  line->Draw();
-  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_track/%s.QualityCut_TrkNsigmaPi_%s.png",run_config,trigName[kTrigType]));
+      TString outname = hName[i];
+      outname.ReplaceAll("mh","");
+      outname.ReplaceAll("_qa","");
+      if(save) 
+	{
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_track/Cut%s_%s.pdf",run_type,outname.Data(),trigName[kTrigType]));
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_track/Cut%s_%s.png",run_type,outname.Data(),trigName[kTrigType]));
+	}
+    }
+  
 
   // Track pt for various cuts
-  TH2F *hTrkPt_cuts = (TH2F*)f->Get(Form("hTrkPt_cuts_qa_%s",trigName[kTrigType]));
+  TH2F *hTrkPt_cuts = (TH2F*)f->Get(Form("mhTrkPt_cuts_qa_%s",trigName[kTrigType]));
   draw2D(hTrkPt_cuts);
   const Int_t nCuts = 12;
   TH1F *hTrkPt[nCuts];

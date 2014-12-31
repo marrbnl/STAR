@@ -1,6 +1,4 @@
 TFile *f;
-Int_t hlt_index = 0;
-Int_t trk_index = 0;
 Int_t vtx_index = 0;
 const char *run_config = "PrimTrk.ClosePrimVtx";
 
@@ -11,101 +9,109 @@ void qa_vertex(const Int_t save = 0)
   gStyle->SetOptFit(1);
   gStyle->SetStatY(0.9);                
   gStyle->SetStatX(0.9);  
-  gStyle->SetStatW(0.15);                
-  gStyle->SetStatH(0.2); 
+
+  f = TFile::Open("./output/Run13.pp500.jpsi.EventQA.root","read");
 
   TString cut_name = run_config;
-  if(cut_name.Contains("HLT"))
-    hlt_index = 1;
-  if(cut_name.Contains("Global"))
-    trk_index = 1;
 
   if(cut_name.Contains("ClosePrimVtx"))
     vtx_index = 1;
   else if (cut_name.Contains("MtdVtx"))
     vtx_index = 2;
 
-  TPaveText *vtx_text = 0x0;
-  if(vtx_index==0) vtx_text = GetPaveText(0.13,0.4,0.82,0.87);
-  else             vtx_text = GetPaveText(0.2,0.6,0.82,0.87);
-  //vtx_text->SetFillStyle(1);
-  vtx_text->AddText(vtx_name[vtx_index]);
-  vtx_text->SetTextColor(kMagenta+1);
 
-  f = TFile::Open(Form("~/Work/STAR/analysis/Output/jpsi.AuAu200.Run14.%s.root",run_config),"read");
-  TH1F *hCuts = (TH1F*)f->Get("hAnalysisCuts");
-  Double_t scale = hCuts->GetBinContent(3)/1e4;
-  cout << "scale = " << scale << endl;
+  cuts();
+  //qa();
+}
 
-  // VPD vz
-  TH1F *hVzVpd = (TH1F*)f->Get(Form("hVzVpd_%s",trigName[kTrigType]));
-  c = draw1D(hVzVpd,Form("Au+Au %s: vertex z distribution reconstructed using VPD%s;v_{z} (cm)",trigName[kTrigType],hlt_name[hlt_index]),kFALSE,kFALSE);
-  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_vertex/%s.VzVpd_%s.png",run_config,trigName[kTrigType]));
+//================================================
+void cuts(const Int_t save = 0)
+{
+  gStyle->SetOptStat(0);
 
-  // TPC vz
-  TH1F *hVzTpc = (TH1F*)f->Get(Form("hVzTpc_%s",trigName[kTrigType]));
-  hVzTpc->SetMaximum(1.2*hVzTpc->GetMaximum());
-  c = draw1D(hVzTpc,Form("Au+Au %s: vertex z distribution reconstructed using TPC%s;v_{z} (cm)",trigName[kTrigType],hlt_name[hlt_index]),kFALSE,kFALSE);
-  vtx_text->Draw();
-  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_vertex/%s.VzTpc_Type%d_%s.png",run_config,vtx_index,trigName[kTrigType]));
-
-  TH1F *hVzTpc_Fit = (TH1F*)hVzTpc->Clone(Form("%s_fit",hVzTpc->GetName()));
-  TF1 *func = new TF1("fit_VzTpc","gaus",-30,30);
-  func->SetParameters(1,0,10);
-  hVzTpc_Fit->Fit(func,"0IR");
-  c = draw1D(hVzTpc_Fit,Form("Au+Au %s: vertex z distribution reconstructed using TPC%s;v_{z} (cm)",trigName[kTrigType],hlt_name[hlt_index]),kFALSE,kFALSE);
-  vtx_text->Draw();
+  // TPC vz cut
+  TH1F *hTpcVz = (TH1F*)f->Get(Form("mhTpcVz_%s",trigName[kTrigType]));
+  TF1 *func = new TF1("func_TpcVz","gaus",-30,35);
+  hTpcVz->Fit(func,"IR0");
   func->SetLineColor(2);
+  hTpcVz->SetMaximum(1.2*hTpcVz->GetMaximum());
+  c = draw1D(hTpcVz,Form("v_{z} of primary vertex reconstructed using TPC"),kFALSE,kFALSE);
+  TPaveText *t1 = GetJpsiPaveText(0.13,0.2,0.78,0.88, run_type, 0.035);
+  t1->Draw();
   func->Draw("sames");
-  Double_t constant = func->GetParameter(0);
-  Double_t sigma = func->GetParameter(2);
-  TLine *line = GetLine(-40,0,-40,0.5*constant);
-  line->Draw();
-  line = GetLine(40,0,40,0.5*constant);
-  line->Draw();
-  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_vertex/%s.Fit_VzTpc_Type%d_%s.png",run_config,vtx_index,trigName[kTrigType]));
+  if(save) 
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_vertex/CutTpcVz_%s.pdf",run_type,trigName[kTrigType]));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_vertex/CutTpcVz_%s.png",run_type,trigName[kTrigType]));
+    }
 
-  // VPD vs TPC vz
-  TH2F *hVzVpdVsTpc = (TH2F*)f->Get(Form("hVzVpdVsTpc_%s",trigName[kTrigType]));
-  c = draw2D(hVzVpdVsTpc,Form("Au+Au %s: vertex z VPD vs TPC%s",trigName[kTrigType],hlt_name[hlt_index]));
-  vtx_text->Draw();
-  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_vertex/%s.VzVpdVsTpc_Type%d_%s.png",run_config,vtx_index,trigName[kTrigType]));
+  // TPC vy vs vx cut
+  TH2F *hTpcVyVx = (TH2F*)f->Get(Form("mhTpcVyVx_%s",trigName[kTrigType]));
+  hTpcVyVx->GetXaxis()->SetRangeUser(-0.5,0.5);
+  hTpcVyVx->GetYaxis()->SetRangeUser(-1,0);
+  c = draw2D(hTpcVyVx,Form("v_{y} vs v_{x} of primary vertex reconstructed using TPC"));
+  t1->Draw();
+  if(save)
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_vertex/CutTpcVyVx_%s.pdf",run_type,trigName[kTrigType]));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_vertex/CutTpcVyVx_%s.png",run_type,trigName[kTrigType]));
+    }
 
-  // TPC-VPD vs TPC vz
-  TH2F *hDvzVsTpc = (TH2F*)f->Get(Form("hDvzVsTpc_%s",trigName[kTrigType]));
-  c = draw2D(hDvzVsTpc,Form("Au+Au %s: vertex z TPC-VPD vs TPC%s",trigName[kTrigType],hlt_name[hlt_index]));
-  vtx_text->Draw();
-  Double_t dzCut = hCuts->GetBinContent(11)/scale;
-  Double_t low_x = hDvzVsTpc->GetXaxis()->GetBinLowEdge(1);
-  Double_t up_x  = hDvzVsTpc->GetXaxis()->GetBinUpEdge(hDvzVsTpc->GetNbinsX());
-  TLine *line = GetLine(low_x,-1*dzCut,up_x,-1*dzCut);
-  line->Draw();
-  line = GetLine(low_x,dzCut,up_x,dzCut);
-  line->Draw();
-  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_vertex/%s.DvzVsTpc_Type%d_%s.png",run_config,vtx_index,trigName[kTrigType]));
 
-  // TPC vz with cuts
-  TH1F *hVzTpcWithCut = (TH1F*)f->Get(Form("hVzTpcWithCut_%s",trigName[kTrigType]));
-  hVzTpcWithCut->SetMaximum(1.2*hVzTpcWithCut->GetMaximum());
-  c = draw1D(hVzTpcWithCut,Form("Au+Au %s: vertex z distribution reconstructed using TPC%s;v_{z} (cm)",trigName[kTrigType],hlt_name[hlt_index]),kFALSE,kFALSE);
-  vtx_text->Draw();
-  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_vertex/%s.VzTpcWithCut_Type%d_%s.png",run_config,vtx_index,trigName[kTrigType]));
+  // TPC-VPD cut
+  //TH2F *hVzDiffVsTpcVz = (TH2F*)f->Get(Form("mhVzDiffVsTpcVz_%s",trigName[kTrigType]));
+  //TH1F *hVzDiff = (TH1F*)hVzDiffVsTpcVz->ProjectionX(Form("hVzDiff_%s",trigName[kTrigType]));
+  //hVzDiff->Rebin(2);
+  TH1F *hVzDiff = (TH1F*)f->Get(Form("mhDiffVzWithCut_%s",trigName[kTrigType]));
+  func = new TF1("func_VzDiff","gaus",-1.8,6.5);
+  hVzDiff->Fit(func,"IR0");
+  func->SetLineColor(2);
+  hVzDiff->GetXaxis()->SetRangeUser(-30,50);
+  hVzDiff->SetMaximum(1.2*hVzDiff->GetMaximum());
+  c = draw1D(hVzDiff,Form("v_{z} difference of TPC-VPD"),kFALSE,kFALSE);
+  t1->Draw();
+  func->Draw("sames");
+  if(save) 
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_vertex/CutDiffVz_%s.pdf",run_type,trigName[kTrigType]));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_vertex/CutDiffVz_%s.png",run_type,trigName[kTrigType]));
+    }
+}
 
-  // TPC vy vs vx with cuts
-  TH2F *hVxVyTpcWithCut = (TH2F*)f->Get(Form("hVxVyTpcWithCut_%s",trigName[kTrigType]));
-  c = draw2D(hVxVyTpcWithCut,Form("Au+Au %s: v_{y} vs v_{x} of vertex reconstructed using TPC%s;v_{x} (cm);v_{y} (cm)",trigName[kTrigType],hlt_name[hlt_index]));
-  vtx_text->Draw();
-  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_vertex/%s.VxVyTpcWithCut_Type%d_%s.png",run_config,vtx_index,trigName[kTrigType]));
 
-  TH1F *hVxTpcWithCut = (TH1F*)hVxVyTpcWithCut->ProjectionX(Form("hVxTpcWithCut_%s",trigName[kTrigType]));
-  c = draw1D(hVxTpcWithCut,Form("Au+Au %s: vertex x distribution reconstructed using TPC%s;v_{z} (cm)",trigName[kTrigType],hlt_name[hlt_index]),kFALSE,kFALSE);
-  vtx_text->Draw();
-  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_vertex/%s.VxTpcWithCut_Type%d_%s.png",run_config,vtx_index,trigName[kTrigType]));
+//================================================
+void qa(const Int_t save = 1)
+{
+  const char *hName[] = {"mhNPrimVtx","mhTpcVx","mhTpcVy","mhTpcVr",
+			 "mhTpcVxVz","mhTpcVyVz","mhVpdVz","mhVzDiffVsTpcVz"};
 
-  // TPC vr with cuts
-  TH1F *hVrTpcWithCut = (TH1F*)f->Get(Form("hVrTpcWithCut_%s",trigName[kTrigType]));
-  hVrTpcWithCut->SetMaximum(1.2*hVrTpcWithCut->GetMaximum());
-  c = draw1D(hVrTpcWithCut,Form("Au+Au %s: vertex r distribution reconstructed using TPC%s;v_{r} (cm)",trigName[kTrigType],hlt_name[hlt_index]),kTRUE,kFALSE);
-  vtx_text->Draw();
-  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_vertex/%s.VrTpcWithCut_Type%d_%s.png",run_config,vtx_index,trigName[kTrigType]));
+  for(Int_t i=0; i<8; i++)
+    {
+      TH1 *h = (TH1*)f->Get(Form("%s_%s",hName[i],trigName[kTrigType]));
+      if(!h->IsA()->InheritsFrom("TH2")) 
+	{
+	  Bool_t logy = kTRUE;
+	  if(run_type == "Run13_pp500")
+	    {
+	      if(hName[i]=="mhNPrimVtx")
+		h->GetXaxis()->SetRangeUser(0,20);
+	      if(hName[i]=="mhVpdVz")
+		logy = kFALSE;
+	    }
+	  c = draw1D(h,"",logy,kFALSE);
+	}
+      else
+	{
+	  TH2F *h2 = (TH2F*)h;
+	  c = draw2D(h2,"");
+	}
+
+      TString outname = hName[i];
+      outname.ReplaceAll("mh","");
+      if(save) 
+	{
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_vertex/%s_%s.pdf",run_type,outname.Data(),trigName[kTrigType]));
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_vertex/%s_%s.png",run_type,outname.Data(),trigName[kTrigType]));
+	}
+    }
 }
