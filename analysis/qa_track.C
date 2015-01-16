@@ -4,7 +4,7 @@ Int_t trk_index = 0;
 const char *run_config = "PrimTrk.ClosePrimVtx.40cm";
 
 //================================================
-void qa_track()
+void qa_track(const Int_t save = 0)
 {
   gStyle->SetOptStat(1);
   gStyle->SetStatY(0.9);                
@@ -17,22 +17,54 @@ void qa_track()
     trk_index = 1;
 
   //f = TFile::Open(Form("~/Work/STAR/analysis/Output/jpsi.AuAu200.Run14.%s.root",run_config),"read");
-  f = TFile::Open("./output/Run13.pp500.jpsi.EventQA.root","read");
+  //f = TFile::Open("./output/Run13.pp500.jpsi.EventQA.root","read");
+  f = TFile::Open("./output/Run13.pp500.jpsi.PID.root","read");
 
-  //qa();
-  qualityCuts();
+  if(!save)
+    {
+      //qa();
+      //qualityCuts();
+      //distribution();
+      cutCorrelation();
+    }
+  else
+    {
+      //qa(1);
+      //qualityCuts(1);
+      //distribution(1);
+    }
 }
 
 //================================================
-void qa(const Int_t save = 0)
+void distribution(const Int_t save = 0)
 {
-  const char *hName[] = {"mhTrkEta_qa","mhTrkPhi_qa","mhTrkDca_qa","mhTrkDcaxy_qa",
-			 "mhTrkDcaz_qa","mhTrkNhitsFit_qa","mhTrkNhitsDedx_qa","mhTrkFitHitFrac_qa"};
+  gStyle->SetOptStat(0);
+  const char *hName[] = {"mhTrkN","mhTrkPt","mhTrkEtaPhi","mhTrkDedx",
+			 "mhMthTrkN","mhMthTrkPt","mhMthTrkEtaPhi"};
 
-  for(Int_t i=0; i<8; i++)
+  for(Int_t i=0; i<7; i++)
     {
       TH1 *h = (TH1*)f->Get(Form("%s_%s",hName[i],trigName[kTrigType]));
-      if(h->IsA()->InheritsFrom("TH2")) 
+      if(!h->IsA()->InheritsFrom("TH2")) 
+	{
+	  TPaveText *t1 = 0;
+	  if(hName[i]=="mhTrkN" || hName[i]=="mhMthTrkN")
+	    {
+	      if(run_type == "Run13_pp500") h->GetXaxis()->SetRangeUser(0,20);
+	      t1 = GetPaveText(0.6,0.7,0.7,0.8);
+	      t1->AddText(Form("<#> = %2.2f",h->GetMean()));
+	    }
+	  else if(hName[i]=="mhTrkPt" || hName[i]=="mhMthTrkPt")
+	    {
+	      h->SetYTitle("dN/dp_{T} (GeV/c)^{-1}");
+	      scaleHisto(h,1,1,kTRUE);
+	      t1 = GetPaveText(0.6,0.7,0.7,0.8);
+	      t1->AddText(Form("<p_{T}> = %2.2f GeV/c",h->GetMean()));
+	    }
+	  c = draw1D(h,"",kTRUE,kFALSE);
+	  if(t1) t1->Draw();
+	}
+      else
 	{
 	  TH2F *h2 = (TH2F*)h;
 	  c = draw2D(h2,"");
@@ -49,8 +81,36 @@ void qa(const Int_t save = 0)
 }
 
 //================================================
-void qualityCuts(const Int_t save = 0)
+void qa(const Int_t save = 1)
 {
+  const char *hName[] = {"mhTrkEta_qa","mhTrkPhi_qa","mhTrkDca_qa","mhTrkDcaxy_qa",
+			 "mhTrkDcaz_qa","mhTrkNhitsFit_qa","mhTrkNhitsDedx_qa","mhTrkFitHitFrac_qa"};
+
+  for(Int_t i=0; i<8; i++)
+    {
+      TH1 *h = (TH1*)f->Get(Form("%s_%s",hName[i],trigName[kTrigType]));
+      if(h->IsA()->InheritsFrom("TH2")) 
+	{
+	  TH2F *h2 = (TH2F*)h;
+	  c = draw2D(h2,"");
+	}
+
+      TString outname = hName[i];
+      outname.ReplaceAll("mh","");
+      outname.ReplaceAll("_qa","");
+      outname = "qa_" + outname;
+      if(save) 
+	{
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_track/%s_%s.pdf",run_type,outname.Data(),trigName[kTrigType]));
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_track/%s_%s.png",run_type,outname.Data(),trigName[kTrigType]));
+	}
+    }
+}
+
+//================================================
+void qualityCuts(const Int_t save = 1)
+{
+  gStyle->SetOptStat(0);
   TH1F *hCuts = (TH1F*)f->Get("hAnalysisCuts");
   Double_t scale = hCuts->GetBinContent(3)/1e4;
   cout << "scale = " << scale << endl;
@@ -89,7 +149,8 @@ void qualityCuts(const Int_t save = 0)
   const Int_t nCuts = 12;
   TH1F *hTrkPt[nCuts];
   TH1F *hTrkRatio[nCuts];
-  char *cuts[nCuts] = {"All tracks","p_{T} > 1 GeV/c", "|#eta| < 0.8","0 < #varphi < 2#pi",Form("NHitsFit > %1.0f",nHitCut), Form("NHitsDedx > %1.0f",nDedxHitCut), Form("dca > %1.1f cm",dcaCut), Form("%1.1f < n#sigma_{#pi} < %1.1f",minNsigmaCut,maxNsigmaCut),Form("HitFraction > %0.2f",minFracCut),"Matched to MTD hits","Matched to good hits","|#Deltaz| < 20 cm"};
+  const char* option[2] = {"No","Yes"};
+  char *cuts[nCuts] = {"All tracks","p_{T} > 1 GeV/c", "|#eta| < 0.8","0 < #varphi < 2#pi",Form("NHitsFit > %1.0f",hCuts->GetBinContent(5)/scale), Form("NHitsDedx > %1.0f",hCuts->GetBinContent(6)/scale), Form("dca < %1.1f cm",hCuts->GetBinContent(7)/scale), Form("%1.1f < n#sigma_{#pi} < %1.1f",hCuts->GetBinContent(8)/scale,hCuts->GetBinContent(9)/scale),Form("HitFraction > %0.2f",hCuts->GetBinContent(10)/scale),Form("Require to match TOF: %s",option[(Int_t)(hCuts->GetBinContent(15)/scale)]),"Matched to MTD hits",Form("|#Deltaz| < %1.0f cm",hCuts->GetBinContent(14)/scale)};
   if(trk_index==1) cuts[6] = "No DCA cut";
 
   TLegend *leg = new TLegend(0.3,0.63,0.45,0.88);
@@ -119,7 +180,11 @@ void qualityCuts(const Int_t save = 0)
     }
   leg->Draw();
   leg1->Draw();
-  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_track/%s.TrkPt_cuts_%s.png",run_config,trigName[kTrigType]));
+  if(save) 
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_track/TrkPt_cuts_%s.pdf",run_type,trigName[kTrigType]));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_track/TrkPt_cuts_%s.png",run_type,trigName[kTrigType]));
+    }
 
 
   for(Int_t i=0; i<nCuts; i++)
@@ -150,7 +215,55 @@ void qualityCuts(const Int_t save = 0)
   c1->cd();
   leg->Draw();
   leg1->Draw();
-  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_track/%s.TrkFraction_cuts_%s.png",run_config,trigName[kTrigType]));
-  if(save) c1->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_track/%s.TrkFraction_cuts_semilog_%s.png",run_config,trigName[kTrigType]));
+  if(save) 
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_track/TrkFraction_cuts_%s.pdf",run_type,trigName[kTrigType]));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_track/TrkFraction_cuts_%s.png",run_type,trigName[kTrigType]));
+
+      c1->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_track/TrkFraction_cuts_semilog_%s.pdf",run_type,trigName[kTrigType]));
+      c1->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_track/TrkFraction_cuts_semilog_%s.png",run_type,trigName[kTrigType]));
+    }
   
+}
+
+
+//================================================
+void cutCorrelation(const Int_t save = 1)
+{
+  gStyle->SetOptStat(0);
+  THnSparseF *hTrkInfo = (THnSparseF*)f->Get(Form("mhTrkInfo_qa_%s",trigName[kTrigType]));
+  TH2F *hNHitVsHitFrac = (TH2F*)hTrkInfo->Projection(2,1);
+  hNHitVsHitFrac->SetName("hNHitVsHitFrac_all");
+  hNHitVsHitFrac->SetTitle(Form("%s: FitHitFrac vs NHitsFit of primary tracks;NHitsFit;NHitsFit/NHitsPoss",trigName[kTrigType]));
+  c = draw2D(hNHitVsHitFrac);
+  TLine *line = GetLine(15,0,15,1,1);
+  line->Draw();
+  line = GetLine(0,0.52,45,0.52,1);
+  line->Draw();
+  if(save) 
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_track/qa_NHitsFit_vs_NHitsFrac_%s.pdf",run_type,trigName[kTrigType]));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_track/qa_NHitsFit_vs_NHitsFrac_%s.png",run_type,trigName[kTrigType]));
+    }
+
+  TList *list = new TList;
+  TH1F *hNHitsFit[3];
+  for(Int_t i=0; i<3; i++)
+    {
+      if(i==1) hTrkInfo->GetAxis(2)->SetRangeUser(0,0.52-0.01);
+      else if (i==2) hTrkInfo->GetAxis(2)->SetRangeUser(0.52+0.01,1);
+
+      hNHitsFit[i] = (TH1F*)hTrkInfo->Projection(1);
+      hNHitsFit[i]->SetName(Form("hNHitsFit_%d",i));
+      hNHitsFit[i]->SetMaximum(1.2*hNHitsFit[i]->GetMaximum());
+      list->Add(hNHitsFit[i]);
+      hTrkInfo->GetAxis(2)->SetRange(0,-1);
+    }
+  TString legName[3] = {"All","NHitsFit/NHitsPoss < 0.52", "NHitsFit/NHitsPoss > 0.52"};
+  c = drawHistos(list,"NHitsFit",Form("%s: # of TPC hits for fitting of primary tracks;NHitsFit",trigName[kTrigType]),kFALSE,0,100,kFALSE,1e-6,0.018,kFALSE,kTRUE,legName,kTRUE,"",0.15,0.25,0.68,0.88,kFALSE);
+  if(save) 
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_track/qa_NHitsFit_CutNHitsFrac_%s.pdf",run_type,trigName[kTrigType]));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_track/qa_NHitsFit_CutNHitsFrac_%s.png",run_type,trigName[kTrigType]));
+    }
 }

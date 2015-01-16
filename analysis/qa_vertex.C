@@ -10,7 +10,7 @@ void qa_vertex(const Int_t save = 0)
   gStyle->SetStatY(0.9);                
   gStyle->SetStatX(0.9);  
 
-  f = TFile::Open("./output/Run13.pp500.jpsi.EventQA.root","read");
+  f = TFile::Open("/Users/admin/Work/STAR/analysis/output/Run13.pp500.jpsi.EventQA.root","read");
 
   TString cut_name = run_config;
 
@@ -20,8 +20,16 @@ void qa_vertex(const Int_t save = 0)
     vtx_index = 2;
 
 
-  cuts();
-  //qa();
+  if(save)
+    {
+      cuts(save);
+      qa(save);
+    }
+  else
+    {
+      //cuts();
+      qa(1);
+    }
 }
 
 //================================================
@@ -59,10 +67,8 @@ void cuts(const Int_t save = 0)
 
 
   // TPC-VPD cut
-  //TH2F *hVzDiffVsTpcVz = (TH2F*)f->Get(Form("mhVzDiffVsTpcVz_%s",trigName[kTrigType]));
-  //TH1F *hVzDiff = (TH1F*)hVzDiffVsTpcVz->ProjectionX(Form("hVzDiff_%s",trigName[kTrigType]));
-  //hVzDiff->Rebin(2);
-  TH1F *hVzDiff = (TH1F*)f->Get(Form("mhDiffVzWithCut_%s",trigName[kTrigType]));
+  TH2F *hVzDiffVsTpcVz = (TH2F*)f->Get(Form("mhVzDiffVsTpcVz_%s",trigName[kTrigType]));
+  TH1F *hVzDiff = (TH1F*)hVzDiffVsTpcVz->ProjectionY(Form("hVzDiff_%s",trigName[kTrigType]));
   func = new TF1("func_VzDiff","gaus",-1.8,6.5);
   hVzDiff->Fit(func,"IR0");
   func->SetLineColor(2);

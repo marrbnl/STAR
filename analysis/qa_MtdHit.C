@@ -3,38 +3,76 @@ TFile *f;
 //================================================
 void qa_MtdHit(const Int_t save = 0)
 {
-  gStyle->SetOptStat(0);
+  gStyle->SetStatY(0.9);                
+  gStyle->SetStatX(0.9);  
 
-  f = TFile::Open(Form("~/Work/STAR/analysis/Output/jpsi.AuAu200.Run14.%s.root",run_config),"read");
-  TH1F *hStat = (TH1F*)f->Get("hEventStat");
 
-  TString cut_name = run_config;
-  Int_t hlt_index = 0;
-  if(cut_name.Contains("HLT"))
-    hlt_index = 1;
+  //f = TFile::Open(Form("~/Work/STAR/analysis/Output/jpsi.AuAu200.Run14.%s.root",run_config),"read");
+  f = TFile::Open("./output/Run13.pp500.jpsi.EventQA.root","read");
 
-  // hit multiplicity
-  TH1F *hMtdHitN    = (TH1F*)f->Get(Form("hMtdHitN_%s",trigName[kTrigType]));
-  TH1F *hMthMtdHitN = (TH1F*)f->Get(Form("hMthMtdHitN_%s",trigName[kTrigType]));
-  printf("[i] %2.4f%% percent of the events with >2 MTD hits matched",100*hMthMtdHitN->Integral(3,100)/hMthMtdHitN->Integral(1,100));
-  scaleHisto( hMtdHitN,    hStat->GetBinContent(kTrigType+7), 1);
-  scaleHisto( hMthMtdHitN, hStat->GetBinContent(kTrigType+7), 1);
-  TList *list = new TList;
-  list->Add(hMtdHitN);
-  list->Add(hMthMtdHitN);
-  TString legName[2];
-  legName[0] = Form("All hits <N> = %2.2f",hMtdHitN->GetMean());
-  legName[1] = Form("Matached hits <N> = %2.2f",hMthMtdHitN->GetMean());
-  c = drawHistos(list,"MTD_hit_multiplicity",Form("Au+Au di-muon: multiplicity of good MTD hits%s;N_{hit};1/N_{evt} dN_{hit}",hlt_name[hlt_index]),kFALSE,0,100,kTRUE,1e-8,10,kTRUE,kTRUE,legName,kTRUE,"",0.5,0.7,0.6,0.8);
-  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_MtdHit/%s.MtdGoodHitN_%s.png",run_config,trigName[kTrigType]));
+  if(!save)
+    {
+      qa();
+    }
+  else
+    {
+      qa(1);
+    }
 
-  // hit map
-  TH2F *hMtdHitMap = (TH2F*)f->Get(Form("hMtdHitMap_%s",trigName[kTrigType]));
-  c = draw2D(hMtdHitMap,Form("Au+Au di-muon: channel vs backleg of good MTD hits%s",hlt_name[hlt_index]));
-  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_MtdHit/%s.MtdGoodHitMap_%s.png",run_config,trigName[kTrigType]));
+}
 
-  // matched hit map
-  TH2F *hMthMtdHitMap = (TH2F*)f->Get(Form("hMtdMtdHitMap_%s",trigName[kTrigType]));
-  c = draw2D(hMthMtdHitMap,Form("Au+Au di-muon: channel vs backleg of matched MTD hits%s",hlt_name[hlt_index]));
-  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_MtdHit/%s.MthMtdHitMap_%s.png",run_config,trigName[kTrigType]));
+
+//================================================
+void qa(const Int_t save = 1)
+{
+  const char *hName[] = {"mhMtdRawHitN","mhMtdHitN","mhMthMtdHitN","mhMtdHitMap",
+			 "mhMtdHitTrigTime","mhMtdRawHitMap","mhMthMtdHitMap","mhMthMtdHitLocaly","mhMthMtdHitGlobalz"};
+
+  for(Int_t i=0; i<9; i++)
+    {
+      TH1 *h = (TH1*)f->Get(Form("%s_%s",hName[i],trigName[kTrigType]));
+      if(!h->IsA()->InheritsFrom("TH2")) 
+	{
+	  c = draw1D(h,"",kTRUE,kFALSE);
+	  gStyle->SetOptStat(1);
+	}
+      else
+	{
+	  TH2F *h2 = (TH2F*)h;
+	  c = draw2D(h2,"");
+	  gStyle->SetOptStat(0);
+	}
+
+      TString outname = hName[i];
+      outname.ReplaceAll("mh","");
+      if(save) 
+	{
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_MtdHit/%s_%s.pdf",run_type,outname.Data(),trigName[kTrigType]));
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_MtdHit/%s_%s.png",run_type,outname.Data(),trigName[kTrigType]));
+	}
+    }
+
+  TH2F *h2 = (TH2F*)f->Get(Form("mhMtdHitMap_%s",trigName[kTrigType]));
+
+  TH2F *hHitMapRot = new TH2F("hHitMapRot","di_muo: #varphi vs #eta distribution of MTD hits;#eta;#varphi",
+			      h2->GetYaxis()->GetNbins(),-0.6,0.6,
+			      h2->GetXaxis()->GetNbins(),0,2*pi);
+
+  for(Int_t ibin=1; ibin<=h2->GetNbinsX(); ibin++)
+    {
+      for(Int_t jbin=1; jbin<=h2->GetNbinsY(); jbin++)
+	{
+	  Int_t iibin = jbin;
+	  Int_t jjbin = ibin + 7;
+	  if(ibin>23) jjbin = ibin-23;
+	  hHitMapRot->SetBinContent(iibin,jjbin,h2->GetBinContent(ibin,jbin));
+	  hHitMapRot->SetBinError(iibin,jjbin,h2->GetBinError(ibin,jbin));
+	}
+    }
+  c = draw2D(hHitMapRot);
+  if(save) 
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_MtdHit/MtdHitMap_Rotate_%s.pdf",run_type,trigName[kTrigType]));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_MtdHit/MtdHitMap_Rotate_%s.png",run_type,trigName[kTrigType]));
+    }
 }

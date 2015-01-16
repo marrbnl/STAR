@@ -5,7 +5,7 @@ void qa_Event()
 {
   gStyle->SetOptStat(0);
   f = TFile::Open("./output/Run13.pp500.jpsi.EventQA.root","read");
-
+ 
   ana();
 }
 

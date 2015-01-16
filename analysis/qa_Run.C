@@ -1,4 +1,5 @@
 TFile *f;
+const vector<Int_t> runList;
 
 //================================================
 void qa_Run()
@@ -6,11 +7,76 @@ void qa_Run()
   gStyle->SetOptStat(0);
   f = TFile::Open("./output/Run13.pp500.jpsi.RunQA.root","read");
 
+
+  ifstream runFile(Form("Rootfiles/%s.all.run.list",run_type));
+  Char_t runName[256];
+  while(!runFile.eof())
+    {
+      runFile.getline(runName,256);
+      Int_t run = atoi(runName);
+      if(run>0) runList.push_back(run);
+    }
+
   makePdf();
+  //badRun();
 }
 
 //================================================
-void makePdf(const Bool_t save = 1)
+void badRun(const Bool_t save = 1)
+{
+  const Int_t badrun = 386;
+
+  TH1F *hStat = (TH1F*)f->Get(Form("mhNeventVsRun_%s",trigName[kTrigType]));
+  cout << "Bad run candidate: " << runList[badrun] << " with " << hStat->GetBinContent(badrun) << " events. " << endl;
+
+  const char *hName[] = {"mhTrkPtVsRun","mhTrkEtaVsRun","mhTrkPhiVsRun","mhTrkDcaVsRun",
+			 "mhNhitsFitVsRun","mhNhitsPossVsRun","mhNhitsDedxVsRun"};
+
+  for(Int_t i=0; i<7; i++)
+    {
+      TH2 *h2 = (TH2*)f->Get(Form("%s_%s",hName[i],trigName[kTrigType]));
+
+      TH1F *hbad = (TH1F*)h2->ProjectionY(Form("%s_bad",h2->GetName()),badrun+1,badrun+1);
+      TH1F *hgood = (TH1F*)h2->ProjectionY(Form("%s_good",h2->GetName()),1,badrun);
+      hgood->Add((TH1F*)h2->ProjectionY(Form("%s_good_2",h2->GetName()),badrun+2,-1));
+      hbad->Scale(1./hbad->Integral());
+      hgood->Scale(1./hgood->Integral());
+      hbad->SetLineColor(2);
+      hbad->SetMaximum(1.2*hbad->GetMaximum());
+      Bool_t logy = kFALSE;
+      if(hName[i]=="mhTrkPtVsRun") 
+	logy = kTRUE;
+      if(hName[i]=="mhTrkPhiVsRun") 
+	hbad->SetMinimum(0.005);
+      if(hName[i]=="mhNhitsFitVsRun") 
+	hbad->SetMaximum(0.07);
+      TString title = h2->GetTitle();
+      title.ReplaceAll("vs Run","");
+      c = draw1D(hbad,title.Data(),logy,kFALSE);
+      hgood->Draw("sames");
+
+      TLegend *leg = new TLegend(0.3,0.7,0.45,0.88);
+      leg->SetBorderSize(0);
+      leg->SetFillColor(0);
+      leg->SetTextSize(0.04);
+      leg->SetHeader(Form("<%s>",title.Data()));
+      leg->AddEntry(hbad,Form("Run %d: %2.3f #pm %2.3f",runList[badrun],hbad->GetMean(),hbad->GetMeanError()),"L");
+      leg->AddEntry(hgood,Form("Other runs: %2.3f #pm %2.3f",hgood->GetMean(),hgood->GetMeanError()),"L");
+      leg->Draw();
+
+      TString outname = hName[i];
+      outname.ReplaceAll("mh","");
+      outname.ReplaceAll("VsRun","");
+      if(save) 
+	{
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_Run/check_Run%d_%s_%s.pdf",run_type,runList[badrun],outname.Data(),trigName[kTrigType]));
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_Run/check_Run%d_%s_%s.png",run_type,runList[badrun],outname.Data(),trigName[kTrigType]));
+	}
+    }
+}
+
+//================================================
+void makePdf(const Bool_t save = 0)
 {
   char outPDFName[256];
   sprintf(outPDFName,"Plots/%s/qa_Run/%s.RunWise.QA.pdf",run_type,run_type);
@@ -80,8 +146,8 @@ void makePdf(const Bool_t save = 1)
   t1->Draw();
   if(save) 
     {
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_Run/NeventVsRun_%s.pdf",run_type,saveName[kTrigType]));
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_Run/NeventVsRun_%s.png",run_type,saveName[kTrigType]));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_Run/NeventVsRun_%s.pdf",run_type,trigName[kTrigType]));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_Run/NeventVsRun_%s.png",run_type,trigName[kTrigType]));
     }
   PaintCanvasToPDF(c, pdf);
 
@@ -125,8 +191,8 @@ void makePdf(const Bool_t save = 1)
       outname.ReplaceAll("mh","");
       if(save) 
 	{
-	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_Run/%s_%s.pdf",run_type,outname.Data(),saveName[kTrigType]));
-	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_Run/%s_%s.png",run_type,outname.Data(),saveName[kTrigType]));
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_Run/%s_%s.pdf",run_type,outname.Data(),trigName[kTrigType]));
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_Run/%s_%s.png",run_type,outname.Data(),trigName[kTrigType]));
 	}
 
       if(!objname.Contains("mhBBCrateVsRun") && !objname.Contains("mhZDCrateVsRun"))
@@ -180,8 +246,8 @@ void makePdf(const Bool_t save = 1)
 	  hOutlier->Draw("sameP");
 	  if(save) 
 	    {
-	      c1->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_Run/%s_pro_%s.pdf",run_type,outname.Data(),saveName[kTrigType]));
-	      c1->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_Run/%s_pro_%s.png",run_type,outname.Data(),saveName[kTrigType]));
+	      c1->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_Run/%s_pro_%s.pdf",run_type,outname.Data(),trigName[kTrigType]));
+	      c1->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_Run/%s_pro_%s.png",run_type,outname.Data(),trigName[kTrigType]));
 	    }
 	}
 
@@ -222,15 +288,6 @@ void makePdf(const Bool_t save = 1)
   printf("%d bad runs found!\n",nBadRun);
   if(nBadRun>-1)
     {
-      vector<Int_t> runList;
-      ifstream runFile(Form("Rootfiles/%s.all.run.list",run_type));
-      Char_t runName[256];
-      while(!runFile.eof())
-	{
-	  runFile.getline(runName,256);
-	  Int_t run = atoi(runName);
-	  if(run>0) runList.push_back(run);
-	}
       for(Int_t i=0; i<nBadRun; i++)
 	{
 	  cout << runList[badRunList[i]] << ", ";
