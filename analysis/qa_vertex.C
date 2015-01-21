@@ -3,14 +3,15 @@ Int_t vtx_index = 0;
 const char *run_config = "PrimTrk.ClosePrimVtx";
 
 //================================================
-void qa_vertex(const Int_t save = 0)
+void qa_vertex()
 {
   gStyle->SetOptStat(1);
   gStyle->SetOptFit(1);
   gStyle->SetStatY(0.9);                
   gStyle->SetStatX(0.9);  
 
-  f = TFile::Open("/Users/admin/Work/STAR/analysis/output/Run13.pp500.jpsi.EventQA.root","read");
+  //f = TFile::Open("/Users/admin/Work/STAR/analysis/output/Run13.pp500.jpsi.EventQA.root","read");
+  f = TFile::Open("/Users/admin/Work/STAR/analysis/output/Run13.pp500.jpsi.CutRanking.root","read");
 
   TString cut_name = run_config;
 
@@ -20,16 +21,9 @@ void qa_vertex(const Int_t save = 0)
     vtx_index = 2;
 
 
-  if(save)
-    {
-      cuts(save);
-      qa(save);
-    }
-  else
-    {
-      //cuts();
-      qa(1);
-    }
+  //cuts();
+  //qa(1);
+  ranking();
 }
 
 //================================================
@@ -119,5 +113,48 @@ void qa(const Int_t save = 1)
 	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_vertex/%s_%s.pdf",run_type,outname.Data(),trigName[kTrigType]));
 	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_vertex/%s_%s.png",run_type,outname.Data(),trigName[kTrigType]));
 	}
+    }
+}
+
+//================================================
+void ranking(const Int_t save = 1)
+{
+  gStyle->SetOptStat(0);
+
+  TH2F *hNVtxVsGoodRank = (TH2F*)f->Get(Form("mhNVtxVsGoodRank_%s",trigName[kTrigType]));
+  hNVtxVsGoodRank->GetXaxis()->SetRangeUser(0,15);
+  hNVtxVsGoodRank->GetYaxis()->SetRangeUser(0,20);
+  c = draw2D(hNVtxVsGoodRank);
+  if(save) 
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_vertex/NVtxVsGoodRank_%s.pdf",run_type,trigName[kTrigType]));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_vertex/NVtxVsGoodRank_%s.png",run_type,trigName[kTrigType]));
+    }
+
+  TH2F *hNVtxVsNTrk = (TH2F*)f->Get(Form("mhNVtxVsNTrk_%s",trigName[kTrigType]));
+  hNVtxVsNTrk->GetYaxis()->SetRangeUser(0,20);
+  c = draw2D(hNVtxVsNTrk);
+  if(save) 
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_vertex/NVtxVsNTrkUsed_%s.pdf",run_type,trigName[kTrigType]));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_vertex/NVtxVsNTrkUsed_%s.png",run_type,trigName[kTrigType]));
+    }
+
+  TH2F *hNTrkUsedVsRank = (TH2F*)f->Get(Form("mhNTrkUsedVsRank_%s",trigName[kTrigType]));
+  draw2D(hNTrkUsedVsRank);
+  TH1F *hNTrkUsed[2];
+  TList *list = new TList;
+  for(Int_t i=0; i<2; i++)
+    {
+      hNTrkUsed[i] = (TH1F*)hNTrkUsedVsRank->ProjectionY(Form("NTrkUsed_%d",i),i+1,i+1);
+      hNTrkUsed[i]->SetMaximum(1.4*hNTrkUsed[i]->GetMaximum());
+      list->Add(hNTrkUsed[i]);
+    }
+  TString legName[2] = {"Ranking > 0","Ranking < 0"};
+  c = drawHistos(list,"hNTrkUsed",Form("%s: number of tracks used to reconstruct vertex;# of used tracks",trigName[kTrigType]),kFALSE,0,100,kFALSE,-3,8,kFALSE,kTRUE,legName,kTRUE,"",0.5,0.65,0.6,0.8,kFALSE);
+  if(save) 
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_vertex/CompareNTrkUsed_%s.pdf",run_type,trigName[kTrigType]));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_vertex/CompareNTrkUsed_%s.png",run_type,trigName[kTrigType]));
     }
 }

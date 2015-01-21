@@ -4,9 +4,8 @@ Int_t trk_index = 0;
 const Double_t low_mass = 3.0;
 const Double_t high_mass = 3.2;
 
-//const char *run_config = "PrimTrk.ClosePrimVtx.TOFmatch";
-//const char *run_config = "PrimTrk.ClosePrimVtx.DCA1cm";
-const char *run_config = "PrimTrk.ClosePrimVtx";
+const char *run_config = "EventQA";
+TString run_cfg_name;
 
 //================================================
 void ana_InvMass()
@@ -24,13 +23,17 @@ void ana_InvMass()
   if(cut_name.Contains("Global"))
     trk_index = 1;
 
-  //f = TFile::Open(Form("~/Work/STAR/analysis/output/jpsi.AuAu200.Run14.%s.root",run_config),"read");
-  f = TFile::Open("./output/Run13.pp500.jpsi.EventQA.root","read");
+  f = TFile::Open(Form("./output/Run13.pp500.jpsi.%s.root",run_config),"read");
 
-  //InvMass();
+  if(run_config=="CutRanking")
+    run_cfg_name = Form("%s.",run_config);
+  else
+    run_cfg_name = "";
+
+  InvMass();
   //upsilon();
   //daughters();
-  pt();
+  //pt();
 }
 
 
@@ -57,8 +60,8 @@ void daughters(Int_t save = 1)
       t1->Draw();
       if(save) 
 	{
-	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_InvMass/DaugPtCorr_%s.pdf",run_type,pName[j]));
-	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_InvMass/DaugPtCorr_%s.png",run_type,pName[j]));
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_InvMass/%sDaugPtCorr_%s.pdf",run_type,run_cfg_name.Data(),pName[j]));
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_InvMass/%sDaugPtCorr_%s.png",run_type,run_cfg_name.Data(),pName[j]));
 	}
     }
 
@@ -107,8 +110,8 @@ void daughters(Int_t save = 1)
       leg->Draw();
       if(save) 
 	{
-	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_InvMass/InvMass_pt1_%1.0f_pt2_%1.0f.pdf",run_type,pt_cuts[i]*10,pt_cut_2*10));
-	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_InvMass/InvMass_pt1_%1.0f_pt2_%1.0f.png",run_type,pt_cuts[i]*10,pt_cut_2*10));
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_InvMass/%sInvMass_pt1_%1.0f_pt2_%1.0f.pdf",run_type,run_cfg_name.Data(),pt_cuts[i]*10,pt_cut_2*10));
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_InvMass/%sInvMass_pt1_%1.0f_pt2_%1.0f.png",run_type,run_cfg_name.Data(),pt_cuts[i]*10,pt_cut_2*10));
 	}
     }
 
@@ -134,8 +137,8 @@ void daughters(Int_t save = 1)
   gPad->SetGridy();
   if(save) 
     {
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_InvMass/InvMass_ComparePt1Cut.pdf",run_type));
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_InvMass/InvMass_ComparePt1Cut.png",run_type));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_InvMass/%sInvMass_ComparePt1Cut.pdf",run_type,run_cfg_name.Data()));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_InvMass/%sInvMass_ComparePt1Cut.png",run_type,run_cfg_name.Data()));
     }
 }
 
@@ -144,10 +147,10 @@ void daughters(Int_t save = 1)
 void InvMass(Int_t save = 1)
 {
   TH1F *hStat = (TH1F*)f->Get("hEventStat");
-  printf("all di-muon events: %4.2e\n",hStat->GetBinContent(3));
-  printf("di-muon     events: %4.2e\n",hStat->GetBinContent(7));
-  printf("single-muon events: %4.2e\n",hStat->GetBinContent(8));
-  printf("e-muon      events: %4.2e\n",hStat->GetBinContent(9));
+  printf("all di-muon events: %4.4e\n",hStat->GetBinContent(3));
+  printf("di-muon     events: %4.4e\n",hStat->GetBinContent(7));
+  printf("single-muon events: %4.4e\n",hStat->GetBinContent(8));
+  printf("e-muon      events: %4.4e\n",hStat->GetBinContent(9));
 
   const char *hName[3] = {"hJpsiInfo","hBkgLSPos","hBkgLSNeg"};
   THnSparseF *hnInvMass[3];
@@ -202,8 +205,8 @@ void InvMass(Int_t save = 1)
   t1->Draw();
   if(save) 
     {
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_InvMass/InvMass_full_pt1_%1.0f_pt2_%1.0f.pdf",run_type,pt1_cut,pt2_cut));
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_InvMass/InvMass_full_pt1_%1.0f_pt2_%1.0f.png",run_type,pt1_cut,pt2_cut));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_InvMass/%sInvMass_full_pt1_%1.0f_pt2_%1.0f.pdf",run_type,run_cfg_name.Data(),pt1_cut*10,pt2_cut*10));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_InvMass/%sInvMass_full_pt1_%1.0f_pt2_%1.0f.png",run_type,run_cfg_name.Data(),pt1_cut*10,pt2_cut*10));
     }
 
   TH1F *hdiff_full = (TH1F*)hDiff->Clone(Form("%s_full",hDiff->GetName()));
@@ -217,8 +220,8 @@ void InvMass(Int_t save = 1)
   t2->Draw();
   if(save) 
     {
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_InvMass/InvMass_US-LS_full_pt1_%1.0f_pt2_%1.0f.pdf",run_type,pt1_cut,pt2_cut));
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_InvMass/InvMass_US-LS_full_pt1_%1.0f_pt2_%1.0f.png",run_type,pt1_cut,pt2_cut));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_InvMass/%sInvMass_US-LS_full_pt1_%1.0f_pt2_%1.0f.pdf",run_type,run_cfg_name.Data(),pt1_cut*10,pt2_cut*10));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_InvMass/%sInvMass_US-LS_full_pt1_%1.0f_pt2_%1.0f.png",run_type,run_cfg_name.Data(),pt1_cut*10,pt2_cut*10));
     }
 
 
@@ -242,8 +245,8 @@ void InvMass(Int_t save = 1)
   leg->Draw();
   if(save) 
     {
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_InvMass/InvMass_jpsi_pt1_%1.0f_pt2_%1.0f.pdf",run_type,pt1_cut,pt2_cut));
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_InvMass/InvMass_jpsi_pt1_%1.0f_pt2_%1.0f.png",run_type,pt1_cut,pt2_cut));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_InvMass/%sInvMass_jpsi_pt1_%1.0f_pt2_%1.0f.pdf",run_type,run_cfg_name.Data(),pt1_cut*10,pt2_cut*10));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_InvMass/%sInvMass_jpsi_pt1_%1.0f_pt2_%1.0f.png",run_type,run_cfg_name.Data(),pt1_cut*10,pt2_cut*10));
     }
 
   Int_t low_bin = hInvMass_jpsi[0]->GetXaxis()->FindFixBin(low_mass+0.001);
@@ -266,8 +269,8 @@ void InvMass(Int_t save = 1)
   signif->Draw();
   if(save) 
     {
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_InvMass/InvMass_US-LS_jpsi_pt1_%1.0f_pt2_%1.0f.pdf",run_type,pt1_cut,pt2_cut));
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_InvMass/InvMass_US-LS_jpsi_pt1_%1.0f_pt2_%1.0f.png",run_type,pt1_cut,pt2_cut));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_InvMass/%sInvMass_US-LS_jpsi_pt1_%1.0f_pt2_%1.0f.pdf",run_type,run_cfg_name.Data(),pt1_cut*10,pt2_cut*10));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_InvMass/%sInvMass_US-LS_jpsi_pt1_%1.0f_pt2_%1.0f.png",run_type,run_cfg_name.Data(),pt1_cut*10,pt2_cut*10));
     }
 
   return;
@@ -287,7 +290,7 @@ void InvMass(Int_t save = 1)
   // hdiff_jpsi->Fit(func,"0R");
   // func->SetLineStyle(2);
   // func->Draw("sames");
-  // if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/InvMass/%s.InvMass_US-LS_jpsi_pt1_%1.1f_pt2_%1.1f_rebin4.png",run_config,pt1_cut,pt2_cut));
+  // if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/InvMass/%s.InvMass_US-LS_jpsi_pt1_%1.1f_pt2_%1.1f_rebin4.png",run_cfg_name.Data(),pt1_cut,pt2_cut));
   
 }
 
@@ -329,8 +332,8 @@ void pt(Int_t save = 1)
   c = drawHistos(list,"Jpsi_pt",Form("%s: p_{T} distribution of J/psi candidates;p_{T} (GeV/c);counts",trigName[kTrigType]),kFALSE,0,100,kFALSE,-2,2,kFALSE,kTRUE,legName,kTRUE,Form("%1.1f < M_{#mu#mu} < %1.1f GeV/c^{2}",low_mass,high_mass),0.55,0.75,0.55,0.8,kTRUE);
   if(save) 
     {
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_InvMass/Jpsi_pt_pt1_%1.0f_pt2_%1.0f.pdf",run_type,pt1_cut,pt2_cut));
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_InvMass/Jpsi_pt_pt1_%1.0f_pt2_%1.0f.png",run_type,pt1_cut,pt2_cut));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_InvMass/%sJpsi_pt_pt1_%1.0f_pt2_%1.0f.pdf",run_type,run_cfg_name.Data(),pt1_cut,pt2_cut));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_InvMass/%sJpsi_pt_pt1_%1.0f_pt2_%1.0f.png",run_type,run_cfg_name.Data(),pt1_cut,pt2_cut));
     }
 
 }
@@ -385,13 +388,13 @@ void upsilon(Int_t save = 1)
   c = draw1D(hInvMass_upsilon[0],Form("Au+Au %s: invariant mass of di-muon pairs%s;M_{#mu#mu} (GeV/c^{2})",trigName[kTrigType],hlt_name[hlt_index]),kFALSE,kTRUE);
   hInvMass_upsilon[1]->Draw("HIST sames");
   leg->Draw();
-  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/InvMass/%s.InvMass_upsion_pt1_%1.1f_pt2_%1.1f.png",run_config,pt1_cut,pt2_cut));
+  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/InvMass/%s.InvMass_upsion_pt1_%1.1f_pt2_%1.1f.png",run_cfg_name.Data(),pt1_cut,pt2_cut));
 
   TH1F *hdiff_upsilon = (TH1F*)hInvMass_upsilon[0]->Clone(Form("%s_upsilon",hDiff->GetName()));
   hdiff_upsilon->Add(hInvMass_upsilon[1],-1);
   c = draw1D(hdiff_upsilon,Form("Au+Au %s: invariant mass of di-muon pairs%s;M_{#mu#mu} (GeV/c^{2})",trigName[kTrigType],hlt_name[hlt_index]),kFALSE,kTRUE);
   gPad->SetGridy();
-  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/InvMass/%s.InvMass_US-LS_upsilon_pt1_%1.1f_pt2_%1.1f.png",run_config,pt1_cut,pt2_cut));
+  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/InvMass/%s.InvMass_US-LS_upsilon_pt1_%1.1f_pt2_%1.1f.png",run_cfg_name.Data(),pt1_cut,pt2_cut));
   
 }
 
