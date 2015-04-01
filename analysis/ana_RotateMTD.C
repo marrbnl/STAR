@@ -19,7 +19,7 @@ void ana_RotateMTD()
 
   //randomMatch();
   //MonteCarlo();
-  //makeHisto();
+  makeHisto();
 }
 
 //================================================

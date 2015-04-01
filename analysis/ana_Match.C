@@ -5,7 +5,7 @@ Int_t trk_index = 0;
 const char *run_config = "PrimTrk.ClosePrimVtx";
 
 //================================================
-void ana_Match(const Int_t save = 0)
+void ana_Match()
 {						
   gStyle->SetOptStat(0);
   gStyle->SetOptFit(1);
@@ -17,25 +17,79 @@ void ana_Match(const Int_t save = 0)
     trk_index = 1;
 
   //f = TFile::Open(Form("~/Work/STAR/analysis/output/jpsi.AuAu200.Run14.%s.root",run_config),"read");
-  f = TFile::Open("./output/Run13.pp500.jpsi.EventQA.root","read");
+  f = TFile::Open("./output/Run13.pp500.jpsi.CutRanking.root","read");
 
- if(!save)
-    {
-      DeltaZ();
-      //DeltaY();
-    }
-  else
-    {
-      DeltaZ(1);
-      DeltaY(1);
-    }
-
-
+  //DeltaZVsPt();
+  //DeltaZVsPos();
+  DeltaY();
 
 }
 
 //================================================
-void DeltaZ(const Int_t save = 1)
+void DeltaZVsPos(const Int_t save = 0)
+{
+  THnSparseF *hn = (THnSparseF*)f->Get(Form("mhTrkDzDy_%s",trigName[kTrigType]));
+  TH2F *hTrkDzVsBL = (TH2F*)hn->Projection(1,3);
+  c = draw2D(hTrkDzVsBL,Form("%s: #Deltaz of matched track-hit pairs",trigName[kTrigType]));
+  if(save) 
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Match/DeltaZ_vs_BL_%s.pdf",run_type,trigName[kTrigType]));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Match/DeltaZ_vs_BL_%s.png",run_type,trigName[kTrigType]));
+    }
+
+  TList *list = new TList;
+  TString legName[30];
+  TH1F *hTrkDzInBL[30];
+  Int_t counter = 0;
+  for(Int_t i=0; i<30; i++)
+    {
+      hTrkDzInBL[i] = (TH1F*)hTrkDzVsBL->ProjectionY(Form("hDeltaZ_BL%d",i+1),i+1,i+1);
+      if(hTrkDzInBL[i]->GetEntries()>0)
+	{
+	  legName[counter] = Form("Module %d",i+1);
+	  hTrkDzInBL[i]->SetLineColor(counter+1);
+	  list->Add(hTrkDzInBL[i]);
+	  counter ++;
+	}
+    }
+  c = drawHistos(list,"TrkDzInBL",Form("%s: #Deltaz of matched track-hit pairs in backleg;#Deltaz (cm)",trigName[kTrigType]),kTRUE,-100,100,kTRUE,0,2e4,kFALSE,kTRUE,legName,kTRUE,"",0.15,0.25,0.2,0.88,kFALSE,0.04,0.04,kFALSE,1,kTRUE,kFALSE);
+  TLine *line = GetLine(0,0,0,1.8e4,1);
+  line->Draw();
+  if(save) 
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Match/DeltaZ_in_BL_%s.pdf",run_type,trigName[kTrigType]));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Match/DeltaZ_in_BL_%s.png",run_type,trigName[kTrigType]));
+    }
+
+  TH2F *hTrkDzVsMod = (TH2F*)hn->Projection(1,4);
+  c = draw2D(hTrkDzVsMod,Form("%s: #Deltaz of matched track-hit pairs",trigName[kTrigType]));
+  if(save) 
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Match/DeltaZ_vs_Mod_%s.pdf",run_type,trigName[kTrigType]));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Match/DeltaZ_vs_Mod_%s.png",run_type,trigName[kTrigType]));
+    }
+
+  list->Clear();
+  TString legName2[5];
+  TH1F *hTrkDzInMod[5];
+  for(Int_t i=0; i<5; i++)
+    {
+      hTrkDzInMod[i] = (TH1F*)hTrkDzVsMod->ProjectionY(Form("hDeltaZ_Mod%d",i+1),i+1,i+1);
+      legName2[i] = Form("Module %d",i+1);
+      list->Add(hTrkDzInMod[i]);
+    }
+  c = drawHistos(list,"TrkDzInMod",Form("%s: #Deltaz of matched track-hit pairs in module;#Deltaz (cm)",trigName[kTrigType]),kTRUE,-100,100,kTRUE,0,8e4,kFALSE,kTRUE,legName2,kTRUE,"",0.15,0.25,0.6,0.88,kTRUE);
+  TLine *line = GetLine(0,0,0,7e4,1);
+  line->Draw();
+  if(save) 
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Match/DeltaZ_in_Mod_%s.pdf",run_type,trigName[kTrigType]));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Match/DeltaZ_in_Mod_%s.png",run_type,trigName[kTrigType]));
+    }
+}
+
+//================================================
+void DeltaZVsPt(const Int_t save = 0)
 {
   THnSparseF *hn = (THnSparseF*)f->Get(Form("mhTrkDzDy_%s",trigName[kTrigType]));
   TH2F *hTrkDzVsPt = (TH2F*)hn->Projection(1,0);
@@ -68,7 +122,6 @@ void DeltaZ(const Int_t save = 1)
       c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Match/FitDz_Pt%1.0f_%s.png",run_type,pt_cut,trigName[kTrigType]));
     }
 
-  return;
   // pt dependence
   Double_t pt_cuts[5] = {1,2,3,5,20};
   for(Int_t i=0; i<4; i++)
@@ -93,7 +146,7 @@ void DeltaZ(const Int_t save = 1)
 }
 
 //================================================
-void DeltaY(const Int_t save = 1)
+void DeltaY(const Int_t save = 0)
 {
   THnSparseF *hn = (THnSparseF*)f->Get(Form("mhTrkDzDy_%s",trigName[kTrigType]));
   TH2F *hTrkDyVsPt = (TH2F*)hn->Projection(2,0);
@@ -112,7 +165,7 @@ void DeltaY(const Int_t save = 1)
     {
       for(Int_t j=0; j<2; j++)
 	{
-	  hn->GetAxis(3)->SetRange(1+j*2,1+j*2);
+	  hn->GetAxis(5)->SetRange(1+j*2,1+j*2);
 	  hn->GetAxis(0)->SetRangeUser(pt_cuts[i]+0.1,pt_cuts[i+1]-0.1);
 	  hDy[i][j] = (TH1F*)hn->Projection(2);
 	  hDy[i][j]->SetName(Form("hTrkDy_pt%1.0f_%1.0f_%d",pt_cuts[i],pt_cuts[i+1],j));

@@ -4,7 +4,7 @@ Int_t trk_index = 0;
 const char *run_config = "PrimTrk.ClosePrimVtx.40cm";
 
 //================================================
-void qa_track(const Int_t save = 0)
+void qa_track()
 {
   gStyle->SetOptStat(1);
   gStyle->SetStatY(0.9);                
@@ -20,19 +20,10 @@ void qa_track(const Int_t save = 0)
   //f = TFile::Open("./output/Run13.pp500.jpsi.EventQA.root","read");
   f = TFile::Open("./output/Run13.pp500.jpsi.PID.root","read");
 
-  if(!save)
-    {
-      //qa();
-      //qualityCuts();
-      //distribution();
-      cutCorrelation();
-    }
-  else
-    {
-      //qa(1);
-      //qualityCuts(1);
-      //distribution(1);
-    }
+  //qa();
+  //qualityCuts();
+  //distribution();
+  cutCorrelation();
 }
 
 //================================================
@@ -228,13 +219,15 @@ void qualityCuts(const Int_t save = 1)
 
 
 //================================================
-void cutCorrelation(const Int_t save = 1)
+void cutCorrelation(const Int_t save = 0)
 {
   gStyle->SetOptStat(0);
   THnSparseF *hTrkInfo = (THnSparseF*)f->Get(Form("mhTrkInfo_qa_%s",trigName[kTrigType]));
+  const Double_t pt_cut = 1;
+  hTrkInfo->GetAxis(0)->SetRangeUser(pt_cut,100);
   TH2F *hNHitVsHitFrac = (TH2F*)hTrkInfo->Projection(2,1);
   hNHitVsHitFrac->SetName("hNHitVsHitFrac_all");
-  hNHitVsHitFrac->SetTitle(Form("%s: FitHitFrac vs NHitsFit of primary tracks;NHitsFit;NHitsFit/NHitsPoss",trigName[kTrigType]));
+  hNHitVsHitFrac->SetTitle(Form("%s: FitHitFrac vs NHitsFit of primary tracks (p_{T} > %1.0f GeV/c);NHitsFit;NHitsFit/NHitsPoss",trigName[kTrigType],pt_cut));
   c = draw2D(hNHitVsHitFrac);
   TLine *line = GetLine(15,0,15,1,1);
   line->Draw();
@@ -260,7 +253,7 @@ void cutCorrelation(const Int_t save = 1)
       hTrkInfo->GetAxis(2)->SetRange(0,-1);
     }
   TString legName[3] = {"All","NHitsFit/NHitsPoss < 0.52", "NHitsFit/NHitsPoss > 0.52"};
-  c = drawHistos(list,"NHitsFit",Form("%s: # of TPC hits for fitting of primary tracks;NHitsFit",trigName[kTrigType]),kFALSE,0,100,kFALSE,1e-6,0.018,kFALSE,kTRUE,legName,kTRUE,"",0.15,0.25,0.68,0.88,kFALSE);
+  c = drawHistos(list,"NHitsFit",Form("%s: # of TPC hits for fitting of primary tracks;NHitsFit",trigName[kTrigType]),kFALSE,0,100,kFALSE,1e-6,0.018,kFALSE,kTRUE,legName,kTRUE,Form("p_{T} > %1.0f GeV/c",pt_cut),0.15,0.25,0.62,0.85,kFALSE);
   if(save) 
     {
       c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_track/qa_NHitsFit_CutNHitsFrac_%s.pdf",run_type,trigName[kTrigType]));

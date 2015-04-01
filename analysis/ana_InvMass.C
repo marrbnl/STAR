@@ -4,7 +4,8 @@ Int_t trk_index = 0;
 const Double_t low_mass = 3.0;
 const Double_t high_mass = 3.2;
 
-const char *run_config = "EventQA";
+const char *run_config = "muon";
+const Bool_t iPico = kTRUE;
 TString run_cfg_name;
 
 //================================================
@@ -23,12 +24,17 @@ void ana_InvMass()
   if(cut_name.Contains("Global"))
     trk_index = 1;
 
-  f = TFile::Open(Form("./output/Run13.pp500.jpsi.%s.root",run_config),"read");
+  if(iPico)
+    f = TFile::Open(Form("./output/Pico.Run13.pp500.jpsi.%s.root",run_config),"read");
+  else
+    f = TFile::Open(Form("./output/Run13.pp500.jpsi.%s.root",run_config),"read");
 
   if(run_config=="CutRanking")
     run_cfg_name = Form("%s.",run_config);
   else
     run_cfg_name = "";
+
+  if(iPico) run_cfg_name = Form("Pico.%s",run_cfg_name.Data());
 
   InvMass();
   //upsilon();
@@ -144,13 +150,13 @@ void daughters(Int_t save = 1)
 
 
 //================================================
-void InvMass(Int_t save = 1)
+void InvMass(Int_t save = 0)
 {
   TH1F *hStat = (TH1F*)f->Get("hEventStat");
   printf("all di-muon events: %4.4e\n",hStat->GetBinContent(3));
-  printf("di-muon     events: %4.4e\n",hStat->GetBinContent(7));
-  printf("single-muon events: %4.4e\n",hStat->GetBinContent(8));
-  printf("e-muon      events: %4.4e\n",hStat->GetBinContent(9));
+  printf("di-muon     events: %4.4e\n",hStat->GetBinContent(9));
+  printf("single-muon events: %4.4e\n",hStat->GetBinContent(10));
+  printf("e-muon      events: %4.4e\n",hStat->GetBinContent(11));
 
   const char *hName[3] = {"hJpsiInfo","hBkgLSPos","hBkgLSNeg"};
   THnSparseF *hnInvMass[3];
@@ -301,6 +307,8 @@ void pt(Int_t save = 1)
   const char *hName[3] = {"hJpsiInfo","hBkgLSPos","hBkgLSNeg"};
   THnSparseF *hnInvMass[3];
   TH1F *hJpsiPt[3];
+  TH1F *hJpsiEta[3];
+  TH1F *hJpsiPhi[3];
   Double_t pt1_cut = 1.5, pt2_cut = 1.0;
   for(Int_t j=0; j<3; j++)
     {
@@ -313,27 +321,70 @@ void pt(Int_t save = 1)
       hJpsiPt[j]->SetName(Form("%s_%s_Jpsi_pt",hName[j],trigName[kTrigType]));
       hJpsiPt[j]->Sumw2();
 
+      hJpsiEta[j] = (TH1F*)hnInvMass[j]->Projection(2);
+      hJpsiEta[j]->SetName(Form("%s_%s_Jpsi_eta",hName[j],trigName[kTrigType]));
+      hJpsiEta[j]->Sumw2();
+
+      hJpsiPhi[j] = (TH1F*)hnInvMass[j]->Projection(3);
+      hJpsiPhi[j]->SetName(Form("%s_%s_Jpsi_phi",hName[j],trigName[kTrigType]));
+      hJpsiPhi[j]->Sumw2();
+
       hnInvMass[j]->GetAxis(0)->SetRange(0,-1);
       hnInvMass[j]->GetAxis(4)->SetRange(0,-1);
       hnInvMass[j]->GetAxis(5)->SetRange(0,-1);
     }
 
-  hJpsiPt[1]->Add(hJpsiPt[2]);
-
-  TH1F *hDiff = (TH1F*)hJpsiPt[0]->Clone("hJpsiPt_US_minus_LS");
-  hDiff->Add(hJpsiPt[1],-1);
-
   TList *list = new TList;
+  TString legName[3] = {"Unlike-sign","Like-sign","US-LS"};
+
+  // pt distribution
+  hJpsiPt[1]->Add(hJpsiPt[2]);
+  TH1F *hDiffPt = (TH1F*)hJpsiPt[0]->Clone("hJpsiPt_US_minus_LS");
+  hDiffPt->Add(hJpsiPt[1],-1);
+
   list->Add(hJpsiPt[0]);
   list->Add(hJpsiPt[1]);
-  list->Add(hDiff);
+  list->Add(hDiffPt);
 
-  TString legName[3] = {"Unlike-sign","Like-sign","US-LS"};
-  c = drawHistos(list,"Jpsi_pt",Form("%s: p_{T} distribution of J/psi candidates;p_{T} (GeV/c);counts",trigName[kTrigType]),kFALSE,0,100,kFALSE,-2,2,kFALSE,kTRUE,legName,kTRUE,Form("%1.1f < M_{#mu#mu} < %1.1f GeV/c^{2}",low_mass,high_mass),0.55,0.75,0.55,0.8,kTRUE);
+  c = drawHistos(list,"Jpsi_pt",Form("%s: p_{T} distribution of J/psi candidates (%1.1f < M_{#mu#mu} < %1.1f GeV/c^{2});p_{T} (GeV/c);counts",trigName[kTrigType],low_mass,high_mass),kFALSE,0,100,kFALSE,-2,2,kFALSE,kTRUE,legName,kTRUE,Form("p_{T,1}>%1.1f, p_{T,2}>%1.1f GeV/c",pt1_cut,pt2_cut),0.55,0.75,0.55,0.8,kTRUE);
   if(save) 
     {
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_InvMass/%sJpsi_pt_pt1_%1.0f_pt2_%1.0f.pdf",run_type,run_cfg_name.Data(),pt1_cut,pt2_cut));
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_InvMass/%sJpsi_pt_pt1_%1.0f_pt2_%1.0f.png",run_type,run_cfg_name.Data(),pt1_cut,pt2_cut));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_InvMass/%sJpsi_pt_pt1_%1.0f_pt2_%1.0f.pdf",run_type,run_cfg_name.Data(),pt1_cut*10,pt2_cut*10));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_InvMass/%sJpsi_pt_pt1_%1.0f_pt2_%1.0f.png",run_type,run_cfg_name.Data(),pt1_cut*10,pt2_cut*10));
+    }
+
+  // eta distribution
+  hJpsiEta[1]->Add(hJpsiEta[2]);
+  TH1F *hDiffEta = (TH1F*)hJpsiEta[0]->Clone("hJpsiEta_US_minus_LS");
+  hDiffEta->Add(hJpsiEta[1],-1);
+
+  list->Clear();
+  list->Add(hJpsiEta[0]);
+  list->Add(hJpsiEta[1]);
+  list->Add(hDiffEta);
+
+  c = drawHistos(list,"Jpsi_eta",Form("%s: #eta distribution of J/psi candidates (%1.1f < M_{#mu#mu} < %1.1f GeV/c^{2});#eta;counts",trigName[kTrigType],low_mass,high_mass),kFALSE,0,100,kFALSE,-2,2,kFALSE,kTRUE,legName,kTRUE,Form("p_{T,1}>%1.1f, p_{T,2}>%1.1f GeV/c",pt1_cut,pt2_cut),0.15,0.35,0.55,0.8,kTRUE);
+  if(save) 
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_InvMass/%sJpsi_eta_pt1_%1.0f_pt2_%1.0f.pdf",run_type,run_cfg_name.Data(),pt1_cut*10,pt2_cut*10));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_InvMass/%sJpsi_eta_pt1_%1.0f_pt2_%1.0f.png",run_type,run_cfg_name.Data(),pt1_cut*10,pt2_cut*10));
+    }
+
+  // phi distribution
+  hJpsiPhi[1]->Add(hJpsiPhi[2]);
+  TH1F *hDiffPhi = (TH1F*)hJpsiPhi[0]->Clone("hJpsiPhi_US_minus_LS");
+  hDiffPhi->Add(hJpsiPhi[1],-1);
+
+  list->Clear();
+  list->Add(hJpsiPhi[0]);
+  list->Add(hJpsiPhi[1]);
+  list->Add(hDiffPhi);
+
+  c = drawHistos(list,"Jpsi_phi",Form("%s: #varphi distribution of J/psi candidates (%1.1f < M_{#mu#mu} < %1.1f GeV/c^{2});#varphi;counts",trigName[kTrigType],low_mass,high_mass),kFALSE,0,100,kFALSE,-2,2,kFALSE,kTRUE,legName,kTRUE,Form("p_{T,1}>%1.1f, p_{T,2}>%1.1f GeV/c",pt1_cut,pt2_cut),0.55,0.75,0.55,0.8,kTRUE);
+  if(save) 
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_InvMass/%sJpsi_phi_pt1_%1.0f_pt2_%1.0f.pdf",run_type,run_cfg_name.Data(),pt1_cut*10,pt2_cut*10));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_InvMass/%sJpsi_phi_pt1_%1.0f_pt2_%1.0f.png",run_type,run_cfg_name.Data(),pt1_cut*10,pt2_cut*10));
     }
 
 }
