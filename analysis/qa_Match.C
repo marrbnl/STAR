@@ -2,7 +2,10 @@ TFile *f;
 Int_t hlt_index = 0;
 Int_t trk_index = 0;
 
-const char *run_config = "PrimTrk.ClosePrimVtx";
+const char *run_config = "HLT.";
+const Bool_t iPico = 0;
+const int year = 2014;
+TString run_cfg_name;
 
 //================================================
 void qa_Match()
@@ -20,14 +23,27 @@ void qa_Match()
   if(cut_name.Contains("Global"))
     trk_index = 1;
 
-  f = TFile::Open(Form("~/Work/STAR/analysis/output/jpsi.AuAu200.Run14.%s.root",run_config),"read");
+  if(year==2013)
+    {
+      run_type = "Run13_pp500";
+      if(iPico) f = TFile::Open(Form("./output/Pico.Run13.pp500.jpsi.%sroot",run_config),"read");
+      else      f = TFile::Open(Form("./output/Run13.pp500.jpsi.%sroot",run_config),"read");
+    }
+  else if(year==2014)
+    {
+      run_type = "Run14_AuAu200";
+      if(iPico) f = TFile::Open(Form("./output/Pico.Run14.AuAu200.jpsi.%sroot",run_config),"read");
+      else      f = TFile::Open(Form("./output/Run14.AuAu200.jpsi.%sroot",run_config),"read");
+    }
+  run_cfg_name = Form("%s",run_config);
+  if(iPico) run_cfg_name = Form("Pico.%s",run_cfg_name.Data());
 
-  //Track();
+  Track();
   //DeltaZ();
   //DeltaY();
   //qualityCuts();
   //yzDistribution();
-  eLoss();
+  //eLoss();
 }
 
 //================================================
@@ -278,18 +294,29 @@ void Track(const Int_t save = 0)
   TH1F *hStat = (TH1F*)f->Get("hEventStat");
 
   // track multiplicity
-  TH1F *hNTrk       = (TH1F*)f->Get(Form("hNTrk_%s",trigName[kTrigType]));
-  TH1F *hMthMtdHitN = (TH1F*)f->Get(Form("hMthMtdHitN_%s",trigName[kTrigType]));
-  scaleHisto( hNTrk,    hStat->GetBinContent(kTrigType+7), 1);
-  scaleHisto( hMthMtdHitN, hStat->GetBinContent(kTrigType+7), 1);
+  TH1F *hNTrk       = (TH1F*)f->Get(Form("mhTrkN_%s",trigName[kTrigType]));
+  TH1F *hMthMtdHitN = (TH1F*)f->Get(Form("mhMthTrkN_%s",trigName[kTrigType]));
+  scaleHisto( hNTrk,    hStat->GetBinContent(9), 1);
+  scaleHisto( hMthMtdHitN, hStat->GetBinContent(9), 1);
+
   TList *list = new TList;
   list->Add(hNTrk);
   list->Add(hMthMtdHitN);
   TString legName[2];
   legName[0] = Form("Good tracks <N> = %2.2f",hNTrk->GetMean());
   legName[1] = Form("Matched tracks <N> = %2.2f",hMthMtdHitN->GetMean());
-  c = drawHistos(list,"Track_multiplicity",Form("Au+Au %s: multiplicity of %s tracks%s;N_{trk};1/N_{evt} dN_{trk}",trigName[kTrigType],trk_name[trk_index],hlt_name[hlt_index]),kFALSE,0,100,kTRUE,1e-8,10,kTRUE,kTRUE,legName,kTRUE,"",0.5,0.7,0.6,0.8);
-  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_Match/%s.NMthTrk_%s.png",run_config,trigName[kTrigType]));
+  c = drawHistos(list,"Track_multiplicity",Form("%s: multiplicity of %s tracks%s;N_{trk};1/N_{evt} dN_{trk}",trigName[kTrigType],trk_name[trk_index],hlt_name[hlt_index]),kFALSE,0,100,kTRUE,1e-8,10,kTRUE,kTRUE,legName,kTRUE,run_type,0.5,0.7,0.6,0.8);
+  if(save) 
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_Match/%s.NMthTrk.png",run_type,run_cfg_name.Data()));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_Match/%s.NMthTrk.pdf",run_type,run_cfg_name.Data()));
+    }
+  c = drawHistos(list,"Track_multiplicity_zoomin",Form("%s: multiplicity of %s tracks%s;N_{trk};1/N_{evt} dN_{trk}",trigName[kTrigType],trk_name[trk_index],hlt_name[hlt_index]),kTRUE,0,10,kTRUE,1e-8,10,kTRUE,kTRUE,legName,kTRUE,run_type,0.2,0.4,0.2,0.4);
+  if(save) 
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_Match/%s.NMthTrk_zoomin.png",run_type,run_cfg_name.Data()));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_Match/%s.NMthTrk_zoomin.pdf",run_type,run_cfg_name.Data()));
+    }
 }
 
 

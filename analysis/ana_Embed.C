@@ -2,7 +2,10 @@ TFile *f;
 const char *signal_name[2] = {"J/#psi","#Upsilon(1S)"};
 Int_t trk_index = 0;
 Int_t signal_index = 0;
-const char *run_config = "Embed.Upsilon.PrimaryTrk";
+
+const char *run_config = "EmbedQA.";
+const int year = 2013;
+TString run_cfg_name;
 
 //================================================
 void ana_Embed()
@@ -20,14 +23,24 @@ void ana_Embed()
   if(cut_name.Contains("Upsilon"))
     signal_index = 1;
 
-  f = TFile::Open(Form("~/Work/STAR/analysis/Output/jpsi.AuAu200.Run14.%s.root",run_config),"read");
-  //f = TFile::Open(Form("~/Work/STAR/analysis/Output/jpsi.embed.test.histos.root"),"read");
+  if(year==2013)
+    {
+      run_type = "Run13_pp500";
+      f = TFile::Open(Form("./output/Run13.pp500.jpsi.%sMC.root",run_config),"read");
+    }
+  else if(year==2014)
+    {
+      run_type = "Run14_AuAu200";
+      f = TFile::Open(Form("./output/Run14.AuAu200.jpsi.%sMC.root",run_config),"read");
+    }
+  run_cfg_name = Form("%s",run_config);
+
   TH1F *hStat = (TH1F*)f->Get("hEventStat");
   printf("# of di-muon events: %d\n",hStat->GetBinContent(7));
   
-  //MCtruth();
+  MCtruth();
   //embedded();
-  efficiency();
+  //efficiency();
   //fakeRate();
 }
 

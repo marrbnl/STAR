@@ -2,17 +2,39 @@ const Double_t low_mass = 3.0;
 const Double_t high_mass = 3.2;
 TFile *f;
 
+const char *run_config = "trigger.";
+const Bool_t iPico = 1;
+const int year = 2013;
+TString run_cfg_name;
+
 //================================================
 void qa_trigger()
 {
   gStyle->SetOptStat(0);
 
-  f = TFile::Open(Form("./output/Run13.pp500.jpsi.trigger.root"),"read");
+  if(year==2013)
+    {
+      run_type = "Run13_pp500";
 
-  //signal();
+      if(iPico)
+	f = TFile::Open(Form("./output/Pico.Run13.pp500.jpsi.%sroot",run_config),"read");
+      else
+	f = TFile::Open(Form("./output/Run13.pp500.jpsi.%sroot",run_config),"read");
+    }
+  else if(year==2014)
+    {
+      run_type = "Run14_AuAu200";
+
+      if(iPico)
+	f = TFile::Open(Form("./output/Pico.Run14.AuAu200.jpsi.%sroot",run_config),"read");
+      else
+	f = TFile::Open(Form("./output/Run14.AuAu200.jpsi.%sroot",run_config),"read");
+    }
+
+  signal();
   //QTcorrelation();
   //MtdVpdTacDiff();
-  MuonPairTacDiff();
+  //MuonPairTacDiff();
 }
 
 //================================================
