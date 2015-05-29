@@ -1,29 +1,43 @@
 TFile *f;
-Int_t hlt_index = 0;
-Int_t trk_index = 0;
-const char *run_config = "PrimTrk.ClosePrimVtx.40cm";
+const Int_t trk_index = 0;
+const Int_t hlt_index = 0;
+
+const char *run_config = "";
+const Bool_t iPico = 1;
+const int year = 2014;
+TString run_cfg_name;
 
 //================================================
 void qa_track()
 {
   gStyle->SetOptStat(1);
+  gStyle->SetOptFit(1);
   gStyle->SetStatY(0.9);                
   gStyle->SetStatX(0.9);  
 
-  TString cut_name = run_config;
-  if(cut_name.Contains("HLT"))
-    hlt_index = 1;
-  if(cut_name.Contains("Global"))
-    trk_index = 1;
+  TString fileName;
 
-  //f = TFile::Open(Form("~/Work/STAR/analysis/Output/jpsi.AuAu200.Run14.%s.root",run_config),"read");
-  //f = TFile::Open("./output/Run13.pp500.jpsi.EventQA.root","read");
-  f = TFile::Open("./output/Run13.pp500.jpsi.PID.root","read");
+  if(year==2013)
+    {
+      run_type = "Run13_pp500";
+      if(iPico) fileName = Form("Pico.Run13.pp500.jpsi.%sroot",run_config);
+      else      fileName = Form("Run13.pp500.jpsi.%sroot",run_config);
+    }
+  else if(year==2014)
+    {
+      run_type = "Run14_AuAu200";
+      if(iPico) fileName = Form("Pico.Run14.AuAu200.jpsi.%sroot",run_config);
+      else      fileName = Form("Run14.AuAu200.jpsi.%sroot",run_config);
+    }
+
+  f = TFile::Open(Form("./output/%s",fileName.Data()),"read");
+
+  run_cfg_name = run_config;
 
   //qa();
-  //qualityCuts();
+  qualityCuts();
   //distribution();
-  cutCorrelation();
+  //cutCorrelation();
 }
 
 //================================================

@@ -8,7 +8,7 @@ void qa_EvtFilter(const int save = 0)
   const char *type[2] = {"Normal","Filtered"};
 
   TFile *f[2];
-  f[0] = TFile::Open(Form("output/jpsi.%s.%s.root",type[0],track),"read");
+  f[0] = TFile::Open(Form("output/jpsi.%s.%s.final.root",type[0],track),"read");
   f[1] = TFile::Open(Form("output/jpsi.%s.%s.%s.root",type[1],track,config),"read");
 
   //f[0] = TFile::Open(Form("output/jpsi.Normal.Global.Gene.root"),"read");

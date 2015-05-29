@@ -4,7 +4,7 @@ TFile *f;
 
 const char *run_config = "trigger.";
 const Bool_t iPico = 1;
-const int year = 2013;
+const int year = 2014;
 TString run_cfg_name;
 
 //================================================
@@ -118,7 +118,7 @@ void MtdVpdTacDiff(const Int_t save = 1)
 
 
 //================================================
-void signal(const Int_t save = 0)
+void signal(const Int_t save = 1)
 {
   gStyle->SetOptStat(1);
   gStyle->SetStatY(0.9);                

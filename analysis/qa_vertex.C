@@ -1,6 +1,9 @@
 TFile *f;
-Int_t vtx_index = 0;
-const char *run_config = "PrimTrk.ClosePrimVtx";
+
+const char *run_config = "";
+const Bool_t iPico = 1;
+const int year = 2014;
+TString run_cfg_name;
 
 //================================================
 void qa_vertex()
@@ -10,20 +13,27 @@ void qa_vertex()
   gStyle->SetStatY(0.9);                
   gStyle->SetStatX(0.9);  
 
-  //f = TFile::Open("/Users/admin/Work/STAR/analysis/output/Run13.pp500.jpsi.EventQA.root","read");
-  f = TFile::Open("/Users/admin/Work/STAR/analysis/output/Run13.pp500.jpsi.CutRanking.root","read");
+  TString fileName;
 
-  TString cut_name = run_config;
+  if(year==2013)
+    {
+      run_type = "Run13_pp500";
+      if(iPico) fileName = Form("Pico.Run13.pp500.jpsi.%sroot",run_config);
+      else      fileName = Form("Run13.pp500.jpsi.%sroot",run_config);
+    }
+  else if(year==2014)
+    {
+      run_type = "Run14_AuAu200";
+      if(iPico) fileName = Form("Pico.Run14.AuAu200.jpsi.%sroot",run_config);
+      else      fileName = Form("Run14.AuAu200.jpsi.%sroot",run_config);
+    }
 
-  if(cut_name.Contains("ClosePrimVtx"))
-    vtx_index = 1;
-  else if (cut_name.Contains("MtdVtx"))
-    vtx_index = 2;
+  f = TFile::Open(Form("./output/%s",fileName.Data()),"read");
 
+  run_cfg_name = run_config;
 
   //cuts();
-  //qa(1);
-  ranking();
+  //qa();
 }
 
 //================================================
@@ -33,14 +43,14 @@ void cuts(const Int_t save = 0)
 
   // TPC vz cut
   TH1F *hTpcVz = (TH1F*)f->Get(Form("mhTpcVz_%s",trigName[kTrigType]));
-  TF1 *func = new TF1("func_TpcVz","gaus",-30,35);
-  hTpcVz->Fit(func,"IR0");
-  func->SetLineColor(2);
+  //TF1 *func = new TF1("func_TpcVz","gaus",-30,35);
+  //hTpcVz->Fit(func,"IR0");
+  //func->SetLineColor(2);
   hTpcVz->SetMaximum(1.2*hTpcVz->GetMaximum());
   c = draw1D(hTpcVz,Form("v_{z} of primary vertex reconstructed using TPC"),kFALSE,kFALSE);
-  TPaveText *t1 = GetJpsiPaveText(0.13,0.2,0.78,0.88, run_type, 0.035);
-  t1->Draw();
-  func->Draw("sames");
+  //TPaveText *t1 = GetJpsiPaveText(0.13,0.5,0.75,0.88, run_type, 0.035);
+  //t1->Draw();
+  //func->Draw("sames");
   if(save) 
     {
       c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_vertex/CutTpcVz_%s.pdf",run_type,trigName[kTrigType]));
@@ -49,10 +59,10 @@ void cuts(const Int_t save = 0)
 
   // TPC vy vs vx cut
   TH2F *hTpcVyVx = (TH2F*)f->Get(Form("mhTpcVyVx_%s",trigName[kTrigType]));
-  hTpcVyVx->GetXaxis()->SetRangeUser(-0.5,0.5);
-  hTpcVyVx->GetYaxis()->SetRangeUser(-1,0);
+  //hTpcVyVx->GetXaxis()->SetRangeUser(-0.5,0.5);
+  //hTpcVyVx->GetYaxis()->SetRangeUser(-1,0);
   c = draw2D(hTpcVyVx,Form("v_{y} vs v_{x} of primary vertex reconstructed using TPC"));
-  t1->Draw();
+  //t1->Draw();
   if(save)
     {
       c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_vertex/CutTpcVyVx_%s.pdf",run_type,trigName[kTrigType]));
@@ -63,14 +73,17 @@ void cuts(const Int_t save = 0)
   // TPC-VPD cut
   TH2F *hVzDiffVsTpcVz = (TH2F*)f->Get(Form("mhVzDiffVsTpcVz_%s",trigName[kTrigType]));
   TH1F *hVzDiff = (TH1F*)hVzDiffVsTpcVz->ProjectionY(Form("hVzDiff_%s",trigName[kTrigType]));
-  func = new TF1("func_VzDiff","gaus",-1.8,6.5);
-  hVzDiff->Fit(func,"IR0");
-  func->SetLineColor(2);
-  hVzDiff->GetXaxis()->SetRangeUser(-30,50);
-  hVzDiff->SetMaximum(1.2*hVzDiff->GetMaximum());
-  c = draw1D(hVzDiff,Form("v_{z} difference of TPC-VPD"),kFALSE,kFALSE);
+  //func = new TF1("func_VzDiff","gaus",-1.8,6.5);
+  //hVzDiff->Fit(func,"IR0");
+  //func->SetLineColor(2);
+  //hVzDiff->GetXaxis()->SetRangeUser(-30,50);
+  hVzDiff->SetMaximum(20*hVzDiff->GetMaximum());
+  c = draw1D(hVzDiff,Form("v_{z} difference of TPC-VPD"),kTRUE,kFALSE);
+  //t1->Draw();
+  //func->Draw("sames");
+  TPaveText *t1 = GetPaveText(0.15,0.6,0.8,0.85);
+  t1->AddText(Form("Fraction of events within [-3,3] cm: %2.1f%%",hVzDiff->Integral(hVzDiff->FindFixBin(-3),hVzDiff->FindFixBin(3))/hVzDiff->GetEntries()*100));
   t1->Draw();
-  func->Draw("sames");
   if(save) 
     {
       c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_vertex/CutDiffVz_%s.pdf",run_type,trigName[kTrigType]));
@@ -80,7 +93,7 @@ void cuts(const Int_t save = 0)
 
 
 //================================================
-void qa(const Int_t save = 1)
+void qa(const Int_t save = 0)
 {
   const char *hName[] = {"mhNPrimVtx","mhTpcVx","mhTpcVy","mhTpcVr",
 			 "mhTpcVxVz","mhTpcVyVz","mhVpdVz","mhVzDiffVsTpcVz"};
