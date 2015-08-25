@@ -33,21 +33,23 @@ void qa_track()
   f = TFile::Open(Form("./output/%s",fileName.Data()),"read");
 
   run_cfg_name = run_config;
+  if(iPico) run_cfg_name = Form("Pico.%s",run_cfg_name.Data());
 
-  //qa();
-  qualityCuts();
+  qa();
+  //qualityCuts();
   //distribution();
   //cutCorrelation();
 }
 
 //================================================
-void distribution(const Int_t save = 0)
+void distribution(const Int_t save = 1)
 {
   gStyle->SetOptStat(0);
   const char *hName[] = {"mhTrkN","mhTrkPt","mhTrkEtaPhi","mhTrkDedx",
-			 "mhMthTrkN","mhMthTrkPt","mhMthTrkEtaPhi"};
+			 "mhMthTrkN","mhMthTrkPt","mhMthTrkEtaPhi",
+			 "mhMthTrkLead","mhMthMtdTrkLocalY","mhMthMtdTrkLocalZ"};
 
-  for(Int_t i=0; i<7; i++)
+  for(Int_t i=0; i<10; i++)
     {
       TH1 *h = (TH1*)f->Get(Form("%s_%s",hName[i],trigName[kTrigType]));
       if(!h->IsA()->InheritsFrom("TH2")) 
@@ -79,8 +81,8 @@ void distribution(const Int_t save = 0)
       outname.ReplaceAll("mh","");
       if(save) 
 	{
-	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_track/%s_%s.pdf",run_type,outname.Data(),trigName[kTrigType]));
-	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_track/%s_%s.png",run_type,outname.Data(),trigName[kTrigType]));
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_track/%s%s_%s.pdf",run_type,run_cfg_name.Data(),outname.Data(),trigName[kTrigType]));
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_track/%s%s_%s.png",run_type,run_cfg_name.Data(),outname.Data(),trigName[kTrigType]));
 	}
     }
 }
@@ -106,8 +108,8 @@ void qa(const Int_t save = 1)
       outname = "qa_" + outname;
       if(save) 
 	{
-	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_track/%s_%s.pdf",run_type,outname.Data(),trigName[kTrigType]));
-	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_track/%s_%s.png",run_type,outname.Data(),trigName[kTrigType]));
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_track/%s%s_%s.pdf",run_type,run_cfg_name.Data(),outname.Data(),trigName[kTrigType]));
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_track/%s%s_%s.png",run_type,run_cfg_name.Data(),outname.Data(),trigName[kTrigType]));
 	}
     }
 }
@@ -142,8 +144,8 @@ void qualityCuts(const Int_t save = 1)
       outname.ReplaceAll("_qa","");
       if(save) 
 	{
-	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_track/Cut%s_%s.pdf",run_type,outname.Data(),trigName[kTrigType]));
-	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_track/Cut%s_%s.png",run_type,outname.Data(),trigName[kTrigType]));
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_track/%sCut%s_%s.pdf",run_type,run_cfg_name.Data(),outname.Data(),trigName[kTrigType]));
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_track/%sCut%s_%s.png",run_type,run_cfg_name.Data(),outname.Data(),trigName[kTrigType]));
 	}
     }
   
@@ -177,7 +179,7 @@ void qualityCuts(const Int_t save = 1)
       hTrkPt[i]->SetLineColor(color[nCuts-i-1]);
       hTrkPt[i]->GetYaxis()->SetRangeUser(1,1e12);
       if(i==0)
-	c = draw1D(hTrkPt[i],Form("Au+Au %s: p_{T} distribution of %s tracks%s;p_{T} (GeV/c)",trigName[kTrigType],trk_name[trk_index],hlt_name[hlt_index]),kTRUE);
+	c = draw1D(hTrkPt[i],Form("%s: p_{T} distribution of %s tracks%s;p_{T} (GeV/c)",trigName[kTrigType],trk_name[trk_index],hlt_name[hlt_index]),kTRUE);
       else
 	hTrkPt[i]->Draw("sames");
       if(i<nCuts/2) leg->AddEntry(hTrkPt[i],cuts[i],"PL");
@@ -187,8 +189,8 @@ void qualityCuts(const Int_t save = 1)
   leg1->Draw();
   if(save) 
     {
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_track/TrkPt_cuts_%s.pdf",run_type,trigName[kTrigType]));
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_track/TrkPt_cuts_%s.png",run_type,trigName[kTrigType]));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_track/%sTrkPt_cuts_%s.pdf",run_type,run_cfg_name.Data(),trigName[kTrigType]));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_track/%sTrkPt_cuts_%s.png",run_type,run_cfg_name.Data(),trigName[kTrigType]));
     }
 
 
@@ -201,10 +203,10 @@ void qualityCuts(const Int_t save = 1)
 
       if(i==0)
 	{
-	  c  = draw1D(hTrkRatio[i],Form("Au+Au %s: fraction of %s tracks surviving a cut%s;p_{T} (GeV/c)",trigName[kTrigType],trk_name[trk_index],hlt_name[hlt_index]),kFALSE);
+	  c  = draw1D(hTrkRatio[i],Form("%s: fraction of %s tracks surviving a cut%s;p_{T} (GeV/c)",trigName[kTrigType],trk_name[trk_index],hlt_name[hlt_index]),kFALSE);
 	  hTrkRatio[i]->SetName(Form("%s_log",hTrkRatio[i]->GetName()));
 	  hTrkRatio[i]->GetYaxis()->SetRangeUser(1e-3,1e2);
-	  c1 = draw1D(hTrkRatio[i],Form("Au+Au %s: fraction of %s tracks surviving a cut%s;p_{T} (GeV/c)",trigName[kTrigType],trk_name[trk_index],hlt_name[hlt_index]),kTRUE);
+	  c1 = draw1D(hTrkRatio[i],Form("%s: fraction of %s tracks surviving a cut%s;p_{T} (GeV/c)",trigName[kTrigType],trk_name[trk_index],hlt_name[hlt_index]),kTRUE);
 	}
       else
 	{
@@ -222,11 +224,11 @@ void qualityCuts(const Int_t save = 1)
   leg1->Draw();
   if(save) 
     {
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_track/TrkFraction_cuts_%s.pdf",run_type,trigName[kTrigType]));
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_track/TrkFraction_cuts_%s.png",run_type,trigName[kTrigType]));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_track/%sTrkFraction_cuts_%s.pdf",run_type,run_cfg_name.Data(),trigName[kTrigType]));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_track/%sTrkFraction_cuts_%s.png",run_type,run_cfg_name.Data(),trigName[kTrigType]));
 
-      c1->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_track/TrkFraction_cuts_semilog_%s.pdf",run_type,trigName[kTrigType]));
-      c1->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_track/TrkFraction_cuts_semilog_%s.png",run_type,trigName[kTrigType]));
+      c1->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_track/%sTrkFraction_cuts_semilog_%s.pdf",run_type,run_cfg_name.Data(),trigName[kTrigType]));
+      c1->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_track/%sTrkFraction_cuts_semilog_%s.png",run_type,run_cfg_name.Data(),trigName[kTrigType]));
     }
   
 }

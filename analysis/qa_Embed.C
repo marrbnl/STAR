@@ -1,5 +1,5 @@
 const char *run_config = "EmbedQA.";
-const Bool_t iPico = 1;
+const Bool_t iPico = 0;
 const int year = 2013;
 TString run_cfg_name;
 
@@ -21,19 +21,25 @@ void qa_Embed()
       fmc   = TFile::Open(Form("./output/Run13.pp500.jpsi.%sMC.root",run_config),"read");
       fdata = TFile::Open(Form("./output/Run13.pp500.jpsi.%sPicoData.root",run_config),"read");
     }
+  if(year==2014)
+    {
+      run_type = "Run14_AuAu200";
+      fmc   = TFile::Open(Form("./output/Run14.AuAu200.jpsi.%sMC.root",run_config),"read");
+      fdata = TFile::Open(Form("./output/Run14.AuAu200.jpsi.%sPicoData.root",run_config),"read");
+    }
   run_cfg_name = Form("%s",run_config);
   if(iPico) run_cfg_name = Form("Pico.%s",run_cfg_name.Data());
 
   makePDF();
 }
 
-
 //================================================
 void makePDF(char *outPDFName="")
 {
   if(year==2013) outPDFName = "EmbedQA_Run13_pp500_Jpsi.pdf";
+  if(year==2014) outPDFName = "EmbedQA_Run14_AuAu200_Jpsi.pdf";
   TDatime time;
-  Int_t year  = time.GetYear();
+  Int_t Year  = time.GetYear();
   Int_t month = time.GetMonth();
   Int_t day   = time.GetDay();
 
@@ -48,14 +54,15 @@ void makePDF(char *outPDFName="")
   t1->SetTextFont(62);
   t1->SetTextSize(0.07);
   t1->AddText("Embedding QA for J/#psi #rightarrow #mu^{+}#mu^{-}");
-  t1->AddText("in pp 500 GeV from Run13");
+  if(year==2013) t1->AddText("in pp 500 GeV from Run13");
+  if(year==2014) t1->AddText("in Au+Au 200 GeV from Run14");
   t1->Draw();
   t1  = new TPaveText(0.28,0.25,0.7,0.4,"brNDC");
   t1->SetFillStyle(0);
   t1->SetBorderSize(0);
   t1->SetTextFont(62);
   t1->SetTextSize(0.05);
-  t1->AddText(Form("%02d/%02d/%04d",month,day,year));
+  t1->AddText(Form("%02d/%02d/%04d",month,day,Year));
   t1->AddText("Rongrong Ma");
   t1->Draw();
   c1->Print(Form("%s(",outPDFName));
@@ -135,8 +142,9 @@ void makePDF(char *outPDFName="")
   t1->SetTextFont(62);
   t1->SetTextSize(0.045);
   t1->AddText("Pion PID");
-  t1->AddText("    0.016 < m^{2} < 0.021 (GeV/c^{2})^{2}");
-  t1->AddText("    |n#sigma_{#pi}| < 4");
+  if(year==2013) 
+    t1->AddText("    0.016 < m^{2} < 0.021 (GeV/c^{2})^{2}");
+  t1->AddText("    |n#sigma_{#pi}| < 2");
   t1->AddText("Muon PID");
   t1->AddText(Form("    %1.1f < n#sigma_{#pi} < %1.1f",h1->GetBinContent(8)/counter,h1->GetBinContent(9)/counter));
   t1->AddText(Form("    |#Deltaz| < %1.0f cm",h1->GetBinContent(14)/counter));
@@ -148,13 +156,17 @@ void makePDF(char *outPDFName="")
 
   TList *list = new TList;
 
+  TH1F *hNJpsi = (TH1F*)fmc->Get("hNEmbedJpsi_di_mu");
+  TCanvas *c = draw1D(hNJpsi,"MC input: # of embedded J/psi per event",kFALSE,kFALSE);
+  PaintCanvasToPDF(c,pdf);
+
   // MC input
   TCanvas *c = new TCanvas("mc_input","mc_input",800,600);
   c->Divide(2,2);
   THnSparseF *hJpsiUS_mc = (THnSparseF*)fmc->Get("hJpsiInfo_di_mu");
   hJpsiUS_mc->GetAxis(7)->SetRange(4,4);
 
-  const char *mc_name[4] = {"invariant mass","p_{T}","#eta","#varphi"};
+  const char *mc_name[4] = {"invariant mass","p_{T}","rapidity","#varphi"};
   for(int i=0; i<4; i++)
     {
       TH1F *hJpsi_true = (TH1F*)hJpsiUS_mc->Projection(i);
@@ -197,7 +209,8 @@ void makePDF(char *outPDFName="")
   TH2F *hTrkInfo[8][3];
   THnSparseF *hnTrk[4];
   hnTrk[0] = (THnSparseF*)fmc->Get("hTrkEtaPhi_MCreco_di_mu");
-  hnTrk[1] = (THnSparseF*)fdata->Get("hTrkEtaPhi_DataPion_di_mu");
+  if(year==2013) hnTrk[1] = (THnSparseF*)fdata->Get("hTrkEtaPhi_DataPion_di_mu");
+  if(year==2014) hnTrk[1] = (THnSparseF*)fmc->Get("hTrkEtaPhi_DataPion_di_mu");
   hnTrk[2] = (THnSparseF*)fdata->Get("hTrkEtaPhi_DataMuonUL_di_mu");
   hnTrk[3] = (THnSparseF*)fdata->Get("hTrkEtaPhi_DataMuonLS_di_mu");
   hnTrk[2]->Add(hnTrk[3],-1);
@@ -248,7 +261,8 @@ void makePDF(char *outPDFName="")
   for(int i=0; i<5; i++)
     {
       hTrkInfo[i+3][0] = (TH2F*)fmc->Get(Form("hTrk%s_MCreco_di_mu",trkinfo_name[i]));
-      hTrkInfo[i+3][1] = (TH2F*)fdata->Get(Form("hTrk%s_DataPion_di_mu",trkinfo_name[i]));
+      if(year==2013) hTrkInfo[i+3][1] = (TH2F*)fdata->Get(Form("hTrk%s_DataPion_di_mu",trkinfo_name[i]));
+      if(year==2014) hTrkInfo[i+3][1] = (TH2F*)fmc->Get(Form("hTrk%s_DataPion_di_mu",trkinfo_name[i]));
       hTrkInfo[i+3][2] = (TH2F*)fdata->Get(Form("hTrk%s_DataMuonUL_di_mu",trkinfo_name[i]));
       TH2F *hLS = (TH2F*)fdata->Get(Form("hTrk%s_DataMuonLS_di_mu",trkinfo_name[i]));
       hTrkInfo[i+3][2]->Add(hLS,-1);
@@ -296,7 +310,11 @@ void makePDF(char *outPDFName="")
 		}
 	      else if(j==1)
 		{
-		  if(i==3) h1->GetXaxis()->SetRangeUser(0,3);
+		  if(i==3) 
+		    {
+		      if(year==2013) h1->GetXaxis()->SetRangeUser(0,3);
+		      if(year==2014) h1->GetXaxis()->SetRangeUser(0,1);
+		    }
 		  if(i==5) h1->GetXaxis()->SetRangeUser(0.4,1);
 		  if(i==7) h1->GetXaxis()->SetRangeUser(-6,6);
 		  h1->SetLineColor(1);
@@ -305,10 +323,18 @@ void makePDF(char *outPDFName="")
 		}
 	      else if(j==2)
 		{
+		  if(i==3) 		    
+		    {
+		      if(year==2013) h1->GetXaxis()->SetRangeUser(0,3);
+		      if(year==2014) h1->GetXaxis()->SetRangeUser(0,1);
+		    }
+		  if(i==5) h1->GetXaxis()->SetRangeUser(0.4,1);
+		  if(i==7) h1->GetXaxis()->SetRangeUser(-6,6);
 		  h1->SetMarkerStyle(20);
 		  h1->SetMarkerColor(4);
 		  h1->SetLineColor(4);
-		  h1->Draw("sames P");
+		  h1->Draw("P");
+		  if(k==0) leg->AddEntry(h1,"#mu candidates in data","PE");
 		}
 	    }
 	  title = GetTitleText(Form("%s distribution (%1.1f < p_{T} < %1.1f)",trk_title[i],pt_cuts[k],pt_cuts[k+1]),0.05);
@@ -322,7 +348,10 @@ void makePDF(char *outPDFName="")
   // === track pt resolution
   c = new TCanvas("track_pt_res","track_pt_res",800,600);
   c->Divide(2,2);
-  TH2F *hpTrkRes = (TH2F*)fmc->Get("hpTrkPtRes_di_mu");
+  THnSparseF *hnpTrkRes = (THnSparseF*)fmc->Get("mhpTrkPtRes_di_mu");
+  TH2F *hpTrkRes = (TH2F*)hnpTrkRes->Projection(0,2);
+  hpTrkRes->Sumw2();
+  hpTrkRes->SetName("hpTrkPtRes");
   hpTrkRes->GetXaxis()->SetTitleOffset(1.1);
   hpTrkRes->GetXaxis()->SetRangeUser(0,10);
   c->cd(1);
@@ -331,7 +360,10 @@ void makePDF(char *outPDFName="")
   title = GetTitleText("p_{T} resolution of pimary tracks (embedding muons)",0.045);
   title->Draw();
 
-  TH2F *hgTrkRes = (TH2F*)fmc->Get("hgTrkPtRes_di_mu");
+  THnSparseF *hngTrkRes = (THnSparseF*)fmc->Get("mhgTrkPtRes_di_mu");
+  TH2F *hgTrkRes = (TH2F*)hngTrkRes->Projection(0,2);
+  hgTrkRes->Sumw2();
+  hgTrkRes->SetName("hgTrkPtRes");
   hgTrkRes->GetXaxis()->SetTitleOffset(1.1);
   hgTrkRes->GetXaxis()->SetRangeUser(0,10);
   c->cd(2);
@@ -342,7 +374,7 @@ void makePDF(char *outPDFName="")
 
   TObjArray pSlices;
   hpTrkRes->FitSlicesY(0, 0, -1, 0, "QNR", &pSlices);
-  TH1D *hpRes = (TH1D*)pSlices[2];
+  TH1D *hpRes = (TH1D*)pSlices[2]->Clone("hpRes");
   hpRes->SetYTitle("#sigma_{p_{T}}/p_{T}");
   hpRes->SetMarkerStyle(21); 
   hpRes->SetMarkerColor(2);
@@ -350,14 +382,14 @@ void makePDF(char *outPDFName="")
   hpRes->GetXaxis()->SetRangeUser(0,10);
   TObjArray gSlices;
   hgTrkRes->FitSlicesY(0, 0, -1, 0, "QNR", &gSlices);
-  TH1D *hgRes = (TH1D*)gSlices[2];
+  TH1D *hgRes = (TH1D*)gSlices[2]->Clone("hgRes");
   hgRes->SetTitle(";p_{T,true} (GeV/c);#sigma_{p_{T}}/p_{T}");
   hgRes->SetMarkerStyle(21);
   hgRes->GetXaxis()->SetRangeUser(0,10);
   hgRes->GetYaxis()->SetRangeUser(0,0.3);
   c->cd(3);
   gPad->SetGridy();
-  hgRes->Draw("P");
+  hgRes->Draw("");
   hpRes->Draw("samesP");
   title = GetTitleText("p_{T} resolution of embedded muon tracks",0.045);
   title->Draw();
@@ -368,7 +400,21 @@ void makePDF(char *outPDFName="")
   leg->AddEntry(hpRes,"Primary tracks","P");
   leg->AddEntry(hgRes,"Global tracks","P");
   leg->Draw();
+  TH1D *hgShift = (TH1D*)gSlices[1]->Clone("hgShift");
+  hgShift->SetTitle(";p_{T,true} (GeV/c);<#Deltap_{T}/p_{T}>");
+  hgShift->SetMarkerStyle(21);
+  hgShift->GetXaxis()->SetRangeUser(0,10);
+  hgShift->GetYaxis()->SetRangeUser(-0.01,0.01);
+  TH1D *hpShift = (TH1D*)pSlices[1]->Clone("hpShift");
+  hpShift->SetMarkerStyle(21); 
+  hpShift->SetMarkerColor(2);
+  hpShift->SetLineColor(2);
+  c->cd(4);
+  gPad->SetGridy();
+  hgShift->Draw("");
+  hpShift->Draw("samesP");
   PrintCanvasToPDF(c,pdf);
+
 
   c = new TCanvas("fit_jpsi","fit_jpsi",800,600);
   hJpsiUS_mc->GetAxis(7)->SetRange(5,5);
@@ -386,10 +432,10 @@ void makePDF(char *outPDFName="")
   c = new TCanvas("track_pt_eff","track_pt_eff",800,600);
   c->Divide(2,2);
   const TString legName[3] = {"MC tracks","Matched to TPC","Matched to TPC+MTD"};
-  TH2F *hTrkPhiPt[3];
-  hTrkPhiPt[0] = (TH2F*)fmc->Get("hMcTrkPhiVsPt_di_mu");
-  hTrkPhiPt[1] = (TH2F*)fmc->Get("hMcTrkPhiVsPtTpc_di_mu");
-  hTrkPhiPt[2] = (TH2F*)fmc->Get("hMcTrkPhiVsPtMtd_di_mu");
+  THnSparseF *hnTrkInfo[3];
+  hnTrkInfo[0] = (THnSparseF*)fmc->Get("mhMcTrkInfo_di_mu");
+  hnTrkInfo[1] = (THnSparseF*)fmc->Get("mhMcTrkInfoTpc_di_mu");
+  hnTrkInfo[2] = (THnSparseF*)fmc->Get("mhMcTrkInfoMtd_di_mu");
   TH1F *hMcTrkPt[3];
   c->cd(1);
   TLegend *leg = new TLegend(0.5,0.6,0.7,0.8);
@@ -398,7 +444,9 @@ void makePDF(char *outPDFName="")
   leg->SetTextSize(0.045);
   for(Int_t i=0; i<3; i++)
     {
-      hMcTrkPt[i] = (TH1F*)hTrkPhiPt[i]->ProjectionX(Form("hMcTrkPt_%d",i));
+      hnTrkInfo[i]->GetAxis(1)->SetRangeUser(-0.5+1e-4,0.5-1e-4);
+      hMcTrkPt[i] = (TH1F*)hnTrkInfo[i]->Projection(0);
+      hMcTrkPt[i]->SetName(Form("hMcTrkPt_%d",i));
       scaleHisto( hMcTrkPt[i], 1, 1, kTRUE);
       hMcTrkPt[i]->GetXaxis()->SetTitleOffset(1.1);
       hMcTrkPt[i]->Sumw2();
@@ -410,6 +458,7 @@ void makePDF(char *outPDFName="")
       leg->AddEntry(hMcTrkPt[i],legName[i].Data(),"P");
       if(i==0) hMcTrkPt[i]->Draw();
       else     hMcTrkPt[i]->Draw("samesP");
+      hnTrkInfo[i]->GetAxis(1)->SetRange(0,-1);
     }
   leg->Draw();
   title = GetTitleText("p_{T} distribution of single muons (|#eta_{true}|<0.5)",0.045);
@@ -450,8 +499,10 @@ void makePDF(char *outPDFName="")
   leg->SetHeader("p_{T} > 2 GeV/c");
   for(Int_t i=0; i<3; i++)
     {
-      hTrkPhiPt[i]->GetXaxis()->SetRangeUser(2,100);
-      hMcTrkPhi[i] = (TH1F*)hTrkPhiPt[i]->ProjectionY(Form("hMcTrkPhi_%d",i));
+      hnTrkInfo[i]->GetAxis(0)->SetRangeUser(2+1e-4,100);
+      hnTrkInfo[i]->GetAxis(1)->SetRangeUser(-0.5+1e-4,0.5-1e-4);
+      hMcTrkPhi[i] = (TH1F*)hnTrkInfo[i]->Projection(2);
+      hMcTrkPhi[i]->SetName(Form("hMcTrkPhi_%d",i));
       hMcTrkPhiRatio[i] = (TH1F*)hMcTrkPhi[i]->Clone(Form("%s_ratio",hMcTrkPhi[i]->GetName()));
       hMcTrkPhiRatio[i]->Divide(hMcTrkPhi[0]);
       hMcTrkPhiRatio[i]->SetMarkerColor(color[i]);
@@ -465,6 +516,8 @@ void makePDF(char *outPDFName="")
 	  if(i==1) hMcTrkPhiRatio[i]->Draw("HIST");
 	  else     hMcTrkPhiRatio[i]->Draw("samesHIST");
 	}
+      hnTrkInfo[i]->GetAxis(0)->SetRange(0,-1);
+      hnTrkInfo[i]->GetAxis(1)->SetRange(0,-1);
     }
   leg->Draw();
   title = GetTitleText("Tracking efficiency of single muons (|#eta_{true}|<0.5)",0.045);
@@ -472,10 +525,6 @@ void makePDF(char *outPDFName="")
 
   c->cd(4);
   gPad->SetGridy();
-  TH2F *hTrkEtaPt[3];
-  hTrkEtaPt[0] = (TH2F*)fmc->Get("hMcTrkEtaVsPt_di_mu");
-  hTrkEtaPt[1] = (TH2F*)fmc->Get("hMcTrkEtaVsPtTpc_di_mu");
-  hTrkEtaPt[2] = (TH2F*)fmc->Get("hMcTrkEtaVsPtMtd_di_mu");
   TH1F *hMcTrkEta[3], *hMcTrkEtaRatio[3];
   TLegend *leg = new TLegend(0.5,0.65,0.7,0.85);
   leg->SetBorderSize(0);
@@ -484,13 +533,15 @@ void makePDF(char *outPDFName="")
   leg->SetHeader("p_{T} > 2 GeV/c");
   for(Int_t i=0; i<3; i++)
     {
-      hTrkEtaPt[i]->GetXaxis()->SetRangeUser(2,100);
-      hMcTrkEta[i] = (TH1F*)hTrkEtaPt[i]->ProjectionY(Form("hMcTrkPhi_%d",i));
+      hnTrkInfo[i]->GetAxis(0)->SetRangeUser(2+1e-4,100);
+      hMcTrkEta[i] = (TH1F*)hnTrkInfo[i]->Projection(1);
+      hMcTrkEta[i]->SetName(Form("hMcTrkPhi_%d",i));
       hMcTrkEtaRatio[i] = (TH1F*)hMcTrkEta[i]->Clone(Form("%s_ratio",hMcTrkEta[i]->GetName()));
       hMcTrkEtaRatio[i]->Divide(hMcTrkEta[0]);
       hMcTrkEtaRatio[i]->SetMarkerColor(color[i]);
       hMcTrkEtaRatio[i]->SetLineColor(color[i]);
       hMcTrkEtaRatio[i]->GetYaxis()->SetRangeUser(0,1.1);
+      hMcTrkEtaRatio[i]->GetXaxis()->SetRangeUser(-1,1);
       hMcTrkEtaRatio[i]->SetTitle(";#eta;Tracking efficiency");
       if(i>0)
 	{
@@ -498,6 +549,7 @@ void makePDF(char *outPDFName="")
 	  if(i==1) hMcTrkEtaRatio[i]->Draw("HIST");
 	  else     hMcTrkEtaRatio[i]->Draw("samesHIST");
 	}
+      hnTrkInfo[i]->GetAxis(0)->SetRange(0,-1);
     }
   leg->Draw();
   title = GetTitleText("Tracking efficiency of single muons",0.045);
@@ -516,30 +568,52 @@ void makePDF(char *outPDFName="")
   t1->Draw();
   PaintCanvasToPDF(c1,pdf);
 
-  TH2F *hDyVsRcTrkPt = (TH2F*)fmc->Get("hDyVsRcTrkPt_MCreco_true_di_mu");
+  TH2F *hDyVsRcTrkPt = (TH2F*)fmc->Get("hTrkDyVsPt_MCreco_di_mu");
   hDyVsRcTrkPt->GetXaxis()->SetTitleOffset(1.1);
   hDyVsRcTrkPt->GetXaxis()->SetRangeUser(0,10);
   c = draw2D(hDyVsRcTrkPt,"#Deltay vs p_{T} of reconstructed MC tracks (primary)");
   PaintCanvasToPDF(c,pdf);
 
-  TH2F *hDzVsRcTrkPt = (TH2F*)fmc->Get("hDzVsRcTrkPt_MCreco_true_di_mu");
+  TH1F *hDy = (TH1F*)hDyVsRcTrkPt->ProjectionY("hDeltay");
+  c = draw1D(hDy,"#Deltay of reconstructed MC tracks (primary)",kFALSE,kFALSE);
+  PaintCanvasToPDF(c,pdf);
+
+  TH2F *hDzVsRcTrkPt = (TH2F*)fmc->Get("hTrkDzVsPt_MCreco_di_mu");
   hDzVsRcTrkPt->GetXaxis()->SetTitleOffset(1.1);
   hDzVsRcTrkPt->GetXaxis()->SetRangeUser(0,10);
   hDzVsRcTrkPt->GetYaxis()->SetRangeUser(-100,100);
   c = draw2D(hDzVsRcTrkPt,"#Deltaz vs p_{T} of reconstructed MC tracks (primary)");
   PaintCanvasToPDF(c,pdf);
 
-  TH2F *hMcTof = (TH2F*)fmc->Get("hMcTof_di_mu");
-  hMcTof->GetXaxis()->SetTitleOffset(1.1);
-  hMcTof->GetXaxis()->SetRangeUser(0,10);
-  c = draw2D(hMcTof,"Time-of-flight for MTD hits calculated by GEANT");
+  TH1F *hDz = (TH1F*)hDzVsRcTrkPt->ProjectionY("hDeltaz");
+  c = draw1D(hDz,"#Deltaz of reconstructed MC tracks (primary)",kFALSE,kFALSE);
   PaintCanvasToPDF(c,pdf);
 
-  TH2F *hMcDeltaTof = (TH2F*)fmc->Get("hMcDeltaTof_di_mu");
-  hMcDeltaTof->GetXaxis()->SetTitleOffset(1.1);
-  hMcDeltaTof->GetXaxis()->SetRangeUser(0,10);
-  hMcDeltaTof->GetYaxis()->SetRangeUser(-5,5);
-  c = draw2D(hMcDeltaTof,"#Deltatof vs p_{T} of reconstructed MC tracks (primary)");
+  THnSparseF *hn = (THnSparseF*)fmc->Get("mhMcTofQA_di_mu");
+  TH2F *hMcTofVsMod = (TH2F*)hn->Projection(1,4);
+  hMcTofVsMod->GetYaxis()->SetRangeUser(10,20);
+  c = draw2D(hMcTofVsMod,"Time-of-flight for MTD hits calculated by GEANT;module");
+  PaintCanvasToPDF(c,pdf);
+
+  TH2F *hExpTofVsMod = (TH2F*)hn->Projection(2,4);
+  hExpTofVsMod->GetYaxis()->SetRangeUser(10,20);
+  c = draw2D(hExpTofVsMod,"Time-of-flight for tracks to reach MTD;module");
+  PaintCanvasToPDF(c,pdf);
+
+  TH2F *hdTofVsMod = (TH2F*)hn->Projection(0,4);
+  hdTofVsMod->GetYaxis()->SetRangeUser(-1,1);
+  c = draw2D(hdTofVsMod,"#Deltatof vs module of reconstructed MC tracks (primary);module");
+  PaintCanvasToPDF(c,pdf);
+
+  TH2F *hMcDeltaTofVsPt = (TH2F*)fmc->Get("hMcDeltaTof_di_mu");
+  hMcDeltaTofVsPt->GetXaxis()->SetTitleOffset(1.1);
+  hMcDeltaTofVsPt->GetXaxis()->SetRangeUser(0,10);
+  hMcDeltaTofVsPt->GetYaxis()->SetRangeUser(-1,1);
+  c = draw2D(hMcDeltaTofVsPt,"#Deltatof vs p_{T} of reconstructed MC tracks (primary)");
+  PaintCanvasToPDF(c,pdf);
+
+  TH1F *hMcDeltaTof = (TH1F*)hMcDeltaTofVsPt->ProjectionY("hMcDeltaTof");
+  c = draw1D(hMcDeltaTof,"#Deltatof of reconstructed MC tracks (primary)",kFALSE,kFALSE);
   PaintCanvasToPDF(c,pdf);
 
   pdf->On();

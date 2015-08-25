@@ -32,8 +32,8 @@ void ana_Background()
   run_cfg_name = "SameEvent.";
 
   //makeHisto(fileName);
-  //ana(fileName);
-  compareToMixEvent(fileName);
+  ana(fileName);
+  //compareToMixEvent(fileName,0);
 }
 
 //================================================
@@ -145,7 +145,7 @@ void compareToMixEvent(TString fileName, const int save = 0)
 }
 
 //================================================
-void ana(TString fileName, const Int_t save = 0)
+void ana(TString fileName, const Int_t save = 1)
 {
   TFile *fin = TFile::Open(Form("Rootfiles/%s",fileName.Data()),"read");
 
@@ -165,7 +165,7 @@ void ana(TString fileName, const Int_t save = 0)
       for(int j=0; j<2; j++)
 	{
 	  hLSpair[j][i]->GetXaxis()->SetRangeUser(0,8);
-	  c = draw2D(hLSpair[j][i],Form("Mixed event: %s like-sign pairs (p_{T,1}>%1.1f, p_{T,2}>%1.1f GeV/c)",title[j],pt_cuts_1[i],pt_cuts_2[i]));
+	  c = draw2D(hLSpair[j][i],Form("Same event: %s like-sign pairs (p_{T,1}>%1.1f, p_{T,2}>%1.1f GeV/c)",title[j],pt_cuts_1[i],pt_cuts_2[i]));
 	  if(save) 
 	    {
 	      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EventMixing/%sInvMass_vs_pt_LS_%s_pt1_%1.0f_pt2_%1.0f.pdf",run_type,run_cfg_name.Data(),title[j],pt_cuts_1[i]*10,pt_cuts_2[i]*10));
@@ -180,7 +180,7 @@ void ana(TString fileName, const Int_t save = 0)
 	  h1->Rebin(10);
 	  list->Add(h1);
 	}
-      c = sysCompare(list,Form("Charge_pt1_%1.1f_pt2_%1.1f",pt_cuts_1[i],pt_cuts_2[i]),Form("Mixed event: di-muon pairs"),"Charge dependece;M_{#mu#mu} (GeV/c^{2});--/++",kFALSE,0,15,kFALSE,0.1,10,kTRUE,0.7,1.3,kTRUE,kTRUE,legName,kTRUE,"Mixed events",0.25,0.4,0.35,0.55,kFALSE);
+      c = sysCompare(list,Form("Charge_pt1_%1.1f_pt2_%1.1f",pt_cuts_1[i],pt_cuts_2[i]),Form("Same event: di-muon pairs"),"Charge dependece;M_{#mu#mu} (GeV/c^{2});--/++",kFALSE,0,15,kFALSE,0.1,10,kTRUE,0.7,1.3,kTRUE,kTRUE,legName,kTRUE,"Same events",0.25,0.4,0.35,0.55,kFALSE);
       c->cd(1);
       TPaveText *t1 = GetPaveText(0.7,0.8,0.7,0.85,0.04,62);
       t1->AddText(Form("p_{T,1}>%1.1f GeV/c",pt_cuts_1[i]));
@@ -203,14 +203,15 @@ void ana(TString fileName, const Int_t save = 0)
       
       list->Clear();
       TH1F *htmp = (TH1F*)hLS[i]->ProjectionX(Form("%s_prox2",hLS[i]->GetName()));
-      TH1F *h1 = (TH1F*)htmp->Rebin(nSpecMBins,Form("htmp_rebin",htmp->GetName()),specM);
+      TH1F *h1 = (TH1F*)htmp->Rebin(nSpecMBins2,Form("htmp_rebin",htmp->GetName()),specM2);
       scaleHisto(h1, 1, 1,kTRUE,kFALSE, kTRUE);
       list->Add(h1);
-      TH1F *h1 = (TH1F*)hLSGeom[i]->ProjectionX(Form("%s_prox",hLSGeom[i]->GetName()));
+      htmp = (TH1F*)hLSGeom[i]->ProjectionX(Form("%s_prox",hLSGeom[i]->GetName()));
+      h1 = (TH1F*)htmp->Rebin(nSpecMBins2,Form("htmp_rebin",htmp->GetName()),specM2);
       scaleHisto(h1, 1, 1,kTRUE,kFALSE, kTRUE);
       list->Add(h1);
 
-      c = sysCompare(list,Form("GeometricalMean_pt1_%1.1f_pt2_%1.1f",pt_cuts_1[i],pt_cuts_2[i]),Form("Mixed event: like-sign di-muon pairs (p_{T,1}>%1.1f, p_{T,2}>%1.1f GeV/c)",pt_cuts_1[i],pt_cuts_2[i]),"Geometric/Arithmetic;M_{#mu#mu} (GeV/c^{2});",kTRUE,0,4,kFALSE,0.1,10,kTRUE,0.93,1.07,kFALSE,kTRUE,legName2,kTRUE,"Like-sign",0.25,0.4,0.25,0.45,kTRUE);
+      c = sysCompare(list,Form("GeometricalMean_pt1_%1.1f_pt2_%1.1f",pt_cuts_1[i],pt_cuts_2[i]),Form("Same event: like-sign di-muon pairs (p_{T,1}>%1.1f, p_{T,2}>%1.1f GeV/c)",pt_cuts_1[i],pt_cuts_2[i]),"Geometric/Arithmetic;M_{#mu#mu} (GeV/c^{2});",kTRUE,0,4,kFALSE,0.1,10,kTRUE,0.93,1.07,kFALSE,kTRUE,legName2,kTRUE,"Like-sign",0.25,0.4,0.25,0.45,kTRUE);
      if(save) 
 	{
 	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EventMixing/%sInvMass_Geom_pt1_%1.0f_pt2_%1.0f.pdf",run_type,run_cfg_name.Data(),pt_cuts_1[i]*10,pt_cuts_2[i]*10));

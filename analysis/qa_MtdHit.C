@@ -1,24 +1,37 @@
 TFile *f;
 
+const char *run_config = "";
+const Bool_t iPico = 1;
+const int year = 2014;
+TString run_cfg_name;
+
 //================================================
-void qa_MtdHit(const Int_t save = 0)
+void qa_MtdHit()
 {
   gStyle->SetStatY(0.9);                
-  gStyle->SetStatX(0.9);  
+  gStyle->SetStatX(0.9); 
 
+  TString fileName;
 
-  //f = TFile::Open(Form("~/Work/STAR/analysis/Output/jpsi.AuAu200.Run14.%s.root",run_config),"read");
-  f = TFile::Open("./output/Run13.pp500.jpsi.EventQA.root","read");
-
-  if(!save)
+  if(year==2013)
     {
-      qa();
+      run_type = "Run13_pp500";
+      if(iPico) fileName = Form("Pico.Run13.pp500.jpsi.%sroot",run_config);
+      else      fileName = Form("Run13.pp500.jpsi.%sroot",run_config);
     }
-  else
+  else if(year==2014)
     {
-      qa(1);
+      run_type = "Run14_AuAu200";
+      if(iPico) fileName = Form("Pico.Run14.AuAu200.jpsi.%sroot",run_config);
+      else      fileName = Form("Run14.AuAu200.jpsi.%sroot",run_config);
     }
 
+  f = TFile::Open(Form("./output/%s",fileName.Data()),"read");
+
+  run_cfg_name = run_config;
+  if(iPico) run_cfg_name = Form("Pico.%s",run_cfg_name.Data());
+
+  qa();
 }
 
 
@@ -26,7 +39,7 @@ void qa_MtdHit(const Int_t save = 0)
 void qa(const Int_t save = 1)
 {
   const char *hName[] = {"mhMtdRawHitN","mhMtdHitN","mhMthMtdHitN","mhMtdHitMap",
-			 "mhMtdHitTrigTime","mhMtdRawHitMap","mhMthMtdHitMap","mhMthMtdHitLocaly","mhMthMtdHitGlobalz"};
+			 "mhMtdHitTrigTime","mhMtdRawHitMap","mhMthMtdHitMap","mhMthMtdHitLocalY","mhMthMtdHitLocalZ"};
 
   for(Int_t i=0; i<9; i++)
     {
@@ -47,8 +60,8 @@ void qa(const Int_t save = 1)
       outname.ReplaceAll("mh","");
       if(save) 
 	{
-	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_MtdHit/%s_%s.pdf",run_type,outname.Data(),trigName[kTrigType]));
-	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_MtdHit/%s_%s.png",run_type,outname.Data(),trigName[kTrigType]));
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_MtdHit/%s%s_%s.pdf",run_type,run_cfg_name.Data(),outname.Data(),trigName[kTrigType]));
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_MtdHit/%s%s_%s.png",run_type,run_cfg_name.Data(),outname.Data(),trigName[kTrigType]));
 	}
     }
 
@@ -72,7 +85,7 @@ void qa(const Int_t save = 1)
   c = draw2D(hHitMapRot);
   if(save) 
     {
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_MtdHit/MtdHitMap_Rotate_%s.pdf",run_type,trigName[kTrigType]));
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_MtdHit/MtdHitMap_Rotate_%s.png",run_type,trigName[kTrigType]));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_MtdHit/%sMtdHitMap_Rotate_%s.pdf",run_type,run_cfg_name.Data(),trigName[kTrigType]));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_MtdHit/%sMtdHitMap_Rotate_%s.png",run_type,run_cfg_name.Data(),trigName[kTrigType]));
     }
 }

@@ -2,8 +2,8 @@ TFile *f;
 Int_t hlt_index = 0;
 Int_t trk_index = 0;
 
-const char *run_config = "HLT.";
-const Bool_t iPico = 0;
+const char *run_config = "FitDz.";
+const Bool_t iPico = 1;
 const int year = 2014;
 TString run_cfg_name;
 
@@ -38,8 +38,9 @@ void qa_Match()
   run_cfg_name = Form("%s",run_config);
   if(iPico) run_cfg_name = Form("Pico.%s",run_cfg_name.Data());
 
-  Track();
+  //Track();
   //DeltaZ();
+  CompareFitDz();
   //DeltaY();
   //qualityCuts();
   //yzDistribution();
@@ -47,46 +48,382 @@ void qa_Match()
 }
 
 //================================================
-void DeltaZ(const Int_t save = 0)
+void CompareFitDz(const Int_t savePlot = 1)
 {
-  THnSparseF *hn = (THnSparseF*)f->Get(Form("hTrkDzDy_%s",trigName[kTrigType]));
-  TH2F *hTrkDzVsPt = (TH2F*)hn->Projection(1,0);
-  c = draw2D(hTrkDzVsPt,Form("Au+Au %s: #Deltaz of matched %s track-hit pairs%s",trigName[kTrigType],trk_name[trk_index],hlt_name[hlt_index]));
-  TLine *line = GetLine(0,-20,20,-20);
-  line->Draw();
-  line = GetLine(0,20,20,20);
-  line->Draw();
-  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_Match/%s.DeltaZ_vs_pt_%s.png",run_config,trigName[kTrigType]));
+  TString filename = f->GetName();
+  filename.ReplaceAll("output","Rootfiles");
+  filename.ReplaceAll(Form(".%sroot",run_config),".FitDz.root");
+  TFile *fin = TFile::Open(filename.Data(),"read");
+  const char *type_name[2] = {"2Gaus","3Gaus"};
 
-  Double_t pt_cut = 1;
-  hTrkDzVsPt->GetXaxis()->SetRangeUser(pt_cut+0.1,100);
-  TH1F *hMthDz = (TH1F*)hTrkDzVsPt->ProjectionY(Form("hTrkDzVsPt_%s_proj",trigName[kTrigType]));
-  hMthDz->SetTitle(Form("Au+Au %s: #Deltaz of matched track-hit pairs (p_{T}>%1.1f GeV/c);#Deltaz (cm)",trigName[kTrigType],pt_cut));
+  TList *list = new TList;
+  TString legName[2] = {"Two-Gaussian fit","Three-Gaussian fit"};
 
-  Double_t range = 80;
-  TF1 *func = new TF1("func","gaus(0)+gaus(3)",-1*range,range);
-  func->SetParameters(100,0,100,1000,0,10);
-  //func->SetParameters(1000,0,60,1000,0,15);
-  c = FitDeltaZ(hMthDz,func,range,20.);
-  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_Match/%s.FitDz_Pt%1.0fGeV_%s.png",run_config,pt_cut,trigName[kTrigType]));
-
-  // pt dependence
-  Double_t pt_cuts[5] = {1,2,3,5,20};
-  for(Int_t i=0; i<4; i++)
+  list->Clear();
+  TH1F *hChi2[2];
+  for(int i=0; i<2; i++)
     {
-      hTrkDzVsPt->GetXaxis()->SetRangeUser(pt_cuts[i]+0.1,pt_cuts[i+1]-0.1);
-      TH1F *htmp = (TH1F*)hTrkDzVsPt->ProjectionY(Form("hTrkDz_pt%1.0f-%1.0f_%s",pt_cuts[i],pt_cuts[i+1],trigName[kTrigType]));
-      htmp->SetTitle(Form("Au+Au %s: #Deltaz of matched track-hit pairs (%1.0f < p_{T} < %1.0f GeV/c);#Deltaz (cm)",trigName[kTrigType],pt_cuts[i],pt_cuts[i+1]));
-
-      TF1 *func = new TF1(Form("func_pt%1.0f-%1.0f",pt_cuts[i],pt_cuts[i+1]),"gaus(0)+gaus(3)",-1*range,range);
-      if(i==0) func->SetParameters(100,0,100,1000,0,10);
-      if(i==1) func->SetParameters(1000,0,15,1000,0,60);
-      if(i==2) func->SetParameters(1000,0,15,1000,0,60);
-      if(i==3) func->SetParameters(1000,0,60,1000,0,15);
-      c = FitDeltaZ(htmp,func,range,20.);
-      if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_Match/%s.FitDz_Pt%1.0f-%1.0fGeV_%s.png",run_config,pt_cuts[i],pt_cuts[i+1],trigName[kTrigType]));
+      hChi2[i] = (TH1F*)fin->Get(Form("hChi_%s",type_name[i]));
+      list->Add(hChi2[i]);
     }
- 
+  c = drawHistos(list,"chi2","Chi2/NDF of #Deltaz fit;p_{T} [GeV/c];Chi2/ndf",kFALSE,2.0,3.8,kTRUE,0.1,300,kTRUE,kTRUE,legName,kTRUE,"",0.5,0.7,0.65,0.85,kTRUE);
+  if(savePlot) 
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_Match/%sCompare_FitDzChi2_%s.png",run_type,run_cfg_name.Data(),trigName[kTrigType]));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_Match/%sCompare_FitDzChi2_%s.pdf",run_type,run_cfg_name.Data(),trigName[kTrigType]));
+    }
+
+  list->Clear();
+  TH1F *hMean[2];
+  for(int i=0; i<2; i++)
+    {
+      hMean[i] = (TH1F*)fin->Get(Form("hMean_%s",type_name[i]));
+      list->Add(hMean[i]);
+    }
+  c = drawHistos(list,"mean","Mean of fitted #Deltaz distribution",kFALSE,2.0,3.8,kFALSE,0.1,300,kFALSE,kTRUE,legName,kTRUE,"",0.5,0.7,0.65,0.85,kTRUE);
+  if(savePlot) 
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_Match/%sCompare_FitDzMean_%s.png",run_type,run_cfg_name.Data(),trigName[kTrigType]));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_Match/%sCompare_FitDzMean_%s.pdf",run_type,run_cfg_name.Data(),trigName[kTrigType]));
+    }
+
+  TH1F *hSigma[2];
+  for(int i=0; i<2; i++)
+    {
+      hSigma[i] = (TH1F*)fin->Get(Form("hSigma_%s",type_name[i]));
+      hSigma[i]->SetMarkerStyle(20);
+      hSigma[i]->SetMarkerColor(color[i]);
+      hSigma[i]->SetLineColor(color[i]);
+    }
+  hSigma[0]->SetMaximum(16);
+  c = draw1D(hSigma[0],"Sigma of fitted #Deltaz distribution");
+  hSigma[1]->Draw("sames");
+  TF1 *fResDzVsPt = new TF1("fResDzVsPt","[0]+[1]*exp([2]/x)",1,20);
+  fResDzVsPt->SetParameters(-32.6793, 32.6034, 0.444217);
+  fResDzVsPt->SetLineColor(4);
+  fResDzVsPt->Draw("sames");
+  TLegend *leg = new TLegend(0.55,0.65,0.7,0.85);
+  leg->SetBorderSize(0);
+  leg->SetFillColor(0);
+  leg->SetTextSize(0.04);
+  leg->AddEntry(hSigma[0],legName[0].Data(),"PL");
+  leg->AddEntry(hSigma[1],legName[1].Data(),"PL");
+  leg->AddEntry(fResDzVsPt,"Run13 embedding","L");
+  leg->Draw();
+  if(savePlot) 
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_Match/%sCompare_FitDzSigma_%s.png",run_type,run_cfg_name.Data(),trigName[kTrigType]));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_Match/%sCompare_FitDzSigma_%s.pdf",run_type,run_cfg_name.Data(),trigName[kTrigType]));
+    }
+
+  list->Clear();
+  TH1F *hPurity[2];
+  for(int i=0; i<2; i++)
+    {
+      hPurity[i] = (TH1F*)fin->Get(Form("hPurity_%s",type_name[i]));
+      list->Add(hPurity[i]);
+    }
+  c = drawHistos(list,"hPurity","Purity of selected muon sample by #Deltaz cut",kFALSE,2.0,3.8,kFALSE,0.1,300,kFALSE,kTRUE,legName,kTRUE,"",0.5,0.7,0.2,0.4,kTRUE);
+  if(savePlot) 
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_Match/%sCompare_DzPurity_%s.png",run_type,run_cfg_name.Data(),trigName[kTrigType]));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_Match/%sCompare_DzPurity_%s.pdf",run_type,run_cfg_name.Data(),trigName[kTrigType]));
+    }
+
+  list->Clear();
+  TH1F *hEff[2];
+  for(int i=0; i<2; i++)
+    {
+      hEff[i] = (TH1F*)fin->Get(Form("hEff_%s",type_name[i]));
+      list->Add(hEff[i]);
+    }
+  c = drawHistos(list,"hEff","Efficiency of #Deltaz cut",kFALSE,2.0,3.8,kFALSE,0.1,300,kFALSE,kTRUE,legName,kTRUE,"",0.2,0.4,0.2,0.4,kTRUE);
+  if(savePlot) 
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_Match/%sCompare_DzCutEff_%s.png",run_type,run_cfg_name.Data(),trigName[kTrigType]));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_Match/%sCompare_DzCutEff_%s.pdf",run_type,run_cfg_name.Data(),trigName[kTrigType]));
+    }
+}
+
+//================================================
+void DeltaZ(const Int_t savePlot = 0, const Int_t saveHisto = 0)
+{
+  TH2F *hDzVsPt = (TH2F*)f->Get(Form("mhDzVsPt_%s",trigName[kTrigType]));
+  c = draw2D(hDzVsPt,Form("%s: #Deltaz of matched %s track-hit pairs%s",trigName[kTrigType],trk_name[trk_index],hlt_name[hlt_index]));
+  if(savePlot) 
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_Match/%sDeltaZ_vs_pt_%s.png",run_type,run_cfg_name.Data(),trigName[kTrigType]));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_Match/%sDeltaZ_vs_pt_%s.pdf",run_type,run_cfg_name.Data(),trigName[kTrigType]));
+    }
+
+  // Fitting
+  const int type = 0;
+  const char *type_name[2] = {"2Gaus","3Gaus"};
+
+  TH1F *hMthDz = (TH1F*)hDzVsPt->ProjectionY(Form("hTrkDz_%s_proj",trigName[kTrigType]));
+  hMthDz->SetTitle(Form("%s: #Deltaz of matched track-hit pairs;#Deltaz (cm)",trigName[kTrigType]));
+  Double_t range = 80;
+  TF1 *func;
+  if(type==0)
+    {
+      func = new TF1("func","gaus(0)+gaus(3)",-1*range,range);
+      func->SetParameter(1,0);
+      func->SetParameter(4,0);
+      func->SetParameter(2,10);
+      func->SetParameter(5,50);
+    }
+  else if(type==1)
+    {
+      func = new TF1("func","gaus(0)+gaus(3)+gaus(6)",-1*range,range);
+      func->SetParameter(1,0);
+      func->SetParameter(4,0);
+      func->SetParameter(7,0);
+      func->SetParameter(2,10);
+      func->SetParameter(5,20);
+      func->SetParameter(8,100);
+    }
+  c = FitDeltaZ(hMthDz,func,range,20.,type);
+  if(savePlot) 
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_Match/%sFitDz_%s_All_%s.png",run_type,run_cfg_name.Data(),type_name[type],trigName[kTrigType]));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_Match/%sFitDz_%s_All_%s.pdf",run_type,run_cfg_name.Data(),type_name[type],trigName[kTrigType]));
+    }
+  //return;
+  // pt dependence
+  const int nTrkPtBin = 26;
+  const double trkPtBins[nTrkPtBin+1] = {1,1.1,1.2,1.3,1.4,1.5,1.6,1.7,1.8,1.9,2.0,2.2,2.4,2.6,2.8,3.0,3.5,4.0,4.5,5.0,6.0,7.0,8.0,9.0,10.0,15.0,20.0};
+  double trkPtbins[nTrkPtBin+2];
+  trkPtbins[0] = 0;
+  for(int i=1; i<nTrkPtBin+2; i++) trkPtbins[i] = trkPtBins[i-1];
+  TH1F *hMean = new TH1F(Form("hMean_%s",type_name[type]),Form("Mean of fitted #Deltaz distribution;p_{T} [GeV/c];mean [cm]"),nTrkPtBin,trkPtbins);
+  TH1F *hSigma = new TH1F(Form("hSigma_%s",type_name[type]),Form("Sigma of fitted #Deltaz distribution;p_{T} [GeV/c];#sigma [cm]"),nTrkPtBin,trkPtbins);
+  TH1F *hPurity = new TH1F(Form("hPurity_%s",type_name[type]),Form("Purity of selected muon sample by #Deltaz cut;p_{T} [GeV/c];purity"),nTrkPtBin,trkPtbins);
+  TH1F *hEff = new TH1F(Form("hEff_%s",type_name[type]),Form("Efficiency of #Deltaz cut;p_{T} [GeV/c];Efficiency"),nTrkPtBin,trkPtbins);
+  TH1F *hChi2 = new TH1F(Form("hChi_%s",type_name[type]),Form("Chi2/NDF of #Deltaz fit;p_{T} [GeV/c];Chi2/ndf"),nTrkPtBin,trkPtbins);
+  TF1 *fResDzVsPt = new TF1("fResDzVsPt","[0]+[1]*exp([2]/x)");
+  fResDzVsPt->SetParameters(-32.6793, 32.6034, 0.444217);
+  const int nCanvas = nTrkPtBin/6+1;
+  TCanvas *canvas[nCanvas];
+  for(int i=0; i<nTrkPtBin; i++)
+    {
+      if(i%6==0) 
+	{
+	  canvas[i/6] = new TCanvas(Form("Fit_dz_%d",i/6),Form("Fit_dz_%d",i/6),1100,650);
+	  canvas[i/6]->Divide(3,2);
+	}
+      int low_bin  = hDzVsPt->GetXaxis()->FindFixBin(trkPtBins[i]+1e-4);
+      int high_bin = hDzVsPt->GetXaxis()->FindFixBin(trkPtBins[i+1]-1e-4);
+      
+      TH1F *htmp = (TH1F*)hDzVsPt->ProjectionY(Form("hTrkDz_pt%1.1f-%1.1f_%s",trkPtBins[i],trkPtBins[i+1],trigName[kTrigType]),low_bin,high_bin);
+      htmp->SetTitle(Form("%s: #Deltaz of matched track-hit pairs (%1.1f < p_{T} < %1.1f GeV/c);#Deltaz (cm)",trigName[kTrigType],trkPtBins[i],trkPtBins[i+1]));
+
+      TF1 *func;
+      if(type==0)
+	{
+	  func = new TF1(Form("func_pt%1.1f-%1.1f_%s",trkPtBins[i],trkPtBins[i+1],type_name[type]),"gaus(0)+gaus(3)",-1*range,range);
+	  func->SetParameter(1,0);
+	  func->SetParameter(4,0);
+	  func->SetParameter(2,10);
+	  func->SetParameter(5,50);
+	}
+      if(type==1)
+	{
+	  func = new TF1(Form("func_pt%1.1f-%1.1f_%s",trkPtBins[i],trkPtBins[i+1],type_name[type]),"gaus(0)+gaus(3)+gaus(6)",-1*range,range);
+	  func->SetParameter(1,0);
+	  func->SetParameter(4,0);
+	  func->SetParameter(7,0);
+	  func->SetParameter(2,10);
+	  func->SetParameter(5,20);
+	  func->SetParameter(8,60);
+	  if(i<6)
+	    {
+	      func->SetParameter(2,8);
+	      func->SetParameter(5,25);
+	      func->SetParameter(8,40);
+	    }
+	  if(i==1)
+	    {
+	      func->SetParameter(2,10);
+	      func->SetParameter(5,25);
+	      func->SetParameter(8,40);
+	    }
+	  if(i==0)
+	    {
+	      func->SetParLimits(2,7,9);
+	      func->SetParameter(5,20);
+	      func->SetParameter(8,54);
+	    }
+	}
+      htmp->Fit(func,"IR0");
+      hChi2->SetBinContent(i+2, func->GetChisquare()/func->GetNDF());
+      hChi2->SetBinError(i+2, 0);
+      htmp->GetYaxis()->SetNdivisions(505);
+      canvas[i/6]->cd(i%6+1);
+      htmp->SetTitle(";#Deltaz [cm]");
+      htmp->GetXaxis()->SetRangeUser(-100,100);
+      htmp->SetMarkerStyle(20);
+      htmp->Draw("HIST");
+      func->SetLineColor(2);
+      func->Draw("sames");
+
+      TF1 *func1, *func2, *func3;
+      func1 = new TF1("func1","gaus",-1*range,range);
+      func1->SetParameters(func->GetParameter(0),func->GetParameter(1),func->GetParameter(2));
+      if(type==0)
+	{
+	  func2 = new TF1("func2","gaus",-1*range,range);
+	  func2->SetParameters(func->GetParameter(3),func->GetParameter(4),func->GetParameter(5));
+	  func2->SetLineColor(4);
+	  func2->Draw("sames");
+	}
+      else if(type==1)
+	{
+	  func2 = new TF1("func2","gaus(0)+gaus(3)",-1*range,range);
+	  func2->SetParameters(func->GetParameter(3),func->GetParameter(4),func->GetParameter(5),func->GetParameter(6),func->GetParameter(7),func->GetParameter(8));
+	  func2->SetLineColor(kGreen+2);
+	  func2->Draw("sames");
+
+	  func3 = new TF1("func3","gaus",-1*range,range);
+	  func3->SetParameters(func->GetParameter(6),func->GetParameter(7),func->GetParameter(8));
+	  func3->SetLineColor(4);
+	  func3->Draw("sames");
+	}
+
+
+      TPaveText *t = GetTitleText(Form("%1.1f < p_{T} < %1.1f GeV/c",trkPtBins[i],trkPtBins[i+1]),0.06);
+      t->Draw();
+      if(savePlot && (i%6==5 || i==nTrkPtBin-1))
+	{
+	  canvas[i/6]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_Match/%sFitDz_%s_Bin%d_%s.png",run_type,run_cfg_name.Data(),type_name[type],i/6,trigName[kTrigType]));
+	  canvas[i/6]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_Match/%sFitDz_%s_Bin%d_%s.pdf",run_type,run_cfg_name.Data(),type_name[type],i/6,trigName[kTrigType]));
+	}
+
+      hMean->SetBinContent(i+2,func->GetParameter(1));
+      hMean->SetBinError(i+2, func->GetParError(1));
+      hSigma->SetBinContent(i+2,func->GetParameter(2));
+      hSigma->SetBinError(i+2, func->GetParError(2));
+
+      // pt dependent dz cut
+      double pt = hPurity->GetBinCenter(i+1);
+      double dz_sigma = fResDzVsPt->Eval(pt);
+      double cut = 999.;
+      if(pt<3) cut = 2 * dz_sigma;
+      else     cut = 2.5 * dz_sigma;
+      
+      double all = htmp->Integral(htmp->FindFixBin(-1*cut),htmp->FindFixBin(cut));
+      double all_err = TMath::Sqrt(all);
+      double bkg = (func->Integral(-1*cut,cut)-func1->Integral(-1*cut,cut)) * 1./htmp->GetBinWidth(1);
+      double bkg_err = TMath::Sqrt(bkg);
+      double signal = all - bkg;
+      double signal_err = TMath::Sqrt(all_err*all_err+bkg_err*bkg_err);
+      double purity = 1 - bkg/all;
+      double purity_err = TMath::Sqrt(bkg_err*bkg_err/all/all+bkg*bkg/all/all/all/all*all_err*all_err);
+      hPurity->SetBinContent(i+2,purity);
+      hPurity->SetBinError(i+2,purity_err);
+      
+      double out = 
+	func1->Integral(func1->GetParameter(1)-5*func1->GetParameter(2),-1*cut)* 1./htmp->GetBinWidth(1) +
+	func1->Integral(cut, func1->GetParameter(1)+5*func1->GetParameter(2))* 1./htmp->GetBinWidth(1);
+      double eff = signal/(signal+out);
+      hEff->SetBinContent(i+2,eff);
+      hEff->SetBinError(i+2,1e-10);
+
+    }
+  hChi2->SetMarkerStyle(21);
+  hChi2->SetMaximum(1.2*hChi2->GetMaximum());
+  c = draw1D(hChi2);
+  if(savePlot) 
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_Match/%sFitDz_Chi2_%s_%s.png",run_type,run_cfg_name.Data(),type_name[type],trigName[kTrigType]));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_Match/%sFitDz_Chi2_%s_%s.pdf",run_type,run_cfg_name.Data(),type_name[type],trigName[kTrigType]));
+    }
+  hMean->SetMarkerStyle(21);
+  hMean->GetYaxis()->SetRangeUser(-0.5,0.5);
+  c = draw1D(hMean);
+  if(savePlot) 
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_Match/%sFitDz_Mean_%s_%s.png",run_type,run_cfg_name.Data(),type_name[type],trigName[kTrigType]));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_Match/%sFitDz_Mean_%s_%s.pdf",run_type,run_cfg_name.Data(),type_name[type],trigName[kTrigType]));
+    }
+  hSigma->SetMarkerStyle(21);
+  hSigma->GetYaxis()->SetRangeUser(0,15);
+  c = draw1D(hSigma);
+  if(savePlot) 
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_Match/%sFitDz_Sigma_%s_%s.png",run_type,run_cfg_name.Data(),type_name[type],trigName[kTrigType]));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_Match/%sFitDz_Sigma_%s_%s.pdf",run_type,run_cfg_name.Data(),type_name[type],trigName[kTrigType]));
+    }
+  hPurity->SetMarkerStyle(21);
+  hPurity->GetYaxis()->SetRangeUser(0,1);
+  c = draw1D(hPurity);
+  if(savePlot) 
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_Match/%sDzCut_Purity_%s_%s.png",run_type,run_cfg_name.Data(),type_name[type],trigName[kTrigType]));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_Match/%sDzCut_Purity_%s_%s.pdf",run_type,run_cfg_name.Data(),type_name[type],trigName[kTrigType]));
+    }
+  hEff->SetMarkerStyle(21);
+  hEff->GetYaxis()->SetRangeUser(0,1.1);
+  c = draw1D(hEff);
+  if(savePlot) 
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_Match/%sDzCut_Efficiency_%s_%s.png",run_type,run_cfg_name.Data(),type_name[type],trigName[kTrigType]));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_Match/%sDzCut_Efficiency_%s_%s.pdf",run_type,run_cfg_name.Data(),type_name[type],trigName[kTrigType]));
+    }
+
+  if(saveHisto)
+    {
+      TString filename = f->GetName();
+      filename.ReplaceAll("output","Rootfiles");
+      filename.ReplaceAll(Form(".%sroot",run_config),".FitDz.root");
+      cout << filename.Data() << endl;
+      TFile *fout = TFile::Open(filename.Data(),"update");
+      hChi2->Write("",TObject::kOverwrite);
+      hMean->Write("",TObject::kOverwrite);
+      hSigma->Write("",TObject::kOverwrite);
+      hPurity->Write("",TObject::kOverwrite);
+      hEff->Write("",TObject::kOverwrite);
+      fout->Close();
+    }
+}
+
+//================================================
+TCanvas *FitDeltaZ(TH1 *histo, TF1 *func, const Double_t range1 = 50., Double_t range2 = 20., int type = 0)
+{
+  histo->Fit(func,"IR0");
+  histo->GetYaxis()->SetNdivisions(505);
+  c = draw1D(histo,"",kFALSE,kFALSE);
+  func->SetLineColor(2);
+  func->Draw("sames");
+
+  TF1 *func1, *func2;
+  if(type==0)
+    {
+      func1 = new TF1("func1","gaus",-1*range1,range1);
+      func1->SetParameters(func->GetParameter(3),func->GetParameter(4),func->GetParameter(5));
+      func1->SetLineColor(4);
+      func1->Draw("sames");
+    }
+  else if(type==1)
+    {
+      func1 = new TF1("func1","gaus(0)+gaus(3)",-1*range1,range1);
+      func1->SetParameters(func->GetParameter(3),func->GetParameter(4),func->GetParameter(5),func->GetParameter(6),func->GetParameter(7),func->GetParameter(8));
+      func1->SetLineColor(kGreen+2);
+      func1->Draw("sames");
+
+      func2 = new TF1("func2","gaus",-1*range1,range1);
+      func2->SetParameters(func->GetParameter(6),func->GetParameter(7),func->GetParameter(8));
+      func2->SetLineColor(4);
+      func2->Draw("sames");
+    }
+  TPaveText *t1 = GetPaveText(0.2,0.3,0.65,0.78,0.04);
+  t1->AddText(Form("#Deltaz ~ [-%1.0f,%1.0f] cm",range1,range1));
+  t1->AddText(Form("S/B ~ %1.3f:1",((func->Integral(-1*range1,range1))-(func1->Integral(-1*range1,range1)))/(func1->Integral(-1*range1,range1))));
+  t1->Draw();
+  t1 = GetPaveText(0.2,0.3,0.47,0.6,0.04);
+  t1->AddText(Form("#Deltaz ~ [-%1.0f,%1.0f] cm",range2,range2));
+  t1->AddText(Form("S/B ~ %1.3f:1",((func->Integral(-1*range2,range2))-(func1->Integral(-1*range2,range2)))/(func1->Integral(-1*range2,range2))));
+  t1->Draw();
+  return c;
 }
 
 //================================================
@@ -147,28 +484,6 @@ void qualityCuts(const Int_t save = 0)
 }
 
 
-//================================================
-TCanvas *FitDeltaZ(TH1 *histo, TF1 *func, const Double_t range1 = 50., Double_t range2 = 20.)
-{
-  histo->Fit(func,"R0");
-  histo->GetYaxis()->SetNdivisions(505);
-  c = draw1D(histo);
-  TF1 *func1 = new TF1("func1","gaus",-1*range1,range1);
-  func1->SetParameters(func->GetParameter(3),func->GetParameter(4),func->GetParameter(5));
-  func->SetLineColor(2);
-  func->Draw("sames");
-  func1->SetLineColor(4);
-  func1->Draw("sames");
-  TPaveText *t1 = GetPaveText(0.2,0.3,0.65,0.78,0.04);
-  t1->AddText(Form("#Deltaz ~ [-%1.0f,%1.0f]",range1,range1));
-  t1->AddText(Form("S/B ~ %1.1f:1",((func->Integral(-1*range1,range1))-(func1->Integral(-1*range1,range1)))/(func1->Integral(-1*range1,range1))));
-  t1->Draw();
-  t1 = GetPaveText(0.2,0.3,0.47,0.6,0.04);
-  t1->AddText(Form("#Deltaz ~ [-%1.0f,%1.0f]",range2,range2));
-  t1->AddText(Form("S/B ~ %1.1f:1",((func->Integral(-1*range2,range2))-(func1->Integral(-1*range2,range2)))/(func1->Integral(-1*range2,range2))));
-  t1->Draw();
-  return c;
-}
 
 
 //================================================

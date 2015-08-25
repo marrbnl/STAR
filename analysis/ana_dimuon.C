@@ -41,7 +41,7 @@ void dimuon(Int_t save = 1)
   printf("all di-muon events: %4.2e\n",hStat->GetBinContent(3));
   printf("di-muon     events: %4.2e\n",hStat->GetBinContent(9));
 
-  double pt1_cut = 1.0, pt2_cut = 1.0;
+  double pt1_cut = 1.5, pt2_cut = 1.0;
 
   // Acceptance from mixed event
   TFile *fmix = TFile::Open(Form("Rootfiles/Pico.Run14.AuAu200.jpsi.MixEvent.root"),"read");
@@ -97,17 +97,17 @@ void dimuon(Int_t save = 1)
   TString legName[2] = {"Raw","Acceptance corrected"};
   TH1F *hLSBkg = (TH1F*)hSameBkg->ProjectionX("SameEvent_LS_bkg");
   TH1F *hLSBkgCorr = (TH1F*)hSameBkgCorr->ProjectionX("SameEvent_LS_bkg_AccCorr");
-  scaleHisto(hLSBkg, 1, 1,kTRUE,kFALSE, kTRUE);
-  scaleHisto(hLSBkgCorr, 1, 1,kTRUE,kFALSE, kTRUE);
 
-  //scaleHisto(hRatio, 1, 1,kTRUE,kFALSE, kTRUE);
-  //hLSBkgCorr->SetMaximum(1e4);
-  //draw1D(hLSBkgCorr);
-  //return;
 
-  list->Add(hLSBkg);
-  list->Add(hLSBkgCorr);
+  TH1F *hLSBkgRebin = (TH1F*)hLSBkg->Rebin(nSpecMBins2,Form("%s_rebin",hLSBkg->GetName()),specM2);
+  TH1F *hLSBkgCorrRebin = (TH1F*)hLSBkgCorr->Rebin(nSpecMBins2,Form("%s_rebin",hLSBkgCorr->GetName()),specM2);
+  scaleHisto(hLSBkgRebin, 1, 1,kTRUE,kFALSE, kTRUE);
+  scaleHisto(hLSBkgCorrRebin, 1, 1,kTRUE,kFALSE, kTRUE);
+  list->Add(hLSBkgRebin);
+  list->Add(hLSBkgCorrRebin);
   c = sysCompare(list,Form("LS_pt1_%1.1f_pt2_%1.1f",pt1_cut,pt2_cut),Form("SameEvent: like-sign di-muon pairs (p_{T,1}>%1.1f, p_{T,2}>%1.1f GeV/c)",pt1_cut,pt2_cut),"Acceptance factor",kTRUE,0,5,kFALSE,0.1,10,kTRUE,0.7,1.3,kFALSE,kTRUE,legName,kTRUE,"Like-sign",0.2,0.4,0.2,0.4,kTRUE);
+  TLine *line = GetLine(0,1,5.5,1,1);
+  line->Draw();
   if(save) 
     {
       c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_dimuon/SameEvent_LS_AccCorr_pt1_%1.0f_pt2_%1.0f.pdf",run_type,pt1_cut*10,pt2_cut*10));
@@ -115,6 +115,8 @@ void dimuon(Int_t save = 1)
     }
 
   // di-muon continuum
+  scaleHisto(hLSBkg, 1, 1,kTRUE,kFALSE, kTRUE);
+  scaleHisto(hLSBkgCorr, 1, 1,kTRUE,kFALSE, kTRUE);
   hInvMassVsPt[0]->Sumw2();
   TH1F *h1 = (TH1F*)hInvMassVsPt[0]->ProjectionX("SameEvent_UL");
   TH1F *hUL = (TH1F*)h1->Rebin(nSpecMBins,"SameEvent_UL_Rebin",specM);
@@ -124,7 +126,7 @@ void dimuon(Int_t save = 1)
   TH1F *hDiff = (TH1F*)hUL->Clone(Form("InvMass_US_minus_LS_pt1%1.1f_pt2%1.1f",pt1_cut,pt2_cut));
   hDiff->Add(hLSBkgCorr,-1);
   hUL->SetMaximum(1.3*hUL->GetMaximum());
-  hUL->SetMinimum(-4000);
+  hUL->SetMinimum(-8000);
   hUL->GetYaxis()->SetNdivisions(505);
   hUL->SetLineColor(4);
   hUL->SetMarkerColor(4);

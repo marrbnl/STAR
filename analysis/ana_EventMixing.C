@@ -2,7 +2,7 @@ const Double_t low_mass = 3.0;
 const Double_t high_mass = 3.2;
 TFile *f;
 
-const char *run_config = "MixEvent.";
+const char *run_config = "mix.";
 const Bool_t iPico = 1;
 const int year = 2014;
 TString run_cfg_name;
@@ -30,9 +30,9 @@ void ana_EventMixing()
 
   run_cfg_name = run_config;
 
-  //eventBinning();
+  eventBinning();
   //makeHisto(fileName);
-  acceptance(fileName,1);
+  //acceptance(fileName);
   //subtraction();
 }
 
@@ -54,21 +54,56 @@ void eventBinning(const Int_t save = 0)
       c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EventMixing/%sVertexZ_Binning.png",run_type,run_cfg_name.Data()));
     }
 
-  TH1F *hgRefMult = (TH1F*)f->Get(Form("mhgRefMult_%s",trigName[kTrigType]));
-  c = draw1D(hgRefMult,"",kTRUE,kFALSE);
-  double bounds[9] = {472,401,283,193,126,77,44,23,11};
-  for(int i=0; i<9; i++)
+  TH1F *hgRefMultCorr = (TH1F*)f->Get(Form("mhgRefMultCorr_%s",trigName[kTrigType]));
+  c = draw1D(hgRefMultCorr,"",kTRUE,kFALSE);
+  //double bounds[9] = {472,401,283,193,126,77,44,23,11};
+  double bounds[16] = {11,16,23,32,44,59,77,99,126,157,193,235,283,338,401,472};
+  for(int i=0; i<16; i++)
     {
       double value = bounds[i];
-      double height = hgRefMult->GetBinContent(hgRefMult->FindFixBin(value));
+      double height = hgRefMultCorr->GetBinContent(hgRefMultCorr->FindFixBin(value));
       TLine *line = GetLine(value,0,value,height,2,1,1);
       line->Draw();
     }
   if(save) 
     {
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EventMixing/%sgRelMult_Binning.pdf",run_type,run_cfg_name.Data()));
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EventMixing/%sgRelMult_Binning.png",run_type,run_cfg_name.Data()));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EventMixing/%sgRefMult_Binning.pdf",run_type,run_cfg_name.Data()));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EventMixing/%sgRefMult_Binning.png",run_type,run_cfg_name.Data()));
     }
+
+  // centrality
+  TH1F *hgRefMult = (TH1F*)f->Get(Form("mhgRefMult_%s",trigName[kTrigType]));
+  hgRefMult->SetLineColor(2);
+  c = draw1D(hgRefMult,"",kTRUE,kFALSE);
+  hgRefMultCorr->Draw("sames HIST");
+  TLegend *leg = new TLegend(0.15,0.3,0.4,0.5);
+  leg->SetBorderSize(0);
+  leg->SetFillColor(0);
+  leg->SetTextSize(0.04);
+  leg->AddEntry(hgRefMult,"Raw gRefMult","L");
+  leg->AddEntry(hgRefMultCorr,"Corrected gRefMult","L");
+  leg->Draw();
+  if(save) 
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EventMixing/%sgRefMult.pdf",run_type,run_cfg_name.Data()));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EventMixing/%sgRefMult.png",run_type,run_cfg_name.Data()));
+    }
+
+
+  TH1F *hCentrality = (TH1F*)f->Get(Form("mhCentrality_%s",trigName[kTrigType]));
+  c = draw1D(hCentrality,"",kTRUE,kFALSE);
+  if(save) 
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EventMixing/%sCentrality.pdf",run_type,run_cfg_name.Data()));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EventMixing/%sCentrality.png",run_type,run_cfg_name.Data()));
+    }
+
+  // event plane
+  TH2F *hExcVsIncRawEP = (TH2F*)f->Get(Form("mhExcVsIncRawEP_%s",trigName[kTrigType]));
+  c = draw2D(hExcVsIncRawEP);
+
+  TH1F *hEventPlane = (TH1F*)f->Get(Form("mhEventPlane_%s",trigName[kTrigType]));
+  c = draw1D(hEventPlane,"",kFALSE,kFALSE);
 }
 
 //================================================

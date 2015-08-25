@@ -1,9 +1,9 @@
 const Double_t low_mass = 3.0;
 const Double_t high_mass = 3.2;
 
-const char *run_config = "TrigHit.";
-const Bool_t iPico = 1;
-const int year = 2013;
+const char *run_config = "kink.";
+const Bool_t iPico = 0;
+const int year = 2014;
 TString run_cfg_name;
 
 TFile *f;
@@ -28,13 +28,140 @@ void ana_JpsiMuon()
   run_cfg_name = Form("%s",run_config);
   if(iPico) run_cfg_name = Form("Pico.%s",run_cfg_name.Data());
 
-  DeltaTof();
+  //DeltaTof();
   //DeltaY();
   //DeltaZ();
+  kink();
 }
 
 //================================================
-void DeltaTof(const Int_t save = 1)
+void kink(const Int_t save = 0)
+{
+  THnSparseF *hnKink = (THnSparseF*)f->Get(Form("mhMuonKink_%s",trigName[kTrigType]));
+  hnKink->GetAxis(2)->SetRangeUser(1.6,100);
+
+  // check invariant mass
+  const char *name[3] = {"UL","LS","UL-LS"};
+  TH1F *hInvMass[2];
+  TH1F *hDr[2], *hDz[2];
+  for(int i=0; i<2; i++)
+    {
+      hnKink->GetAxis(1)->SetRange(i+1,i+1);
+
+      hnKink->GetAxis(0)->SetRangeUser(low_mass+0.001, high_mass-0.001);
+      hDr[i] = (TH1F*)hnKink->Projection(3);
+      hDr[i]->Sumw2();
+      hDr[i]->SetName(Form("hDr_%s",name[i]));
+      TH1F *htmp = (TH1F*)hnKink->Projection(6);
+      htmp->Sumw2();
+      htmp->SetName(Form("hDr_%s_2",name[i]));
+      hDr[i]->Add(htmp);
+      cout << hDr[i]->GetEntries() << endl;
+
+      hDz[i] = (TH1F*)hnKink->Projection(4);
+      hDz[i]->SetName(Form("hDz_%s",name[i]));
+      hDz[i]->Sumw2();
+      htmp = (TH1F*)hnKink->Projection(7);
+      htmp->SetName(Form("hDz_%s_2",name[i]));
+      htmp->Sumw2();
+      hDz[i]->Add(htmp);
+      hnKink->GetAxis(0)->SetRange(0,-1);
+
+      hInvMass[i] = (TH1F*)hnKink->Projection(0);
+      hInvMass[i]->SetName(Form("hInvMass_%s",name[i]));
+      hInvMass[i]->Rebin(4);
+      hInvMass[i]->SetMarkerStyle(21);
+      hInvMass[i]->SetMarkerColor(color[1-i]);
+      hInvMass[i]->SetLineColor(hInvMass[i]->GetMarkerColor());
+    }
+  hnKink->GetAxis(1)->SetRange(0,-1);
+  c = draw1D(hInvMass[0],"Invariant mass distribution of dimuon pairs;M_{#mu#mu} (GeV/c^{2});Counts");
+  hInvMass[1]->Draw("sames HIST");
+  TLegend *leg = new TLegend(0.15,0.62,0.3,0.85);
+  leg->SetBorderSize(0);
+  leg->SetFillColor(0);
+  leg->SetTextSize(0.04);
+  leg->SetHeader("p_{T,1} > 1.5 GeV/c");
+  leg->AddEntry(hInvMass[0],"Unlike-sign","P");
+  leg->AddEntry(hInvMass[1],"Like-sign","L");
+  leg->Draw();
+  if(save) 
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/kink_InvMass.png",run_type));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/kink_InvMass.pdf",run_type));
+    }
+
+  // analyze dr and dz distribution
+  TH1F *hKinkDr[2], *hKinkDz[2];
+  hKinkDr[0] = (TH1F*)hDr[0]->Clone("hKinkDr_US-LS");
+  hKinkDr[0]->Add(hDr[1],-1);
+  hKinkDz[0] = (TH1F*)hDz[0]->Clone("hKinkDz_US-LS");
+  hKinkDz[0]->Add(hDz[1],-1);
+  hnKink->GetAxis(1)->SetRange(1,1);
+  hKinkDr[1] = (TH1F*)hnKink->Projection(3);
+  hKinkDr[1]->Sumw2();
+  hKinkDr[1]->SetName("hKinkDr_LS");
+  htmp = (TH1F*)hnKink->Projection(6);
+  htmp->Sumw2();
+  htmp->SetName("hKinkDr_LS_2");
+  hKinkDr[1]->Add(htmp);
+  hKinkDz[1] = (TH1F*)hnKink->Projection(4);
+  hKinkDz[1]->Sumw2();
+  hKinkDz[1]->SetName("hKinkDz_LS");
+  htmp = (TH1F*)hnKink->Projection(7);
+  htmp->Sumw2();
+  htmp->SetName("hKinkDz_LS_2");
+  hKinkDz[1]->Add(htmp);
+  hnKink->GetAxis(1)->SetRange(0,-1);
+  for(int i=0; i<2; i++)
+    {
+      hKinkDr[i]->Rebin(2);
+      hKinkDr[i]->Scale(1./hKinkDr[i]->GetBinContent(hKinkDr[i]->FindFixBin(0)));
+      hKinkDr[i]->SetMarkerStyle(21);
+      hKinkDr[i]->SetMarkerColor(color[1-i]);
+      hKinkDr[i]->SetLineColor(hKinkDr[i]->GetMarkerColor());
+
+      hKinkDz[i]->Scale(1./hKinkDz[i]->GetBinContent(hKinkDz[i]->FindFixBin(0)));
+      hKinkDz[i]->SetMarkerStyle(21);
+      hKinkDz[i]->SetMarkerColor(color[1-i]);
+      hKinkDz[i]->SetLineColor(hKinkDz[i]->GetMarkerColor());
+
+      cout << "Fraction = " << hKinkDz[i]->Integral(hKinkDz[i]->FindFixBin(-0.15),hKinkDz[i]->FindFixBin(0.15))/hKinkDz[i]->Integral() << endl;
+    }
+  c = draw1D(hKinkDr[0],"Distance in transverse plane for muon candidates;#sqrt{(#Deltax)^{2}+(#Deltay)^{2}} (cm)");
+  hKinkDr[1]->Draw("sames HIST");
+  TLegend *leg = new TLegend(0.6,0.65,0.75,0.85);
+  leg->SetBorderSize(0);
+  leg->SetFillColor(0);
+  leg->SetTextSize(0.04);
+  leg->AddEntry(hKinkDr[0],"J/psi muon","P");
+  leg->AddEntry(hKinkDr[1],"All muon","L");
+  leg->Draw();
+  if(save) 
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/kink_Dr.png",run_type));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/kink_Dr.pdf",run_type));
+    }
+
+  hKinkDz[0]->GetXaxis()->SetRangeUser(-2,2);
+  c = draw1D(hKinkDz[0],"Distance in z coordinate for muon candidates;#Deltaz (cm)");
+  hKinkDz[1]->Draw("sames HIST");
+  TLegend *leg = new TLegend(0.6,0.65,0.75,0.85);
+  leg->SetBorderSize(0);
+  leg->SetFillColor(0);
+  leg->SetTextSize(0.04);
+  leg->AddEntry(hKinkDz[0],"J/psi muon","P");
+  leg->AddEntry(hKinkDz[1],"All muon","L");
+  leg->Draw();
+  if(save) 
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/kink_Dz.png",run_type));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/kink_Dz.pdf",run_type));
+    }
+}
+
+//================================================
+void DeltaTof(const Int_t save = 0)
 {
   TList *list = new TList;
 
@@ -409,9 +536,123 @@ void DeltaZ(const Int_t save = 1)
   leg->AddEntry(hDz[2],"Embedded muon","L");
   leg->AddEntry(hDz[3],"Cosmic ray","L");
   leg->Draw();
+  TLine *line = GetLine(-20,0,-20,0.7*hDz[0]->GetMaximum(),1);
+  line->Draw();
+  TLine *line = GetLine(20,0,20,0.7*hDz[0]->GetMaximum(),1);
+  line->Draw();
   if(save) 
     {
       c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/%sDz_data_MC_cosmic.png",run_type,run_cfg_name.Data()));
       c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/%sDz_data_MC_cosmic.pdf",run_type,run_cfg_name.Data()));
+    }
+}
+
+
+//================================================
+void kink_2(const Int_t save = 0)
+{
+  THnSparseF *hnKink = (THnSparseF*)f->Get(Form("mhMuonKink_%s",trigName[kTrigType]));
+  hnKink->GetAxis(2)->SetRangeUser(1.6,100);
+
+  // check invariant mass
+  const char *name[3] = {"UL","LS","UL-LS"};
+  TH1F *hInvMass[2];
+  TH1F *hDr[2], *hDz[2];
+  for(int i=0; i<2; i++)
+    {
+      hnKink->GetAxis(1)->SetRange(i+1,i+1);
+
+      hnKink->GetAxis(0)->SetRangeUser(low_mass+0.001, high_mass-0.001);
+      hDr[i] = (TH1F*)hnKink->Projection(3);
+      hDr[i]->Sumw2();
+      hDr[i]->SetName(Form("hDr_%s",name[i]));
+      hDz[i] = (TH1F*)hnKink->Projection(4);
+      hDz[i]->SetName(Form("hDz_%s",name[i]));
+      hDz[i]->Sumw2();
+      cout << hDz[i]->GetEntries() << endl;
+      hnKink->GetAxis(0)->SetRange(0,-1);
+
+      hInvMass[i] = (TH1F*)hnKink->Projection(0);
+      hInvMass[i]->SetName(Form("hInvMass_%s",name[i]));
+      hInvMass[i]->Rebin(4);
+      hInvMass[i]->SetMarkerStyle(21);
+      hInvMass[i]->SetMarkerColor(color[1-i]);
+      hInvMass[i]->SetLineColor(hInvMass[i]->GetMarkerColor());
+    }
+  hnKink->GetAxis(1)->SetRange(0,-1);
+  c = draw1D(hInvMass[0],"Invariant mass distribution of dimuon pairs;M_{#mu#mu} (GeV/c^{2});Counts");
+  hInvMass[1]->Draw("sames HIST");
+  TLegend *leg = new TLegend(0.15,0.62,0.3,0.85);
+  leg->SetBorderSize(0);
+  leg->SetFillColor(0);
+  leg->SetTextSize(0.04);
+  leg->SetHeader("p_{T,1} > 1.5 GeV/c");
+  leg->AddEntry(hInvMass[0],"Unlike-sign","P");
+  leg->AddEntry(hInvMass[1],"Like-sign","L");
+  leg->Draw();
+  if(save) 
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/kink_InvMass.png",run_type));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/kink_InvMass.pdf",run_type));
+    }
+
+  // analyze dr and dz distribution
+  TH1F *hKinkDr[2], *hKinkDz[2];
+  hKinkDr[0] = (TH1F*)hDr[0]->Clone("hKinkDr_US-LS");
+  hKinkDr[0]->Add(hDr[1],-1);
+  hKinkDz[0] = (TH1F*)hDz[0]->Clone("hKinkDz_US-LS");
+  hKinkDz[0]->Add(hDz[1],-1);
+  hnKink->GetAxis(1)->SetRange(1,1);
+  hKinkDr[1] = (TH1F*)hnKink->Projection(3);
+  hKinkDr[1]->Sumw2();
+  hKinkDr[1]->SetName("hKinkDr_LS");
+  hKinkDz[1] = (TH1F*)hnKink->Projection(4);
+  hKinkDz[1]->Sumw2();
+  hKinkDz[1]->SetName("hKinkDz_LS");
+  hnKink->GetAxis(1)->SetRange(0,-1);
+  for(int i=0; i<2; i++)
+    {
+      hKinkDr[i]->Rebin(2);
+      hKinkDr[i]->Scale(1./hKinkDr[i]->GetBinContent(hKinkDr[i]->FindFixBin(0)));
+      hKinkDr[i]->SetMarkerStyle(21);
+      hKinkDr[i]->SetMarkerColor(color[1-i]);
+      hKinkDr[i]->SetLineColor(hKinkDr[i]->GetMarkerColor());
+
+      hKinkDz[i]->Scale(1./hKinkDz[i]->GetBinContent(hKinkDz[i]->FindFixBin(0)));
+      hKinkDz[i]->SetMarkerStyle(21);
+      hKinkDz[i]->SetMarkerColor(color[1-i]);
+      hKinkDz[i]->SetLineColor(hKinkDz[i]->GetMarkerColor());
+
+      cout << "Fraction = " << hKinkDz[i]->Integral(hKinkDz[i]->FindFixBin(-0.15),hKinkDz[i]->FindFixBin(0.15))/hKinkDz[i]->Integral() << endl;
+    }
+  c = draw1D(hKinkDr[0],"Distance in transverse plane for muon candidates;#sqrt{(#Deltax)^{2}+(#Deltay)^{2}} (cm)");
+  hKinkDr[1]->Draw("sames HIST");
+  TLegend *leg = new TLegend(0.6,0.65,0.75,0.85);
+  leg->SetBorderSize(0);
+  leg->SetFillColor(0);
+  leg->SetTextSize(0.04);
+  leg->AddEntry(hKinkDr[0],"J/psi muon","P");
+  leg->AddEntry(hKinkDr[1],"All muon","L");
+  leg->Draw();
+  if(save) 
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/kink_Dr.png",run_type));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/kink_Dr.pdf",run_type));
+    }
+
+  hKinkDz[0]->GetXaxis()->SetRangeUser(-2,2);
+  c = draw1D(hKinkDz[0],"Distance in z coordinate for muon candidates;#Deltaz (cm)");
+  hKinkDz[1]->Draw("sames HIST");
+  TLegend *leg = new TLegend(0.6,0.65,0.75,0.85);
+  leg->SetBorderSize(0);
+  leg->SetFillColor(0);
+  leg->SetTextSize(0.04);
+  leg->AddEntry(hKinkDz[0],"J/psi muon","P");
+  leg->AddEntry(hKinkDz[1],"All muon","L");
+  leg->Draw();
+  if(save) 
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/kink_Dz.png",run_type));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/kink_Dz.pdf",run_type));
     }
 }

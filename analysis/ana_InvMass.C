@@ -55,9 +55,8 @@ void ana_InvMass()
   //dimuon();
 }
 
-
 //================================================
-void Jpsi(Int_t save = 1)
+void Jpsi(Int_t save = 0)
 {
   TH1F *hStat = (TH1F*)f->Get("hEventStat");
   printf("all         events: %4.4e\n",hStat->GetBinContent(1));
@@ -87,38 +86,6 @@ void Jpsi(Int_t save = 1)
   hInvMass[0]->SetLineColor(2);
   hInvMass[0]->SetYTitle("Counts");
 
-  // Mixed event background
-  TFile *fmix = TFile::Open(Form("Rootfiles/Pico.Run14.AuAu200.jpsi.MixEvent.root"),"read");
-  TH2F *hMixUL2D = (TH2F*)fmix->Get(Form("US_pt_vs_InvMass_pt1_%1.1f_pt2_%1.1f_%s",pt1_cut,pt2_cut,trigName[kTrigType]));
-  TH2F *hMixLS2D = (TH2F*)fmix->Get(Form("LS_pt_vs_InvMass_pt1_%1.1f_pt2_%1.1f_%s",pt1_cut,pt2_cut,trigName[kTrigType]));
-  TH1F *hMixUL = (TH1F*)hMixUL2D->ProjectionX("MixEvent_UL");
-  TH1F *hMixLS = (TH1F*)hMixLS2D->ProjectionX("MixEvent_LS");
-  TH1F *hRatio = (TH1F*)hInvMass[1]->Clone(Form("%s_ratio",hInvMass[1]->GetName()));
-  hRatio->Rebin(10);
-  hMixLS->Rebin(10);
-  hRatio->GetXaxis()->SetRangeUser(0,8);
-  hRatio->GetYaxis()->SetRangeUser(6e-4,2e-3);
-  hRatio->SetMarkerStyle(25);
-  hRatio->Divide(hMixLS);
-  TF1 *func = new TF1(Form("%s_func",hRatio->GetName()),"pol0",1,2);
-  hRatio->Fit(func,"IR0");
-  c = draw1D(hRatio,Form("Like-sign: SameEvent/MixEvent (N_{++}+N_{--})"));
-  func->SetLineColor(2);
-  func->Draw("same");
-  TPaveText *t1 = GetPaveText(0.2,0.3,0.2,0.35,0.04,62);
-  t1->AddText(Form("p_{T,1}>%1.1f GeV/c",pt1_cut));
-  t1->AddText(Form("p_{T,2}>%1.1f GeV/c",pt2_cut));
-  t1->Draw();
-  if(save) 
-    {
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_InvMass/%sLS_SameToMix_pt1_%1.0f_pt2_%1.0f.pdf",run_type,run_cfg_name.Data(),pt1_cut*10,pt2_cut*10));
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_InvMass/%sLS_SameToMix_pt1_%1.0f_pt2_%1.0f.png",run_type,run_cfg_name.Data(),pt1_cut*10,pt2_cut*10));
-    }
-  hMixUL->Scale(func->GetParameter(0));
-  TH1F *hMixULBkg = (TH1F*)hMixUL->Rebin(nSpecMBinsJpsi, Form("%s_rebin",hMixUL->GetName()),specMJpsi);
-  scaleHisto(hMixULBkg, 1, 1,kTRUE,kFALSE, kTRUE);
-  hMixULBkg->SetLineColor(4);
-
   // signal
   TH1F *hInvMass_jpsi[2];
   for(Int_t j=0; j<2; j++)
@@ -129,7 +96,6 @@ void Jpsi(Int_t save = 1)
     }
   c = draw1D(hInvMass_jpsi[0],Form("%s: invariant mass of di-muon pairs%s;M_{#mu#mu} (GeV/c^{2});dN/dM",trigName[kTrigType],hlt_name[hlt_index]));
   hInvMass_jpsi[1]->Draw("HIST sames");
-  hMixULBkg->Draw("HIST sames");
   leg = new TLegend(0.15,0.63,0.3,0.85);
   if(hlt_index==1) leg = new TLegend(0.25,0.2,0.35,0.4);
   leg->SetBorderSize(0);
@@ -138,7 +104,6 @@ void Jpsi(Int_t save = 1)
   leg->SetHeader(Form("p_{T,1} > %1.1f, p_{T,2} > %1.1f GeV/c",pt1_cut,pt2_cut));
   leg->AddEntry(hInvMass_jpsi[0],"Unlike sign","PLE");
   leg->AddEntry(hInvMass_jpsi[1],"Like sign (++)+(--)","L");
-  leg->AddEntry(hMixULBkg,"Mixed: unlike-sign","L");
   leg->Draw();
   if(save) 
     {
@@ -149,15 +114,35 @@ void Jpsi(Int_t save = 1)
   // same event background
   Int_t low_bin = hInvMass_jpsi[0]->GetXaxis()->FindFixBin(low_mass+0.001);
   Int_t high_bin = hInvMass_jpsi[0]->GetXaxis()->FindFixBin(high_mass-0.001);
-  Double_t nBackground = hInvMass_jpsi[1]->Integral(low_bin,high_bin,"width");
-  Double_t nSignal = hInvMass_jpsi[0]->Integral(low_bin,high_bin,"width") - nBackground;
-  TPaveText *signif = GetPaveText(0.15,0.45,0.12,0.25);
+  double errorLS, errorUL;
+  double nLS = hInvMass_jpsi[1]->IntegralAndError(low_bin,high_bin,errorLS,"width");
+  double nUL = hInvMass_jpsi[0]->IntegralAndError(low_bin,high_bin,errorUL,"width");
+  double nSignal = nUL - nLS;
+  double nBackground = nLS;
+  double errorSignal = TMath::Sqrt(errorLS*errorLS+errorUL*errorUL);
+  TPaveText *signif = GetPaveText(0.13,0.3,0.55,0.75);
+  signif->SetTextAlign(11);
+  signif->SetTextFont(62);
   signif->AddText(Form("[%1.1f,%1.1f] GeV/c^{2}",low_mass,high_mass));
-  signif->AddText(Form("S/B = %1.0f/%1.0f = %1.2e:1",nSignal,nBackground,nSignal/nBackground));
+  signif->AddText(Form("S/B = %1.0f/%1.0f = 1:%3.0f",nSignal,nBackground,nBackground/nSignal));
+  signif->AddText(Form("Significance: %3.2f",nSignal/errorSignal));
 
+  const double min = -8e3, max = 2.5e4;
   TH1F *hdiff_jpsi = (TH1F*)hInvMass_jpsi[0]->Clone(Form("InvMass_US_minus_LS_jpsi"));
   hdiff_jpsi->Add(hInvMass_jpsi[1],-1);
+  hdiff_jpsi->GetYaxis()->SetRangeUser(min,max);
   hdiff_jpsi->GetXaxis()->SetRangeUser(2.5,3.5);
+  //hdiff_jpsi->GetYaxis()->SetNdivisions(505);
+  const int min_bin = hdiff_jpsi->FindFixBin(2.8);
+  const int max_bin = hdiff_jpsi->FindFixBin(3.3);
+  // for(int bin=min_bin; bin<=max_bin; bin++)
+  //   {
+  //     printf("%3.2f: %3.2f+/-%3.2f - %3.2f+/-%3.2f = %3.2f+/-%3.2f\n",
+  // 	     hdiff_jpsi->GetBinCenter(bin),
+  // 	     hInvMass_jpsi[0]->GetBinContent(bin)*hInvMass_jpsi[0]->GetBinWidth(bin),hInvMass_jpsi[0]->GetBinError(bin)*hInvMass_jpsi[0]->GetBinWidth(bin),
+  // 	     hInvMass_jpsi[1]->GetBinContent(bin)*hInvMass_jpsi[1]->GetBinWidth(bin),hInvMass_jpsi[1]->GetBinError(bin)*hInvMass_jpsi[1]->GetBinWidth(bin),
+  // 	     hdiff_jpsi->GetBinContent(bin)*hdiff_jpsi->GetBinWidth(bin),hdiff_jpsi->GetBinError(bin)*hdiff_jpsi->GetBinWidth(bin));
+  //   }
   c = draw1D(hdiff_jpsi,Form("%s: invariant mass of di-muon pairs%s;M_{#mu#mu} (GeV/c^{2});US-LS",trigName[kTrigType],hlt_name[hlt_index]),kFALSE);
   gPad->SetGridy();
   TPaveText *t1 = GetPaveText(0.2,0.4,0.8,0.85,0.04);
@@ -170,45 +155,101 @@ void Jpsi(Int_t save = 1)
       c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_InvMass/%sInvMass_US-LS_jpsi_pt1_%1.0f_pt2_%1.0f.pdf",run_type,run_cfg_name.Data(),pt1_cut*10,pt2_cut*10));
       c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_InvMass/%sInvMass_US-LS_jpsi_pt1_%1.0f_pt2_%1.0f.png",run_type,run_cfg_name.Data(),pt1_cut*10,pt2_cut*10));
     }
+  return;
+  
+  // Mixed event background
+  TFile *fmix = TFile::Open(Form("Rootfiles/Pico.Run14.AuAu200.jpsi.MixEvent.%sroot",run_config),"read");
+  TH2F *hMixUL2D = (TH2F*)fmix->Get(Form("US_pt_vs_InvMass_pt1_%1.1f_pt2_%1.1f_%s",pt1_cut,pt2_cut,trigName[kTrigType]));
+  hMixUL2D->Sumw2();
+  TH2F *hMixLS2D = (TH2F*)fmix->Get(Form("LS_pt_vs_InvMass_pt1_%1.1f_pt2_%1.1f_%s",pt1_cut,pt2_cut,trigName[kTrigType]));
+  hMixLS2D->Sumw2();
+  TH1F *hMixUL = (TH1F*)hMixUL2D->ProjectionX("MixEvent_UL");
+  TH1F *hMixLS = (TH1F*)hMixLS2D->ProjectionX("MixEvent_LS");
+  hInvMass[1]->Rebin(10);
+  hMixLS->Rebin(10);
+  TH1F *hRatio = DivideTH1WithTH1(hInvMass[1],hMixLS);
+  //(TH1F*)hInvMass[1]->Clone(Form("%s_ratio",hInvMass[1]->GetName()));
+  //draw1D(hInvMass[1]);
+  //draw1D(hMixLS);
+  //hRatio->Rebin(10);
+  //hMixLS->Rebin(10);
+  hRatio->GetXaxis()->SetRangeUser(0,8);
+  hRatio->GetYaxis()->SetRangeUser(1e-3,2.2e-3);
+  hRatio->SetMarkerStyle(25);
+  //hRatio->Divide(hMixLS);
+  TF1 *func = new TF1(Form("%s_func",hRatio->GetName()),"pol0",2.8,3.2);
+  hRatio->Fit(func,"IR0");
+  c = draw1D(hRatio,Form("Like-sign: SameEvent/MixEvent (N_{++}+N_{--})"));
+  func->SetLineColor(2);
+  func->Draw("same");
+  if(save) 
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_InvMass/%sLS_SameToMix_pt1_%1.0f_pt2_%1.0f.pdf",run_type,run_cfg_name.Data(),pt1_cut*10,pt2_cut*10));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_InvMass/%sLS_SameToMix_pt1_%1.0f_pt2_%1.0f.png",run_type,run_cfg_name.Data(),pt1_cut*10,pt2_cut*10));
+    }
 
-  // mix event background
+  hMixUL->Scale(func->GetParameter(0));
+  TH1F *hMixULBkg = (TH1F*)hMixUL->Rebin(nSpecMBinsJpsi, Form("%s_rebin",hMixUL->GetName()),specMJpsi);
+  scaleHisto(hMixULBkg, 1, 1,kTRUE,kFALSE, kTRUE);
+  hMixULBkg->SetLineColor(4);
+
+  TH1F *hInvMassClone = (TH1F*)hInvMass_jpsi[0]->Clone(Form("%s_clone",hInvMass_jpsi[0]->GetName()));
+  c = draw1D(hInvMassClone,Form("%s: invariant mass of di-muon pairs%s;M_{#mu#mu} (GeV/c^{2});dN/dM",trigName[kTrigType],hlt_name[hlt_index]));
+  hInvMass_jpsi[1]->Draw("HIST sames");
+  hMixULBkg->Draw("HIST sames");
+  leg = new TLegend(0.15,0.63,0.3,0.85);
+  leg->SetBorderSize(0);
+  leg->SetFillColor(0);
+  leg->SetTextSize(0.04);
+  leg->SetHeader(Form("p_{T,1} > %1.1f, p_{T,2} > %1.1f GeV/c",pt1_cut,pt2_cut));
+  leg->AddEntry(hInvMass_jpsi[0],"Unlike sign","PLE");
+  leg->AddEntry(hInvMass_jpsi[1],"Like sign (++)+(--)","L");
+  leg->AddEntry(hMixULBkg,"Mixed: unlike-sign","L");
+  leg->Draw();
+  if(save) 
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_InvMass/%sInvMass_jpsi_MixUL_pt1_%1.0f_pt2_%1.0f.pdf",run_type,run_cfg_name.Data(),pt1_cut*10,pt2_cut*10));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_InvMass/%sInvMass_jpsi_MixUL_pt1_%1.0f_pt2_%1.0f.png",run_type,run_cfg_name.Data(),pt1_cut*10,pt2_cut*10));
+    }
+
   TH1F *hdiff_jpsi_2 = (TH1F*)hInvMass_jpsi[0]->Clone(Form("InvMass_US_minus_LS_jpsi_Mix"));
   hdiff_jpsi_2->Add(hMixULBkg,-1);
+  hdiff_jpsi_2->GetYaxis()->SetRangeUser(min,max);
   hdiff_jpsi_2->GetXaxis()->SetRangeUser(2.5,3.5);
-  c = draw1D(hdiff_jpsi_2,Form("%s: invariant mass of di-muon pairs%s;M_{#mu#mu} (GeV/c^{2});US-LS",trigName[kTrigType],hlt_name[hlt_index]),kFALSE);
+  // for(int bin=min_bin; bin<=max_bin; bin++)
+  //   {
+  //     printf("%3.2f: %3.2f+/-%3.2f - %3.2f+/-%3.2f = %3.2f+/-%3.2f\n",
+  // 	     hdiff_jpsi_2->GetBinCenter(bin),
+  // 	     hInvMass_jpsi[0]->GetBinContent(bin)*hInvMass_jpsi[0]->GetBinWidth(bin),hInvMass_jpsi[0]->GetBinError(bin)*hInvMass_jpsi[0]->GetBinWidth(bin),
+  // 	     hMixULBkg->GetBinContent(bin)*hMixULBkg->GetBinWidth(bin),hMixULBkg->GetBinError(bin)*hMixULBkg->GetBinWidth(bin),
+  // 	     hdiff_jpsi_2->GetBinContent(bin)*hdiff_jpsi_2->GetBinWidth(bin),hdiff_jpsi_2->GetBinError(bin)*hdiff_jpsi_2->GetBinWidth(bin));
+  //   }
+  c = draw1D(hdiff_jpsi_2,Form("Invariant mass of di-muon pairs (mixed-event UL background);M_{#mu#mu} (GeV/c^{2});US-LS"),kFALSE);
   gPad->SetGridy();
   t1->Draw();
+  double errorLS;
+  double nLS = hMixULBkg->IntegralAndError(low_bin,high_bin,errorLS,"width");
+  double nSignal = nUL - nLS;
+  double nBackground = nLS;
+  double errorSignal = TMath::Sqrt(errorLS*errorLS+errorUL*errorUL);
+  TPaveText *signif = GetPaveText(0.13,0.3,0.55,0.75);
+  signif->SetTextAlign(11);
+  signif->SetTextFont(62);
+  signif->AddText(Form("[%1.1f,%1.1f] GeV/c^{2}",low_mass,high_mass));
+  signif->AddText(Form("S/B = %1.0f/%1.0f = 1:%3.0f",nSignal,nBackground,nBackground/nSignal));
+  signif->AddText(Form("Significance: %3.2f",nSignal/errorSignal));
+  signif->Draw();
   if(save) 
     {
       c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_InvMass/%sInvMass_US-MixUS_jpsi_pt1_%1.0f_pt2_%1.0f.pdf",run_type,run_cfg_name.Data(),pt1_cut*10,pt2_cut*10));
       c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_InvMass/%sInvMass_US-MixUS_jpsi_pt1_%1.0f_pt2_%1.0f.png",run_type,run_cfg_name.Data(),pt1_cut*10,pt2_cut*10));
     }
-
-  return;
-  hdiff_jpsi->SetName(Form("%s_rebin4",hdiff_jpsi->GetName()));
-  //hdiff_jpsi->Rebin(4);
-  hdiff_jpsi->GetXaxis()->SetRangeUser(2.6,3.6);
-  hdiff_jpsi->GetYaxis()->SetRangeUser(-250,500);
-  c = draw1D(hdiff_jpsi,Form("Au+Au %s: invariant mass of di-muon pairs%s;M_{#mu#mu} (GeV/c^{2});US-LS",trigName[kTrigType],hlt_name[hlt_index]),kFALSE);
-  gPad->SetGridy();
-  t1->Draw();
-  signif->Draw();
-
-
-  // TF1 *func = new TF1("fit","gaus",3.0,3.2);
-  // func->SetParameter(1,3.1);
-  // func->SetParameter(2,0.5);
-  // hdiff_jpsi->Fit(func,"0R");
-  // func->SetLineStyle(2);
-  // func->Draw("sames");
-  // if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/InvMass/%s.InvMass_US-LS_jpsi_pt1_%1.1f_pt2_%1.1f_rebin4.png",run_cfg_name.Data(),pt1_cut,pt2_cut));
-  
 }
 
 
 
 //================================================
-void daughters(Int_t save = 1)
+void daughters(Int_t save = 0)
 {
   const char *hName[3] = {"hJpsiInfo","hBkgLSPos","hBkgLSNeg"};
   THnSparseF *hnInvMass[3];
@@ -405,22 +446,33 @@ void pt(Int_t save = 0)
 //================================================
 void upsilon(Int_t save = 0)
 {
+  const int type = 0;
+
   TH1F *hStat = (TH1F*)f->Get("hEventStat");
   printf("all di-muon events: %4.2e\n",hStat->GetBinContent(3));
   printf("di-muon     events: %4.2e\n",hStat->GetBinContent(7));
 
-  const char *hName[3] = {"hJpsiInfo","hBkgLSPos","hBkgLSNeg"};
+  if(type==0) { const char *hName[3] = {"hJpsiInfo","hBkgLSPos","hBkgLSNeg"}; }
+  else if(type==1) { const char *hName[3] = {"hUpsilonInfo","hUpsilonBkgLSPos","hUpsilonBkgLSNeg"}; }
   THnSparseF *hnInvMass[3];
   TH1F *hInvMass[3];
-  Double_t pt1_cut = 1.0, pt2_cut = 1.0;
+  Double_t pt1_cut = 1.5, pt2_cut = 1.0;
   for(Int_t j=0; j<3; j++)
     {
       hnInvMass[j] = (THnSparseF*)f->Get(Form("m%s_%s",hName[j],trigName[kTrigType]));
-      hnInvMass[j]->GetAxis(4)->SetRangeUser(pt1_cut+0.01,100);
-      hnInvMass[j]->GetAxis(5)->SetRangeUser(pt2_cut+0.01,100);
+      if(type==0)
+	{
+	  hnInvMass[j]->GetAxis(1)->SetRangeUser(4,100);
+	  hnInvMass[j]->GetAxis(4)->SetRangeUser(pt1_cut+0.01,100);
+	  hnInvMass[j]->GetAxis(5)->SetRangeUser(pt2_cut+0.01,100);
+	}
+      else if(type==1)
+	{
+	  hnInvMass[j]->GetAxis(2)->SetRangeUser(pt1_cut+0.01,100);
+	  hnInvMass[j]->GetAxis(3)->SetRangeUser(pt2_cut+0.01,100);
+	}
       hInvMass[j] = (TH1F*)hnInvMass[j]->Projection(0);
       hInvMass[j]->SetName(Form("%s_%s_InvMass",hName[j],trigName[kTrigType]));
-      hInvMass[j]->Rebin(10);
       hInvMass[j]->Sumw2();
     }
   hInvMass[1]->Add(hInvMass[2]);
@@ -449,19 +501,29 @@ void upsilon(Int_t save = 0)
   for(Int_t i=0; i<2; i++)
     {
       hInvMass_upsilon[i] = (TH1F*)hInvMass[i]->Clone(Form("%s_upsilon",hInvMass[i]->GetName()));
-      hInvMass_upsilon[i]->Rebin(10);
-      hInvMass_upsilon[i]->GetXaxis()->SetRangeUser(6,18);
+      if(type==0) hInvMass_upsilon[i]->Rebin(100);
+      if(type==1) hInvMass_upsilon[i]->Rebin(10);
+      hInvMass_upsilon[i]->GetXaxis()->SetRangeUser(8,14);
     }
-  c = draw1D(hInvMass_upsilon[0],Form("Au+Au %s: invariant mass of di-muon pairs%s;M_{#mu#mu} (GeV/c^{2})",trigName[kTrigType],hlt_name[hlt_index]),kFALSE,kTRUE);
+  c = draw1D(hInvMass_upsilon[0],Form("Invariant mass of di-muon pairs%s;M_{#mu#mu} (GeV/c^{2})",hlt_name[hlt_index]),kTRUE,kTRUE);
   hInvMass_upsilon[1]->Draw("HIST sames");
   leg->Draw();
-  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/InvMass/%s.InvMass_upsion_pt1_%1.1f_pt2_%1.1f.png",run_cfg_name.Data(),pt1_cut,pt2_cut));
+  if(save) 
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_InvMass/%sInvMass_upsion_pt1_%1.0f_pt2_%1.0f.pdf",run_type,run_cfg_name.Data(),pt1_cut*10,pt2_cut*10));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_InvMass/%sInvMass_upsion_pt1_%1.0f_pt2_%1.0f.png",run_type,run_cfg_name.Data(),pt1_cut*10,pt2_cut*10));
+    }
 
   TH1F *hdiff_upsilon = (TH1F*)hInvMass_upsilon[0]->Clone(Form("%s_upsilon",hDiff->GetName()));
   hdiff_upsilon->Add(hInvMass_upsilon[1],-1);
-  c = draw1D(hdiff_upsilon,Form("Au+Au %s: invariant mass of di-muon pairs%s;M_{#mu#mu} (GeV/c^{2})",trigName[kTrigType],hlt_name[hlt_index]),kFALSE,kTRUE);
+  c = draw1D(hdiff_upsilon,Form("Invariant mass of di-muon pairs%s;M_{#mu#mu} (GeV/c^{2});UL-LS",hlt_name[hlt_index]),kFALSE,kTRUE);
   gPad->SetGridy();
-  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/InvMass/%s.InvMass_US-LS_upsilon_pt1_%1.1f_pt2_%1.1f.png",run_cfg_name.Data(),pt1_cut,pt2_cut));
+  if(save) 
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_InvMass/%sInvMass_upsion_UL-LS_pt1_%1.0f_pt2_%1.0f.pdf",run_type,run_cfg_name.Data(),pt1_cut*10,pt2_cut*10));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_InvMass/%sInvMass_upsion_UL-LS_pt1_%1.0f_pt2_%1.0f.png",run_type,run_cfg_name.Data(),pt1_cut*10,pt2_cut*10));
+    }
+
   
 }
 
