@@ -53,7 +53,7 @@ void ana_JpsiYield()
 }
 
 //================================================
-void anaYield(int savePlot = 1)
+void anaYield(int savePlot = 0)
 {
   TString fileName = f->GetName();
   fileName.ReplaceAll("output","Rootfiles");
@@ -141,7 +141,7 @@ void prod_makeYield()
 }
 
 //================================================
-void makeYield(const int icent = 2, const int isys = 5, int savePlot = 0, int saveHisto = 0)
+void makeYield(const int icent = 1, const int isys = 0, int savePlot = 0, int saveHisto = 0)
 {
   const char *sys_name[6] = {"","_LargeScale","_SmallScale","_pol1","_LargeFit","_SmallFit"};
   const char *sys_title[6] = {"","Sys.LargeScale.","Sys.SmallScale.","Sys.pol1.","Sys.LargeFit.","Sys.SmallFit."};
@@ -417,11 +417,11 @@ void makeYield(const int icent = 2, const int isys = 5, int savePlot = 0, int sa
       hSignal[i]->Add(hMixBkg[i],-1);
       hSignal[i]->SetLineColor(1);
       hSignal[i]->SetMarkerColor(1);
-      if(i>=3)
-      	{
-      	  funcForm = "pol1"; 
-      	  const int nPar = 2;
-      	}
+      // if(i<=1)
+      // 	{
+      // 	  funcForm = "pol3"; 
+      // 	  const int nPar = 4;
+      // 	}
       funcSignal[i] = new TF1(Form("fit_%s",hSignal[i]->GetName()),Form("gausn(0)+%s(3)",funcForm.Data()),fit_min,fit_max);
       funcSignal[i]->SetParameter(1,3.09);
       funcSignal[i]->SetParameter(2,0.05);
@@ -465,6 +465,7 @@ void makeYield(const int icent = 2, const int isys = 5, int savePlot = 0, int sa
       double count = hSignal[i]->IntegralAndError(low_bin,high_bin,error);
       printf("All = %1.0f +/- %1.1f\n",count,error);
       TF1 *functmp = new TF1(Form("bkg_%s",hSignal[i]->GetName()),Form("%s",funcForm.Data()),fit_min,fit_max);
+      functmp->SetLineColor(4);
       double bkg_params[nPar];
       for(int j=0; j<nPar; j++)
 	{
@@ -503,6 +504,7 @@ void makeYield(const int icent = 2, const int isys = 5, int savePlot = 0, int sa
       if(i<4)  hSignal[i]->SetMaximum(1.2*hSignal[i]->GetMaximum());
       hSignal[i]->Draw();
       funcSignal[i]->Draw("sames");
+      functmp->Draw("sames");
       TPaveText *t = GetTitleText(Form("%1.0f < p_{T} < %1.0f GeV/c (%s%%)",ptBins_low[i],ptBins_high[i],cent_Name[icent]),0.06);
       t->Draw();
       TLine *line = GetLine(low_mass_tmp,hSignal[i]->GetMinimum()*1.5,low_mass_tmp,hSignal[i]->GetMaximum()*0.3,1);

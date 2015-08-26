@@ -53,14 +53,14 @@ void compareFitDz(const Int_t savePlot = 1)
 {
   TFile *fin = TFile::Open(Form("Rootfiles/%s",outFileName),"read");
   // embedding hadron
-  const char *partName[2] = {"kaonP","kaonM"};
-  TH1F *hEmbed[2][2];
-  for(int j=0; j<2; j++)
+  const char *partName[4] = {"kaonP","kaonM","pionP","pionM"};
+  TH1F *hEmbed[4][2];
+  for(int j=0; j<4; j++)
     {
       for(int k=0; k<2; k++)
 	{
-	  hEmbed[j][k] = (TH1F*)fin->Get(Form("Embed_%s_sigma%d",partName[j],k));
-	  hEmbed[j][k]->SetMarkerStyle(20);
+	  hEmbed[j][k] = (TH1F*)fin->Get(Form("Embed_%s_dz_sigma%d",partName[j],k));
+	  hEmbed[j][k]->SetMarkerStyle(20+j);
 	  hEmbed[j][k]->SetMarkerColor(color[k+2]);
 	  hEmbed[j][k]->SetLineColor(color[k+2]);
 	}
@@ -102,8 +102,13 @@ void compareFitDz(const Int_t savePlot = 1)
   if(type==1) hDataMuon[2]->Draw("sames");
   hDataJpsiMuon->Draw("sames");
   fResDzVsPt->Draw("same");
-  hEmbed[0][0]->Draw("same");
-  hEmbed[0][1]->Draw("same");
+  for(int j=0; j<4; j++)
+    {
+      for(int k=0; k<2; k++)
+	{
+	  hEmbed[j][k]->Draw("same");
+	}
+    }
 
   double xmin = 0.3, xmax = 0.5, ymin = 0.65, ymax = 0.88;
   leg1 = new TLegend(xmin,ymin,xmax,ymax);
@@ -120,9 +125,11 @@ void compareFitDz(const Int_t savePlot = 1)
   leg2->SetBorderSize(0);
   leg2->SetFillColor(0);
   leg2->SetTextSize(0.035);
-  leg2->AddEntry(hEmbed[0][0],"Embed K^{+}","PL");
-  leg2->AddEntry(hEmbed[0][1],"Embed K^{#font[122]{-}}","PL");
   leg2->AddEntry(fResDzVsPt,"Embed J/psi muon","L");
+  leg2->AddEntry(hEmbed[0][0],"Embed K^{+}","PL");
+  leg2->AddEntry(hEmbed[1][0],"Embed K^{#font[122]{-}}","PL");
+  leg2->AddEntry(hEmbed[2][0],"Embed #pi^{+}","PL");
+  leg2->AddEntry(hEmbed[3][0],"Embed #pi^{#font[122]{-}}","PL");
   leg2->Draw();
 
   if(savePlot) 
@@ -171,23 +178,28 @@ void HadronEmbed(const Int_t savePlot = 0, const Int_t saveHisto = 0)
       c = sysCompare(list,Form("McTrkEff_%s",partName[i]),Form("p_{T} distribution of embedded %s;p_{T}^{mc} (GeV/c);counts",partTitle[i]),Form("Efficiency of embedded %s;p_{T}^{mc} (GeV/c);Efficiency",partTitle[i]),kTRUE,0,13,kFALSE,0.1,10,kTRUE,0,1,kFALSE,kTRUE,legName,kTRUE,"|#eta_{mc}|<0.5",0.5,0.7,0.25,0.5,kTRUE);
       c->cd(2);
       gPad->SetGridy();
+      if(savePlot) 
+	{
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_DeltaZ/Embed_%s_McTrkPtEff.png",run_type,partName[i]));
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_DeltaZ/Embed_%s_McTrkPtEff.pdf",run_type,partName[i]));
+	}
     }
 
   // decay mode
   TH2F *hHadronDecay = (TH2F*)fin->Get("mhHadronDecay");
   for(int i=0; i<nPart; i++)
     {
-      int all = 0;
-      for(int j=1; j<=hHadronDecay->GetNbinsX(); j++)
+      printf("=== %s\n",partName[i]);
+      TH1F *h1 = (TH1F*)hHadronDecay->ProjectionX(Form("%s",partName[i]),geantId[i]+1,geantId[i]+1);
+      for(int j=1; j<=h1->GetNbinsX(); j++)
 	{
-	  int entry = hHadronDecay->GetBinContent(j,geantId[i]+1);
+	  int entry = h1->GetBinContent(j);
 	  if(entry<1) continue;
-	  all += entry;
-	  printf("%s: decay code %d with entries %1.0f\n",partName[i],j-1,entry);
+	  printf("Decay code %d with entries %1.0f (%1.2f%%)\n",j-1,entry,entry/h1->GetEntries()*100);
 	}
-      printf("%s: %1.0f\n",partName[i],all);
     }
 
+  TH2F *hDyVsPt[nPart];
   TH2F *hDzVsPt[nPart];
   TH2F *hDzVsDecay[nPart];
   TH1F *hAll[nPart];
@@ -196,6 +208,11 @@ void HadronEmbed(const Int_t savePlot = 0, const Int_t saveHisto = 0)
   for(int i=0; i<nPart; i++)
     {
       hn->GetAxis(0)->SetRange(geantId[i]+1,geantId[i]+1);
+      hDyVsPt[i] = (TH2F*)hn->Projection(3,1);
+      hDyVsPt[i]->Sumw2();
+      hDyVsPt[i]->Rebin2D(5,5);
+      hDyVsPt[i]->SetName(Form("hDyVsPt_%s",partName[i]));
+      hDyVsPt[i]->SetTitle(Form("#Deltay vs p_{T} for %s in embedding;p_{T} [GeV/c];#Deltay [cm]",partTitle[i]));
       hDzVsPt[i] = (TH2F*)hn->Projection(2,1);
       hDzVsPt[i]->Sumw2();
       hDzVsPt[i]->Rebin2D(5,5);
@@ -245,6 +262,7 @@ void HadronEmbed(const Int_t savePlot = 0, const Int_t saveHisto = 0)
 	  hDVsMode[i][j]->SetName(Form("%s_%s_vs_mode",partName[i],var_name[j]));
 	  int counter = 0;
 	  list->Clear();
+	  if(j==0)   all = hDVsMode[i][j]->GetEntries();
 	  for(int k=0; k<nDecay; k++)
 	    {
 	      TH1F *htmp = (TH1F*)hDVsMode[i][j]->ProjectionY(Form("%s_%d",hDVsMode[i][j]->GetName(),decay_mode[k]),decay_mode[k]+1,decay_mode[k]+1);
@@ -254,8 +272,7 @@ void HadronEmbed(const Int_t savePlot = 0, const Int_t saveHisto = 0)
 	      counter++;
 	      if(j==0)
 		{
-		  all += htmp->GetEntries();
-		  printf("%s: decay code %d with entries %1.0f\n",partName[i],decay_mode[k],htmp->GetEntries());
+		  printf("%s: decay code %d with entries %1.0f (%1.2f%%)\n",partName[i],decay_mode[k],htmp->GetEntries(),htmp->GetEntries()/all*100);
 		}
 	    }
 	  if(j==0)       printf("%s: %1.0f\n",partName[i],all);
@@ -268,204 +285,181 @@ void HadronEmbed(const Int_t savePlot = 0, const Int_t saveHisto = 0)
 	      line->Draw();
 	      if(savePlot) 
 		{
-		  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_DeltaZ/Embed_%s_%s.png",run_type,partName[i],var_name[j]));
-		  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_DeltaZ/Embed_%s_%s.pdf",run_type,partName[i],var_name[j]));
+		  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_DeltaZ/Embed_%s_%sDis.png",run_type,partName[i],var_name[j]));
+		  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_DeltaZ/Embed_%s_%sDis.pdf",run_type,partName[i],var_name[j]));
 		}
 	    }
-	}
-    }
-      
-  return;
-  
-  const char *legName2[2] = {"no decay","decay before magnet"};
-  for(int i=0; i<nPart/2; i++)
-    {
-      if(hAll[i*2]->Integral(0,-1)<100 || hAll[i*2+1]->Integral(0,-1)<100) continue;
-      TLegend *leg = new TLegend(0.55,0.65,0.7,0.85);
-      leg->SetBorderSize(0);
-      leg->SetFillColor(0);
-      leg->SetTextSize(0.04);
-      for(int j=0; j<2; j++)
-	{
-	  hNoDecay[i*2+j]->SetMarkerStyle(21);
-	  hNoDecay[i*2+j]->SetMarkerColor(2+j*2);
-	  hNoDecay[i*2+j]->SetLineColor(2+j*2);
-	  hNoDecay[i*2+j]->GetXaxis()->SetRangeUser(-100,100);
-	  hDecay[i*2+j]->SetMarkerStyle(25);
-	  hDecay[i*2+j]->SetMarkerColor(2+j*2);
-	  hDecay[i*2+j]->SetLineColor(2+j*2);
-	  if(j==0) 
-	    c = draw1D(hNoDecay[i*2+j],Form("#Deltaz distribution of %s and %s",partTitle[i*2],partTitle[i*2+1]));
-	  else
-	    hNoDecay[i*2+j]->Draw("samesP");
-	  hDecay[i*2+j]->Draw("samesP");
-	  leg->AddEntry(hNoDecay[i*2+j],Form("%s: %s",partTitle[i*2+j],legName[0]),"PL");
-	  leg->AddEntry(hDecay[i*2+j],Form("%s: %s",partTitle[i*2+j],legName[1]),"PL");
-	}
-      TLine *line = GetLine(0,0,0,hNoDecay[i*2]->GetMaximum()*0.8,1);
-      line->Draw();
-      leg->Draw();
 
- 
-
-      // Fit
-      TCanvas *c = new TCanvas(Form("Fit_%s_dz",partNameAll[i]),Form("Fit_%s_dz",partNameAll[i]),850,650);
-      c->Divide(2,2);
-      TH1F *htmp = 0;
-      for(int j=0; j<4; j++)
-	{
-	  if(j<2) htmp = (TH1F*)hNoDecay[i*2+j]->Clone(Form("%s_clone",hNoDecay[i*2+j]->GetName()));
-	  else    htmp = (TH1F*)hDecay[i*2+j-2]->Clone(Form("%s_clone",hNoDecay[i*2+j]->GetName()));
-	  double range = 60;
-	  TF1 *func = new TF1(Form("func_%s_%d",partNameAll[i],j),"gaus(0)+gaus(3)",-1*range,range);
-	  func->SetParameter(1,0);
-	  func->SetParameter(4,0);
-	  func->SetParameter(2,10);
-	  func->SetParameter(5,30);
-	  htmp->Fit(func,"IR0");
-	  htmp->GetYaxis()->SetNdivisions(505);
-	  c->cd(j+1);
-	  htmp->SetTitle(";#Deltaz [cm]");
-	  htmp->GetXaxis()->SetRangeUser(-80,100);
-	  htmp->SetMarkerStyle(20);
-	  htmp->SetMarkerColor(1);
-	  htmp->SetLineColor(1);
-	  htmp->SetMaximum(1.5*htmp->GetMaximum());
-	  htmp->Draw("P");
-	  func->SetLineColor(2);
-	  func->Draw("sames");
-	  TF1 *func2 = new TF1(Form("func2_%s_%d",partNameAll[i],j),"gaus",-1*range,range);
-	  for(int ipar=0; ipar<3; ipar++) func2->SetParameter(ipar,func->GetParameter(ipar+3));
-	  func2->SetLineColor(4);
-	  func2->Draw("sames");
-	  TPaveText *t = GetTitleText(Form("%s: %s",partTitle[i*2+j%2],legName[j/2]),0.06);
-	  t->Draw();
-	  TLine *line = GetLine(0,0,0,htmp->GetMaximum()*0.7,1);
-	  line->Draw();
-	}
-      if(savePlot)
-	{
-	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_DeltaZ/Embed_%s_FitDz_All.png",run_type,partNameAll[i]));
-	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_DeltaZ/Embed_%s_FitDz_All.pdf",run_type,partNameAll[i]));
-	}
-    }
-
-  const int nTrkPtBin = 5;
-  const double trkPtBins[nTrkPtBin+1] = {1,1.5,2.0,3.0,5.0,20.0};
-  double trkPtbins[nTrkPtBin+2];
-  trkPtbins[0] = 0;
-  for(int i=1; i<nTrkPtBin+2; i++) trkPtbins[i] = trkPtBins[i-1];
-  TH1F *hMean[nPart][2];
-  TH1F *hSigma[nPart][2];
-  const int nCanvas = nTrkPtBin/6+1;
-  TCanvas *canvas[nPart][nCanvas];
-  TString legName1[2] = {"Narrow Gaussian","Wide Gaussian"};
-  for(int j=0; j<nPart; j++)
-    {
-      if(hDzVsPt[j]->GetEntries()<100) continue;
-      for(int k=0; k<2; k++)
-	{
-	  hMean[j][k] = new TH1F(Form("hMean%d_%s",k,partName[j]),Form("Mean of fitted #Deltaz distribution;p_{T} [GeV/c];mean [cm]"),nTrkPtBin+1,trkPtbins);
-	  hSigma[j][k] = new TH1F(Form("hSigma%d_%s",k,partName[j]),Form("Sigma of fitted #Deltaz distribution;p_{T} [GeV/c];#sigma [cm]"),nTrkPtBin+1,trkPtbins);
-	}
-      for(int i=0; i<nTrkPtBin; i++)
-	{
-	  if(i%6==0) 
+	  if(j>1) continue;
+	  if(hDVsMode[i][0]->GetEntries()<1) continue;
+	  TCanvas *c = new TCanvas(Form("Fit_%s_dz",partName[i]),Form("Fit_%s_dz",partName[i]),1100,500);
+	  c->Divide(2,1);
+	  for(int k=0; k<2; k++)
 	    {
-	      canvas[j][i/6] = new TCanvas(Form("Fit_%s_dz_%d",partName[j],i/6),Form("Fit_%s_dz_%d",partName[j],i/6),1100,650);
-	      canvas[j][i/6]->Divide(3,2);
-	    }
-
-	  int low_bin  = hDzVsPt[j]->GetXaxis()->FindFixBin(trkPtBins[i]+1e-4);
-	  int high_bin = hDzVsPt[j]->GetXaxis()->FindFixBin(trkPtBins[i+1]-1e-4);
-      
-	  TH1F *htmp = (TH1F*)hDzVsPt[j]->ProjectionY(Form("hTrkDz_pt%1.1f-%1.1f_%s",trkPtBins[i],trkPtBins[i+1],partName[j]),low_bin,high_bin);
-	  if(htmp->Integral(1,htmp->GetNbinsX())>20)
-	    {
-	      htmp->Rebin(5);
-	      htmp->SetTitle(Form("%s: #Deltaz of %s (%1.1f < p_{T} < %1.1f GeV/c);#Deltaz (cm)",partTitle[j],trkPtBins[i],trkPtBins[i+1]));
-	      double range = 80;
-	      if(i>2) range = 80;
-	      TF1 *func = new TF1(Form("func_pt%1.1f-%1.1f_%s",trkPtBins[i],trkPtBins[i+1],partName[j]),"gaus(0)+gaus(3)",-1*range,range);
+	      TH1F *htmp = (TH1F*)hDVsMode[i][j]->ProjectionY(Form("%s_%d",hDVsMode[i][j]->GetName(),decay_mode[k]),decay_mode[k]+1,decay_mode[k]+1);
+	      htmp->Sumw2();
+	      if(htmp->GetEntries()<1) continue;
+	      double range = 60;
+	      TF1 *func = new TF1(Form("func_%s_%d",partName[i],k),"gaus(0)+gaus(3)",-1*range,range);
 	      func->SetParameter(1,0);
 	      func->SetParameter(4,0);
 	      func->SetParameter(2,10);
 	      func->SetParameter(5,30);
 	      htmp->Fit(func,"IR0");
 	      htmp->GetYaxis()->SetNdivisions(505);
-	      canvas[j][i/6]->cd(i%6+1);
-	      htmp->SetTitle(";#Deltaz [cm]");
+	      c->cd(k+1);
+	      htmp->SetTitle(Form(";%s [cm]",var_title[j]));
 	      htmp->GetXaxis()->SetRangeUser(-80,100);
 	      htmp->SetMarkerStyle(20);
+	      htmp->SetMarkerColor(1);
+	      htmp->SetLineColor(1);
 	      htmp->SetMaximum(1.5*htmp->GetMaximum());
 	      htmp->Draw("P");
 	      func->SetLineColor(2);
 	      func->Draw("sames");
-	      TF1 *func2 = new TF1(Form("func2_pt%1.1f-%1.1f_%s",trkPtBins[i],trkPtBins[i+1],partName[j]),"gaus",-1*range,range);
+	      TF1 *func2 = new TF1(Form("func2_%s_%d",partName[i],k),"gaus",-1*range,range);
 	      for(int ipar=0; ipar<3; ipar++) func2->SetParameter(ipar,func->GetParameter(ipar+3));
 	      func2->SetLineColor(4);
 	      func2->Draw("sames");
-	      TPaveText *t = GetTitleText(Form("%s: %1.1f < p_{T} < %1.1f GeV/c",partTitle[j],trkPtBins[i],trkPtBins[i+1]),0.06);
+	      TPaveText *t = GetTitleText(Form("%s: %s",partTitle[i],decay_process[k]),0.06);
 	      t->Draw();
 	      TLine *line = GetLine(0,0,0,htmp->GetMaximum()*0.7,1);
 	      line->Draw();
-	      for(int k=0; k<2; k++)
+	    }
+	  if(savePlot) 
+	    {
+	      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_DeltaZ/Embed_%s_Fit_%s.png",run_type,partName[i],var_name[j]));
+	      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_DeltaZ/Embed_%s_Fit_%s.pdf",run_type,partName[i],var_name[j]));
+	    }
+	}
+    }
+
+  const int nTrkPtBin =6;
+  const double trkPtBins[nTrkPtBin+1] = {1,1.5,2,3,5,8,10};
+  double trkPtbins[nTrkPtBin+2];
+  trkPtbins[0] = 0;
+  for(int i=1; i<nTrkPtBin+2; i++) trkPtbins[i] = trkPtBins[i-1];
+  TH1F *hMean[nPart][2][2];
+  TH1F *hSigma[nPart][2][2];
+  const int nCanvas = nTrkPtBin/6+1;
+  TCanvas *canvas[nPart][2][nCanvas];
+  TString legName1[2] = {"Narrow Gaussian","Wide Gaussian"};
+  for(int i=0; i<nPart; i++)
+    {
+      TH2F *h2; 
+      for(int j=0; j<2; j++)
+	{
+	  if(j==0) h2 = hDzVsPt[i];
+	  else     h2 = hDyVsPt[i];
+	  if(h2->GetEntries()<1) continue;
+	  for(int k=0; k<2; k++)
+	    {
+	      hMean[i][j][k] = new TH1F(Form("Embed_%s_%s_mean%d",partName[i],var_name[j],k),Form("Mean of fitted %s distribution;p_{T} [GeV/c];mean [cm]",var_title[j]),nTrkPtBin+1,trkPtbins);
+	      hSigma[i][j][k] = new TH1F(Form("Embed_%s_%s_sigma%d",partName[i],var_name[j],k),Form("Sigma of fitted %s distribution;p_{T} [GeV/c];#sigma [cm]",var_title[j]),nTrkPtBin+1,trkPtbins);
+	    }
+	  for(int k=0; k<nTrkPtBin; k++)
+	    {
+	      if(k%6==0) 
 		{
-		  hMean[j][k]->SetBinContent(i+2,func->GetParameter(1+3*k));
-		  hMean[j][k]->SetBinError(i+2, func->GetParError(1+3*k));
-		  hSigma[j][k]->SetBinContent(i+2,func->GetParameter(2+3*k));
-		  hSigma[j][k]->SetBinError(i+2, func->GetParError(2+3*k));
+		  canvas[i][j][k/6] = new TCanvas(Form("Fit_%s_%s_%d",var_name[j],partName[i],k/6),Form("Fit_%s_%s_%d",var_name[j],partName[i],k/6),1100,650);
+		  canvas[i][j][k/6]->Divide(3,2);
+		}
+
+	      int low_bin  = h2->GetXaxis()->FindFixBin(trkPtBins[k]+1e-4);
+	      int high_bin = h2->GetXaxis()->FindFixBin(trkPtBins[k+1]-1e-4);
+      
+	      TH1F *htmp = (TH1F*)h2->ProjectionY(Form("hTrk_%s_pt%1.1f-%1.1f_%s",var_name[j],trkPtBins[k],trkPtBins[k+1],partName[i]),low_bin,high_bin);
+	      if(htmp->Integral(1,htmp->GetNbinsX())>20)
+		{
+		  htmp->SetTitle(Form("%s: %s of %s (%1.1f < p_{T} < %1.1f GeV/c);#Deltaz (cm)",partTitle[i],var_title[j],trkPtBins[k],trkPtBins[k+1]));
+		  double range = 80;
+		  if(i>2) range = 80;
+		  TF1 *func = new TF1(Form("func_%s_pt%1.1f-%1.1f_%s",var_name[j],trkPtBins[k],trkPtBins[k+1],partName[i]),"gaus(0)+gaus(3)",-1*range,range);
+		  func->SetParameter(1,0);
+		  func->SetParameter(4,0);
+		  func->SetParameter(2,5);
+		  func->SetParameter(5,30);
+		  htmp->Fit(func,"IR0");
+		  htmp->GetYaxis()->SetNdivisions(505);
+		  canvas[i][j][k/6]->cd(k%6+1);
+		  htmp->SetTitle(Form(";%s [cm]",var_title[j]));
+		  htmp->GetXaxis()->SetRangeUser(-80,100);
+		  htmp->SetMarkerStyle(20);
+		  htmp->SetMaximum(1.5*htmp->GetMaximum());
+		  htmp->Draw("P");
+		  func->SetLineColor(2);
+		  func->Draw("sames");
+		  TF1 *func2 = new TF1(Form("func2_%s_pt%1.1f-%1.1f_%s",var_name[j],trkPtBins[k],trkPtBins[k+1],partName[i]),"gaus",-1*range,range);
+		  for(int ipar=0; ipar<3; ipar++) func2->SetParameter(ipar,func->GetParameter(ipar+3));
+		  func2->SetLineColor(4);
+		  func2->Draw("sames");
+		  TPaveText *t = GetTitleText(Form("%s: %1.1f < p_{T} < %1.1f GeV/c",partTitle[i],trkPtBins[k],trkPtBins[k+1]),0.06);
+		  t->Draw();
+		  TLine *line = GetLine(0,0,0,htmp->GetMaximum()*0.7,1);
+		  line->Draw();
+		  for(int l=0; l<2; l++)
+		    {
+		      hMean[i][j][l]->SetBinContent(k+2,func->GetParameter(1+3*l));
+		      hMean[i][j][l]->SetBinError(k+2, func->GetParError(1+3*l));
+		      hSigma[i][j][l]->SetBinContent(k+2,fabs(func->GetParameter(2+3*l)));
+		      hSigma[i][j][l]->SetBinError(k+2, func->GetParError(2+3*l));
+		    }
+		}
+	      if(savePlot && (k%6==5 || k==nTrkPtBin-1))
+		{
+		  canvas[i][j][k/6]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_DeltaZ/Embed_%s_Fit_%s_Bin%d.png",run_type,partName[i],var_name[j],k/6));
+		  canvas[i][j][k/6]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_DeltaZ/Embed_%s_Fit_%s_Bin%d.pdf",run_type,partName[i],var_name[j],k/6));
 		}
 	    }
-	  if(savePlot && (i%6==5 || i==nTrkPtBin-1))
+	  list->Clear();
+	  for(int k=0; k<2; k++)
 	    {
-	      canvas[j][i/6]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_DeltaZ/Embed_%s_FitDz_Bin%d.png",run_type,partName[j],i/6));
-	      canvas[j][i/6]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_DeltaZ/Embed_%s_FitDz_Bin%d.pdf",run_type,partName[j],i/6));
+	      list->Add(hMean[i][j][k]);
 	    }
-	}
-      list->Clear();
-      for(int k=0; k<2; k++)
-	{
-	  list->Add(hMean[j][k]);
-	}
-      c = drawHistos(list,Form("FitMean_%s",partTitle[j]),Form("%s: mean of #Deltaz distribution",partTitle[j]),true,0,5,kTRUE,-10,10,kFALSE,kTRUE,legName1,kTRUE,"",0.5,0.7,0.68,0.85,kTRUE);
-      if(savePlot)
-	{
-	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_DeltaZ/Embed_%s_FitDz_Mean.png",run_type,partName[j]));
-	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_DeltaZ/Embed_%s_FitDz_Mean.pdf",run_type,partName[j]));
-	}
-
-      list->Clear();
-      for(int k=0; k<2; k++)
-	{
-	  list->Add(hSigma[j][k]);
-	}
-      c = drawHistos(list,Form("FitSigma_%s",partTitle[j]),Form("%s: #sigma of #Deltaz distribution",partTitle[j]),true,0,5,kTRUE,0,40,kFALSE,kTRUE,legName1,kTRUE,"",0.5,0.7,0.68,0.85,kTRUE);
-      if(savePlot)
-	{
-	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_DeltaZ/Embed_%s_FitDz_Sigma.png",run_type,partName[j]));
-	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_DeltaZ/Embed_%s_FitDz_Sigma.pdf",run_type,partName[j]));
+	  c = drawHistos(list,Form("FitMean_%s_%s",var_name[j],partTitle[i]),Form("%s: mean of %s distribution",partTitle[i],var_title[j]),true,0,10,kTRUE,-20,20,kFALSE,kTRUE,legName1,kTRUE,"",0.5,0.7,0.68,0.85,kTRUE);
+	  if(savePlot)
+	    {
+	      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_DeltaZ/Embed_%s_Fit_%s_Mean.png",run_type,partName[i],var_name[j]));
+	      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_DeltaZ/Embed_%s_Fit_%s_Mean.pdf",run_type,partName[i],var_name[j]));
+	    }
+	  
+	  list->Clear();
+	  for(int k=0; k<2; k++)
+	    {
+	      list->Add(hSigma[i][j][k]);
+	    }
+	  c = drawHistos(list,Form("FitSigma_%s_%s",var_name[j],partTitle[i]),Form("%s: #sigma of %s distribution",partTitle[i],var_title[j]),true,0,10,kTRUE,0,80,kFALSE,kTRUE,legName1,kTRUE,"",0.5,0.7,0.68,0.85,kTRUE);
+	  if(savePlot)
+	    {
+	      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_DeltaZ/Embed_%s_Fit_%s_Sigma.png",run_type,partName[i],var_name[j]));
+	      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_DeltaZ/Embed_%s_Fit_%s_Sigma.pdf",run_type,partName[i],var_name[j]));
+	    }
 	}
     }
 
   if(saveHisto)
     {
       TFile *fout = TFile::Open(Form("Rootfiles/%s",outFileName),"update");
-      for(int j=0; j<nPart; j++)
+      for(int i=0; i<nPart; i++)
 	{
-	  if(hDzVsPt[j]->GetEntries()<100) continue;
-	  for(int k=0; k<2; k++)
+	  TH2F *h2;
+	  for(int j=0; j<2; j++)
 	    {
-	      hMean[j][k]->Write(Form("Embed_%s_mean%d",partName[j],k),TObject::kOverwrite);
-	      hSigma[j][k]->Write(Form("Embed_%s_sigma%d",partName[j],k),TObject::kOverwrite);
+	      if(j==0) h2 = hDzVsPt[i];
+	      else     h2 = hDyVsPt[i];
+	      if(h2->GetEntries()<1) continue;
+	      for(int k=0; k<2; k++)
+		{
+		  hMean[i][j][k]->Write("",TObject::kOverwrite);
+		  hSigma[i][j][k]->Write("",TObject::kOverwrite);
+		}
 	    }
 	}
-      fout->Close();
     }
 }
 
 //================================================
-void JpsiMuon(const Int_t savePlot = 0, const Int_t saveHisto = 0)
+void JpsiMuon(const Int_t savePlot = 1, const Int_t saveHisto = 1)
 {
   gStyle->SetStatW(0.2);                
   gStyle->SetStatH(0.2); 
@@ -560,7 +554,7 @@ void JpsiMuon(const Int_t savePlot = 0, const Int_t saveHisto = 0)
 }
 
 //================================================
-void Compare2GausVs3Gaus(const Int_t savePlot = 0)
+void Compare2GausVs3Gaus(const Int_t savePlot = 1)
 {
   TFile *fin = TFile::Open(Form("Rootfiles/%s",outFileName),"read");
   const char *type_name[2] = {"2Gaus","3Gaus"};
@@ -572,7 +566,7 @@ void Compare2GausVs3Gaus(const Int_t savePlot = 0)
   TH1F *hChi2[2];
   for(int i=0; i<2; i++)
     {
-      hChi2[i] = (TH1F*)fin->Get(Form("hChi_%s",type_name[i]));
+      hChi2[i] = (TH1F*)fin->Get(Form("Data_Muon_Chi2_%s",type_name[i]));
       list->Add(hChi2[i]);
     }
   c = drawHistos(list,"chi2","Chi2/NDF of #Deltaz fit;p_{T} [GeV/c];Chi2/ndf",kFALSE,2.0,3.8,kTRUE,0.1,300,kTRUE,kTRUE,legName,kTRUE,"",0.5,0.7,0.65,0.85,kTRUE);
@@ -586,7 +580,7 @@ void Compare2GausVs3Gaus(const Int_t savePlot = 0)
   TH1F *hMean[2];
   for(int i=0; i<2; i++)
     {
-      hMean[i] = (TH1F*)fin->Get(Form("hMean_%s",type_name[i]));
+      hMean[i] = (TH1F*)fin->Get(Form("Data_Muon_Mean_%s_0",type_name[i]));
       list->Add(hMean[i]);
     }
   c = drawHistos(list,"mean","Mean of fitted #Deltaz distribution",kFALSE,2.0,3.8,kFALSE,0.1,300,kFALSE,kTRUE,legName,kTRUE,"",0.5,0.7,0.65,0.85,kTRUE);
@@ -599,7 +593,7 @@ void Compare2GausVs3Gaus(const Int_t savePlot = 0)
   TH1F *hSigma[2];
   for(int i=0; i<2; i++)
     {
-      hSigma[i] = (TH1F*)fin->Get(Form("hSigma_%s",type_name[i]));
+      hSigma[i] = (TH1F*)fin->Get(Form("Data_Muon_Sigma_%s_0",type_name[i]));
       hSigma[i]->SetMarkerStyle(20);
       hSigma[i]->SetMarkerColor(color[i]);
       hSigma[i]->SetLineColor(color[i]);
@@ -629,7 +623,7 @@ void Compare2GausVs3Gaus(const Int_t savePlot = 0)
   TH1F *hPurity[2];
   for(int i=0; i<2; i++)
     {
-      hPurity[i] = (TH1F*)fin->Get(Form("hPurity_%s",type_name[i]));
+      hPurity[i] = (TH1F*)fin->Get(Form("Data_Muon_Purity_%s",type_name[i]));
       list->Add(hPurity[i]);
     }
   c = drawHistos(list,"hPurity","Purity of selected muon sample by #Deltaz cut",kFALSE,2.0,3.8,kFALSE,0.1,300,kFALSE,kTRUE,legName,kTRUE,"",0.5,0.7,0.2,0.4,kTRUE);
@@ -643,7 +637,7 @@ void Compare2GausVs3Gaus(const Int_t savePlot = 0)
   TH1F *hEff[2];
   for(int i=0; i<2; i++)
     {
-      hEff[i] = (TH1F*)fin->Get(Form("hEff_%s",type_name[i]));
+      hEff[i] = (TH1F*)fin->Get(Form("Data_Muon_Eff_%s",type_name[i]));
       list->Add(hEff[i]);
     }
   c = drawHistos(list,"hEff","Efficiency of #Deltaz cut",kFALSE,2.0,3.8,kFALSE,0.1,300,kFALSE,kTRUE,legName,kTRUE,"",0.2,0.4,0.2,0.4,kTRUE);
@@ -655,7 +649,7 @@ void Compare2GausVs3Gaus(const Int_t savePlot = 0)
 }
 
 //================================================
-void MuonCandidates(const Int_t savePlot = 0, const Int_t saveHisto = 0)
+void MuonCandidates(const Int_t savePlot = 1, const Int_t saveHisto = 1)
 {
   TH2F *hDzVsPt = (TH2F*)f->Get(Form("mhMuonDzVsPt_%s",trigName[kTrigType]));
   c = draw2D(hDzVsPt,Form("%s: #Deltaz of muon candidates",trigName[kTrigType]));

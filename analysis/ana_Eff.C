@@ -5,7 +5,7 @@ const double pt1_cut = 1.5;
 const double pt2_cut = 1.0;
 const Double_t low_mass = 2.9;
 const Double_t high_mass = 3.3;
-const char *det_name[5] = {"","Tpc","Mtd","MtdFake","Muon"};
+const char *det_name[5] = {"","Tpc","Mtd","Muon","MtdFake"};
 const char *charge_name[3] = {"","_pos","_neg"};
 const char *charge_title[3] = {" "," positive "," negative "};
 
@@ -17,6 +17,7 @@ void ana_Eff()
   gStyle->SetOptStat(0);
   TString fileName;
   TString outName;
+  TString outPDF;
 
   if(year==2013)
     {
@@ -24,12 +25,14 @@ void ana_Eff()
       run_type = "Run13_pp500";
       fileName = Form("Run13.pp500.jpsi.EmbedQA.MC.%sroot",run_config);
       outName = Form("Run13.pp500.jpsi.Eff.%sroot",run_config);
+      outPDF = Form("Run13_pp500_Embed_Eff.pdf");
     }
   else if(year==2014)
     {
       run_type = "Run14_AuAu200";
       fileName = Form("Run14.AuAu200.jpsi.EmbedQA.MC.%sroot",run_config);
       outName = Form("Run14.AuAu200.jpsi.Eff.%sroot",run_config);
+      outPDF = Form("Run14_AuAu200_Embed_Eff.pdf");
     }
   run_cfg_name = run_config;
 
@@ -38,29 +41,26 @@ void ana_Eff()
   printf("# of events: %4.4e\n",hStat->GetBinContent(3));
 
   //makeEffFromEmbed(outName);
-  JpsiEffFromEmbed(outName);
+  JpsiEffFromEmbed(outName, outPDF);
+  //3DTrkEff(outName, outPDF);
 }
 
 //================================================
-void JpsiEffFromEmbed(TString inName, const bool savePlot = 0)
+void JpsiEffFromEmbed(TString inName, TString outPDFName, const bool savePlot = 0)
 {
-  if(year==2013) const int nCentBins = 1;
-
-  // single tracks
+ // single tracks
   TFile *fin = TFile::Open(Form("Rootfiles/%s",inName.Data()),"read");
-  TH3F *hMcTrkPtEtaPhi[nCentBins][5][3];
-  TH1F *hMcTrkPt[nCentBins][5][3];
-  TH2F *hMcTrkEtaPhi[nCentBins][5][3];
-  TH1F *hMcTrkEta[nCentBins][5][3];
-  TH1F *hMcTrkPhi[nCentBins][5][3];
-  TH1F *hMcTrkPtInEtaPhi[nCentBins][5][3][2][12];
-  TH1F *hMcTrkPtInBackleg[nCentBins][5][3][30];
+  TH3F *hMcTrkPtEtaPhi[nCentBins][2][3];
+  TH1F *hMcTrkPt[nCentBins][2][3];
+  TH2F *hMcTrkEtaPhi[nCentBins][2][3];
+  TH1F *hMcTrkEta[nCentBins][2][3];
+  TH1F *hMcTrkPhi[nCentBins][2][3];
   double eta_bounds[3] = {-0.5,0,0.5};
   for(int k=0; k<nCentBins; k++)
     {
       for(int j=0; j<3; j++)
 	{
-	  for(int i=0; i<5; i++)
+	  for(int i=0; i<2; i++)
 	    {
 	      if(nCentBins==1) hMcTrkPtEtaPhi[k][i][j] = (TH3F*)fin->Get(Form("McTrkPtEtaPhi%s%s",det_name[i],charge_name[j]));
 	      else             hMcTrkPtEtaPhi[k][i][j] = (TH3F*)fin->Get(Form("McTrkPtEtaPhi%s%s_%s",det_name[i],charge_name[j],cent_Title[k]));
@@ -72,24 +72,24 @@ void JpsiEffFromEmbed(TString inName, const bool savePlot = 0)
 	      hMcTrkEta[k][i][j] = (TH1F*)hMcTrkPtEtaPhi[k][i][j]->ProjectionY(Form("McTrkEta%s%s_%d",det_name[i],charge_name[j],k),low_xbin,-1,0,-1);
 	      hMcTrkPhi[k][i][j] = (TH1F*)hMcTrkPtEtaPhi[k][i][j]->ProjectionZ(Form("McTrkPhi%s%s_%d",det_name[i],charge_name[j],k),low_xbin,-1,low_ybin,high_ybin);
 	      
-	      for(int ieta=0; ieta<2; ieta++)
-		{
-		  int low_etabin = hMcTrkPtEtaPhi[k][i][j]->GetYaxis()->FindFixBin(eta_bounds[ieta]+1e-4);
-		  int high_etabin = hMcTrkPtEtaPhi[k][i][j]->GetYaxis()->FindFixBin(eta_bounds[ieta+1]-1e-4);
-		  for(int iphi=0; iphi<12; iphi++)
-		    {
-		      int low_phibin = hMcTrkPtEtaPhi[k][i][j]->GetZaxis()->FindFixBin(pi/12+pi/6*iphi + 1e-4);
-		      int high_phibin = hMcTrkPtEtaPhi[k][i][j]->GetZaxis()->FindFixBin(pi/12+pi/6*(iphi+1) - 1e-4);
-		      hMcTrkPtInEtaPhi[k][i][j][ieta][iphi] = (TH1F*)hMcTrkPtEtaPhi[k][i][j]->ProjectionX(Form("McTrkPt%s%s_eta%d_phi%d_cent%d",det_name[i],charge_name[j],ieta,iphi,k),low_etabin,high_etabin,low_phibin,high_phibin);
-		      if(iphi==11)
-			{
-			  int low_phibin = 0;
-			  int high_phibin = hMcTrkPtEtaPhi[k][i][j]->GetZaxis()->FindFixBin(pi/12 - 1e-4);
-			  hMcTrkPtInEtaPhi[k][i][j][ieta][iphi]->Add((TH1F*)hMcTrkPtEtaPhi[k][i][j]->ProjectionX(Form("McTrkPt%s%s_eta%d_phi%d_cent%d_2",det_name[i],charge_name[j],ieta,iphi,k),low_etabin,high_etabin,low_phibin,high_phibin));
-			}
-		      hMcTrkPtInEtaPhi[k][i][j][ieta][iphi]->Rebin(2);
-		    }
-		}
+	      // for(int ieta=0; ieta<2; ieta++)
+	      // 	{
+	      // 	  int low_etabin = hMcTrkPtEtaPhi[k][i][j]->GetYaxis()->FindFixBin(eta_bounds[ieta]+1e-4);
+	      // 	  int high_etabin = hMcTrkPtEtaPhi[k][i][j]->GetYaxis()->FindFixBin(eta_bounds[ieta+1]-1e-4);
+	      // 	  for(int iphi=0; iphi<12; iphi++)
+	      // 	    {
+	      // 	      int low_phibin = hMcTrkPtEtaPhi[k][i][j]->GetZaxis()->FindFixBin(pi/12+pi/6*iphi + 1e-4);
+	      // 	      int high_phibin = hMcTrkPtEtaPhi[k][i][j]->GetZaxis()->FindFixBin(pi/12+pi/6*(iphi+1) - 1e-4);
+	      // 	      hMcTrkPtInEtaPhi[k][i][j][ieta][iphi] = (TH1F*)hMcTrkPtEtaPhi[k][i][j]->ProjectionX(Form("McTrkPt%s%s_eta%d_phi%d_cent%d",det_name[i],charge_name[j],ieta,iphi,k),low_etabin,high_etabin,low_phibin,high_phibin);
+	      // 	      if(iphi==11)
+	      // 		{
+	      // 		  int low_phibin = 0;
+	      // 		  int high_phibin = hMcTrkPtEtaPhi[k][i][j]->GetZaxis()->FindFixBin(pi/12 - 1e-4);
+	      // 		  hMcTrkPtInEtaPhi[k][i][j][ieta][iphi]->Add((TH1F*)hMcTrkPtEtaPhi[k][i][j]->ProjectionX(Form("McTrkPt%s%s_eta%d_phi%d_cent%d_2",det_name[i],charge_name[j],ieta,iphi,k),low_etabin,high_etabin,low_phibin,high_phibin));
+	      // 		}
+	      // 	      hMcTrkPtInEtaPhi[k][i][j][ieta][iphi]->Rebin(2);
+	      // 	    }
+	      // 	}
 
 	      hMcTrkPtEtaPhi[k][i][j]->GetXaxis()->SetRangeUser(1.5,20);
 	      hMcTrkEtaPhi[k][i][j] = (TH2F*)hMcTrkPtEtaPhi[k][i][j]->Project3D("zy");
@@ -159,7 +159,6 @@ void JpsiEffFromEmbed(TString inName, const bool savePlot = 0)
 	      hMcTrkPtEff[k][i][j]->Divide(hMcTrkPt[k][0][j]);
 	    }
 
-	  /*
 	  c = new TCanvas(Form("FitMcTrkEff_%s_Cent%d",charge_name[j],k),Form("FitMcTrkEff_%s_Cent%d",charge_name[j],k),1100,650);
 	  c->Divide(2,2);
 	  int counter = 1;
@@ -174,7 +173,6 @@ void JpsiEffFromEmbed(TString inName, const bool savePlot = 0)
 	      funcMcTrkPtEff[k][i][j]->SetLineColor(2);
 	      funcMcTrkPtEff[k][i][j]->Draw("sames");
 	    }
-	  */
 
 	  
 	}
@@ -423,6 +421,8 @@ void JpsiEffFromEmbed(TString inName, const bool savePlot = 0)
 
 }
 
+
+
 //================================================
 double erf(double *x, double *par)
 {
@@ -620,10 +620,24 @@ void makeEffFromEmbed(TString outName, const bool save = 1)
 	      hMcTrkPtEff[k][i][j] = (TH1F*)hMcTrkPt[k][i][j]->Clone(Form("%s_Eff",hMcTrkPt[k][i][j]->GetName()));
 	      hMcTrkPtEff[k][i][j]->Divide(hMcTrkPt[k][0][j]);
 
-	      hMcTrkPtEtaPhi[k][i][j] = (TH3F*)hMcTrkInfo[i]->Projection(0,1,2);
+	      TH3F *h3 = (TH3F*)hMcTrkInfo[i]->Projection(0,1,2);
+	      h3->SetName(Form("McTrkPtEtaPhi%d%d%d",i,j,k));
+	      TString name_tmp = Form("McTrkPtEtaPhi%s%s",det_name[i],charge_name[j]);
+	      if(nCentBins>1) name_tmp = Form("McTrkPtEtaPhi%s%s_%s",det_name[i],charge_name[j],cent_Title[k]);
+	      hMcTrkPtEtaPhi[k][i][j] = new TH3F(name_tmp.Data(),h3->GetTitle(),200,0,20,40,-2,2,360,pi/12,2*pi+pi/12);
+	      for(int binx=1; binx<=h3->GetNbinsX(); binx++)
+		{
+		  for(int biny=1; biny<=h3->GetNbinsY(); biny++)
+		    {
+		      for(int binz=1; binz<=h3->GetNbinsZ(); binz++)
+			{
+			  int new_binz = binz-15;
+			  if(binz<=15) new_binz = binz + 360 - 15;
+			  hMcTrkPtEtaPhi[k][i][j]->SetBinContent(binx,biny,new_binz,h3->GetBinContent(binx,biny,binz));
+			}
+		    }
+		}
 	      hMcTrkPtEtaPhi[k][i][j]->Sumw2();
-	      if(nCentBins==1) hMcTrkPtEtaPhi[k][i][j]->SetName(Form("McTrkPtEtaPhi%s%s",det_name[i],charge_name[j]));
-	      else             hMcTrkPtEtaPhi[k][i][j]->SetName(Form("McTrkPtEtaPhi%s%s_%s",det_name[i],charge_name[j],cent_Title[k]));
 	      hMcTrkPtEtaPhiEff[k][i][j] = (TH3F*)hMcTrkPtEtaPhi[k][i][j]->Clone(Form("%s_Eff",hMcTrkPtEtaPhi[k][i][j]->GetName()));
 	      hMcTrkPtEtaPhiEff[k][i][j]->Divide(hMcTrkPtEtaPhi[k][0][j]);
 	      hMcTrkInfo[i]->GetAxis(3)->SetRange(0,-1);
@@ -649,10 +663,24 @@ void makeEffFromEmbed(TString outName, const bool save = 1)
 	      hRcTrkPtEff[k][i][j] = (TH1F*)hRcTrkPt[k][i][j]->Clone(Form("%s_Eff",hRcTrkPt[k][i][j]->GetName()));
 	      hRcTrkPtEff[k][i][j]->Divide(hRcTrkPt[k][0][j]);
 
-	      hRcTrkPtEtaPhi[k][i][j] = (TH3F*)hRcTrkInfo[i]->Projection(0,1,2);
+	      TH3F *h3 = (TH3F*)hRcTrkInfo[i]->Projection(0,1,2);
+	      h3->SetName(Form("McTrkPtEtaPhi%d%d%d",i,j,k));
+	      TString name_tmp = Form("RcTrkPtEtaPhi%s%s",det_name[i+1],charge_name[j]);
+	      if(nCentBins>1) name_tmp = Form("RcTrkPtEtaPhi%s%s_%s",det_name[i+1],charge_name[j],cent_Title[k]);
+	      hRcTrkPtEtaPhi[k][i][j] = new TH3F(name_tmp.Data(),h3->GetTitle(),200,0,20,40,-2,2,360,pi/12,2*pi+pi/12);
+	      for(int binx=1; binx<=h3->GetNbinsX(); binx++)
+		{
+		  for(int biny=1; biny<=h3->GetNbinsY(); biny++)
+		    {
+		      for(int binz=1; binz<=h3->GetNbinsZ(); binz++)
+			{
+			  int new_binz = binz-15;
+			  if(binz<=15) new_binz = binz + 360 - 15;
+			  hRcTrkPtEtaPhi[k][i][j]->SetBinContent(binx,biny,new_binz,h3->GetBinContent(binx,biny,binz));
+			}
+		    }
+		}
 	      hRcTrkPtEtaPhi[k][i][j]->Sumw2();
-	      if(nCentBins==1) hRcTrkPtEtaPhi[k][i][j]->SetName(Form("RcTrkPtEtaPhi%s%s",det_name[i+1],charge_name[j]));
-	      else             hRcTrkPtEtaPhi[k][i][j]->SetName(Form("RcTrkPtEtaPhi%s%s_%s",det_name[i+1],charge_name[j],cent_Title[k]));
 	      hRcTrkPtEtaPhiEff[k][i][j] = (TH3F*)hRcTrkPtEtaPhi[k][i][j]->Clone(Form("%s_Eff",hRcTrkPtEtaPhi[k][i][j]->GetName()));
 	      hRcTrkPtEtaPhiEff[k][i][j]->Divide(hRcTrkPtEtaPhi[k][0][j]);
 	      hRcTrkInfo[i]->GetAxis(3)->SetRange(0,-1);
@@ -740,102 +768,230 @@ TLorentzVector twoBodyDecay(TLorentzVector parent, Double_t dmass)
   return myBoost(parent,daughter);
 }
 
-/*
 
-  hJpsiUS_mc->GetAxis(7)->SetRange(4,4);
-  TCanvas *c = new TCanvas("mc_input","mc_input",800,600);
-  c->Divide(2,2);
+//================================================
+void 3DTrkEff(TString inName, TString outPDFName, const bool savePlot = 0)
+{
+  if(year==2013) const int nCentBins = 1;
 
-  for(int i=0; i<4; i++)
+  TCanvas *c1 = new TCanvas("1pad","1pad",800,600);
+  SetPadMargin(gPad);
+
+  //----------------------------------------------------------------------------
+  // Title page
+  TPaveText *t1 = GetPaveText(0.28,0.7,0.5,0.7,0.07,62);
+  t1->AddText("Efficiency of single muons by embedding");
+  if(year==2013) t1->AddText("in pp 500 GeV from Run13");
+  if(year==2014) t1->AddText("in Au+Au 200 GeV from Run14");
+  t1->Draw();
+  c1->Print(Form("%s(",outPDFName.Data()));
+
+  //----------------------------------------------------------------------------
+  // Get TPDF
+  TPDF *pdf = 0;
+  TSeqCollection *col = gROOT->GetListOfSpecials();
+  for(Int_t i=0; i<col->GetEntries(); i++)
     {
-      TH1F *hJpsi_true = (TH1F*)hJpsiUS_mc->Projection(i);
-      hJpsi_true->SetName("hJpsi_true");
-      hJpsi_true->SetTitle("");
-      hJpsi_true->SetMinimum(0);
-      if(i==0) 
-	{
-	  hJpsi_true->SetTitle(";M_{#mu#mu} (GeV/c^{2})");
-	  hJpsi_true->GetXaxis()->SetRangeUser(0,4);
-	  cout << "# of input J/psi signal = " << hJpsi_true->GetEntries() << endl;
-	}
-      if(i==1)
-	{
-	  hJpsi_true->GetXaxis()->SetRangeUser(0,12);
-	}
-      if(i==2)
-	{
-	  hJpsi_true->GetXaxis()->SetRangeUser(-1.5,1.5);
-	}
-      c->cd(i+1);
-      title = GetTitleText(Form("MC input: %s distribution",mc_name[i]),0.045);
-      hJpsi_true->Draw();
-      title->Draw();
+      TObject *obj = (TObject*)col->At(i);
+      if( obj->IsA()->InheritsFrom("TPDF") && strcmp(obj->GetName(),outPDFName.Data())==0 )
+        pdf = dynamic_cast<TPDF*>obj;
     }
-  hJpsiUS_mc->GetAxis(7)->SetRange(0,-1);
+  if(!pdf) 
+    {
+      printf("No pointer to PDF file is available.\n");
+      return;
+    }
+  pdf->Off();
+
+  t1 = GetPaveText(0.28,0.7,0.5,0.7,0.05,62);
+  t1->AddText("TPC tracking efficiency");
+  c1->Clear();
+  t1->Draw();
+  PaintCanvasToPDF(c1,pdf);
 
 
+  // single tracks
+  TFile *fin = TFile::Open(Form("Rootfiles/%s",inName.Data()),"read");
+  TH3F *hMcTrkPtEtaPhi[nCentBins][2][3];
+  TH1F *hMcTrkPt[nCentBins][2][3];
+  TH1F *hMcTrkPtEff[nCentBins][2][3];
+  TH2F *hMcTrkEtaPhi[nCentBins][2][3];
+  TH2F *hMcTrkEtaPhiEff[nCentBins][2][3];
+  TH1F *hMcTrkEta[nCentBins][2][3];
+  TH1F *hMcTrkEtaEff[nCentBins][2][3];
+  TH1F *hMcTrkPhi[nCentBins][2][3];
+  TH1F *hMcTrkPhiEff[nCentBins][2][3];
+  double eta_bounds[3] = {-0.5,0,0.5};
+  int style[3] = {20,24,24};
+  TString legName_charge[3] = {"#mu^{+}+#mu^{-}","#mu^{+}","#mu^{-}"};
+  for(int k=0; k<nCentBins; k++)
+    {
+      for(int j=0; j<3; j++)
+	{
+	  for(int i=0; i<2; i++)
+	    {
+	      if(nCentBins==1) hMcTrkPtEtaPhi[k][i][j] = (TH3F*)fin->Get(Form("McTrkPtEtaPhi%s%s",det_name[i],charge_name[j]));
+	      else             hMcTrkPtEtaPhi[k][i][j] = (TH3F*)fin->Get(Form("McTrkPtEtaPhi%s%s_%s",det_name[i],charge_name[j],cent_Title[k]));
+	      int low_ybin = hMcTrkPtEtaPhi[k][i][j]->GetYaxis()->FindFixBin(-0.5+1e-4);
+	      int high_ybin = hMcTrkPtEtaPhi[k][i][j]->GetYaxis()->FindFixBin(0.5-1e-4);
+	      hMcTrkPt[k][i][j] = (TH1F*)hMcTrkPtEtaPhi[k][i][j]->ProjectionX(Form("McTrkPt%s%s_%d",det_name[i],charge_name[j],k),low_ybin,high_ybin,0,-1);
+	      hMcTrkPtEff[k][i][j] = (TH1F*)hMcTrkPt[k][i][j]->Clone(Form("%s_Eff",hMcTrkPt[k][i][j]->GetName()));
+	      hMcTrkPtEff[k][i][j]->Divide(hMcTrkPt[k][0][j]);
+	      hMcTrkPtEff[k][i][j]->SetMarkerStyle(style[j]);
+	      hMcTrkPtEff[k][i][j]->SetMarkerColor(color[j]);
+	      hMcTrkPtEff[k][i][j]->SetLineColor(color[j]);
 
-  TFile *fWeight = TFile::Open("Rootfiles/HTppSpectrum.root","read");
-  TF1 *func = (TF1*)fWeight->Get("function");
+	      hMcTrkPtEtaPhi[k][i][j]->GetXaxis()->SetRangeUser(1.5,20);
+	      hMcTrkEtaPhi[k][i][j] = (TH2F*)hMcTrkPtEtaPhi[k][i][j]->Project3D("zy");
+	      hMcTrkEtaPhi[k][i][j]->SetName(Form("McTrkEtaPhi%s%s_%d",det_name[i],charge_name[j],k));
+	      hMcTrkEtaPhiEff[k][i][j] = (TH2F*)hMcTrkEtaPhi[k][i][j]->Clone(Form("%s_Eff",hMcTrkEtaPhi[k][i][j]->GetName()));
+	      hMcTrkEtaPhiEff[k][i][j]->Divide(hMcTrkEtaPhi[k][0][j]);
+	      hMcTrkPtEtaPhi[k][i][j]->GetXaxis()->SetRange(0,-1);
+
+	      int low_xbin = hMcTrkPtEtaPhi[k][i][j]->GetXaxis()->FindFixBin(1.5);
+	      hMcTrkEta[k][i][j] = (TH1F*)hMcTrkPtEtaPhi[k][i][j]->ProjectionY(Form("McTrkEta%s%s_%d",det_name[i],charge_name[j],k),low_xbin,-1,0,-1);
+	      hMcTrkPhi[k][i][j] = (TH1F*)hMcTrkPtEtaPhi[k][i][j]->ProjectionZ(Form("McTrkPhi%s%s_%d",det_name[i],charge_name[j],k),low_xbin,-1,low_ybin,high_ybin);
+	      hMcTrkEtaEff[k][i][j] = (TH1F*)hMcTrkEta[k][i][j]->Clone(Form("%s_Eff",hMcTrkEta[k][i][j]->GetName()));
+	      hMcTrkEtaEff[k][i][j]->Divide(hMcTrkEta[k][0][j]);
+	      hMcTrkEtaEff[k][i][j]->SetMarkerStyle(style[j]);
+	      hMcTrkEtaEff[k][i][j]->SetMarkerColor(color[j]);
+	      hMcTrkEtaEff[k][i][j]->SetLineColor(color[j]);
+
+	      hMcTrkPhiEff[k][i][j] = (TH1F*)hMcTrkPhi[k][i][j]->Clone(Form("%s_Eff",hMcTrkPhi[k][i][j]->GetName()));
+	      hMcTrkPhiEff[k][i][j]->Divide(hMcTrkPhi[k][0][j]);
+	      hMcTrkPhiEff[k][i][j]->SetMarkerStyle(style[j]);
+	      hMcTrkPhiEff[k][i][j]->SetMarkerColor(color[j]);
+	      hMcTrkPhiEff[k][i][j]->SetLineColor(color[j]);
+	    }
+	}
+      c = new TCanvas(Form("McTrkPtEff_Cent%d",k),Form("McTrkPtEff_Cent%d",k),800,600);
+      leg = new TLegend(0.3,0.65,0.5,0.85);
+      leg->SetBorderSize(0);
+      leg->SetFillColor(0);
+      leg->SetTextSize(0.045);
+      for(int j=0; j<3; j++)
+	{
+	  hMcTrkPtEff[k][1][j]->GetXaxis()->SetRangeUser(0,10);
+	  hMcTrkPtEff[k][1][j]->GetYaxis()->SetRangeUser(0,1.2);
+	  hMcTrkPtEff[k][1][j]->SetTitle(";p_{T,mc} (GeV/c);Efficiency");
+	  if(j==0) hMcTrkPtEff[k][1][j]->Draw("");
+	  else     hMcTrkPtEff[k][1][j]->Draw("sames");
+	  leg->AddEntry(hMcTrkPtEff[k][1][j],legName_charge[j],"P");
+	}
+      leg->Draw();
+      TPaveText *t1 = GetTitleText("TPC tracking efficiency (|#eta_{mc}| < 0.5)");
+      t1->Draw();
+      PaintCanvasToPDF(c,pdf);
+      if(savePlot)
+	{
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/%sMcTrkPtTpcEff_cent%s.pdf",run_type,run_cfg_name.Data(),cent_Title[k]));
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/%sMcTrkPtTpcEff_cent%s.png",run_type,run_cfg_name.Data(),cent_Title[k]));
+	}
+
+      c = new TCanvas(Form("McTrkEtaEff_Cent%d",k),Form("McTrkEtaEff_Cent%d",k),800,600);
+      for(int j=0; j<3; j++)
+	{
+	  hMcTrkEtaEff[k][1][j]->GetXaxis()->SetRangeUser(-1,1);
+	  hMcTrkEtaEff[k][1][j]->GetYaxis()->SetRangeUser(0,1.2);
+	  hMcTrkEtaEff[k][1][j]->SetTitle(";#eta_{mc};Efficiency");
+	  if(j==0) hMcTrkEtaEff[k][1][j]->Draw("");
+	  else     hMcTrkEtaEff[k][1][j]->Draw("sames");
+	}
+      leg->Draw();
+      TPaveText *t1 = GetTitleText("TPC tracking efficiency (p_{T,mc} > 1.5 GeV/c)");
+      t1->Draw();
+      PaintCanvasToPDF(c,pdf);
+      if(savePlot)
+	{
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/%sMcTrkEtaTpcEff_cent%s.pdf",run_type,run_cfg_name.Data(),cent_Title[k]));
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/%sMcTrkEtaTpcEff_cent%s.png",run_type,run_cfg_name.Data(),cent_Title[k]));
+	}
+
+      c = new TCanvas(Form("McTrkPhiEff_Cent%d",k),Form("McTrkPhiEff_Cent%d",k),800,600);
+      for(int j=0; j<3; j++)
+      	{
+      	  hMcTrkPhiEff[k][1][j]->GetYaxis()->SetRangeUser(0,1.2);
+      	  hMcTrkPhiEff[k][1][j]->SetTitle(";#varphi_{mc};Efficiency");
+      	  if(j==0) hMcTrkPhiEff[k][1][j]->Draw("HIST");
+      	  else     hMcTrkPhiEff[k][1][j]->Draw("sames HIST");
+      	}
+      leg->Draw();
+      TPaveText *t1 = GetTitleText("TPC tracking efficiency (|#eta_{mc}|<0.5)");
+      t1->Draw();
+      PaintCanvasToPDF(c,pdf);
+      if(savePlot)
+	{
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/%sMcTrkPhiTpcEff_cent%s.pdf",run_type,run_cfg_name.Data(),cent_Title[k]));
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/%sMcTrkPhiTpcEff_cent%s.png",run_type,run_cfg_name.Data(),cent_Title[k]));
+	}
+
+     c = new TCanvas(Form("McTrkEtaPhiEff_Cent%d",k),Form("McTrkEtaPhiEff_Cent%d",k),1100,700);
+     c->Divide(2,2);
+     for(int j=0; j<3; j++)
+      	{
+	  c->cd(j+1);
+     	  hMcTrkEtaPhiEff[k][1][j]->GetXaxis()->SetRangeUser(-1,1);
+      	  hMcTrkEtaPhiEff[k][1][j]->GetZaxis()->SetRangeUser(0,1);
+      	  hMcTrkEtaPhiEff[k][1][j]->SetTitle(";#eta_{mc};#varphi_{mc}");
+	  ScaleHistoTitle(hMcTrkEtaPhiEff[k][1][j],0.06,0.7,0.05,0.06,0.7,0.05,62);
+	  hMcTrkEtaPhiEff[k][1][j]->Draw("colz");
+	  TPaveText *t1 = GetTitleText(Form("TPC tracking efficiency for %s",legName_charge[j].Data()),0.06);
+	  t1->Draw();
+      	}
+      PaintCanvasToPDF(c,pdf);
+      if(savePlot)
+	{
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/%sMcTrkEtaPhiTpcEff_cent%s.pdf",run_type,run_cfg_name.Data(),cent_Title[k]));
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/%sMcTrkEtaPhiTpcEff_cent%s.png",run_type,run_cfg_name.Data(),cent_Title[k]));
+	}
+    }
+
+  // in (phi,eta) bins
+  const int neta = 10*2;
+  const int nphi = 60;
+  const int nCanvas = nphi*neta/2/15;
+  TCanvas *cTpcEff[nCanvas];
+  for(int i=0; i<nCanvas; i++)
+    {
+      cTpcEff[i] = new TCanvas(Form("TpcEff_%d",i),Form("TpcEff_%d",i),1200,750);
+      cTpcEff[i]->Divide(5,3);
+    }
+  TH3F *hMcTrkPtEtaPhiEff[nCentBins][3];
+  for(int k=0; k<nCentBins; k++)
+    {
+      for(int j=0; j<3; j++)
+	{
+	  for(int i=0; i<2; i++)
+	    {
+	      int nbinsy = hMcTrkPtEtaPhi[k][i][j]->GetNbinsY();
+	      int nbinsz = hMcTrkPtEtaPhi[k][i][j]->GetNbinsZ();
+	      hMcTrkPtEtaPhi[k][i][j]->Rebin3D(10,nbinsy/neta,nbinsz/nphi);
+	    }
+	  hMcTrkPtEtaPhiEff[k][j] = (TH3F*)hMcTrkPtEtaPhi[k][1][j]->Clone(Form("%s_Eff",hMcTrkPtEtaPhi[k][1][j]->GetName()));
+	  hMcTrkPtEtaPhiEff[k][j]->Divide(hMcTrkPtEtaPhi[k][0][j]);
+	}
+
+      for(int ieta=1+neta/4; ieta<=neta-neta/4; ieta++)
+	{
+	  for(int iphi=1; iphi<=nphi; iphi++)
+	    {
+	      int index = (ieta-1-neta/4)*nphi + iphi - 1;
+	      cTpcEff[index/15]->cd(index%15+1);
+	      for(int j=1; j<3; j++)
+		{
+		  TH1F *htmp = (TH1F*)hMcTrkPtEtaPhiEff[k][j]->ProjectionX(Form("%s_%d_%d",hMcTrkPtEtaPhiEff[k][j]->GetName(),ieta,iphi),ieta,ieta,iphi,iphi);
+		  htmp->GetXaxis()->SetRangeUser(0,10);
+		  htmp->SetMarkerStyle(20+(j-1)*4);
+		  htmp->SetTitle(";p_{T,mc} (GeV/c);Tpc Efficiency");
+		  if(j==1) htmp->Draw();
+		  else     htmp->Draw("sames");
+		}
+	    }
+	}
+    }
   
-  TList *list = new TList;
-  for(int i=0; i<3; i++)
-    {
-      for(int bin=1; bin<=hJpsiPt[i]->GetNbinsX(); bin++)
-	{
-	  double weight = func->Eval(hJpsiPt[i]->GetBinCenter(bin)/mean_pt);
-	  hJpsiPt[i]->SetBinContent(bin,hJpsiPt[i]->GetBinContent(bin)*weight);
-	  hJpsiPt[i]->SetBinError(bin,hJpsiPt[i]->GetBinError(bin)*weight);
-	}
-      list->Add(hJpsiPt[i]);
-    }
-  c = drawHistos(list,"Jpsi_pt",Form("Embedding: p_{T} distribution of J/#psi"),kTRUE,0,10,kTRUE,1e-4,2e5,kTRUE,kTRUE,name,kTRUE,"",0.55,0.75,0.6,0.8,kTRUE);
-  if(save) 
-    {
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Eff/%sJpsiPt_pt1%1.0f.pdf",run_type,run_cfg_name.Data(),pt1_cut*10));
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Eff/%sJpsiPt_pt1%1.0f.png",run_type,run_cfg_name.Data(),pt1_cut*10));
-    }
 
-  const int nbins = 6;
-  const double xbins[nbins+1] = {0,1,2,3,4,6,10};
-  TH1F *hJpsiPtRebin[3];
-  TH1F *hRatio[3], *hRatioRebin[3];
-  list->Clear();
-  for(int i=0; i<3; i++)
-    {
-      hJpsiPtRebin[i] = (TH1F*)hJpsiPt[i]->Rebin(nbins,Form("%s_rebin",hJpsiPt[i]->GetName()),xbins);
-
-      hRatio[i] = (TH1F*)hJpsiPt[i]->Clone(Form("%s_eff",hJpsiPt[i]->GetName()));
-      hRatio[i]->Divide(hJpsiPt[0]);
-
-      hRatioRebin[i] = (TH1F*)hJpsiPtRebin[i]->Clone(Form("%s_eff",hJpsiPtRebin[i]->GetName()));
-      hRatioRebin[i]->Divide(hJpsiPtRebin[0]);
-    }
-
-  list->Clear();
-  TString legName[2] = {"TPCreco","MTDreco"};
-  for(int i=1; i<3; i++)
-    {
-      list->Add(hRatio[i]);
-    }
-  c = drawHistos(list,"Jpsi_eff",Form("Embedding: J/#psi efficiency;p_{T} (GeV/c)"),kTRUE,0,10,kTRUE,1e-4,1,kTRUE,kTRUE,legName,kTRUE,"",0.65,0.85,0.15,0.35,kTRUE);
-  if(save) 
-    {
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Eff/%sJpsi_Eff_pt1%1.0f.pdf",run_type,run_cfg_name.Data(),pt1_cut*10));
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Eff/%sJpsi_Eff_pt1%1.0f.png",run_type,run_cfg_name.Data(),pt1_cut*10));
-    }
-
-  if(1)
-    {
-      TFile *fout = TFile::Open(Form("Rootfiles/%s",outName.Data()),"recreate");
-      for(int i=0; i<3; i++)
-	{
-	  hJpsiPt[i]->Write();
-	  hJpsiPtRebin[i]->Write();
-	  hRatio[i]->Write();
-	  hRatioRebin[i]->Write();
-	}
-    }
+  pdf->On();
+  pdf->Close();
 }
-*/
 

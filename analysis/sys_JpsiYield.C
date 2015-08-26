@@ -41,9 +41,9 @@ void sys_JpsiYield()
 }
 
 //================================================
-void signalExtraction(int save = 1)
+void signalExtraction(int save = 0)
 {
-  const char *sys_name[6] = {"","_LargeScale","_SmallScale","_pol1","_LargeFit","_SmallFit"};
+  const char *sys_name[6] = {"","_LargeScale","_SmallScale","_LargeFit","_SmallFit","_pol1"};
   TString outName = file_name;
   outName.ReplaceAll(".root",".result.root");
 
@@ -58,7 +58,7 @@ void signalExtraction(int save = 1)
   for(int i=0; i<nCentBins; i++)
     {
       TCanvas *c = new TCanvas(Form("Sys_Signal_cent%s",cent_Title[i]),Form("Sys_Signal_cent%s",cent_Title[i]),800,600);
-      for(int j=0; j<6; j++)
+      for(int j=0; j<5; j++)
 	{
 	  if(j==0) hSignal[i][j] = (TH1F*)f->Get(Form("Jpsi_BinCountYield_cent%s%s",cent_Title[i],sys_name[j]));
 	  else     hSignal[i][j] = (TH1F*)fSys->Get(Form("Jpsi_BinCountYield_cent%s%s",cent_Title[i],sys_name[j]));
@@ -94,9 +94,9 @@ void signalExtraction(int save = 1)
       leg2->SetBorderSize(0);
       leg2->SetFillColor(0);
       leg2->SetTextSize(0.035);
-      leg2->AddEntry(hSignal[i][3],"Pol1 to fit background","P");
-      leg2->AddEntry(hSignal[i][4],"Larger fit range","P");
-      leg2->AddEntry(hSignal[i][5],"Smaller fit range","P");
+      leg2->AddEntry(hSignal[i][3],"Larger fit range","P");
+      leg2->AddEntry(hSignal[i][4],"Smaller fit range","P");
+      //leg2->AddEntry(hSignal[i][5],"Pol1 to fit background","P");
       leg2->Draw();
 
       TLine *line = GetLine(0,1+sys_value,10,1+sys_value);
