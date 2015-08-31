@@ -47,13 +47,13 @@ void ana_JpsiYield()
   printf("acc di-muon events: %4.4e\n",hStat->GetBinContent(10));
 
   //makeHistos();
-  //makeYield();
+  makeYield();
   //prod_makeYield();
-  anaYield();
+  //anaYield();
 }
 
 //================================================
-void anaYield(int savePlot = 0)
+void anaYield(int savePlot = 1)
 {
   TString fileName = f->GetName();
   fileName.ReplaceAll("output","Rootfiles");
@@ -136,15 +136,15 @@ void anaYield(int savePlot = 0)
 void prod_makeYield()
 {
   for(int i=0; i<4; i++)
-    for(int j=0; j<6; j++)
+    for(int j=0; j<7; j++)
       makeYield(i,j,1,1);
 }
 
 //================================================
-void makeYield(const int icent = 1, const int isys = 0, int savePlot = 0, int saveHisto = 0)
+void makeYield(const int icent = 3, const int isys = 0, int savePlot = 0, int saveHisto = 0)
 {
-  const char *sys_name[6] = {"","_LargeScale","_SmallScale","_pol1","_LargeFit","_SmallFit"};
-  const char *sys_title[6] = {"","Sys.LargeScale.","Sys.SmallScale.","Sys.pol1.","Sys.LargeFit.","Sys.SmallFit."};
+  const char *sys_name[7] = {"","_LargeScale","_SmallScale","_pol1","_LargeFit","_SmallFit","_Rebin"};
+  const char *sys_title[7] = {"","Sys.LargeScale.","Sys.SmallScale.","Sys.pol1.","Sys.LargeFit.","Sys.SmallFit.","Sys.Rebin"};
 
   printf("Process centrality %s%%\n",cent_Name[icent]);
   TString fileName = f->GetName();
@@ -316,12 +316,16 @@ void makeYield(const int icent = 1, const int isys = 0, int savePlot = 0, int sa
   // jpsi signal
   TCanvas *cSignal = new TCanvas(Form("InvMass_%s",cent_Name[icent]),Form("InvMass_%s",cent_Name[icent]),1100,650);
   cSignal->Divide(nxpad,nypad);
-  const int rebin_signal = 10;
+  int rebin_signal = 10;
+  if(isys==6)
+    {
+      rebin_signal = 5;
+    }
+
   for(int i=0; i<nPtBins; i++)
     {
       hMixBkg[i] = (TH1F*)hMixUL[i]->Clone(Form("mix_bkg_pt%s_cent%s",pt_Name[i],cent_Name[icent]));
-      if(i==0) hMixBkg[i]->Scale(funcScale[i]->GetParameter(0));
-      else     hMixBkg[i]->Scale(hBinCountScaleFactor->GetBinContent(i));
+      hMixBkg[i]->Scale(hBinCountScaleFactor->GetBinContent(i));
       hSeUL[i]->Rebin(rebin_signal);
       hSeUL[i]->SetTitle("");
       hSeUL[i]->SetMarkerStyle(21);
@@ -383,13 +387,15 @@ void makeYield(const int icent = 1, const int isys = 0, int savePlot = 0, int sa
   TH1F *hSigma = new TH1F(Form("Jpsi_FitSigma_cent%s%s",cent_Title[icent],sys_name[isys]),Form("Jpsi_FitSigma_cent%s%s",cent_Title[icent],sys_name[isys]),nbins,xbins);
   TH1F *hFitYield = new TH1F(Form("Jpsi_FitYield_cent%s%s",cent_Title[icent],sys_name[isys]),Form("Jpsi_FitYield_cent%s%s",cent_Title[icent],sys_name[isys]),nbins,xbins);
   TH1F *hBinCountYield = new TH1F(Form("Jpsi_BinCountYield_cent%s%s",cent_Title[icent],sys_name[isys]),Form("Jpsi_BinCountYield_cent%s%s",cent_Title[icent],sys_name[isys]),nbins,xbins);
-  TString funcForm = "pol1";
-  const int nPar = 2;
+  TString funcForm1 = "pol3";
+  int nPar1 = 4;
+  TString funcForm2 = "pol1";
+  int nPar2 = 2;
   double fit_min = 2.6, fit_max = 3.8;
   if(isys==3)
     {
-      funcForm = "pol1"; 
-      const int nPar = 2;
+      funcForm2 = "pol1"; 
+      const int nPar2 = 2;
     }
   if(isys==4)
     {
@@ -400,6 +406,8 @@ void makeYield(const int icent = 1, const int isys = 0, int savePlot = 0, int sa
       fit_min = 2.7; fit_max = 3.7;
     }
 
+  TString funcForm;
+  int nPar;
   for(int i=0; i<nPtBins; i++)
     {
       printf("+++++ %1.0f < pT < %1.0f +++++\n",ptBins_low[i],ptBins_high[i]);
@@ -415,16 +423,25 @@ void makeYield(const int icent = 1, const int isys = 0, int savePlot = 0, int sa
 	    }
 	}
       hSignal[i]->Add(hMixBkg[i],-1);
+      //hSignal[i]->Add(hSeLS[i],-1);
       hSignal[i]->SetLineColor(1);
       hSignal[i]->SetMarkerColor(1);
-      // if(i<=1)
-      // 	{
-      // 	  funcForm = "pol3"; 
-      // 	  const int nPar = 4;
-      // 	}
+      if(i==0)
+      	{
+	  funcForm = funcForm1; 
+	  nPar = nPar1;
+      	}
+      else
+      	{
+	  funcForm = funcForm2; 
+	  nPar = nPar2;
+      	}
       funcSignal[i] = new TF1(Form("fit_%s",hSignal[i]->GetName()),Form("gausn(0)+%s(3)",funcForm.Data()),fit_min,fit_max);
       funcSignal[i]->SetParameter(1,3.09);
       funcSignal[i]->SetParameter(2,0.05);
+      //funcSignal[i]->SetParameter(0,300);
+      //funcSignal[i]->SetParLimits(1,3.08,3.1);
+      //funcSignal[i]->SetParLimits(2,0.04,0.07);
       if(icent>0 && fix_mean[0]>0)
 	{
 	  funcSignal[i]->FixParameter(1,fix_mean[i]);
@@ -466,14 +483,15 @@ void makeYield(const int icent = 1, const int isys = 0, int savePlot = 0, int sa
       printf("All = %1.0f +/- %1.1f\n",count,error);
       TF1 *functmp = new TF1(Form("bkg_%s",hSignal[i]->GetName()),Form("%s",funcForm.Data()),fit_min,fit_max);
       functmp->SetLineColor(4);
-      double bkg_params[nPar];
+      const int nParameter = nPar;
+      double bkg_params[nParameter];
       for(int j=0; j<nPar; j++)
 	{
 	  functmp->SetParameter(j,funcSignal[i]->GetParameter(3+j));
 	  functmp->SetParError(j,funcSignal[i]->GetParError(3+j));
 	  bkg_params[j] = funcSignal[i]->GetParameter(3+j);
 	}
-      double bkg_matrix[nPar*nPar];
+      double bkg_matrix[nParameter*nParameter];
       for(int j=3; j<3+nPar; j++)
 	{
 	  for(int k=3; k<3+nPar; k++)
@@ -527,7 +545,6 @@ void makeYield(const int icent = 1, const int isys = 0, int savePlot = 0, int sa
   t->SetTextColor(4);
   cFit->cd(1);
   t->Draw();
-  //return;
 
   if(savePlot) 
     {
@@ -537,6 +554,7 @@ void makeYield(const int icent = 1, const int isys = 0, int savePlot = 0, int sa
       cFit->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiYield/%s%sFit_Jpsi_cent%s.pdf",run_type,run_cfg_name.Data(),sys_title[isys],cent_Title[icent]));
       cFit->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiYield/%s%sFit_Jpsi_cent%s.png",run_type,run_cfg_name.Data(),sys_title[isys],cent_Title[icent]));
     }
+
   hMean->SetMarkerStyle(21);
   hMean->GetYaxis()->SetRangeUser(3.06,3.12);
   c = draw1D(hMean,Form("Mean of Gaussian fit to Jpsi signal (%s%%);p_{T} (GeV/c);mean",cent_Name[icent]));

@@ -140,7 +140,7 @@ void compareFitDz(const Int_t savePlot = 1)
 }
 
 //================================================
-void HadronEmbed(const Int_t savePlot = 0, const Int_t saveHisto = 0)
+void HadronEmbed(const Int_t savePlot = 1, const Int_t saveHisto = 0)
 {
   const int nPart = 6;
   const int geantId[nPart] = {8,9,11,12,14,15};
@@ -149,7 +149,8 @@ void HadronEmbed(const Int_t savePlot = 0, const Int_t saveHisto = 0)
   const char *partNameAll[nPart/2] = {"pion","kaon","pronton"};
 
 
-  TFile *fin = TFile::Open("output/Run14.AuAu200.Hadron.embed.root","read");
+  //TFile *fin = TFile::Open("output/Run14.AuAu200.Hadron.embed.root","read");
+  TFile *fin = TFile::Open("output/Run14.AuAu15.Phi.Embed.root","read");
   THnSparseF *hn = (THnSparseF*)fin->Get("mhHadronMatch");
 
   TList *list = new TList;
@@ -303,7 +304,7 @@ void HadronEmbed(const Int_t savePlot = 0, const Int_t saveHisto = 0)
 	      TF1 *func = new TF1(Form("func_%s_%d",partName[i],k),"gaus(0)+gaus(3)",-1*range,range);
 	      func->SetParameter(1,0);
 	      func->SetParameter(4,0);
-	      func->SetParameter(2,10);
+	      func->SetParameter(2,5);
 	      func->SetParameter(5,30);
 	      htmp->Fit(func,"IR0");
 	      htmp->GetYaxis()->SetNdivisions(505);
@@ -377,8 +378,8 @@ void HadronEmbed(const Int_t savePlot = 0, const Int_t saveHisto = 0)
 		  TF1 *func = new TF1(Form("func_%s_pt%1.1f-%1.1f_%s",var_name[j],trkPtBins[k],trkPtBins[k+1],partName[i]),"gaus(0)+gaus(3)",-1*range,range);
 		  func->SetParameter(1,0);
 		  func->SetParameter(4,0);
-		  func->SetParameter(2,5);
-		  func->SetParameter(5,30);
+		  func->SetParameter(2,8);
+		  func->SetParameter(5,20);
 		  htmp->Fit(func,"IR0");
 		  htmp->GetYaxis()->SetNdivisions(505);
 		  canvas[i][j][k/6]->cd(k%6+1);

@@ -1,6 +1,6 @@
 const char *run_config = "EmbedQA.";
 const Bool_t iPico = 0;
-const int year = 2013;
+const int year = 2014;
 TString run_cfg_name;
 
 TFile *fdata, *fmc;
@@ -105,7 +105,7 @@ void makePDF(char *outPDFName="")
   TH1F *h1 = (TH1F*)fmc->Get("hAnalysisCuts");
   Int_t counter = (Int_t)(h1->GetBinContent(3)/1e4);
   Double_t vtxz = h1->GetBinContent(1)/counter;
-  if(TMath::Abs(vtxz)<1e3)
+  if(0)
     {
       t1->AddText(Form("Vertex cut: |vtx_z| < %1.0f cm",vtxz));
     }
