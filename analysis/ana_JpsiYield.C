@@ -47,7 +47,7 @@ void ana_JpsiYield()
   printf("acc di-muon events: %4.4e\n",hStat->GetBinContent(10));
 
   //makeHistos();
-  makeYield();
+  //makeYield();
   //prod_makeYield();
   //anaYield();
 }
@@ -57,7 +57,7 @@ void anaYield(int savePlot = 1)
 {
   TString fileName = f->GetName();
   fileName.ReplaceAll("output","Rootfiles");
-  fileName.ReplaceAll(".root",".result.root");
+  fileName.ReplaceAll(".root",".yield.root");
   TFile *fin = TFile::Open(fileName,"read");
 
   TList *list = new TList;
@@ -141,7 +141,7 @@ void prod_makeYield()
 }
 
 //================================================
-void makeYield(const int icent = 3, const int isys = 0, int savePlot = 0, int saveHisto = 0)
+void makeYield(const int icent = 1, const int isys = 0, int savePlot = 0, int saveHisto = 0)
 {
   const char *sys_name[7] = {"","_LargeScale","_SmallScale","_pol1","_LargeFit","_SmallFit","_Rebin"};
   const char *sys_title[7] = {"","Sys.LargeScale.","Sys.SmallScale.","Sys.pol1.","Sys.LargeFit.","Sys.SmallFit.","Sys.Rebin"};
@@ -153,10 +153,10 @@ void makeYield(const int icent = 3, const int isys = 0, int savePlot = 0, int sa
 
   TString outName = f->GetName();
   outName.ReplaceAll("output","Rootfiles");
-  outName.ReplaceAll(".root",".result.root");
+  outName.ReplaceAll(".root",".yield.root");
 
   TString outNameSys = outName;
-  outNameSys.ReplaceAll(".result.root",".sys.signal.root");
+  outNameSys.ReplaceAll(".yield.root",".sys.signal.root");
 
   TH1F *hSeUL[nPtBins];
   TH1F *hSeLS[nPtBins];
@@ -282,7 +282,7 @@ void makeYield(const int icent = 3, const int isys = 0, int savePlot = 0, int sa
   TH1F *hAcc[nPtBins];
   for(int i=0; i<nPtBins; i++)
     {
-      hAcc[i] = (TH1F*)hMixUL[i]->Clone(Form("Mix_Acceptance_pt%s_cent%s",pt_Name[i],cent_Name[icent]));
+      hAcc[i] = (TH1F*)hMixUL[i]->Clone(Form("Mix_Acceptance_cent%s_pt%s",cent_Title[icent],pt_Name[i]));
       TH1F *htmp = (TH1F*)hMixLS[i]->Clone(Form("%s_clone2",hMixLS[i]->GetName()));
       hAcc[i]->Rebin(10);
       htmp->Rebin(10);
@@ -368,8 +368,8 @@ void makeYield(const int icent = 3, const int isys = 0, int savePlot = 0, int sa
       TFile *fFit = 0;
       if(isys==0)  fFit = TFile::Open(outName,"read");
       else         fFit = TFile::Open(outNameSys,"read");
-      TH1F *h1 = (TH1F*)fFit->Get(Form("Jpsi_FitMean_cent0080%s",sys_name[isys]));
-      TH1F *h2 = (TH1F*)fFit->Get(Form("Jpsi_FitSigma_cent0080%s",sys_name[isys]));
+      TH1F *h1 = (TH1F*)fFit->Get(Form("Jpsi_FitMean_cent%s%s",cent_Title[0],sys_name[isys]));
+      TH1F *h2 = (TH1F*)fFit->Get(Form("Jpsi_FitSigma_cent%s%s",cent_Title[0],sys_name[isys]));
       for(int bin=0; bin<=h1->GetNbinsX(); bin++)
 	{
 	  fix_mean[bin] = h1->GetBinContent(bin);
@@ -413,7 +413,7 @@ void makeYield(const int icent = 3, const int isys = 0, int savePlot = 0, int sa
       printf("+++++ %1.0f < pT < %1.0f +++++\n",ptBins_low[i],ptBins_high[i]);
 
       // Fitting
-      hSignal[i] = (TH1F*)hSeUL[i]->Clone(Form("Jpsi_signal_pt%s_cent%s",pt_Name[i],cent_Name[icent]));
+      hSignal[i] = (TH1F*)hSeUL[i]->Clone(Form("Jpsi_Signal_cent%s_pt%s",cent_Title[icent],pt_Name[i]));
       for(int bin=1; bin<=hSignal[i]->GetNbinsX(); bin++)
 	{
 	  if(hSignal[i]->GetBinContent(bin)==0)
@@ -436,7 +436,7 @@ void makeYield(const int icent = 3, const int isys = 0, int savePlot = 0, int sa
 	  funcForm = funcForm2; 
 	  nPar = nPar2;
       	}
-      funcSignal[i] = new TF1(Form("fit_%s",hSignal[i]->GetName()),Form("gausn(0)+%s(3)",funcForm.Data()),fit_min,fit_max);
+      funcSignal[i] = new TF1(Form("Fit%s",hSignal[i]->GetName()),Form("gausn(0)+%s(3)",funcForm.Data()),fit_min,fit_max);
       funcSignal[i]->SetParameter(1,3.09);
       funcSignal[i]->SetParameter(2,0.05);
       //funcSignal[i]->SetParameter(0,300);
@@ -595,6 +595,15 @@ void makeYield(const int icent = 3, const int isys = 0, int savePlot = 0, int sa
       hSigma->Write("",TObject::kOverwrite);
       hFitYield->Write("",TObject::kOverwrite);
       hBinCountYield->Write("",TObject::kOverwrite);
+      if(isys==0)
+	{
+	  for(int i=0; i<nPtBins; i++)
+	    {
+	      hAcc[i]->Write("",TObject::kOverwrite);
+	      hSignal[i]->Write("",TObject::kOverwrite);
+	      funcSignal[i]->Write("",TObject::kOverwrite);
+	    }
+	}
       fout->Close();
     }
 }

@@ -46,7 +46,7 @@ void signalExtraction(int save = 1)
   const int nSys = 7;
   const char *sys_name[nSys] = {"","_LargeScale","_SmallScale","_LargeFit","_SmallFit","_Rebin","_pol1"};
   TString outName = file_name;
-  outName.ReplaceAll(".root",".result.root");
+  outName.ReplaceAll(".root",".yield.root");
 
   TString outNameSys = file_name;
   outNameSys.ReplaceAll(".root",".sys.signal.root");

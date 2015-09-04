@@ -1,4 +1,7 @@
-const char *run_config = "EmbedQA.";
+const int part_type = 0;
+const char *part_name[4] = {"Jpsi","Upsilon1S","Upsilon2S","Upsilon3S"};
+const char *part_text[4] = {"J/#psi","#Upsilon(1S)","#Upsilon(2S)","#Upsilon(3S)"};
+const double part_mass[4] = {3.09,9.46, 10.023, 10.34};
 const Bool_t iPico = 0;
 const int year = 2014;
 TString run_cfg_name;
@@ -24,8 +27,8 @@ void qa_Embed()
   if(year==2014)
     {
       run_type = "Run14_AuAu200";
-      fmc   = TFile::Open(Form("./output/Run14.AuAu200.jpsi.%sMC.root",run_config),"read");
-      fdata = TFile::Open(Form("./output/Run14.AuAu200.jpsi.%sPicoData.root",run_config),"read");
+      fmc   = TFile::Open(Form("./output/Run14.AuAu200.%s.Embed.root",part_name[part_type]),"read");
+      fdata = TFile::Open(Form("./output/Run14.AuAu200.jpsi.EmbedQA.PicoData.root"),"read");
     }
   run_cfg_name = Form("%s",run_config);
   if(iPico) run_cfg_name = Form("Pico.%s",run_cfg_name.Data());
@@ -37,7 +40,7 @@ void qa_Embed()
 void makePDF(char *outPDFName="")
 {
   if(year==2013) outPDFName = "EmbedQA_Run13_pp500_Jpsi.pdf";
-  if(year==2014) outPDFName = "EmbedQA_Run14_AuAu200_Jpsi.pdf";
+  if(year==2014) outPDFName = Form("EmbedQA_Run14_AuAu200_%s.pdf",part_name[part_type]);
   TDatime time;
   Int_t Year  = time.GetYear();
   Int_t month = time.GetMonth();
@@ -53,7 +56,7 @@ void makePDF(char *outPDFName="")
   t1->SetBorderSize(0);
   t1->SetTextFont(62);
   t1->SetTextSize(0.07);
-  t1->AddText("Embedding QA for J/#psi #rightarrow #mu^{+}#mu^{-}");
+  t1->AddText(Form("Embedding QA for %s #rightarrow #mu^{+}#mu^{-}",part_text[part_type]));
   if(year==2013) t1->AddText("in pp 500 GeV from Run13");
   if(year==2014) t1->AddText("in Au+Au 200 GeV from Run14");
   t1->Draw();
@@ -116,13 +119,14 @@ void makePDF(char *outPDFName="")
 
   t1->AddText(Form("Track selection:"));
   t1->AddText("    Primary tracks");
-  t1->AddText(Form("    p_{T} > %1.1f GeV/c",h1->GetBinContent(2)/counter));
+  //t1->AddText(Form("    p_{T} > %1.1f GeV/c",h1->GetBinContent(2)/counter));
+  t1->AddText(Form("    p_{T} > 1 GeV/c"));
   t1->AddText(Form("    |#eta| < %1.1f",h1->GetBinContent(4)/counter));  
   t1->AddText(Form("    NHitsFit >= %1.0f",h1->GetBinContent(5)/counter));     
   t1->AddText(Form("    NHitsDedx >= %1.0f",h1->GetBinContent(6)/counter));
-  t1->AddText(Form("    NHitsFit/NHitsPoss > %1.2f",h1->GetBinContent(10)/counter));
+  t1->AddText(Form("    NHitsFit/NHitsPoss >= %1.2f",h1->GetBinContent(10)/counter));
   if(TMath::Abs(h1->GetBinContent(7)/counter)<10)
-    t1->AddText(Form("    global dca < %1.1f cm",h1->GetBinContent(7)/counter));  
+    t1->AddText(Form("    global dca <= %1.1f cm",h1->GetBinContent(7)/counter));  
   c1->Clear();
   title->Draw();
   t1->Draw();
@@ -176,7 +180,8 @@ void makePDF(char *outPDFName="")
       if(i==0) 
 	{
 	  hJpsi_true->SetTitle(";M_{#mu#mu} (GeV/c^{2})");
-	  hJpsi_true->GetXaxis()->SetRangeUser(0,4);
+	  if(run_config=="Jpsi") hJpsi_true->GetXaxis()->SetRangeUser(0,4);
+	  else hJpsi_true->GetXaxis()->SetRangeUser(9,12);
 	}
       if(i==1)
 	{
@@ -420,8 +425,8 @@ void makePDF(char *outPDFName="")
   hJpsiUS_mc->GetAxis(7)->SetRange(5,5);
   TH1F *hReco = (TH1F*)hJpsiUS_mc->Projection(0);
   hReco->SetName("hRecoSignal_TPC");
-  hReco->GetXaxis()->SetRangeUser(2.4,4);
-  TF1 *func = new TF1("func","gaus",3,3.2);
+  hReco->GetXaxis()->SetRangeUser(part_mass[part_type]-1,part_mass[part_type]+1);
+  TF1 *func = new TF1("func","gaus",part_mass[part_type]-0.3,part_mass[part_type]+0.3);
   hReco->Fit(func,"IR0");
   c = draw1D(hReco,Form("Reconstructed J/#psi peak using primary tracks in TPC;M_{#mu#mu} (GeV/c^{2})"),kFALSE,kFALSE);
   func->SetLineColor(2);
@@ -453,7 +458,7 @@ void makePDF(char *outPDFName="")
       hMcTrkPt[i]->SetMarkerStyle(20);
       hMcTrkPt[i]->SetMarkerColor(color[i]);
       hMcTrkPt[i]->SetLineColor(color[i]);
-      hMcTrkPt[i]->GetXaxis()->SetRangeUser(0,10);
+      if(part_type==0) hMcTrkPt[i]->GetXaxis()->SetRangeUser(0,10);
       hMcTrkPt[i]->SetTitle(";p_{T,true} (GeV/c);dN/dp_{T}");
       leg->AddEntry(hMcTrkPt[i],legName[i].Data(),"P");
       if(i==0) hMcTrkPt[i]->Draw();
@@ -478,7 +483,7 @@ void makePDF(char *outPDFName="")
       hMcTrkPtRatio[i]->Divide(hMcTrkPt[0]);
       hMcTrkPtRatio[i]->SetMarkerColor(color[i]);
       hMcTrkPtRatio[i]->SetLineColor(color[i]);
-      hMcTrkPtRatio[i]->GetXaxis()->SetRangeUser(0,10);
+      if(part_type==0) hMcTrkPtRatio[i]->GetXaxis()->SetRangeUser(0,10);
       hMcTrkPtRatio[i]->GetYaxis()->SetRangeUser(0,1.3);
       hMcTrkPtRatio[i]->SetTitle(";p_{T,true} (GeV/c);Tracking efficiency");
       leg->AddEntry(hMcTrkPtRatio[i],legName2[i-1].Data(),"P");
