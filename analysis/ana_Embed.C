@@ -1,10 +1,6 @@
 const char *run_config = "";
 const int year = 2014;
 TString run_cfg_name;
-const double pt1_cut = 1.5;
-const double pt2_cut = 1.0;
-const Double_t low_mass = 2.9;
-const Double_t high_mass = 3.3;
 const char *det_name[5] = {"","Tpc","Mtd","Muon","MtdFake"};
 const char *charge_name[3] = {"","_pos","_neg"};
 const char *charge_title[3] = {" "," positive "," negative "};
@@ -29,14 +25,16 @@ void ana_Embed()
       const int nCentBins = 1;
       run_type = "Run13_pp500";
       fileName = Form("Run13.pp500.jpsi.EmbedQA.MC.%sroot",run_config);
-      outName = Form("Run13.pp500.TrkEff.all.%sroot",run_config);
+      outName = Form("Run13.pp500.TrkEff.%sroot",run_config);
       outPDF = Form("Run13_pp500_Embed_Eff.pdf");
     }
   else if(year==2014)
     {
       run_type = "Run14_AuAu200";
       fileName = Form("Run14.AuAu200.Jpsi.Embed.%sroot",run_config);
-      outName = Form("Run14.AuAu200.TrkEff.all.%sroot",run_config);
+      outName = Form("Run14.AuAu200.TrkEff.%sroot",run_config);
+      if(pt1_cut != 1.5 || pt2_cut != 1.0)
+	outName = Form("Run14.AuAu200.TrkEff.%spt%1.1f.pt%1.1f.root",run_config,pt1_cut,pt2_cut);
       outPDF = Form("Run14_AuAu200_Embed_Eff.pdf");
     }
   run_cfg_name = run_config;
@@ -47,14 +45,16 @@ void ana_Embed()
 
   //makeHistos(outName);
   //efficiency(outName);
-  //TrkEff3D(outName, outPDF);
+  TrkEff3D(outName, outPDF);
 }
 
 //================================================
 void efficiency(TString inName, const bool savePlot = 1, const bool saveHisto = 1)
 {
   if(year==2013) const int nCentBins = 1;
-  TFile *fin = TFile::Open(Form("Rootfiles/%s",inName.Data()),"read");
+  TFile *fin = 0;
+  if(saveHisto) fin = TFile::Open(Form("Rootfiles/%s",inName.Data()),"update");
+  else fin = TFile::Open(Form("Rootfiles/%s",inName.Data()),"read");
   TList *list = new TList;
 
   // TPC tracking efficiency
@@ -410,7 +410,7 @@ void efficiency(TString inName, const bool savePlot = 1, const bool saveHisto = 
 
   if(saveHisto)
     {
-      TFile *fout = TFile::Open("Rootfiles/Run14.AuAu200.TrkEff.root","update");
+      fin->cd();
       for(int k=0; k<nCentBins; k++)
 	{
 	  hResVsTruePt[k]->Write("",TObject::kOverwrite);
@@ -425,141 +425,8 @@ void efficiency(TString inName, const bool savePlot = 1, const bool saveHisto = 
 void makeHistos(TString outName, const bool save = 1)
 {
   gStyle->SetOptStat(1);
-  THnSparseF *hJpsiUS_mc = (THnSparseF*)f->Get("hJpsiInfo_di_mu");
   if(year==2013) const int nCentBins = 1;
-  printf("+++ Jpsi distribution +++\n");
-  // j/psi distribution
-  TH1F *hJpsi[nCentBins][3][4];
-  TH2F *hJpsiMassVsPt[nCentBins][3];
-  TString name[3] = {"MCinput","TPCreco","MTDreco"};
-  TString variable[4] = {"mass","pT","rapidity","phi"};
-  const char *mc_name[4] = {"invariant mass","p_{T}","y","#varphi"};
-  for(int k=0; k<nCentBins; k++)
-    {
-      if(nCentBins>1) hJpsiUS_mc->GetAxis(10)->SetRange(centBins_low[k],centBins_high[k]);
-      for(int i=0; i<3; i++)
-	{
-	  hJpsiUS_mc->GetAxis(7)->SetRange(i+4,i+4);
-	  if(i>0)
-	    {
-	      hJpsiUS_mc->GetAxis(4)->SetRangeUser(pt1_cut+0.01,100);
-	      hJpsiUS_mc->GetAxis(5)->SetRangeUser(pt2_cut+0.01,100);
-	    }
-	  hJpsiMassVsPt[k][i] = (TH2F*)hJpsiUS_mc->Projection(0,1);
-	  hJpsiMassVsPt[k][i]->SetName(Form("%s_Jpsi_MassVsPt_%s",name[i].Data(),cent_Title[k]));
-	  
-	  for(int j=0; j<4; j++)
-	    {
-	      if(i>0 && j>0) hJpsiUS_mc->GetAxis(0)->SetRangeUser(low_mass+0.001, high_mass-0.001);
-	      hJpsi[k][i][j] = (TH1F*)hJpsiUS_mc->Projection(j);
-	      hJpsi[k][i][j]->SetName(Form("%s_Jpsi_%s_%s",name[i].Data(),variable[j].Data(),cent_Title[k]));
-	    }
-	  hJpsiUS_mc->GetAxis(0)->SetRange(0,-1);
-	  hJpsiUS_mc->GetAxis(4)->SetRange(0,-1);
-	  hJpsiUS_mc->GetAxis(5)->SetRange(0,-1);
-	}
-      hJpsiUS_mc->GetAxis(9)->SetRange(0,-1);
-    }
-  hJpsiUS_mc->GetAxis(7)->SetRange(0,-1);
-
-  // matched Jpsi for response
-  THnSparseF *hnJpsiMatch = (THnSparseF*)f->Get("mhJpsiMatch_di_mu");
-  hnJpsiMatch->GetAxis(2)->SetRangeUser(low_mass+0.001, high_mass-0.001);
-  TH2F *hJpsiPtMatch[nCentBins];
-  for(int k=0; k<nCentBins; k++)
-    {
-      if(nCentBins>1) hnJpsiMatch->GetAxis(4)->SetRange(centBins_low[k],centBins_high[k]);
-      hJpsiPtMatch[k] = (TH2F*)hnJpsiMatch->Projection(1,3);
-      hJpsiPtMatch[k]->Sumw2();
-      hJpsiPtMatch[k]->SetName(Form("JpsiPt_TrueVsReco_%s",cent_Title[k]));
-      hnJpsiMatch->GetAxis(4)->SetRange(0,-1);
-    }
-
-  printf("+++ Weight jpsi pt distribution +++\n");
-  // weight input spectrum
-  TFile *fWeight = TFile::Open("Rootfiles/HP2015/HTppSpectrum.root","read");
-  TF1 *func = (TF1*)fWeight->Get("function");
   
-  TH1F *hJpsiPt[nCentBins][3][2];
-  for(int k=0; k<nCentBins; k++)
-    {
-      for(int i=0; i<3; i++)
-	{
-	  hJpsiPt[k][i][0] = (TH1F*)hJpsi[k][i][1]->Clone(Form("%s_FlatPt",hJpsi[k][i][1]->GetName()));
-	}
-    }
-
-  for(int k=0; k<nCentBins; k++)
-    {
-      for(int i=0; i<3; i++)
-	{
-	  if(i==0)
-	    {
-	      hJpsiPt[k][i][1] = (TH1F*)hJpsi[k][i][1]->Clone(Form("%s_WeightPt",hJpsi[k][i][1]->GetName()));
-	      for(int bin=1; bin<=hJpsiPt[k][i][1]->GetNbinsX(); bin++)
-		{
-		  double weight = func->Eval(hJpsiPt[k][i][1]->GetBinCenter(bin)/mean_pt);
-		  hJpsiPt[k][i][1]->SetBinContent(bin,hJpsiPt[k][i][1]->GetBinContent(bin)*weight);
-		  hJpsiPt[k][i][1]->SetBinError(bin,hJpsiPt[k][i][1]->GetBinError(bin)*weight);
-		}
-	    }
-	  else if(i==1)
-	    {
-	      hJpsiPt[k][i][1] = (TH1F*)hJpsi[k][i][1]->Clone(Form("%s_WeightPt",hJpsi[k][i][1]->GetName()));
-	    }
-	  else if(i==2)
-	    {
-	      TH2F *h2tmp = (TH2F*)hJpsiPtMatch[k]->Clone(Form("%s_tmp",hJpsiPtMatch[k]->GetName()));
-	      for(int biny=1; biny<=h2tmp->GetNbinsY(); biny++)
-		{
-		  double weight = func->Eval(h2tmp->GetYaxis()->GetBinCenter(biny)/mean_pt);
-		  for(int binx=1; binx<=h2tmp->GetNbinsX(); binx++)
-		    {
-		      h2tmp->SetBinContent(binx,biny,weight*h2tmp->GetBinContent(binx,biny));
-		      h2tmp->SetBinError(binx,biny,weight*h2tmp->GetBinError(binx,biny));
-		    }
-		}
-	      hJpsiPt[k][i][1] = (TH1F*)h2tmp->ProjectionX(Form("%s_WeightPt",hJpsi[k][i][1]->GetName()));
-	    }
-	}
-    }
-
-  printf("+++ Rebin jpsi distribution +++\n");
-  // rebin input spectrum
-  const int nbins = nPtBins -1;
-  double xbins[nbins+1];
-  for(int i=0; i<nbins; i++)
-    xbins[i] = ptBins_low[i+1];
-  xbins[nbins] = ptBins_high[nbins];
-  TH1F *hJpsiPtRebin[nCentBins][3][2];
-  for(int k=0; k<nCentBins; k++)
-    {
-      for(int i=0; i<3; i++)
-	{
-	  for(int j=0; j<2; j++)
-	    {
-	      hJpsiPtRebin[k][i][j] = (TH1F*)hJpsiPt[k][i][j]->Rebin(nbins,Form("%s_rebin",hJpsiPt[k][i][j]->GetName()),xbins);
-	    }
-	}
-    }
-
-  // j/psi efficiency
-  TH1F *hJpsiEff[nCentBins][2][2], *hJpsiEffRebin[nCentBins][2][2];
-  for(int k=0; k<nCentBins; k++)
-    {
-      for(int i=0; i<2; i++)
-	{
-	  for(int j=0; j<2; j++)
-	    {
-	      hJpsiEff[k][i][j] = (TH1F*)hJpsiPt[k][i+1][j]->Clone(Form("%s_Eff",hJpsiPt[k][i+1][j]->GetName()));
-	      hJpsiEff[k][i][j]->Divide(hJpsiPt[k][0][j]);
-	      
-	      hJpsiEffRebin[k][i][j] = (TH1F*)hJpsiPtRebin[k][i+1][j]->Clone(Form("%s_Eff_rebin",hJpsiPt[k][i+1][j]->GetName()));
-	      hJpsiEffRebin[k][i][j]->Divide(hJpsiPtRebin[k][0][j]);
-	    }
-	}
-    }
-
   printf("+++ Single track resolution +++\n");
   // single track efficiency & resolution
   THnSparseF *hnTrkPtRes = (THnSparseF*)f->Get("mhpTrkPtRes_di_mu");
@@ -578,6 +445,7 @@ void makeHistos(TString outName, const bool save = 1)
     }
 
   printf("+++ Single track efficiency +++\n");
+  TFile *fUps = TFile::Open("output/Run14.AuAu200.Upsilon1S.Embed.root","read");
   THnSparseF *hMcTrkInfo[5], *hRcTrkInfo[4];
   TH1F *hMcTrkPt[nCentBins][5][3], *hRcTrkPt[nCentBins][4][3];
   TH1F *hMcTrkPtEff[nCentBins][5][3], *hRcTrkPtEff[nCentBins][4][3];
@@ -586,6 +454,12 @@ void makeHistos(TString outName, const bool save = 1)
   for(int i=0; i<5; i++)
     {
       hMcTrkInfo[i] = (THnSparseF*)f->Get(Form("mhMcTrkInfo%s_di_mu",det_name[i]));
+      hMcTrkInfo[i]->SetTitle(Form("%s_jpsi",hMcTrkInfo[i]->GetName()));
+      hMcTrkInfo[i]->Sumw2();
+      THnSparseF *hntmp = (THnSparseF*)fUps->Get(Form("mhMcTrkInfo%s_di_mu",det_name[i]));
+      hntmp->Sumw2();
+      hMcTrkInfo[i]->Add(hntmp);
+
       for(int k=0; k<nCentBins; k++)
 	{
 	  if(nCentBins) hMcTrkInfo[i]->GetAxis(4)->SetRange(centBins_low[k],centBins_high[k]);
@@ -627,6 +501,12 @@ void makeHistos(TString outName, const bool save = 1)
   for(int i=0; i<4; i++)
     {
       hRcTrkInfo[i] = (THnSparseF*)f->Get(Form("mhRcTrkInfo%s_di_mu",det_name[i+1]));
+      hRcTrkInfo[i]->SetTitle(Form("%s_jpsi",hRcTrkInfo[i]->GetName()));
+      hRcTrkInfo[i]->Sumw2();
+      THnSparseF *hntmp = (THnSparseF*)fUps->Get(Form("mhRcTrkInfo%s_di_mu",det_name[i+1]));
+      hntmp->Sumw2();
+      hRcTrkInfo[i]->Add(hntmp);
+
       for(int k=0; k<nCentBins; k++)
 	{
 	  if(nCentBins>1) hRcTrkInfo[i]->GetAxis(4)->SetRange(centBins_low[k],centBins_high[k]);
@@ -672,28 +552,6 @@ void makeHistos(TString outName, const bool save = 1)
       TFile *fout = TFile::Open(Form("Rootfiles/%s",outName.Data()),"recreate");
       for(int k=0; k<nCentBins; k++)
 	{
-	  // jpsi
-	  hJpsiPtMatch[k]->Write();
-	  for(int i=0; i<3; i++)
-	    {
-	      hJpsiMassVsPt[k][i]->Write();
-	      for(int j=0; j<4; j++)
-		{
-		  hJpsi[k][i][j]->Write();
-		}
-	    }
-	  
-	  for(int i=0; i<3; i++)
-	    {
-	      for(int j=0; j<2; j++)
-		{
-		  hJpsiPt[k][i][j]->Write();
-		  if(i>0) hJpsiEff[k][i-1][j]->Write();
-		  hJpsiPtRebin[k][i][j]->Write();
-		  if(i>0) hJpsiEffRebin[k][i-1][j]->Write();
-		}
-	    }
-
 	  // single tracks
 	  hResVsRecoPt[k]->Write();
 	  hResVsTruePt[k]->Write();
@@ -789,7 +647,7 @@ void TrkEff3D(TString inName, TString outPDFName, const bool savePlot = 1)
 
 
   // single tracks
-  TFile *fin = TFile::Open(Form("Rootfiles/%s",inName.Data()),"read");
+  TFile *fin = TFile::Open(Form("Rootfiles/%s",inName.Data()),"update");
   TH3F *hMcTrkPtEtaPhi[nCentBins][3][3];
   TH1F *hMcTrkPt[nCentBins][2][3];
   TH1F *hMcTrkPtEff[nCentBins][2][3];
@@ -989,7 +847,7 @@ void TrkEff3D(TString inName, TString outPDFName, const bool savePlot = 1)
 		{
 		  TH1F *htmp = (TH1F*)hMcTrkPtEtaPhiEff[k][j]->ProjectionX(Form("%s_%d_%d",hMcTrkPtEtaPhiEff[k][j]->GetName(),ieta,iphi),ieta,ieta,iphi,iphi);
 		  ScaleHistoTitle(htmp,0.06,1.1,0.05,0.06,1.1,0.05,62);
-		  htmp->GetXaxis()->SetRangeUser(0,10);
+		  htmp->GetXaxis()->SetRangeUser(0,12);
 		  htmp->GetYaxis()->SetRangeUser(0,1.2);
 		  htmp->SetMarkerStyle(20+(j-1)*4);
 		  htmp->SetTitle(";p_{T,mc} (GeV/c);Tpc Efficiency");
@@ -1083,14 +941,14 @@ void TrkEff3D(TString inName, TString outPDFName, const bool savePlot = 1)
 	}
     }
 
-  TFile *fout = TFile::Open("Rootfiles/Run14.AuAu200.TrkEff.root","recreate");
+  fin->cd();
   for(int k=0; k<1; k++)
     {
       for(int j=0; j<3; j++)
 	{
-	  hMcTrkPtEtaPhiEff[k][j]->Write();
+	  hMcTrkPtEtaPhiEff[k][j]->Write("",TObject::kOverwrite);
 	  for(int l=0; l<2; l++)
-	    hMcTrkPtEtaMtdEff[k][j][l]->Write();
+	    hMcTrkPtEtaMtdEff[k][j][l]->Write("",TObject::kOverwrite);
 	}
     }
 }

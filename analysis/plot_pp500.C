@@ -26,7 +26,7 @@ void plot_pp500()
 //================================================
 void Run11_TofMult(const bool save = 0)
 {
-  TFile *f = TFile::Open("Rootfiles/BBCvsTOFM.root","read");
+  TFile *f = TFile::Open("Rootfiles/HP2015/BBCvsTOFM.root","read");
   TH2F *hTofMult = (TH2F*)f->Get("hBBCvsTofRefM");
   hTofMult->GetXaxis()->SetRange(150,2000);
   hTofMult->GetYaxis()->SetRangeUser(0,60);
@@ -110,7 +110,7 @@ void compareToModel(const bool save = 1)
   h->GetXaxis()->SetRangeUser(0,22.5);
   h->Draw();
   // data
-  TFile *fdata = TFile::Open(Form("./Rootfiles/sptrum.root"),"read");	
+  TFile *fdata = TFile::Open(Form("./Rootfiles/HP2015/sptrum.root"),"read");	
   TGraphErrors *gData = (TGraphErrors*)fdata->Get("Jpsi_pp500");
   //gData->SetMarkerStyle(29);
   //gData->SetMarkerSize(2);
@@ -247,7 +247,7 @@ void Run13_signal(const bool save = 1)
 }
 
 //================================================
-void evtAct(const bool save = 1)
+void evtAct(const bool save = 0)
 {
   TPaveText *syserr = GetPaveText(0.5,0.85,0.15,0.18,0.03);
   syserr->AddText("+15% one-sided error along both x- and y- direction");
@@ -262,7 +262,7 @@ void evtAct(const bool save = 1)
   syserr_2->SetTextColor(1);
 
   gStyle->SetEndErrorSize(6);
-  TFile *fin = TFile::Open(Form("Rootfiles/Pico.Run13.pp500.jpsi.EvtAct.Rank1.VtxDz0.pt0-10.root"),"read");
+  TFile *fin = TFile::Open(Form("Rootfiles/HP2015/Pico.Run13.pp500.jpsi.EvtAct.Rank1.VtxDz0.pt0-10.root"),"read");
 
   const char *draw_style = "sameE5";
 
@@ -300,7 +300,7 @@ void evtAct(const bool save = 1)
   sys->Draw(draw_style);
   
   // Compare to Qian
-  TFile *fHT = TFile::Open("Rootfiles/Spectrum_in_bin_Rank.root");
+  TFile *fHT = TFile::Open("Rootfiles/HP2015/Spectrum_in_bin_Rank.root");
   TGraphErrors *gr = (TGraphErrors*)fHT->Get("event_Act");
   gr->SetMarkerStyle(29);
   gr->SetMarkerColor(4);
@@ -366,7 +366,7 @@ void evtAct(const bool save = 1)
   h->DrawCopy();
 
   TGraphErrors *gPythia[2];
-  TFile *fpythia = TFile::Open("Rootfiles/jpsi-pt.default.20150629.root");
+  TFile *fpythia = TFile::Open("Rootfiles/HP2015/jpsi-pt.default.20150629.root");
   for(int i=0; i<2; i++)
     {
       gPythia[i] = (TGraphErrors*)fpythia->Get(Form("Graph;%d",i+1));
@@ -560,7 +560,7 @@ void evtAct(const bool save = 1)
 
   ratio->Draw("sames PEZ");
   sys->Draw(draw_style);
-  TFile *fHT2 = TFile::Open("Rootfiles/Spectrum_in_bin_Rank.root");
+  TFile *fHT2 = TFile::Open("Rootfiles/HP2015/Spectrum_in_bin_Rank.root");
   TGraphErrors *graph[3];
   graph[0] = (TGraphErrors*)fHT2->Get("event_Act");
   graph[1] = (TGraphErrors*)fHT2->Get("evAct_lowpT");
@@ -579,6 +579,7 @@ void evtAct(const bool save = 1)
 	  double eyh = eyl;
 	  graphSys[i]->SetPoint(j,x,y);
 	  graphSys[i]->SetPointError(j,exl,eyl);
+	  cout << x << "  " << y << endl;
 	}
       graph[i]->SetLineWidth(1);
       if(i==0)
@@ -634,7 +635,7 @@ void evtAct(const bool save = 1)
 
   if(0)
     {
-      TFile *fout = TFile::Open("Rootfiles/HP2015.pp.Jpsi.root","recreate");
+      TFile *fout = TFile::Open("Rootfiles/HP2015/HP2015.pp.Jpsi.root","recreate");
       ratio->Write("STAR_Run13_pp500_Jpsi_mumu_pT0");
       sys->Write("STAR_Run13_pp500_Jpsi_mumu_pT0_sys");
       gr->Write("STAR_Run11_pp500_Jpsi_ee_pT4");
@@ -656,8 +657,8 @@ void evtAct(const bool save = 1)
 //================================================
 void Run11_xsec(const bool save = 1)
 {
-  TFile *fxsec = TFile::Open("./Rootfiles/Spectrum_in_bin_Rank.root","read");
-  TFile *fsys  = TFile::Open("./Rootfiles/HTppSpectrum.root","read"); 
+  TFile *fxsec = TFile::Open("./Rootfiles/HP2015/Spectrum_in_bin_Rank.root","read");
+  TFile *fsys  = TFile::Open("./Rootfiles/HP2015/HTppSpectrum.root","read"); 
   TGraphErrors *gSysAll = (TGraphErrors*)fsys->Get("gSpectrum_sysErr");
   TGraphErrors *gSpectrum[5];
   TGraphErrors *gSys[5];
@@ -827,8 +828,8 @@ void Run13_ptDependence(const bool save = 1)
   const double marker_size[3] = {1.5,1.5,2};
 
   TFile *file[2];
-  file[0] = TFile::Open("Rootfiles/Pico.Run13.pp500.jpsi.EvtAct.Rank0.pt0-2.root","read");
-  file[1] = TFile::Open("Rootfiles/Pico.Run13.pp500.jpsi.EvtAct.Rank0.pt2-4.root","read");
+  file[0] = TFile::Open("Rootfiles/HP2015/Pico.Run13.pp500.jpsi.EvtAct.Rank0.pt0-2.root","read");
+  file[1] = TFile::Open("Rootfiles/HP2015/Pico.Run13.pp500.jpsi.EvtAct.Rank0.pt2-4.root","read");
 
   TGraphErrors *graph[3];
   for(int i=0; i<3; i++) graph[i] = new TGraphErrors(2);

@@ -1,9 +1,4 @@
 TFile *f;
-const double pt1_cut = 1.5, pt2_cut = 1.0;
-const double low_mass = 2.9;
-const double high_mass = 3.3;
-
-const char *run_config = "";
 const Bool_t iPico = 1;
 const int year = 2014;
 const int mix_type = 0; // 0 - Shuai; 1 - Rongrong
@@ -47,7 +42,7 @@ void ana_JpsiYield()
   printf("acc di-muon events: %4.4e\n",hStat->GetBinContent(10));
 
   //makeHistos();
-  //makeYield();
+  makeYield();
   //prod_makeYield();
   //anaYield();
 }
@@ -57,7 +52,9 @@ void anaYield(int savePlot = 1)
 {
   TString fileName = f->GetName();
   fileName.ReplaceAll("output","Rootfiles");
+  fileName.ReplaceAll(".root",Form(".pt%1.1f.pt%1.1f.root",pt1_cut,pt2_cut));
   fileName.ReplaceAll(".root",".yield.root");
+
   TFile *fin = TFile::Open(fileName,"read");
 
   TList *list = new TList;
@@ -75,7 +72,8 @@ void anaYield(int savePlot = 1)
       list->Add(hFitYield[i]);
       legName[i] = Form("%s%%",cent_Name[i]);
     }
-  c = drawHistos(list,"Jpsi_FitYield","J/psi yield from bin counting;p_{T} (GeV/c);Counts",kFALSE,0,30,kTRUE,1e-6,1.2*hBinCountYield[0]->GetMaximum(),kFALSE,kTRUE,legName,kTRUE,"Centrality",0.45,0.75,0.55,0.8,kTRUE);
+  if(pt1_cut==1.5 && pt2_cut==1.0) c = drawHistos(list,"Jpsi_FitYield","J/psi yield from bin counting;p_{T} (GeV/c);Counts",kFALSE,0,30,kTRUE,1e-6,1.2*hBinCountYield[0]->GetMaximum(),kFALSE,kTRUE,legName,kTRUE,"Centrality",0.45,0.75,0.55,0.8,kTRUE);
+  else c = drawHistos(list,"Jpsi_FitYield","J/psi yield from bin counting;p_{T} (GeV/c);Counts",kFALSE,0,30,kTRUE,1e-6,1600,kFALSE,kTRUE,legName,kTRUE,"Centrality",0.45,0.75,0.55,0.8,kTRUE);
   /*
   for(int i=0; i<nCentBins; i++)
     {
@@ -140,8 +138,8 @@ void prod_makeYield()
       makeYield(i,j,1,1);
 }
 
-//================================================
-void makeYield(const int icent = 1, const int isys = 0, int savePlot = 0, int saveHisto = 0)
+//===============================================
+void makeYield(const int icent = 0, const int isys = 0, int savePlot = 0, int saveHisto = 0)
 {
   const char *sys_name[7] = {"","_LargeScale","_SmallScale","_pol1","_LargeFit","_SmallFit","_Rebin"};
   const char *sys_title[7] = {"","Sys.LargeScale.","Sys.SmallScale.","Sys.pol1.","Sys.LargeFit.","Sys.SmallFit.","Sys.Rebin"};
@@ -149,10 +147,11 @@ void makeYield(const int icent = 1, const int isys = 0, int savePlot = 0, int sa
   printf("Process centrality %s%%\n",cent_Name[icent]);
   TString fileName = f->GetName();
   fileName.ReplaceAll("output","Rootfiles");
+  fileName.ReplaceAll(".root",Form(".pt%1.1f.pt%1.1f.root",pt1_cut,pt2_cut));
   TFile *fin = TFile::Open(fileName,"read");
+  cout << fileName << endl;
 
-  TString outName = f->GetName();
-  outName.ReplaceAll("output","Rootfiles");
+  TString outName = fileName;
   outName.ReplaceAll(".root",".yield.root");
 
   TString outNameSys = outName;
@@ -382,11 +381,13 @@ void makeYield(const int icent = 1, const int isys = 0, int savePlot = 0, int sa
   TCanvas *cFit = new TCanvas(Form("Fit_Jpsi_%s",cent_Name[icent]),Form("Fit_Jpsi_%s",cent_Name[icent]),1100,650);
   cFit->Divide(nxpad,nypad);
   TH1F *hSignal[nPtBins];
+  TH1F *hSignalSave[nPtBins];
   TF1 *funcSignal[nPtBins];
   TH1F *hMean = new TH1F(Form("Jpsi_FitMean_cent%s%s",cent_Title[icent],sys_name[isys]),Form("Jpsi_FitMean_cent%s%s",cent_Title[icent],sys_name[isys]),nbins,xbins);
   TH1F *hSigma = new TH1F(Form("Jpsi_FitSigma_cent%s%s",cent_Title[icent],sys_name[isys]),Form("Jpsi_FitSigma_cent%s%s",cent_Title[icent],sys_name[isys]),nbins,xbins);
   TH1F *hFitYield = new TH1F(Form("Jpsi_FitYield_cent%s%s",cent_Title[icent],sys_name[isys]),Form("Jpsi_FitYield_cent%s%s",cent_Title[icent],sys_name[isys]),nbins,xbins);
   TH1F *hBinCountYield = new TH1F(Form("Jpsi_BinCountYield_cent%s%s",cent_Title[icent],sys_name[isys]),Form("Jpsi_BinCountYield_cent%s%s",cent_Title[icent],sys_name[isys]),nbins,xbins);
+  TH1F *hSigToBkg = new TH1F(Form("Jpsi_SigToBkg_cent%s%s",cent_Title[icent],sys_name[isys]),Form("Jpsi_SigToBkg_cent%s%s",cent_Title[icent],sys_name[isys]),nbins,xbins);
   TString funcForm1 = "pol3";
   int nPar1 = 4;
   TString funcForm2 = "pol1";
@@ -426,6 +427,7 @@ void makeYield(const int icent = 1, const int isys = 0, int savePlot = 0, int sa
       //hSignal[i]->Add(hSeLS[i],-1);
       hSignal[i]->SetLineColor(1);
       hSignal[i]->SetMarkerColor(1);
+      hSignalSave[i] = (TH1F*)hSignal[i]->Clone(Form("%s_save",hSignal[i]->GetName()));
       if(i==0)
       	{
 	  funcForm = funcForm1; 
@@ -438,7 +440,7 @@ void makeYield(const int icent = 1, const int isys = 0, int savePlot = 0, int sa
       	}
       funcSignal[i] = new TF1(Form("Fit%s",hSignal[i]->GetName()),Form("gausn(0)+%s(3)",funcForm.Data()),fit_min,fit_max);
       funcSignal[i]->SetParameter(1,3.09);
-      funcSignal[i]->SetParameter(2,0.05);
+      funcSignal[i]->SetParameter(2,0.06);
       //funcSignal[i]->SetParameter(0,300);
       //funcSignal[i]->SetParLimits(1,3.08,3.1);
       //funcSignal[i]->SetParLimits(2,0.04,0.07);
@@ -514,6 +516,9 @@ void makeYield(const int icent = 1, const int isys = 0, int savePlot = 0, int sa
       printf("Fit combined = %1.1f +/- %1.1f -> %1.1f +/- %1.1f (%1.1fsigma)\n",bkg,bkg_err,signal,sig_err,signal/sig_err);
       hBinCountYield->SetBinContent(i,signal);
       hBinCountYield->SetBinError(i,sig_err);
+      double all = hSeUL[i]->Integral(hSeUL[i]->FindBin(low_mass_tmp+1e-4),hSeUL[i]->FindBin(high_mass_tmp-1e-4));
+      hSigToBkg->SetBinContent(i,signal/(all-signal));
+      printf("all = %1.2f, signal = %1.2f\n",all,signal);
 
       // plotting
       if(i==0) cFit1->cd();
@@ -562,6 +567,7 @@ void makeYield(const int icent = 1, const int isys = 0, int savePlot = 0, int sa
     {
       c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiYield/%s%sFit_Jpsi_Mean_cent%s.pdf",run_type,run_cfg_name.Data(),sys_title[isys],cent_Title[icent]));
       c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiYield/%s%sFit_Jpsi_Mean_cent%s.png",run_type,run_cfg_name.Data(),sys_title[isys],cent_Title[icent]));
+
     }
 
   hSigma->SetMarkerStyle(21);
@@ -595,13 +601,18 @@ void makeYield(const int icent = 1, const int isys = 0, int savePlot = 0, int sa
       hSigma->Write("",TObject::kOverwrite);
       hFitYield->Write("",TObject::kOverwrite);
       hBinCountYield->Write("",TObject::kOverwrite);
+      hSigToBkg->Write("",TObject::kOverwrite);
       if(isys==0)
 	{
 	  for(int i=0; i<nPtBins; i++)
 	    {
 	      hAcc[i]->Write("",TObject::kOverwrite);
 	      hSignal[i]->Write("",TObject::kOverwrite);
+	      hSignalSave[i]->Write("",TObject::kOverwrite);
 	      funcSignal[i]->Write("",TObject::kOverwrite);
+	      hMixBkg[i]->Write("",TObject::kOverwrite);
+	      hSeUL[i]->Write("",TObject::kOverwrite);
+	      hSeLS[i]->Write("",TObject::kOverwrite);
 	    }
 	}
       fout->Close();
@@ -612,7 +623,7 @@ void makeYield(const int icent = 1, const int isys = 0, int savePlot = 0, int sa
 //================================================
 void makeHistos()
 {
-  const char *hName[3] = {"hJpsiInfo","hBkgLSPos","hBkgLSNeg"};
+  const char *hName[3] = {"hJpsiInfoRaw","hBkgLSPosRaw","hBkgLSNegRaw"};
   THnSparseF *hnInvMass[3];
   TH1F *hInvMass[nCentBins][nPtBins][3];
 
@@ -652,13 +663,18 @@ void makeHistos()
   TFile *fmix = 0;
   if(iPico)
     {
-      if(year==2014) fmix = TFile::Open(Form("Output/Pico.Run14.AuAu200.jpsi.mix.%sroot",run_config),"read");
+      if(year==2014) 
+	{
+	  char *mixName = Form("Pico.Run14.AuAu200.jpsi.mix.%spt%1.1f.pt%1.1f.root",run_config,pt1_cut,pt2_cut);
+	  fmix = TFile::Open(Form("Output/%s",mixName),"read");
+	}
     }
   if(!fmix) 
     {
       cout << "No file for mixed events" << endl;
       return;
     }
+  cout << "Mix file: " << fmix->GetName() << endl;
 
   TH1F *hMixInvMass[nCentBins][nPtBins][3];
   if(mix_type==0)
@@ -725,6 +741,7 @@ void makeHistos()
 
   TString fileName = f->GetName();
   fileName.ReplaceAll("output","Rootfiles");
+  fileName.ReplaceAll(".root",Form(".pt%1.1f.pt%1.1f.root",pt1_cut,pt2_cut));
   TFile *fout = TFile::Open(fileName,"recreate");
   for(int k=0; k<nCentBins; k++)
     {
