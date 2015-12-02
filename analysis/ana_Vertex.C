@@ -40,7 +40,7 @@ void ana_Vertex()
 
 
 //================================================
-void vertexSelection(const bool save = 1)
+void vertexSelection(const bool save = 0)
 {
   TList *list = new TList;
   TH1F *hVzDiff[3];
