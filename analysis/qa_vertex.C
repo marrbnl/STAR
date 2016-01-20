@@ -1,8 +1,6 @@
 TFile *f;
-
-const char *run_config = "";
 const Bool_t iPico = 1;
-const int year = 2014;
+const int year = YEAR;
 TString run_cfg_name;
 
 //================================================
@@ -33,12 +31,59 @@ void qa_vertex()
   run_cfg_name = run_config;
   if(iPico) run_cfg_name = Form("Pico.%s",run_cfg_name.Data());
 
+  vtxCuts();
   //cuts();
-  qa();
+  //qa();
 }
 
+
 //================================================
-void cuts(const Int_t save = 1)
+void vtxCuts(const Int_t save = 1)
+{
+  gStyle->SetOptStat(0);
+  THnSparseF *hn = (THnSparseF*)f->Get("mhEventMult_qa_di_mu");
+  TH1F *hTpcVpdVz[4];
+  hTpcVpdVz[0] = (TH1F*)hn->Projection(5);
+  hTpcVpdVz[0]->SetName("hTpcVpdVz_All");
+
+  // ranking > 0 cut
+  hn->GetAxis(4)->SetRange(3,3);
+  hTpcVpdVz[1] = (TH1F*)hn->Projection(5);
+  hTpcVpdVz[1]->SetName("hTpcVpdVz_PosRanking");
+
+  // |TpcVz| < 50 cm
+  hn->GetAxis(3)->SetRangeUser(-50,50);
+  hTpcVpdVz[2] = (TH1F*)hn->Projection(5);
+  hTpcVpdVz[2]->SetName("hTpcVpdVz_TPcVz");
+
+  // |TpcVz-VpdVz| < 5 cm
+  hn->GetAxis(5)->SetRangeUser(-5,5);
+  hTpcVpdVz[3] = (TH1F*)hn->Projection(5);
+  hTpcVpdVz[3]->SetName("hTpcVpdVz_TPcVpdDz");
+
+  TString legName[4] = {"All","Ranking > 0","|TpcVz| < 50 cm","|TpcVz-VpdVz| < 5 cm"};
+  TList *list = new TList;
+  for(int i=0; i<4; i++)
+    {
+      printf("[i] %s: %4.2f%%\n",legName[i].Data(),hTpcVpdVz[i]->GetEntries()/hTpcVpdVz[0]->GetEntries()*100);
+      if(i<3) list->Add(hTpcVpdVz[i]);
+    }
+  c = drawHistos(list,"TpcVpdVzDiff",Form("Distribution of TpcVz-VpdVz;TpcVz-VpdVz (cm)"),kFALSE,0,100,kFALSE,-3,8,kTRUE,kTRUE,legName,kTRUE,"",0.6,0.75,0.6,0.8,kFALSE);
+  double vzdiff_cut = 5;
+  TLine *line = GetLine(-1*vzdiff_cut,0,-1*vzdiff_cut,hTpcVpdVz[0]->GetMaximum()*0.8);
+  line->Draw();
+  TLine *line = GetLine(vzdiff_cut,0,vzdiff_cut,hTpcVpdVz[0]->GetMaximum()*0.8);
+  line->Draw();
+  if(save) 
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_vertex/TpcVpdDz_VtxCut.pdf",run_type));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_vertex/TpcVpdDz_VtxCut.png",run_type));
+    }
+}
+
+
+//================================================
+void cuts(const Int_t save = 0)
 {
   gStyle->SetOptStat(0);
 

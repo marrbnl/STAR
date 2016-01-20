@@ -40,11 +40,11 @@ void qa_Match()
 
   //Track();
   //DeltaZ();
-  CompareFitDz();
+  //CompareFitDz();
   //DeltaY();
   //qualityCuts();
   //yzDistribution();
-  //eLoss();
+  eLoss();
 }
 
 //================================================

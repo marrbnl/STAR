@@ -3,7 +3,7 @@ const char *part_name[4] = {"Jpsi","Upsilon1S","Upsilon2S","Upsilon3S"};
 const char *part_text[4] = {"J/#psi","#Upsilon(1S)","#Upsilon(2S)","#Upsilon(3S)"};
 const double part_mass[4] = {3.09,9.46, 10.023, 10.34};
 const Bool_t iPico = 0;
-const int year = 2014;
+const int year = 2013;
 TString run_cfg_name;
 
 TFile *fdata, *fmc;
@@ -39,7 +39,7 @@ void qa_Embed()
 //================================================
 void makePDF(char *outPDFName="")
 {
-  if(year==2013) outPDFName = "EmbedQA_Run13_pp500_Jpsi.pdf";
+  if(year==2013) outPDFName = "Run13_pp500_Jpsi_EmbedQA.pdf";
   if(year==2014) outPDFName = Form("EmbedQA_Run14_AuAu200_%s.pdf",part_name[part_type]);
   TDatime time;
   Int_t Year  = time.GetYear();

@@ -1,4 +1,4 @@
-const int year = 2014;
+const int year = YEAR;
 
 //================================================
 void ana_JpsiXsec()
@@ -20,10 +20,216 @@ void ana_JpsiXsec()
     }
 
 
-  xsec();
+  //xsec();
   //compare();
   //sfToMb();
+  xsec_Run13();
 }
+
+
+//================================================
+void xsec_Run13(const bool savePlot = 1, const bool saveHisto = 1)
+{
+  // Get the dimuon events number
+  TFile *fdata = TFile::Open(Form("./output/Pico.Run13.pp500.jpsi.%sroot",run_config),"read");
+  TH1F *hStat = (TH1F*)fdata->Get("hEventStat");
+  printf("all         events: %d\n",hStat->GetBinContent(1));
+  printf("all di-muon events: %d\n",hStat->GetBinContent(3));
+  printf("acc di-muon events: %d\n",hStat->GetBinContent(10));
+  const double dimuon_events = hStat->GetBinContent(3);
+
+  // Luminosity
+  const double sample_Lum = 28.272; // pb-1
+  const double sample_Nev = 118476807;
+  TFile *fVtxEff = TFile::Open("Rootfiles/Run13.pp500.VPDMB.VtxCutEff.root","read");
+  TH1F *hVtxEff = (TH1F*)fVtxEff->Get("hVtxEff");
+  const double mb_vtx_eff = hVtxEff->GetBinContent(1);
+  const double ana_Lum = dimuon_events * 1./sample_Nev * sample_Lum * 1e3 * mb_vtx_eff; // nb-1
+
+  printf("+++++++++++++++++++++++++++++++++\n");
+  printf("# of dimuon events is: %d\n",dimuon_events);
+  printf("vtx cut efficiency: %4.2f%%\n",mb_vtx_eff*100);
+  printf("Sample luminosity %5.3f pb-1\n",sample_Lum);
+  printf("Effective luminosity %5.3f nb-1\n",ana_Lum);
+  printf("+++++++++++++++++++++++++++++++++\n");
+
+
+  // Jpsi efficiency
+  char *embedEffName = Form("Run13.pp500.JpsiEff.%spt%1.1f.pt%1.1f.root",run_config,pt1_cut,pt2_cut);
+  char *trigEffName = Form("Run13.pp500.JpsiTrigEff.pt%1.1f.pt%1.1f.root",pt1_cut,pt2_cut);
+  printf("Embed   eff: %s\n",embedEffName);
+  printf("Trigger eff: %s\n",trigEffName);
+  TFile *fEmbedEff = TFile::Open(Form("Rootfiles/%s",embedEffName),"read");
+  TFile *fTrigEff = TFile::Open(Form("Rootfiles/%s",trigEffName),"read");
+  TH1F *hJpsiEffEmbed[nCentBins];
+  TH1F *hJpsiEffTrig[nCentBins];
+  TH1F *hJpsiRespEff[nCentBins];
+  for(int k=0; k<nCentBins; k++)
+    {
+      hJpsiEffEmbed[k] = (TH1F*)fEmbedEff->Get(Form("MTDreco_Jpsi_pT_%s_WeightPt_Eff_rebin",cent_Title[k]));
+      hJpsiEffTrig[k] = (TH1F*)fTrigEff->Get(Form("JpsiTrigEff_cent%s_rebin",cent_Title[k]));
+      hJpsiRespEff[k] = (TH1F*)fTrigEff->Get(Form("JpsiRespEff_cent%s_rebin",cent_Title[k]));
+    }
+
+  // Jpsi raw counts
+  char * yieldName = Form("Pico.Run13.pp500.jpsi.%spt%1.1f.pt%1.1f.yield.root",run_config,pt1_cut,pt2_cut);
+  TFile *fYield = TFile::Open(Form("Rootfiles/%s",yieldName),"read");
+  cout << yieldName << endl;
+  TH1F *hJpsiCounts[nCentBins];
+  for(int k=0; k<nCentBins; k++)
+    {
+      hJpsiCounts[k] = (TH1F*)fYield->Get(Form("Jpsi_BinCountYield_cent%s",cent_Title[k]));
+    }
+
+  // Jpsi invariant yield
+  TH1F *hJpsiInvYield[nCentBins];
+  for(int k=0; k<nCentBins; k++)
+    {
+      hJpsiInvYield[k] = (TH1F*)hJpsiCounts[k]->Clone(Form("Jpsi_InvYield_cent%s",cent_Title[k]));
+      hJpsiInvYield[k]->Divide(hJpsiEffEmbed[k]);
+      //hJpsiInvYield[k]->Divide(hJpsiEffTrig[k]); // 100% trigger efficiency
+      hJpsiInvYield[k]->Divide(hJpsiRespEff[k]);
+      cout << hJpsiEffEmbed[k]->GetBinContent(1) << "  " << hJpsiEffTrig[k]->GetBinContent(1) << endl;
+      for(int bin=1; bin<=hJpsiInvYield[k]->GetNbinsX(); bin++)
+	{
+	  double bin_width = hJpsiInvYield[k]->GetBinWidth(bin); // dpT
+	  double bin_center = hJpsiInvYield[k]->GetBinCenter(bin); // pT 
+	  hJpsiInvYield[k]->SetBinContent(bin,hJpsiInvYield[k]->GetBinContent(bin)/bin_width/bin_center);
+	  hJpsiInvYield[k]->SetBinError(bin,hJpsiInvYield[k]->GetBinError(bin)/bin_width/bin_center);
+	}
+
+      hJpsiInvYield[k]->Scale(1./ana_Lum); // N_evt
+      hJpsiInvYield[k]->Scale(1./(2*pi)); // 2pi
+      hJpsiInvYield[k]->Scale(1./1.6); // dy
+      hJpsiInvYield[k]->SetMarkerStyle(21);
+      hJpsiInvYield[k]->SetMarkerColor(1);
+      hJpsiInvYield[k]->SetLineColor(1);
+      hJpsiInvYield[k]->SetMarkerSize(1.5);
+    }
+
+  TCanvas *c = new TCanvas("c2","c2", 700, 700);
+  SetPadMargin(gPad,0.12, 0.14, 0.03,0.03);
+  gPad->SetLogy();
+  TH1F *h = new TH1F("h2",";p_{T} (GeV/c);B#times1/(2#pip_{T})#timesd^{2}#sigma/(dp_{T}dy)   (nb/GeV/c)^{2}",10,0,25);
+  ScaleHistoTitle(h,0.045,1,0.035,0.045,1.4,0.035,62);
+  h->GetYaxis()->SetRangeUser(1e-6,100);
+  h->GetXaxis()->SetRangeUser(0,22.5);
+  h->GetYaxis()->CenterTitle(1);
+  h->DrawCopy();
+
+  leg = new TLegend(0.45,0.7,0.65,0.95);
+  leg->SetBorderSize(0);
+  leg->SetFillColor(0);
+  leg->SetTextSize(0.035);
+  leg->SetHeader("p+p @ 500 GeV");
+
+  // CGC
+  TFile *fCGC = TFile::Open("Rootfiles/Model/pp500_Jpsi_xsec/CGC.root","read");
+  TGraphAsymmErrors *gCgcLowPt = (TGraphAsymmErrors*)fCGC->Get("CGC_lowPt");
+  TGraphAsymmErrors *gCgcHighPt = (TGraphAsymmErrors*)fCGC->Get("CGC_highPt");
+  gCgcLowPt->Draw("sames E3");
+  gCgcHighPt->Draw("sames E3");
+  leg->AddEntry(gCgcLowPt,"CGC","F");
+
+      
+  TFile *fFit = TFile::Open("Rootfiles/GlobalFit.Jpsi.pp500.root","read");
+  TF1 *funcJpsi = (TF1*)fFit->Get("ffpt");
+  funcJpsi->Draw("sames");
+  leg->AddEntry(funcJpsi,"Global fit","L");
+
+  hJpsiInvYield[0]->Draw("samesP");
+  leg->AddEntry(hJpsiInvYield[0],"Run13: J/#psi#rightarrow#mu^{+}#mu^{-}, |y|<0.5","P");
+
+  // Run11 e+e-
+  TFile *fee = TFile::Open(Form("Rootfiles/2015HP/sptrum.root"),"read");
+  TGraphErrors *gData = (TGraphErrors*)fee->Get("Jpsi_pp500");
+  gData->Draw("sames PEZ");
+  for(int i=0; i<19; i++)
+    {
+      TBox *box = (TBox*)fee->Get(Form("sys_uncert_%d",i));
+      box->Draw();
+    }
+  leg->AddEntry(gData,"Run11: J/#psi#rightarrowe^{+}e^{-}, |y|<1","P");
+  leg->Draw();
+
+  if(savePlot)
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiXsec/%sJpsiInvYield_Compare.pdf",run_type,run_config));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiXsec/%sJpsiInvYield_Compare.png",run_type,run_config));
+    }
+
+
+  // ratio to Global fit
+  TCanvas *c = new TCanvas("pp500_Jpsi_ratio","pp500_Jpsi_ratio",800,600);
+  //gPad->SetLogy();
+  h->SetTitle(";p_{T} (GeV/c);Data/GlobalFit");
+  ScaleHistoTitle(h,0.045,1,0.035,0.045,1,0.035,62);
+  h->GetYaxis()->SetRangeUser(0.001,1.2);
+  h->GetXaxis()->SetRangeUser(0,22.5);
+  h->GetYaxis()->CenterTitle(1);
+  h->Draw();
+
+  funcJpsi->SetNpx(1000);
+  TH1F *hFitJpsiPt = (TH1F*)funcJpsi->GetHistogram();
+  hFitJpsiPt->SetName(Form("GlobalFit_Jpsi_Yield"));
+  for(int bin=1; bin<=hFitJpsiPt->GetNbinsX(); bin++)
+    {
+      hFitJpsiPt->SetBinContent(bin,hFitJpsiPt->GetBinContent(bin));
+    }
+
+  TH1F *hRatio = (TH1F*)hJpsiInvYield[0]->Clone(Form("%s_ratio",hJpsiInvYield[0]->GetName()));
+  for(int bin=1; bin<=hRatio->GetNbinsX(); bin++)
+    {
+      int start_bin = hFitJpsiPt->FindBin(hRatio->GetXaxis()->GetBinLowEdge(bin)+1e-6);
+      int end_bin   = hFitJpsiPt->FindBin(hRatio->GetXaxis()->GetBinUpEdge(bin)-1e-6);
+      double scale = 0;
+      for(int ibin=start_bin; ibin<=end_bin; ibin++)
+	{
+	  scale += hFitJpsiPt->GetBinContent(ibin) * hFitJpsiPt->GetBinCenter(ibin) * hFitJpsiPt->GetBinWidth(ibin);
+	}
+      scale = scale / hRatio->GetBinCenter(bin) / hRatio->GetBinWidth(bin);
+      cout << scale << " -> " << hRatio->GetBinContent(bin) << endl;
+      hRatio->SetBinContent(bin,hRatio->GetBinContent(bin)/scale);
+      hRatio->SetBinError(bin,hRatio->GetBinError(bin)/scale);
+    }
+  hRatio->Draw("sames");
+
+  TGraphErrors *gRatio = (TGraphErrors*)gData->Clone("gRatio");
+  double x,y;
+  double *xarr = gData->GetX();
+  double *yarr = gData->GetY();
+  for(int ip=0; ip<gData->GetN(); ip++)
+    {
+      double ex = gData->GetErrorX(ip);
+      double ey = gData->GetErrorY(ip);
+      double scale = funcJpsi->Eval(xarr[ip]);
+      cout << xarr[ip] << "  " << yarr[ip]/scale << "  " << scale << "  " << ey << endl;
+      gRatio->SetPoint(ip,xarr[ip],yarr[ip]/scale);
+      gRatio->SetPointError(ip,ex,ey/scale);
+     
+    }
+  gRatio->Draw("sames PEZ");
+
+  if(savePlot)
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiXsec/%sJpsiInvYield_RatioToGFit.pdf",run_type,run_config));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiXsec/%sJpsiInvYield_RatioToGFit.png",run_type,run_config));
+    }
+
+  if(saveHisto)
+    {
+      char *outname = "";
+      if(year==2013) outname = Form("Pico.Run13.pp500.jpsi.%spt%1.1f.pt%1.1f.xsec.root",run_config,pt1_cut,pt2_cut);
+      if(year==2014) outname = Form("Pico.Run14.AuAu200.jpsi.%spt%1.1f.pt%1.1f.xsec.root",run_config,pt1_cut,pt2_cut);
+      TFile *fout = TFile::Open(Form("Rootfiles/%s",outname),"recreate");
+      for(int k=0; k<nCentBins; k++)
+	{
+	  hJpsiInvYield[k]->Write();
+	}
+    }
+
+}
+
 
 //================================================
 void sfToMb(const bool savePlot = 0)

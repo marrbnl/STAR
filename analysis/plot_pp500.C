@@ -23,7 +23,7 @@ void plot_pp500()
 }
 
 //================================================
-void jpsi_xsec(const bool save = 1)
+void jpsi_xsec(const bool save = 1, const bool saveHisto = 1)
 {
   TCanvas *c2 = new TCanvas("c2","c2", 700, 700);
   SetPadMargin(gPad,0.12, 0.14, 0.03,0.03);
@@ -82,7 +82,7 @@ void jpsi_xsec(const bool save = 1)
       cgc_low_yl[i] = (cgc_low_y[i] - cgc_lowPt[i][2] * scale);
     }
   TGraphAsymmErrors *gCgcLowPt = new TGraphAsymmErrors(cgc_low_npoints,cgc_low_pt,cgc_low_y,cgc_low_pt_err,cgc_low_pt_err,cgc_low_yl,cgc_low_yh);
-  gCgcLowPt->SetFillStyle(3000);
+  gCgcLowPt->SetFillStyle(1001);
   gCgcLowPt->SetLineColor(kOrange+1);
   gCgcLowPt->SetFillColor(gCgcLowPt->GetLineColor());
 
@@ -103,7 +103,7 @@ void jpsi_xsec(const bool save = 1)
       cgc_high_yl[i] = (cgc_high_y[i] - cgc_highPt[i][2] * scale);
     }
   TGraphAsymmErrors *gCgcHighPt = new TGraphAsymmErrors(cgc_high_npoints,cgc_high_pt,cgc_high_y,cgc_high_pt_err,cgc_high_pt_err,cgc_high_yl,cgc_high_yh);
-  gCgcHighPt->SetFillStyle(3000);
+  gCgcHighPt->SetFillStyle(1001);
   gCgcHighPt->SetLineColor(kCyan+1);
   gCgcHighPt->SetFillColor(gCgcHighPt->GetLineColor());
 
@@ -133,6 +133,11 @@ void jpsi_xsec(const bool save = 1)
   leg->AddEntry(gCgcHighPt,"NLO NRQCD","F");
   leg->Draw();
 
+  TPaveText *star = GetPaveText(0.3,0.38,0.2,0.25,0.04);
+  star->AddText("STAR preliminary");
+  star->SetTextFont(20);
+  star->SetTextColor(2);
+  star->Draw();
 
 
 
@@ -140,6 +145,14 @@ void jpsi_xsec(const bool save = 1)
     {
       c2->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/Jpsi_pp500_STAR_vs_CGC_NRQCD.pdf",run_type,run_cfg_name.Data()));
       c2->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/Jpsi_pp500_STAR_vs_CGC_NRQCD.png",run_type,run_cfg_name.Data()));
+    }
+
+  if(saveHisto)
+    {
+      TFile *fout = TFile::Open("Rootfiles/Model/pp500_Jpsi_xsec/CGC.root","recreate");
+      gCgcLowPt->Write("CGC_lowPt");
+      gCgcHighPt->Write("CGC_highPt");
+      fout->Close();
     }
 
 }

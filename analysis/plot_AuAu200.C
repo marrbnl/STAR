@@ -10,16 +10,16 @@ const double npart[nCentBins] = {161, 280, 142, 62};
 //================================================
 void plot_AuAu200()
 {  
-  //rawSignal();
+  rawSignal();
   //xsec();
   //upsilon();
   //publication();
-  v2();
+  //v2();
   //efficiency();
 }
 
 //================================================
-void efficiency(const bool savePlot = 1)
+void efficiency(const bool savePlot = 0)
 {
   gStyle->SetOptStat(0);
   TFile *fmuon = TFile::Open("Rootfiles/Run14.AuAu200.JpsiEff.pt1.0.pt1.0.root","read");
@@ -42,7 +42,7 @@ void efficiency(const bool savePlot = 1)
   hJpsiEffMuon->Multiply(htrig);
   hJpsiEffMuon->Multiply(hresp);
 
-  TFile *felec = TFile::Open("Rootfiles/HT15forMrr.root","read");
+  TFile *felec = TFile::Open("Rootfiles/2015QM/HT15forMrr.root","read");
   TH1F *hJpsiEffElec = (TH1F*)felec->Get("jpsiRcEff");
   hJpsiEffElec->SetMarkerStyle(20);
   hJpsiEffElec->SetMarkerColor(4);
@@ -90,7 +90,7 @@ void efficiency(const bool savePlot = 1)
 }
 
 //================================================
-void v2(const bool savePlot = 1)
+void v2(const bool savePlot = 0)
 {
   gStyle->SetOptStat(0);
   TCanvas *c1 = new TCanvas("v2_combined","v2_combined",800,500);
@@ -173,7 +173,7 @@ void v2(const bool savePlot = 1)
   char aa[256];
 
   ifstream ifs;
-  ifs.open("v2/v2Results_4ptBins.dat");
+  ifs.open("Rootfiles/Published/Jpsi_v2_200/v2Results_4ptBins.dat");
   for(int i=0; i<5; i++)
     {
       ifs.getline(aa, 256);
@@ -495,13 +495,13 @@ void v2(const bool savePlot = 1)
   grCMS16->SetLineColor(grCMS16->GetMarkerColor());
   grCMS16->SetLineWidth(1);
 
-  TGraph *grZhuang = new TGraph("model/Jpsi_v2_Zhuang_LHC_B_Thermalized.dat");
+  TGraph *grZhuang = new TGraph("Rootfiles/Published/Jpsi_Raa_200/model/Jpsi_v2_Zhuang_LHC_B_Thermalized.dat");
   grZhuang->SetLineColor(grCMS16->GetLineColor());
   grZhuang->SetLineWidth(2);
   grZhuang->SetLineStyle(2);
   grZhuang->Draw("c");
 
-  TGraph *grZhuang2 = new TGraph("model/Jpsi_v2_Zhuang_LHC_B_NotThermalized.dat");
+  TGraph *grZhuang2 = new TGraph("Rootfiles/Published/Jpsi_Raa_200/model/Jpsi_v2_Zhuang_LHC_B_NotThermalized.dat");
   grZhuang2->SetLineColor(grZhuang->GetLineColor());
   grZhuang2->SetLineWidth(2);
   grZhuang2->SetLineStyle(3);
@@ -1498,11 +1498,12 @@ void rawSignal(const bool savePlot = 1)
   TH1F *hJpsiSignal[nPtBins];
   for(int i=0; i<nPtBins; i++)
     {
-      hJpsiSignal[i] = (TH1F*)fin->Get(Form("Jpsi_Signal_cent0060_pt%s_save",pt_Name[i]));
+      hJpsiSignal[i] = (TH1F*)fin->Get(Form("Jpsi_Signal_cent0020_pt%s_save",pt_Name[i]));
     }
-  TH1F *hJpsiCount = (TH1F*)fin->Get("Jpsi_BinCountYield_cent0060");
-  TH1F *hSigToBkg = (TH1F*)fin->Get("Jpsi_SigToBkg_cent0060");
+  TH1F *hJpsiCount = (TH1F*)fin->Get("Jpsi_BinCountYield_cent0020");
+  TH1F *hSigToBkg = (TH1F*)fin->Get("Jpsi_SigToBkg_cent0020");
 
+  /*
   // raw signal
   TGaxis::SetMaxDigits(3); 
   TH1F *hSeUL = (TH1F*)fin->Get("hJpsiInfoRaw_di_mu_InvMass_jpsi_PtBin0_CentBin0");
@@ -1588,7 +1589,7 @@ void rawSignal(const bool savePlot = 1)
       c1->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/FitJpsi_pt0-10_cent0060.jpg",run_type,run_cfg_name.Data()));
       c1->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/FitJpsi_pt0-10_cent0060.eps",run_type,run_cfg_name.Data()));
     }
-
+  */
   TCanvas *c2 = new TCanvas("Fit_jpsi_ptbins","Fit_jpsi_ptbins",1100,650);
   c2->Divide(3,2);
   for(int i=1; i<nPtBins; i++)
@@ -1611,7 +1612,7 @@ void rawSignal(const bool savePlot = 1)
 	  TPaveText *t1 = GetPaveText(0.17,0.37,0.65,0.92,0.06,62);
 	  t1->SetTextAlign(11);
 	  t1->AddText("Au+Au @ 200 GeV");
-	  t1->AddText("0-60%");
+	  t1->AddText("0-20%");
 	  t1->AddText(Form("#it{L} ~ %1.1f nb^{-1}",luminosity));
 	  t1->AddText("J/#psi#rightarrow#mu^{+}#mu^{-}");
 	  t1->Draw();
@@ -1625,18 +1626,22 @@ void rawSignal(const bool savePlot = 1)
       t1->AddText(Form("Significance: %2.1f",hJpsiCount->GetBinContent(i)/hJpsiCount->GetBinError(i)));
       t1->Draw();
     }
+  /*
   c2->cd(2);
   TPaveText *star = GetPaveText(0.25,0.5,0.85,0.93,0.06);
   star->AddText("STAR preliminary");
   star->SetTextFont(20);
   star->SetTextColor(2);
   star->Draw();
+  */
   if(savePlot)
     {
-      c2->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/FitJpsi_ptbins_cent0060.pdf",run_type,run_cfg_name.Data()));
+      c2->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/FitJpsi_ptbins_cent0020.pdf",run_type,run_cfg_name.Data()));
+      /*
       c2->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/FitJpsi_ptbins_cent0060.png",run_type,run_cfg_name.Data()));
       c2->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/FitJpsi_ptbins_cent0060.jpg",run_type,run_cfg_name.Data()));
       c2->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/FitJpsi_ptbins_cent0060.eps",run_type,run_cfg_name.Data()));
+      */
     }
 
 }
@@ -1705,6 +1710,7 @@ void upsilon(const bool savePlot = 1)
   hSub->Draw();
   for(int i=0; i<4; i++)
     {
+      func[i]->SetLineStyle(i+1);
       func[i]->Draw("sames");
     }
   TF1 *funcBkg = new TF1("funcBkg","[0]*expo(1)",8,12);
@@ -1713,7 +1719,7 @@ void upsilon(const bool savePlot = 1)
       funcBkg->SetParameter(i,func[0]->GetParameter(9+i));
     }
   funcBkg->SetLineColor(kGreen+1);
-  funcBkg->SetLineStyle(2);
+  funcBkg->SetLineStyle(5);
   funcBkg->Draw("sames");
   printf("Fit: chi2/ndf = %1.1f/%1.0f\n",func[0]->GetChisquare(), func[0]->GetNDF());
 
@@ -1721,7 +1727,7 @@ void upsilon(const bool savePlot = 1)
   t1->SetTextAlign(11);
   t1->AddText(Form("Au+Au @ 200 GeV #it{L} ~ %1.1f nb^{-1}",luminosity));
   t1->Draw();
-  TLegend *leg = new TLegend(0.65,0.65,0.85,0.85);
+  TLegend *leg = new TLegend(0.65,0.63,0.85,0.92);
   leg->SetBorderSize(0);
   leg->SetFillColor(0);
   leg->SetTextFont(62);
@@ -1729,8 +1735,12 @@ void upsilon(const bool savePlot = 1)
   leg->SetHeader("#Upsilon#rightarrow#mu^{+}#mu^{-}, |y| < 0.5");
   leg->AddEntry(hSub,"UL-LS","P");
   leg->AddEntry(func[0],"Combined fit","L");
+  leg->AddEntry(func[1],"#Upsilon(1S)","L");
+  leg->AddEntry(func[2],"#Upsilon(2S)","L");
+  leg->AddEntry(func[3],"#Upsilon(3S)","L");
+  leg->AddEntry(funcBkg,"Drell-Yan+b#bar{b}","L");
   leg->Draw();
-  TPaveText *t1 = GetPaveText(0.65,0.85,0.58,0.63,0.04,62);
+  TPaveText *t1 = GetPaveText(0.65,0.85,0.55,0.60,0.04,62);
   t1->SetTextAlign(11);
   t1->AddText(Form("#chi^{2}/NDF = %1.1f/%d\n",func[0]->GetChisquare(), func[0]->GetNDF()));
   t1->Draw();

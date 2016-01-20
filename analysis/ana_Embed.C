@@ -1,5 +1,5 @@
 const char *run_config = "";
-const int year = 2014;
+const int year = YEAR;
 TString run_cfg_name;
 const char *det_name[5] = {"","Tpc","Mtd","Muon","MtdFake"};
 const char *charge_name[3] = {"","_pos","_neg"};
@@ -22,9 +22,8 @@ void ana_Embed()
 
   if(year==2013)
     {
-      const int nCentBins = 1;
       run_type = "Run13_pp500";
-      fileName = Form("Run13.pp500.jpsi.EmbedQA.MC.%sroot",run_config);
+      fileName = Form("Run13.pp500.jpsi.Embed.%sroot",run_config);
       outName = Form("Run13.pp500.TrkEff.%sroot",run_config);
       outPDF = Form("Run13_pp500_Embed_Eff.pdf");
     }
@@ -33,8 +32,8 @@ void ana_Embed()
       run_type = "Run14_AuAu200";
       fileName = Form("Run14.AuAu200.Jpsi.Embed.%sroot",run_config);
       outName = Form("Run14.AuAu200.TrkEff.%sroot",run_config);
-      if(pt1_cut != 1.5 || pt2_cut != 1.0)
-	outName = Form("Run14.AuAu200.TrkEff.%spt%1.1f.pt%1.1f.root",run_config,pt1_cut,pt2_cut);
+      //if(pt1_cut != 1.5 || pt2_cut != 1.0)
+      //outName = Form("Run14.AuAu200.TrkEff.%spt%1.1f.pt%1.1f.root",run_config,pt1_cut,pt2_cut);
       outPDF = Form("Run14_AuAu200_Embed_Eff.pdf");
     }
   run_cfg_name = run_config;
@@ -44,14 +43,13 @@ void ana_Embed()
   printf("# of events: %4.4e\n",hStat->GetBinContent(3));
 
   //makeHistos(outName);
-  //efficiency(outName);
-  TrkEff3D(outName, outPDF);
+  efficiency(outName);
+  //TrkEff3D(outName, outPDF);
 }
 
 //================================================
-void efficiency(TString inName, const bool savePlot = 1, const bool saveHisto = 1)
+void efficiency(TString inName, const bool savePlot = 0, const bool saveHisto = 0)
 {
-  if(year==2013) const int nCentBins = 1;
   TFile *fin = 0;
   if(saveHisto) fin = TFile::Open(Form("Rootfiles/%s",inName.Data()),"update");
   else fin = TFile::Open(Form("Rootfiles/%s",inName.Data()),"read");
@@ -166,7 +164,7 @@ void efficiency(TString inName, const bool savePlot = 1, const bool saveHisto = 
 	      hMcTrkEtaEff[k][i][j]->SetLineColor(color[j]);
 	      hMcTrkEtaEff[k][i][j]->GetXaxis()->SetRangeUser(-0.6,0.6);
 	      hMcTrkEtaEff[k][i][j]->GetYaxis()->SetRangeUser(0,1.4);
-	      hMcTrkEtaEff[k][i][j]->SetTitle("");
+	      hMcTrkEtaEff[k][i][j]->SetTitle(";#eta;Efficiency");
 	      if(j==0 && i==1) hMcTrkEtaEff[k][i][j]->Draw("P");
 	      else hMcTrkEtaEff[k][i][j]->Draw("sames");
 	      leg->AddEntry(hMcTrkEtaEff[k][i][j],legName_charge[j].Data(),"P");
@@ -196,7 +194,7 @@ void efficiency(TString inName, const bool savePlot = 1, const bool saveHisto = 
 	  TH1F *htmp = (TH1F*)hMcTrkPhiEff[k][i][0]->Clone(Form("%s_clone",hMcTrkPhiEff[k][i][0]->GetName()));
 	  htmp->SetLineColor(color[counter]);
 	  htmp->GetYaxis()->SetRangeUser(0,1.4);
-	  htmp->SetTitle(";#eta_{mc};Efficiency");
+	  htmp->SetTitle(";#varphi_{mc};Efficiency");
 	  if(i==1) htmp->DrawCopy("HIST");
 	  else     htmp->DrawCopy("sames HIST");
 	  leg->AddEntry(htmp,legName[counter+1].Data(),"L");
@@ -401,11 +399,27 @@ void efficiency(TString inName, const bool savePlot = 1, const bool saveHisto = 
 	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Embed/%sFitTrkPtRes_cent%s.png",run_type,run_cfg_name.Data(),cent_Title[k]));
 	}
     }
-  c = drawHistos(list,Form("TrkRes"),Form("p_{T} resolution of muon tracks;p_{T,true} (GeV/c);#sigma(p_{T})/p_{T}"),kTRUE,0,11,kFALSE,0.1,10,kFALSE,kTRUE,legName_cent,kTRUE,"",0.3,0.5,0.6,0.85,kTRUE);
+  bool drawLegend = true;
+  if(year==2013) drawLegend = false;
+  c = drawHistos(list,Form("TrkRes"),Form("p_{T} resolution of muon tracks;p_{T,true} (GeV/c);#sigma(p_{T})/p_{T}"),kTRUE,0,11,kFALSE,0.1,10,kFALSE,drawLegend,legName_cent,drawLegend,"",0.3,0.5,0.6,0.85,kTRUE);
   if(savePlot)
     {
       c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Embed/%sMcTrkPtRes_CentBins.pdf",run_type,run_cfg_name.Data()));
       c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Embed/%sMcTrkPtRes_CentBins.png",run_type,run_cfg_name.Data()));
+    }
+
+  list->Clear();
+  for(int k=0; k<nCentBins; k++)
+    {
+      TH1F *htmp = (TH1F*)hTrkPtShift[k]->Clone(Form("%s_clone",hTrkPtShift[k]->GetName()));
+      htmp->Scale(100);
+      list->Add(htmp);
+    }
+  c = drawHistos(list,Form("TrkPtShift"),Form("p_{T} shift of muon tracks;p_{T,true} (GeV/c);<#Deltap_{T}/p_{T}> (%%)"),kTRUE,0,11,kTRUE,-0.2,0.2,kFALSE,drawLegend,legName_cent,drawLegend,"",0.3,0.5,0.6,0.85,kTRUE);
+  if(savePlot)
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Embed/%sMcTrkPtShift_CentBins.pdf",run_type,run_cfg_name.Data()));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Embed/%sMcTrkPtShift_CentBins.png",run_type,run_cfg_name.Data()));
     }
 
   if(saveHisto)
@@ -425,7 +439,6 @@ void efficiency(TString inName, const bool savePlot = 1, const bool saveHisto = 
 void makeHistos(TString outName, const bool save = 1)
 {
   gStyle->SetOptStat(1);
-  if(year==2013) const int nCentBins = 1;
   
   printf("+++ Single track resolution +++\n");
   // single track efficiency & resolution
@@ -445,7 +458,6 @@ void makeHistos(TString outName, const bool save = 1)
     }
 
   printf("+++ Single track efficiency +++\n");
-  TFile *fUps = TFile::Open("output/Run14.AuAu200.Upsilon1S.Embed.root","read");
   THnSparseF *hMcTrkInfo[5], *hRcTrkInfo[4];
   TH1F *hMcTrkPt[nCentBins][5][3], *hRcTrkPt[nCentBins][4][3];
   TH1F *hMcTrkPtEff[nCentBins][5][3], *hRcTrkPtEff[nCentBins][4][3];
@@ -456,13 +468,10 @@ void makeHistos(TString outName, const bool save = 1)
       hMcTrkInfo[i] = (THnSparseF*)f->Get(Form("mhMcTrkInfo%s_di_mu",det_name[i]));
       hMcTrkInfo[i]->SetTitle(Form("%s_jpsi",hMcTrkInfo[i]->GetName()));
       hMcTrkInfo[i]->Sumw2();
-      THnSparseF *hntmp = (THnSparseF*)fUps->Get(Form("mhMcTrkInfo%s_di_mu",det_name[i]));
-      hntmp->Sumw2();
-      hMcTrkInfo[i]->Add(hntmp);
 
       for(int k=0; k<nCentBins; k++)
 	{
-	  if(nCentBins) hMcTrkInfo[i]->GetAxis(4)->SetRange(centBins_low[k],centBins_high[k]);
+	  if(nCentBins>1) hMcTrkInfo[i]->GetAxis(4)->SetRange(centBins_low[k],centBins_high[k]);
 	  for(int j=0; j<3; j++)
 	    {
 	      if(j==0) hMcTrkInfo[i]->GetAxis(3)->SetRange(1,3);
@@ -503,9 +512,6 @@ void makeHistos(TString outName, const bool save = 1)
       hRcTrkInfo[i] = (THnSparseF*)f->Get(Form("mhRcTrkInfo%s_di_mu",det_name[i+1]));
       hRcTrkInfo[i]->SetTitle(Form("%s_jpsi",hRcTrkInfo[i]->GetName()));
       hRcTrkInfo[i]->Sumw2();
-      THnSparseF *hntmp = (THnSparseF*)fUps->Get(Form("mhRcTrkInfo%s_di_mu",det_name[i+1]));
-      hntmp->Sumw2();
-      hRcTrkInfo[i]->Add(hntmp);
 
       for(int k=0; k<nCentBins; k++)
 	{
@@ -666,8 +672,7 @@ void TrkEff3D(TString inName, TString outPDFName, const bool savePlot = 1)
 	{
 	  for(int i=0; i<3; i++)
 	    {
-	      if(nCentBins==1) hMcTrkPtEtaPhi[k][i][j] = (TH3F*)fin->Get(Form("McTrkPtEtaPhi%s%s",det_name[i],charge_name[j]));
-	      else             hMcTrkPtEtaPhi[k][i][j] = (TH3F*)fin->Get(Form("McTrkPtEtaPhi%s%s_%s",det_name[i],charge_name[j],cent_Title[k]));
+	      hMcTrkPtEtaPhi[k][i][j] = (TH3F*)fin->Get(Form("McTrkPtEtaPhi%s%s_%s",det_name[i],charge_name[j],cent_Title[k]));
 	      if(i==2) continue;
 	      int low_ybin = hMcTrkPtEtaPhi[k][i][j]->GetYaxis()->FindFixBin(-0.5+1e-4);
 	      int high_ybin = hMcTrkPtEtaPhi[k][i][j]->GetYaxis()->FindFixBin(0.5-1e-4);
