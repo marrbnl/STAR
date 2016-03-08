@@ -10,11 +10,11 @@ const double npart[nCentBins] = {161, 280, 142, 62};
 //================================================
 void plot_AuAu200()
 {  
-  rawSignal();
+  //rawSignal();
   //xsec();
   //upsilon();
   //publication();
-  //v2();
+  v2();
   //efficiency();
 }
 
@@ -305,11 +305,19 @@ void v2(const bool savePlot = 0)
 
 
   // add MTD result
+  /*
   double pt_mtd[3] = {1.03, 3.2, 6.49};
   double ptError_mtd[3] = {0,0,0};
   double v2_mtd[3] = {-0.122102, 0.00276895, 0.127219};
   double v2StatErr_mtd[3] = {0.156197, 0.134758, 0.10168};
   double v2SysErr_mtd[3] = {0.0557383, 0.0115725, 0.114443};
+  double ptSysErr_mtd[3] = {0.2,0.2,0.2};
+  */
+  double pt_mtd[3] = {1.03, 3.2, 6.49};
+  double ptError_mtd[3] = {0,0,0};
+  double v2_mtd[3] = {0.0560922, 0.0539167, 0.141479};
+  double v2StatErr_mtd[3] = {0.0977832, 0.0693182, 0.0782198};
+  double v2SysErr_mtd[3] = {0.0170439, 0.0233507, 0.0408414};
   double ptSysErr_mtd[3] = {0.2,0.2,0.2};
 
   TCanvas *c2 = new TCanvas("v2_MTD","v2_MTD",800,500);
@@ -370,7 +378,7 @@ void v2(const bool savePlot = 0)
   star->AddText("STAR preliminary");
   star->SetTextFont(20);
   star->SetTextColor(2);
-  star->Draw();
+  //star->Draw();
 
   if(savePlot)
     {
@@ -379,6 +387,8 @@ void v2(const bool savePlot = 0)
       c2->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/JpsiV2_uu_Run14.jpg",run_type,run_cfg_name.Data()));
       c2->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/JpsiV2_uu_Run14.eps",run_type,run_cfg_name.Data()));
     }
+
+  return;
 
 
   TCanvas *c1 = new TCanvas("v2_combined_vs_LHC","v2_combined_vs_LHC",800,500);

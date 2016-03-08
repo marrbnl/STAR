@@ -19,12 +19,13 @@ void ana_JpsiEff()
       run_type = "Run14_AuAu200";
     }
 
-  ploEff();
+  //ploEff();
   //plotEmbedEff();
   //makeMtdRespEff();
   //makeTrigEff();
   //makeEmbedEff();
   //hadronEmbed();
+  compTrigEff();
 }
 
 //================================================
@@ -49,6 +50,7 @@ void ploEff(const int savePlot = 1)
   TFile *fEmbedEff = TFile::Open(Form("Rootfiles/%s",embedEffName),"read");
   TFile *fTrigEff = TFile::Open(Form("Rootfiles/%s",trigEffName),"read");
   TH1F *hJpsiEffEmbed[nCentBins];
+  TH1F *hJpsiSmearEff[nCentBins];
   TH1F *hJpsiEffTrig[nCentBins];
   TH1F *hJpsiRespEff[nCentBins];
   TH1F *hJpsiEffTotal[nCentBins];
@@ -56,9 +58,11 @@ void ploEff(const int savePlot = 1)
     {
       hJpsiEffEmbed[k] = (TH1F*)fEmbedEff->Get(Form("MTDreco_Jpsi_pT_%s_WeightPt_Eff_rebin",cent_Title[k]));
       hJpsiEffEmbed[k]->Scale(0.8/0.5);
+      hJpsiSmearEff[k] = (TH1F*)fTrigEff->Get(Form("JpsiSmearEff_cent%s_rebin",cent_Title[k]));
       hJpsiEffTrig[k] = (TH1F*)fTrigEff->Get(Form("JpsiTrigEff_cent%s_rebin",cent_Title[k]));
       hJpsiRespEff[k] = (TH1F*)fTrigEff->Get(Form("JpsiRespEff_cent%s_rebin",cent_Title[k]));
       hJpsiEffTotal[k] = (TH1F*)hJpsiEffEmbed[k]->Clone(Form("JpsiEffTotal_cent%s_rebin",cent_Title[k]));
+      if(hJpsiSmearEff[k]) hJpsiEffTotal[k]->Multiply(hJpsiSmearEff[k]);
       hJpsiEffTotal[k]->Multiply(hJpsiEffTrig[k]);
       hJpsiEffTotal[k]->Multiply(hJpsiRespEff[k]);
     }
@@ -76,11 +80,48 @@ void ploEff(const int savePlot = 1)
       hJpsiTrigEff[k][1]->DrawCopy("sames");
     }
 
+  TList *list = new TList;
+  TString legName[nCentBins];
+  bool drawLegend = true;
+  if(nCentBins==1) drawLegend = false;
+  // smearing efficiency
+  if(hJpsiSmearEff[0])
+    {
+      list->Clear();
+      for(int k=0; k<nCentBins; k++)
+	{
+	  TH1F *htmp = (TH1F*)hJpsiSmearEff[k]->Clone(Form("%s_clone",hJpsiSmearEff[k]->GetName()));
+	  list->Add(htmp);
+	  legName[k] = Form("%s%%",cent_Name[k]);
+	}
+      c = drawHistos(list,"SmearEff","Correction factor due to smearing;p_{T,J/#psi} (GeV/c);Eff",kFALSE,0,30,kTRUE,0.9,1.1,kFALSE,drawLegend,legName,drawLegend,"Centrality",0.15,0.3,0.6,0.85,kTRUE);
+      if(savePlot)
+	{
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/JpsiEffSmear_CentBins.pdf",run_type));
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/JpsiEffSmear_CentBins.png",run_type));
+	}
+    }
+
+  // response efficiency
+  list->Clear();
+  for(int k=0; k<nCentBins; k++)
+    {
+      TH1F *htmp = (TH1F*)hJpsiRespEff[k]->Clone(Form("%s_clone",hJpsiRespEff[k]->GetName()));
+      list->Add(htmp);
+      legName[k] = Form("%s%%",cent_Name[k]);
+    }
+  c = drawHistos(list,"RespEff","Efficiency for MTD response;p_{T,J/#psi} (GeV/c);Eff",kFALSE,0,30,kTRUE,0.5,0.9,kFALSE,drawLegend,legName,drawLegend,"Centrality",0.15,0.3,0.6,0.85,kTRUE);
+  if(savePlot)
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/JpsiEffResp_CentBins.pdf",run_type));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/JpsiEffResp_CentBins.png",run_type));
+    }
+
   int dx = 1100, dy = 700;
   if(nCentBins==1) { dx = 800; dy = 600; }
   TCanvas *c = new TCanvas("JpsiEffTotal","JpsiEffTotal",dx,dy);
   if(nCentBins>1) c->Divide(nCentBins/2,2);
-  TLegend *leg = new TLegend(0.15,0.55,0.25,0.8);
+  TLegend *leg = new TLegend(0.15,0.5,0.25,0.75);
   leg->SetBorderSize(0);
   leg->SetFillColor(0);
   leg->SetTextSize(0.045);
@@ -88,8 +129,8 @@ void ploEff(const int savePlot = 1)
     {
       c->cd(k+1);
       gPad->SetLogy();
-      hJpsiEffTotal[k]->GetYaxis()->SetRangeUser(0.001,1.2);
-      hJpsiEffTotal[k]->SetTitle(";p_{T} (GeV/c);Efficiency");
+      hJpsiEffTotal[k]->GetYaxis()->SetRangeUser(0.0001,1.2);
+      hJpsiEffTotal[k]->SetTitle(";p_{T,J/#psi} (GeV/c);Efficiency");
       hJpsiEffTotal[k]->SetMarkerStyle(20);
       hJpsiEffTotal[k]->SetMarkerColor(1);
       hJpsiEffTotal[k]->SetLineColor(1);
@@ -101,6 +142,15 @@ void ploEff(const int savePlot = 1)
       hJpsiEffEmbed[k]->SetLineColor(2);
       hJpsiEffEmbed[k]->SetMarkerSize(1.5);
       hJpsiEffEmbed[k]->Draw("sames");
+
+      if(hJpsiSmearEff[k])
+	{
+	  hJpsiSmearEff[k]->SetMarkerStyle(25);
+	  hJpsiSmearEff[k]->SetMarkerColor(kGreen+2);
+	  hJpsiSmearEff[k]->SetLineColor(kGreen+2);
+	  hJpsiSmearEff[k]->SetMarkerSize(1.5);
+	  hJpsiSmearEff[k]->Draw("sames");
+	}
 
       hJpsiRespEff[k]->SetMarkerStyle(22);
       hJpsiRespEff[k]->SetMarkerColor(4);
@@ -122,15 +172,15 @@ void ploEff(const int savePlot = 1)
 
       if(k==0)
 	{
-	  leg->AddEntry(hJpsiEffTotal[k],"Total efficiency","PL");
+	  leg->AddEntry(hJpsiEffTotal[k],"Total efficiency","PL");	    
 	  leg->AddEntry(hJpsiEffEmbed[k],"Tracking, PID, acc (|#eta_{mc}^{J/#psi}|<0.5)","PL");
+	  if(hJpsiSmearEff[k]) leg->AddEntry(hJpsiSmearEff[k],"Smear embedding","PL");
 	  leg->AddEntry(hJpsiRespEff[k],"MTD response","PL");
 	  if(year!=2013) leg->AddEntry(hJpsiEffTrig[k],"MTD trigger efficiency","PL");
 	}
     }
   c->cd(1);
   leg->Draw();
-      
   if(savePlot)
     {
       c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/JpsiEffTotal_CentBins.pdf",run_type));
@@ -935,5 +985,50 @@ void makeTrigEff(const int savePlot = 0, const int saveHisto = 0)
 	}
       fout->Close();
     }
+}
+
+
+//================================================
+void compTrigEff(const int savePlot = 0)
+{
+  TF1 *funcTrigEff[2];
+  TF1 *funcTrigEffCorr[2];
+  funcTrigEff[0] = new TF1(Form("MuonTrigEff_mid"),"[0]-exp(-1*[1]*(x-[2]))",0,12);
+  funcTrigEff[0]->SetParameters(0.908, 2.09256, 1.03406e-14);      
+  funcTrigEffCorr[0] = new TF1(Form("MuonTrigEffCorr_mid"),"[0]-exp(-1*[1]*(x-[2]))",0,12);
+  funcTrigEffCorr[0]->SetParameters(0.936584, 17.1834, 0.893653); 
+
+  funcTrigEff[1] = new TF1(Form("MuonTrigEff_low"),"[0]-exp(-1*[1]*(x-[2]))",0,12);
+  funcTrigEff[1]->SetParameters(0.951456, 2.32223, 6.61693e-14);      
+  funcTrigEffCorr[1] = new TF1(Form("MuonTrigEffCorr_low"),"[0]-exp(-1*[1]*(x-[2]))",0,12);
+  funcTrigEffCorr[1]->SetParameters(0.96023, 10.5511, 0.803); 
+
+  TH1F *hMuonTrigEff[2];
+  TString legName[2] = {"Production_mid","Production_low"};
+  TList *list = new TList;
+  for(int k=0; k<2; k++)
+    {
+      hMuonTrigEff[k] = new TH1F(Form("MuonTrigEff_%d",k),"Single muon efficiency",1000,0,10);
+      for(int bin=1; bin<=hMuonTrigEff[k]->GetNbinsX(); bin++)
+	{
+	  double x = hMuonTrigEff[k]->GetXaxis()->GetBinCenter(bin);
+	  hMuonTrigEff[k]->SetBinContent(bin,funcTrigEff[k]->Eval(x)*funcTrigEffCorr[k]->Eval(x));
+	  hMuonTrigEff[k]->SetBinError(bin,0);
+	}
+      list->Add(hMuonTrigEff[k]);
+    }
+  c = drawHistos(list,"MuonTrigEff_CentBins","Single muon trigger efficiency;p_{T} (GeV/c);Efficiency",kTRUE,0.5,10,kTRUE,0.5,1.0,kFALSE,kTRUE,legName,kTRUE,"",0.4,0.6,0.3,0.55,kTRUE);
+
+  TH1F *hRatio = (TH1F*)hMuonTrigEff[1]->Clone("hRatio");
+  hRatio->GetXaxis()->SetRangeUser(1,3);
+  hRatio->Divide(hMuonTrigEff[0]);
+  c = draw1D(hRatio,";p_{T,#mu} (GeV/c);Prod_low/Prod_mid");
+  /*
+  if(savePlot)
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/CompareMuonTrigEffCombined.pdf",run_type));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/CompareMuonTrigEffCombined.png",run_type));
+    }
+  */
 }
 

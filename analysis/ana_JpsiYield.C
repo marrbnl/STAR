@@ -176,8 +176,8 @@ void makeYield(const int icent = 0, const int isys = 0, int savePlot = 0, int sa
     }
   
   int nxpad, nypad;
-  if(nPtBins-1==6 || nPtBins-1==5) { nxpad = 3; nypad = 2; }
   if(nPtBins-1<=4) { nxpad = 2; nypad = 2; }
+  else             { nxpad = (nPtBins-1)/2 + (nPtBins-1)%2; nypad = 2; }
 
   const int nbins = nPtBins -1;
   double xbins[nbins+1];
@@ -245,7 +245,7 @@ void makeYield(const int icent = 0, const int isys = 0, int savePlot = 0, int sa
 	  hMixScale[i]->Draw();
 	  funcScale[i]->SetLineColor(2);
 	  funcScale[i]->Draw("sames");
-	  TPaveText *t = GetTitleText(Form("%1.0f < p_{T} < %1.0f GeV/c (%s%%)",ptBins_low[i],ptBins_high[i],cent_Name[icent]),0.06);
+	  TPaveText *t = GetTitleText(Form("%1.1f < p_{T} < %1.1f GeV/c (%s%%)",ptBins_low[i],ptBins_high[i],cent_Name[icent]),0.06);
 	  t->Draw();
 	  t = GetPaveText(0.16,0.3,0.7,0.85,0.05);
 	  t->SetTextFont(62);
@@ -297,7 +297,7 @@ void makeYield(const int icent = 0, const int isys = 0, int savePlot = 0, int sa
 	  hAcc[i]->GetXaxis()->SetRangeUser(2,4);
 	  hAcc[i]->GetYaxis()->SetRangeUser(0.9,1.1);
 	  hAcc[i]->Draw("HIST");
-	  TPaveText *t = GetTitleText(Form("%1.0f < p_{T} < %1.0f GeV/c (%s%%)",ptBins_low[i],ptBins_high[i],cent_Name[icent]),0.06);
+	  TPaveText *t = GetTitleText(Form("%1.1f < p_{T} < %1.1f GeV/c (%s%%)",ptBins_low[i],ptBins_high[i],cent_Name[icent]),0.06);
 	  t->Draw();
 	  TLine *line = GetLine(2,1,4,1,1);
 	  line->Draw();
@@ -344,7 +344,7 @@ void makeYield(const int icent = 0, const int isys = 0, int savePlot = 0, int sa
 	  hSeUL[i]->Draw();
 	  hSeLS[i]->Draw("sames HIST");
 	  hMixBkg[i]->Draw("sames HIST");
-	  TPaveText *t = GetTitleText(Form("%1.0f < p_{T} < %1.0f GeV/c (%s%%)",ptBins_low[i],ptBins_high[i],cent_Name[icent]),0.06);
+	  TPaveText *t = GetTitleText(Form("%1.1f < p_{T} < %1.1f GeV/c (%s%%)",ptBins_low[i],ptBins_high[i],cent_Name[icent]),0.06);
 	  t->Draw();
 	}
     }
@@ -366,7 +366,7 @@ void makeYield(const int icent = 0, const int isys = 0, int savePlot = 0, int sa
   // Fit residual
   double fix_mean[nPtBins] = {0};
   double fix_sigma[nPtBins];
-  if(icent>0)
+  if(icent<0)
     {
       TFile *fFit = 0;
       if(isys==0)  fFit = TFile::Open(outName,"read");
@@ -396,7 +396,7 @@ void makeYield(const int icent = 0, const int isys = 0, int savePlot = 0, int sa
   int nPar1 = 4;
   TString funcForm2 = "pol1";
   int nPar2 = 2;
-  double fit_min = 2.6, fit_max = 3.8;
+  double fit_min = 2.5, fit_max = 3.8;
   if(isys==3)
     {
       funcForm2 = "pol1"; 
@@ -432,7 +432,7 @@ void makeYield(const int icent = 0, const int isys = 0, int savePlot = 0, int sa
       hSignal[i]->SetLineColor(1);
       hSignal[i]->SetMarkerColor(1);
       hSignalSave[i] = (TH1F*)hSignal[i]->Clone(Form("%s_save",hSignal[i]->GetName()));
-      if(i==0)
+      if(i<5)
       	{
 	  funcForm = funcForm1; 
 	  nPar = nPar1;
@@ -532,7 +532,7 @@ void makeYield(const int icent = 0, const int isys = 0, int savePlot = 0, int sa
       hSignal[i]->Draw();
       funcSignal[i]->Draw("sames");
       functmp->Draw("sames");
-      TPaveText *t = GetTitleText(Form("%1.0f < p_{T} < %1.0f GeV/c (%s%%)",ptBins_low[i],ptBins_high[i],cent_Name[icent]),0.06);
+      TPaveText *t = GetTitleText(Form("%1.1f < p_{T} < %1.1f GeV/c (%s%%)",ptBins_low[i],ptBins_high[i],cent_Name[icent]),0.06);
       t->Draw();
       TLine *line = GetLine(low_mass_tmp,hSignal[i]->GetMinimum()*1.5,low_mass_tmp,hSignal[i]->GetMaximum()*0.3,1);
       line->Draw();
@@ -624,7 +624,7 @@ void makeYield(const int icent = 0, const int isys = 0, int savePlot = 0, int sa
 }
 
 //================================================
-void makeYieldRun13(const int icent = 0, const int isys = 0, int savePlot = 1, int saveHisto = 1)
+void makeYieldRun13(const int icent = 0, const int isys = 0, int savePlot = 0, int saveHisto = 0)
 {
   const char *sys_name[7] = {"","_LargeScale","_SmallScale","_pol1","_LargeFit","_SmallFit","_Rebin"};
   const char *sys_title[7] = {"","Sys.LargeScale.","Sys.SmallScale.","Sys.pol1.","Sys.LargeFit.","Sys.SmallFit.","Sys.Rebin"};
@@ -836,7 +836,8 @@ void makeYieldRun13(const int icent = 0, const int isys = 0, int savePlot = 1, i
       	{
       	  //func_tmp->SetParameter(ip,functmp->GetParameter(ip+3));
       	}
-      TFitResultPtr ptr = hSignal[i]->Fit(func_tmp,"IR0QS");
+      TH1F *hBkgSig = (TH1F*)hSignal[i]->Clone(Form("%s_fit_bkg",hSignal[i]->GetName()));
+      TFitResultPtr ptr = hBkgSig->Fit(func_tmp,"IR0QS");
       TF1 *bkgfunc_tmp = new TF1(Form("bkgfunc_tmp_%d",i),Form("%s",funcForm.Data()),fit_min,fit_max);
       for(int j=0; j<nPar; j++)
       	{
