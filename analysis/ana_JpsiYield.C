@@ -760,7 +760,7 @@ void makeYieldRun13(const int icent = 0, const int isys = 0, int savePlot = 0, i
       TF1 *functmp = new TF1(Form("Fit%s_temp",hSignal[i]->GetName()),Form("gausn(0)+%s(3)",funcForm.Data()),fit_min,fit_max);
       functmp->SetParameter(0,20);
       functmp->FixParameter(1,3.09);
-      functmp->FixParameter(2,0.06);
+      functmp->FixParameter(2,0.05);
       hSignal[i]->Fit(functmp,"IRS0Q");
       
       funcSignal[i] = new TF1(Form("Fit%s",hSignal[i]->GetName()),Form("gausn(0)+%s(3)",funcForm.Data()),fit_min,fit_max);

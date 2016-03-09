@@ -56,7 +56,7 @@ const char *cent_Title[nCentBins] = {"00100"};
 
 const double pi = 3.1415926;
 const char *charge_name[3] = {"","_pos","_neg"};
-const double jpsiMass = 3.096;
+const double jpsiMass = 3.097;
 const double muMass = 0.1057;
 const int year = YEAR;
 
@@ -73,6 +73,7 @@ TF1 *funcTrigEffCorr[nCentBins];
 TH1F *hMtdRespEffCosmic;
 TH1F *hMtdRespEffEmbed;
 
+void flatPt(const int icent, const bool savePlot);
 void tuneResolution(const int icent, const bool savePlot);
 void upsilon(const int icent, const bool savePlot);
 void trigEff();
@@ -84,8 +85,6 @@ void smear(const double masss, const int icent, const int nExpr, const double sh
 	   TF1 *funcTrigEff, TF1 *funcTrigEffCorr,
 	   const bool debug,
 	   TH1F *hRcJpsiPtMtdResp=0, TH2F *hRcJpsiMassMtdResp=0);
-void tuneSmear(const double masss, const int icent, const int nExpr, const double shift, const double sigma, TH1F *hInputPt, TH2F *hRcJpsiMassVsPt);
-
 TLorentzVector myBoost(TLorentzVector parent, TLorentzVector daughter);
 TLorentzVector twoBodyDecay(TLorentzVector parent, Double_t dmass);
 double combinedFit(double *x, double *par);
@@ -339,12 +338,11 @@ void trigEff()
 //================================================
 void tuneResolution(const int icent, const bool savePlot)
 {
-  const int anaType = 1; // 0 - scan; 1 - determine smear & shift
-  const int nShiftScan = 1;
-  const int nSmearScan = 1;
+  const int anaType = 3; // 0 - check raw jpsi distribution; 1 - scan; 2 - check scan; 3 - pt dependence
+  const int nShiftScan = 10;
+  const int nSmearScan = 20;
   const int index = 4;
 
-  // input spectrum shape
   TH1F *hMcJpsiPt;
   if(year==2013)
     {
@@ -362,96 +360,9 @@ void tuneResolution(const int icent, const bool savePlot)
     {
       TFile *fWeight = TFile::Open("Rootfiles/Published/Jpsi_Raa_200/Publication.Jpsi.200GeV.root","read");
       hMcJpsiPt = (TH1F*)fWeight->Get(Form("TBW_Jpsi_Yield_cent%s",cent_Title[icent]));
-    } 
-
-  // scan smear and shift
-  TH2F *hRcJpsiMassScan[nShiftScan][nSmearScan];
-  if(anaType == 0)
-    {
-      for(int i=0; i<nShiftScan; i++)
-	{
-	  for(int k=0; k<nSmearScan; k++)
-	    {
-	      printf("[i] Scan (%d,%d)\n",i,k);
-	      double sigma = k*0.002;
-	      double shift = i*(-0.002);
-	      hRcJpsiMassScan[i][k] = new TH2F(Form("hRcJpsiMassVsPt_%s_scan%d_%d",cent_Title[icent],i,k),Form("Mass distribution of reconstructed J/#psi (%s%%);p_{T} (GeV/c);mass (GeV/c^{2})",cent_Name[icent]),110,0,11,4000,2,4);
-	      tuneSmear(jpsiMass, icent, 1e7, shift, sigma, hMcJpsiPt, hRcJpsiMassScan[i][k]);
-	    }
-	}
-      TFile *fout = 0x0;
-      if(year==2014) fout = TFile::Open("Rootfiles/Run14.AuAu200.TrkResScan.root","recreate");
-      if(year==2013) fout = TFile::Open("Rootfiles/Run13.pp500.TrkResScan.root","recreate");
-      for(int i=0; i<nShiftScan; i++)
-	{
-	  for(int k=0; k<nSmearScan; k++)
-	    {
-	      hRcJpsiMassScan[i][k]->Write();
-	    }
-	}
     }
 
-  if(anaType == 1)
-    {
-      TFile *fscan = 0x0;
-      if(year==2014) fscan = TFile::Open("Rootfiles/Run14.AuAu200.TrkResScan.root","read");
-      if(year==2013) fscan = TFile::Open("Rootfiles/Run13.pp500.TrkResScan.root","read");
-
-      // check with embedding
-      TFile *fembed = 0x0;
-      if(year==2014) fembed = TFile::Open(Form("Rootfiles/Run14.AuAu200.JpsiEff.pt%1.1f.pt%1.1f.root",pt1_cut,pt2_cut),"read");
-      if(year==2013) fembed = TFile::Open(Form("Rootfiles/Run13.pp500.JpsiEff.pt%1.1f.pt%1.1f.root",pt1_cut,pt2_cut),"read");
-
-      TH2F *hEmbedJpsi[2];
-      hEmbedJpsi[0] = (TH2F*)fembed->Get(Form("TPCreco_Jpsi_MassVsPt_%s",cent_Title[icent]));
-      hEmbedJpsi[1] = (TH2F*)fscan->Get(Form("hRcJpsiMassVsPt_%s_scan0_0",cent_Title[icent]));
-
-      TObjArray embSlices[2];
-      TH1F *hEmbMean[2];
-      TH1F *hEmbSigma[2];
-      for(int i=0; i<2; i++)
-	{
-	  hEmbedJpsi[i]->RebinX(5);
-	  hEmbedJpsi[i]->FitSlicesY(0, 0, -1, 0, "QNR", &embSlices[i]);
-	  hEmbMean[i] = (TH1F*)((TH1F*)embSlices[i][1])->Clone(Form("hEmbMean_%d",i));
-	  hEmbMean[i]->SetMarkerStyle(21+i*4);
-	  hEmbMean[i]->SetMarkerColor(i+1);
-	  hEmbMean[i]->SetLineColor(i+1);
-	  hEmbMean[i]->GetXaxis()->SetRangeUser(0,8);
-	  hEmbMean[i]->GetYaxis()->SetRangeUser(3.085,3.115);
-	  hEmbMean[i]->SetTitle(";p_{T} (GeV/c);Mean");
-
-	  hEmbSigma[i] = (TH1F*)((TH1F*)embSlices[i][2])->Clone(Form("hEmbSigma_%d",i));
-	  hEmbSigma[i]->SetMarkerStyle(21+i*4);
-	  hEmbSigma[i]->SetMarkerColor(i+1);
-	  hEmbSigma[i]->SetLineColor(i+1);
-	  hEmbSigma[i]->GetXaxis()->SetRangeUser(0,8);
-	  hEmbSigma[i]->GetYaxis()->SetRangeUser(0.02,0.06);
-	  hEmbSigma[i]->SetTitle(";p_{T} (GeV/c);#sigma");
-	}
-      TCanvas *c1 = new TCanvas("embed_mean", "embed_mean", 800, 600);
-      hEmbMean[0]->Draw();
-      hEmbMean[1]->Draw("sames");
-      TPaveText *t1 = GetTitleText("Mean of J/#Psi mass peak");
-      t1->Draw();
-      TLegend *leg = new TLegend(0.18,0.65,0.42,0.88);
-      leg->SetBorderSize(0);
-      leg->SetFillColor(0);
-      leg->SetTextSize(0.04);
-      leg->AddEntry(hEmbMean[0],"Embedding","PL");
-      leg->AddEntry(hEmbMean[1],"ToyMC","PL");
-      leg->Draw();
-
-      c1 = new TCanvas("embed_sigma", "embed_sigma", 800, 600);
-      hEmbSigma[0]->Draw();
-      hEmbSigma[1]->Draw("sames");
-      t1 = GetTitleText("Width of J/#Psi mass peak");
-      t1->Draw();
-      leg->Draw();
-      
-    }
   // real data
-  /*
   TFile *fdata = 0x0;
   if(year==2014) fdata = TFile::Open(Form("Rootfiles/Pico.Run14.AuAu200.jpsi.pt%1.1f.pt%1.1f.yield.root",pt1_cut,pt2_cut),"read");
   if(year==2013) fdata = TFile::Open(Form("Rootfiles/Pico.Run13.pp500.jpsi.VtxCut.pt%1.1f.pt%1.1f.yield.root",pt1_cut,pt2_cut),"read");
@@ -459,16 +370,80 @@ void tuneResolution(const int icent, const bool savePlot)
   TH1F *hSignal = (TH1F*)fdata->Get(Form("Jpsi_Signal_cent%s_pt%s",cent_Title[icent],pt_Name[0]));
   TF1 *fitSignal = (TF1*)fdata->Get(Form("FitJpsi_Signal_cent%s_pt%s",cent_Title[icent],pt_Name[0]));
 
+
   const int nHistos = 5;
   TString name[nHistos] = {"TPCemb","TPCreco","MTDreco","MTDtrig","MTDresp"};
+  // check raw jpsi distribution
+  if(anaType == 0)
+    {
+      TH1F *hRcJpsiPt[nHistos];
+      TH2F *hRcJpsiMass[nHistos];
+      for(int i=0; i<nHistos; i++)
+	{
+	  hRcJpsiPt[i] = new TH1F(Form("hRcJpsiPt_%s_%s",name[i].Data(),cent_Title[icent]),Form("p_{T} distribution of reconstructed J/#psi (%s%%);p_{T} (GeV/c)",cent_Name[icent]),110,0,11);
+	  hRcJpsiMass[i] = new TH2F(Form("hRcJpsiMass_%s_%s",name[i].Data(),cent_Title[icent]),Form("Mass distribution of reconstructed J/#psi (%s%%);mass (GeV/c^{2})",cent_Name[icent]),110,0,11,4000,2,4);
+	}
+      smear(jpsiMass, icent, 5e7, 0, 0, hMcJpsiPt, hRcJpsiPt[0], hRcJpsiMass[0], hRcJpsiPt[1], hRcJpsiMass[1], hRcJpsiPt[2], hRcJpsiMass[2], hRcJpsiPt[3], hRcJpsiMass[3], funcTrigEff[icent], funcTrigEffCorr[icent], 0, hRcJpsiPt[4], hRcJpsiMass[4]);
+
+      hRawCounts->SetMarkerStyle(21);
+      hRawCounts->Scale(1./hRawCounts->Integral());
+      TCanvas *c = draw1D(hRawCounts,Form("p_{T} distribution of J/#psi in MTD"),kFALSE,kTRUE);
+      hRcJpsiPt[index]->Sumw2();
+      hRcJpsiPt[index]->SetLineColor(2);
+      TH1F *hRebin = (TH1F*)hRcJpsiPt[index]->Rebin(hRawCounts->GetXaxis()->GetNbins(),Form("%s_rebin",hRawCounts->GetName()),hRawCounts->GetXaxis()->GetXbins()->GetArray());
+      hRebin->Scale(1./hRebin->Integral());
+      hRebin->Draw("sameHIST");
+      if(savePlot)
+	{
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiRes/JpsiPt_ToyMcVsData_cent%s.pdf",run_type,cent_Title[icent]));
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiRes/JpsiPt_ToyMcVsData_cent%s.png",run_type,cent_Title[icent]));
+	}
+    }  
+
+  TH1F *hRcJpsiPtScan[nShiftScan][nSmearScan][nHistos];
+  TH2F *hRcJpsiMassScan[nShiftScan][nSmearScan][nHistos];
+  if(anaType == 1)
+    {
+      for(int i=0; i<nShiftScan; i++)
+	{
+	  for(int k=0; k<nSmearScan; k++)
+	    {
+	      printf("[i] Scan (%d,%d)\n",i+1,k+1);
+	      double sigma = k*0.002;
+	      double shift = i*(-0.002);
+	      for(int j=0; j<nHistos; j++)
+		{
+		  hRcJpsiPtScan[i][k][j] = new TH1F(Form("hRcJpsiPt_%s_%s_scan%d_%d",name[j].Data(),cent_Title[icent],i,k),Form("p_{T} distribution of reconstructed J/#psi (%s%%);p_{T} (GeV/c)",cent_Name[icent]),110,0,11);
+		  hRcJpsiMassScan[i][k][j] = new TH2F(Form("hRcJpsiMass_%s_%s_scan%d_%d",name[j].Data(),cent_Title[icent],i,k),Form("Mass distribution of reconstructed J/#psi (%s%%);mass (GeV/c^{2})",cent_Name[icent]),110,0,11,4000,2,4);
+		}
+	      smear(jpsiMass, icent, 1e7, shift, sigma, hMcJpsiPt, 
+		    hRcJpsiPtScan[i][k][0], hRcJpsiMassScan[i][k][0], hRcJpsiPtScan[i][k][1], hRcJpsiMassScan[i][k][1],
+		    hRcJpsiPtScan[i][k][2], hRcJpsiMassScan[i][k][2], hRcJpsiPtScan[i][k][3], hRcJpsiMassScan[i][k][3],
+		    funcTrigEff[icent], funcTrigEffCorr[icent], 0, hRcJpsiPtScan[i][k][4], hRcJpsiMassScan[i][k][4]);
+	    }
+	}
+
+      TFile *fout = 0x0;
+      if(year==2014) fout = TFile::Open("Rootfiles/Run14.AuAu200.TrkResScan.root","recreate");
+      if(year==2013) fout = TFile::Open("Rootfiles/Run13.pp500.TrkResScan.root","recreate");
+      for(int i=0; i<nShiftScan; i++)
+	{
+	  for(int k=0; k<nSmearScan; k++)
+	    {
+	      for(int j=0; j<nHistos; j++)
+		{
+		  hRcJpsiPtScan[i][k][j]->Write();
+		  hRcJpsiMassScan[i][k][j]->Write();
+		}
+	    }
+	}
+    }
 
   const int shift_index = 5;
   const int smear_index = 10;
   
   if(anaType == 2)
     {
-
-
       // real data
       TH1F *hSignalFit = (TH1F*)hSignal->Clone("hSignalFit");
       hSignalFit->GetYaxis()->SetRangeUser(0,500);
@@ -728,7 +703,6 @@ void tuneResolution(const int icent, const bool savePlot)
       leg->AddEntry(hSigmaData,"Real data","PL");
       leg->Draw();
     }
-  */
 }
 
 //================================================
@@ -825,7 +799,7 @@ void smear(const double masss, const int icent, const int nExpr, const double sh
       TF1 *functmp = (TF1*)funcTrkRes[icent]->Clone(Form("%s_%d",funcTrkRes[icent]->GetName(),i));
       functmp->SetParameter(0,funcTrkRes[icent]->GetParameter(0)*(1+sigma));
       double res1_smear = functmp->Eval(pt1);
-      double res2_smear = functmp->Eval(pt2);
+      double res2_semar = functmp->Eval(pt2);
 
       double rc_pt1 = (1-dpt1/res1*res1_smear) * pt1 * (1+shift);
       double rc_pt2 = (1-dpt2/res2*res2_smear) * pt2 * (1+shift);
@@ -900,61 +874,6 @@ void smear(const double masss, const int icent, const int nExpr, const double sh
     }
 }
 
-
-//================================================
-void tuneSmear(const double masss, const int icent, const int nExpr, 
-	       const double shift, const double sigma, 
-	       TH1F *hInputPt, TH2F *hRcJpsiMassVsPt)
-{
-  for(int i=0; i<nExpr; i++)
-    {
-      //double mc_pt =  hInputPt->GetRandom();
-      double mc_pt  = myRandom->Uniform(0,20);
-      double mc_phi = myRandom->Uniform(-1*pi, pi);
-      double mc_y   = myRandom->Uniform(-0.8, 0.8);
-      double mc_px = mc_pt * TMath::Cos(mc_phi);
-      double mc_py = mc_pt * TMath::Sin(mc_phi);
-      double mc_pz = sqrt(mc_pt*mc_pt+masss*masss) * TMath::SinH(mc_y);
-      TLorentzVector parent;
-      parent.SetXYZM(mc_px,mc_py,mc_pz,masss);
-      TLorentzVector daughter1 = twoBodyDecay(parent,muMass);
-      TLorentzVector daughter2 = parent - daughter1;
-
-      double pt1  = daughter1.Pt();
-      double eta1 = daughter1.Eta();
-      double phi1 = daughter1.Phi();
-      
-      double pt2  = daughter2.Pt();
-      double eta2 = daughter2.Eta();
-      double phi2 = daughter2.Phi();
-
-      if(pt1<0.5 || pt2<0.5) continue;
-
-      // momentum resolution & shift
-      int mom_index1 = hTrkResVsPt[icent]->GetXaxis()->FindBin(pt1)-1;
-      if(pt1>10) mom_index1 = hTrkResVsPt[icent]->GetXaxis()->FindBin(9)-1;
-      int mom_index2 = hTrkResVsPt[icent]->GetXaxis()->FindBin(pt2)-1;
-      if(pt2>10) mom_index2 = hTrkResVsPt[icent]->GetXaxis()->FindBin(9)-1;
-
-      double dpt1 = hTrkResBin[icent][mom_index1]->GetRandom();
-      double dpt2 = hTrkResBin[icent][mom_index2]->GetRandom();
-      double rc_pt1 = (1-dpt1) * pt1 * myRandom->Gaus(1+shift,pt1*sigma);
-      double rc_pt2 = (1-dpt2) * pt2 * myRandom->Gaus(1+shift,pt2*sigma);
-
-      // double res1 = funcTrkRes[icent]->Eval(pt1);
-      // double res2 = funcTrkRes[icent]->Eval(pt2);
-      // double rc_pt1 = (1-myRandom->Gaus(0,res1)) * pt1 * myRandom->Gaus(1+shift,pt1*sigma);
-      // double rc_pt2 = (1-myRandom->Gaus(0,res2)) * pt2 * myRandom->Gaus(1+shift,pt2*sigma);
-
-
-      if(rc_pt1<pt1_cut || rc_pt2<pt2_cut) continue;
-      TLorentzVector rc_daughter1, rc_daughter2;
-      rc_daughter1.SetPtEtaPhiM(rc_pt1,eta1,phi1,muMass);
-      rc_daughter2.SetPtEtaPhiM(rc_pt2,eta2,phi2,muMass);
-      TLorentzVector rc_parent = rc_daughter1 + rc_daughter2;
-      hRcJpsiMassVsPt->Fill(rc_parent.Pt(),rc_parent.M());
-    }
-}
 
 //-------------------------------------------------------
 TLorentzVector myBoost(TLorentzVector parent, TLorentzVector daughter)
