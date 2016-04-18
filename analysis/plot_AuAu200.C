@@ -11,10 +11,10 @@ const double npart[nCentBins] = {161, 280, 142, 62};
 void plot_AuAu200()
 {  
   //rawSignal();
-  //xsec();
+  xsec();
   //upsilon();
   //publication();
-  v2();
+  //v2();
   //efficiency();
 }
 
@@ -544,7 +544,7 @@ void v2(const bool savePlot = 0)
 }
 
 //================================================
-void xsec(const bool savePlot = 1)
+void xsec(const bool savePlot = 0)
 {
   gStyle->SetOptStat(0);
   const int marker_style[nCentBins] = {kFullCircle, kFullStar, kFullSquare, kFullCross};
@@ -558,7 +558,7 @@ void xsec(const bool savePlot = 1)
   const int highpt_color = 12;
 
   // published data
-  TFile *fpub = TFile::Open("Rootfiles/Publication.Jpsi.200GeV.root","read");
+  TFile *fpub = TFile::Open("Rootfiles/Published/Jpsi_Raa_200/Publication.Jpsi.200GeV.root","read");
   TGraphAsymmErrors *gAuAuLowPt[nCentBins];
   TGraphAsymmErrors *gAuAuLowPtSys[nCentBins];
   TGraphAsymmErrors *gAuAuHighPt[nCentBins];
@@ -590,9 +590,9 @@ void xsec(const bool savePlot = 1)
     }
 
   // data
-  TFile *fSys = TFile::Open(Form("Rootfiles/Pico.Run14.AuAu200.jpsi.%spt%1.1f.pt%1.1f.systematics.root",run_config,pt1_cut,pt2_cut),"read");
+  TFile *fSys = TFile::Open(Form("Rootfiles/2015QM/Pico.Run14.AuAu200.jpsi.%spt%1.1f.pt%1.1f.systematics.root",run_config,pt1_cut,pt2_cut),"read");
   TH1F *hSys = (TH1F*)fSys->Get(Form("Sys_all_%s",cent_Title[0]));
-  TFile *fdata = TFile::Open(Form("Rootfiles/Pico.Run14.AuAu200.jpsi.%spt%1.1f.pt%1.1f.xsec.root",run_config,pt1_cut,pt2_cut),"read");
+  TFile *fdata = TFile::Open(Form("Rootfiles/2015QM/Pico.Run14.AuAu200.jpsi.%spt%1.1f.pt%1.1f.xsec.root",run_config,pt1_cut,pt2_cut),"read");
   TH1F *hJpsiInvYield[nCentBins];
   TGraphErrors *hJpsiXsec[nCentBins];
   TGraphErrors *hJpsiXsecSys[nCentBins];
@@ -1770,7 +1770,7 @@ void upsilon(const bool savePlot = 1)
 }
 
 //================================================
-void publication(const bool savePlot = 1, const bool saveHisto = 1)
+void publication(const bool savePlot = 0, const bool saveHisto = 0)
 {
   gStyle->SetOptFit(1);
   gStyle->SetStatY(0.9);                

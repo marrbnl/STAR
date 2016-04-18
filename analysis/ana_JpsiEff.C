@@ -21,15 +21,15 @@ void ana_JpsiEff()
 
   //ploEff();
   //plotEmbedEff();
-  //makeMtdRespEff();
+  makeMtdRespEff();
   //makeTrigEff();
   //makeEmbedEff();
   //hadronEmbed();
-  compTrigEff();
+  //compTrigEff();
 }
 
 //================================================
-void ploEff(const int savePlot = 1)
+void ploEff(const int savePlot = 0)
 {
   TList *list = new TList;
   TString legName[nCentBins];
@@ -704,9 +704,11 @@ void makeEmbedEff()
 
 
 //================================================
-void makeMtdRespEff(bool savePlot = 1, bool saveHisto = 1)
+void makeMtdRespEff(bool savePlot = 0, bool saveHisto = 0)
 {
-  gStyle->SetOptFit(0);
+  gStyle->SetOptFit(1);
+  gStyle->SetStatW(0.15);                
+  gStyle->SetStatH(0.15);
   const char *name[2] = {"cosmic","embed"};
   TGraphAsymmErrors *hMtdResponseEff[2];  
   TFile *fin = 0x0, *fEmbed = 0x0;
@@ -723,15 +725,6 @@ void makeMtdRespEff(bool savePlot = 1, bool saveHisto = 1)
       hMtdResponseEff[0] = (TGraphAsymmErrors*)fin->Get("Run13BOTVsPt");
       fEmbed =  TFile::Open("output/Run13.pp500.jpsi.Embed.root","read");
     }
-
-  /*
-  // Fit cosmic ray data
-  c = drawGraph(hMtdResponseEff[0],"Run13: MTD response efficiency from cosmic ray (bottom half);p_{T} (GeV/c);eff");
-  //TF1 *func = new TF1("func",epsilonfit_1,1,20,3);
-  TF1 *func = new TF1("func","[0]+[1]*1./(exp(-x*[2]))",1,20);
-  hMtdResponseEff[0]->Fit(func,"IR");
-  return;
-  */
 
   int npoints = hMtdResponseEff[0]->GetN();
   const int nbins = npoints - 1;
@@ -757,7 +750,6 @@ void makeMtdRespEff(bool savePlot = 1, bool saveHisto = 1)
   hMtdResponseEff[1] = new TGraphAsymmErrors();
   hMtdResponseEff[1]->Divide(hMatch,hProj,"cl=0.683 b(1,1) mode");
 
-  // compare
   TH1F *hEff[2];
   for(int i=0; i<2; i++)
     {
@@ -777,6 +769,31 @@ void makeMtdRespEff(bool savePlot = 1, bool saveHisto = 1)
       hEff[i]->GetYaxis()->SetRangeUser(0,1.2);
     }
   ScaleHistoTitle(hEff[0],0.045,1,0.035,0.045,1,0.035,62);
+
+
+  // Fit embedding data
+  TH1F *hEmbedFit = (TH1F*)hEff[1]->Clone("hEmbedFit");
+  TF1 *func = new TF1("func","[0]*exp(-pow([1]/x,[2])-pow([3]/x/x,[4]))",1,20);
+  func->SetParameters(1,0.1,1,0.01,1);
+  hEmbedFit->Fit(func,"IR0");
+  hEmbedFit->GetYaxis()->SetRangeUser(0,1.5);
+  c = draw1D(hEmbedFit,"MTD response efficiency from embedding;p_{T} (GeV/c);Efficiency");
+  func->SetLineColor(4);
+  func->Draw("sames");
+  TLegend *leg = new TLegend(0.3,0.2,0.5,0.4);
+  leg->SetBorderSize(0);
+  leg->SetFillColor(0);
+  leg->SetTextSize(0.04);
+  leg->AddEntry(hEmbedFit,"Embedding","PE");
+  leg->AddEntry(func,"Fit function: [0]*exp{-(#frac{[1]}{x})^{[2]}-(#frac{[3]}{x^{2}})^{[4]}}","L");
+  leg->Draw();
+  if(savePlot)
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/FitEmbedMtdRespEff.pdf",run_type));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/FitEmbedMtdRespEff.png",run_type));
+    }
+
+  // compare
   c = draw1D(hEff[0],"MTD response efficiency;p_{T} (GeV/c);Efficiency");
   hEff[1]->Draw("sames P");
 
@@ -809,6 +826,7 @@ void makeMtdRespEff(bool savePlot = 1, bool saveHisto = 1)
 	{
 	  hEff[i]->Write();
 	}
+      func->Write(Form("Fit_%s",hEff[1]->GetName()));
     }
 }
 

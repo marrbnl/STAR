@@ -11,24 +11,21 @@ void ana_Lumi()
   gStyle->SetStatW(0.2);                
   gStyle->SetStatH(0.2);
 
-  //makePrescale();
-  //makeTrigBias();
-  Lumi();
+  //makeHisto();
 
+  //Lumi2013();
+  Lumi2014();
   //MB();
   //MTD();
 }
 
 //================================================
-void Lumi(const int savePlot = 0, const int saveHisto = 0)
+void Lumi2013(const int savePlot = 0, const int saveHisto = 0)
 {
-  if(year==2013)
-    {
-      f = TFile::Open(Form("./output/Run13.MB.VtxCut.root"),"read");
-    }
+  f = TFile::Open(Form("./output/Run13.MB.VtxCut.root"),"read");
 
   THnSparseF *hn = (THnSparseF*)f->Get("hEventVtx");
-  hn->GetAxis(0)->SetRangeUser(14130000,14162000);
+  hn->GetAxis(0)->SetRangeUser(start_run,end_run);
 
   // VPDMB efficiency
   hn->GetAxis(1)->SetRange(2,2);
@@ -48,7 +45,7 @@ void Lumi(const int savePlot = 0, const int saveHisto = 0)
   hGoodBbcVpd->Divide(hGoodBbc);
   hGoodBbcVpd->SetMarkerStyle(21);
   hGoodBbcVpd->SetMarkerSize(1.0);
-  TF1 *func1 = new TF1("func1","pol0",1413000,14162000);
+  TF1 *func1 = new TF1("func1","pol0",start_run,end_run);
   hGoodBbcVpd->Fit(func1,"IR0");
   c = draw1D(hGoodBbcVpd,"Efficiency of VPDMB trigger;RunId;(BBC&PosRank&VPD)/(BBC&PosRank)",false,true);
   func1->SetLineColor(2);
@@ -179,72 +176,386 @@ void Lumi(const int savePlot = 0, const int saveHisto = 0)
 }
 
 //================================================
-void makePrescale(const int savePlot = 1, const int saveHisto = 1)
+void Lumi2014(const int savePlot = 0, const int saveHisto = 0)
 {
-  const char *trigName = "BBCMB";
+  f = TFile::Open(Form("./output/Run14.AuAu200.MB.VtxEff.root"),"read");
+
+  THnSparseF *hn = (THnSparseF*)f->Get("mhMbEvtEff");
+
+  // Vertex distribution
+  TH1F *hTpcVz = (TH1F*)hn->Projection(1);
+  c = draw1D(hTpcVz,"VPD-ZDC-novtx-mon: vertex z distribution;vz_{TPC} (cm)",false,false);
+  TLine *line = GetLine(-100,0,-100,0.8*hTpcVz->GetMaximum());
+  line->Draw();
+  line = GetLine(100,0,100,0.8*hTpcVz->GetMaximum());
+  line->Draw();
+  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/VpdZdcNoVtx_TpcVz.pdf",run_type));
+
+  TH1F *hVtxDz = (TH1F*)hn->Projection(2);
+  c = draw1D(hVtxDz,"VPD-ZDC-novtx-mon: #Deltaz distribution for vertices;vz_{TPC}-vz_{VPD} (cm)",true,false);
+  TLine *line = GetLine(-5,0,-5,0.8*hVtxDz->GetMaximum());
+  line->Draw();
+  line = GetLine(5,0,5,0.8*hVtxDz->GetMaximum());
+  line->Draw();
+  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/VpdZdcNoVtx_TpcVpdDz.pdf",run_type));
+
+  // vertex cut efficiency
+  TH1F *hNEvents[nCentBins][3];
+  for(int i=0; i<nCentBins; i++)
+    {
+      hn->GetAxis(4)->SetRange(centBins_low[i],centBins_high[i]);
+     
+      hNEvents[i][0] = (TH1F*)hn->Projection(0);
+      hNEvents[i][0]->SetName(Form("NEventsPerRun_All_cent%s",cent_Title[i]));
+
+      hn->GetAxis(1)->SetRangeUser(-100+1e-4,100-1e-4);
+      hNEvents[i][1] = (TH1F*)hn->Projection(0);
+      hNEvents[i][1]->SetName(Form("NEventsPerRun_TpcVzCut_cent%s",cent_Title[i]));
+
+      hn->GetAxis(2)->SetRangeUser(-5+1e-4,5-1e-4);
+      hNEvents[i][2] = (TH1F*)hn->Projection(0);
+      hNEvents[i][2]->SetName(Form("NEventsPerRun_TpcVpdDzCut_cent%s",cent_Title[i]));
+
+      for(int j=0; j<3; j++) hNEvents[i][j]->Sumw2();
+
+      hn->GetAxis(1)->SetRange(0,-1);
+      hn->GetAxis(2)->SetRange(0,-1);
+    }
+  hn->GetAxis(4)->SetRange(0,-1);
+
+  TList *list = new TList;
+  TString legName[2] = {"|vz_{TPC}| < 100 cm", "+ |vz_{TPC}-vz_{VPD}| < 3 cm"};
+  TH1F *hVtxEff[nCentBins][2];
+  for(int i=0; i<nCentBins; i++)
+    {
+      hVtxEff[i][0] = (TH1F*)hNEvents[i][1]->Clone(Form("EffPerRun_TpcVzCut_cent%s",cent_Title[i]));
+      hVtxEff[i][1] = (TH1F*)hNEvents[i][2]->Clone(Form("EffPerRun_TpcVpdDzCut_cent%s",cent_Title[i]));
+      list->Clear();
+      for(int j=0; j<2; j++)
+	{
+	  TGraphAsymmErrors *graph = new TGraphAsymmErrors(hVtxEff[i][j],hNEvents[i][0],"cl=0.683 b(1,1) mode");
+	  graph->SetName(Form("graph_%d_%d",i,j));
+	  hVtxEff[i][j]->Divide(hNEvents[i][0]);
+	  double x,y;
+	  for(int ipoint=0; ipoint<graph->GetN(); ipoint++)
+	    {
+	      graph->GetPoint(ipoint,x,y);
+	      int bin = hVtxEff[i][j]->FindFixBin(x);
+	      double err1 = graph->GetErrorYhigh(ipoint);
+	      double err2 = graph->GetErrorYlow(ipoint);
+	      double err = (err1>err2) ? err1 : err2;
+	      hVtxEff[i][j]->SetBinError(bin,err);
+	      if(y==0)
+		{
+		  printf("[w] 0 efficiency for run %d: %1.0f/%1.0f\n",bin+start_run-1,hNEvents[i][j+1]->GetBinContent(bin),hNEvents[i][0]->GetBinContent(bin));
+		}
+	      if(y!=hVtxEff[i][j]->GetBinContent(bin))
+		{
+		  printf("[e] Mismatch eff: %4.2f != %4.2f\n",y,hVtxEff[i][j]->GetBinContent(bin));
+		}
+	    }
+	  list->Add(hVtxEff[i][j]);
+	}
+      c = drawHistos(list,Form("VtxCutEff_cent%s",cent_Title[i]),Form("VPD-ZDC-novtx-mon: vertex cut efficiency (%s%%)",cent_Name[i]),kFALSE,0,30,kTRUE,-0.1,1.5,kFALSE,kTRUE,legName,kTRUE,"",0.5,0.7,0.2,0.35,true);
+      if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/VpdZdcNoVtx_VtxCutEff_cent%s.pdf",run_type,cent_Title[i]));
+    }
+
+  // different luminosity
+  TH1F *hVtxEffLumi[nCentBins][4];
+  const char *trgSetupName[4] = {"production","production_low","production_mid","production_high"};
+  for(int i=0; i<4; i++)
+    {
+      for(int j=0; j<nCentBins; j++)
+	{
+	  hVtxEffLumi[j][i] = (TH1F*)hVtxEff[j][1]->Clone(Form("EffPerRun_TpcVpdDzCut_%s_cent%s",trgSetupName[i],cent_Title[j]));
+	  hVtxEffLumi[j][i]->Reset();
+	}
+      ifstream fruns;
+      fruns.open(Form("Rootfiles/Luminosity/%s/AuAu_200_%s_2014.list",run_type,trgSetupName[i]));
+      int runnumber;
+      while(!fruns.eof())
+	{
+	  fruns >> runnumber;
+	  for(int j=0; j<nCentBins; j++)
+	    {
+	      int bin = hVtxEff[j][1]->FindFixBin(runnumber+0.5);
+	      hVtxEffLumi[j][i]->SetBinContent(bin,hVtxEff[j][1]->GetBinContent(bin));
+	      hVtxEffLumi[j][i]->SetBinError(bin,hVtxEff[j][1]->GetBinError(bin));
+	    }
+	}
+    }
+  draw1D(hVtxEffLumi[0][3]);
+  TString legName2[4];
+  for(int j=0; j<nCentBins; j++)
+    {
+      list->Clear();
+      for(int i=0; i<4; i++)
+	{
+	  legName2[i] = Form("AuAu_200_%s_2014",trgSetupName[i]);
+	  list->Add(hVtxEffLumi[j][i]);
+	}
+      c = drawHistos(list,Form("VtxCutEff_cent%s_%s",cent_Title[j],trgSetupName[i]),Form("VPD-ZDC-novtx-mon: vertex cut efficiency (%s%%)",cent_Name[j]),kFALSE,0,30,kTRUE,-0.1,1.5,kFALSE,kTRUE,legName2,kTRUE,"trgsetupname",0.5,0.7,0.2,0.35,true);
+      if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/VpdZdcNoVtx_VtxCutEff_%s_cent%s.pdf",run_type,trgSetupName[i],cent_Title[j]));
+    }
+      
+  return;
+
+  // VPDMB efficiency
+  hn->GetAxis(1)->SetRange(2,2);
+  hn->GetAxis(3)->SetRange(3,3);
+  TH1F *hBbcTpcVz = (TH1F*)hn->Projection(4);
+  hBbcTpcVz->SetName("hBbcTpcVz");
+  c = draw1D(hBbcTpcVz,"BBCMB: distribution of TPC vz with Ranking>0;vz_{TPC} (cm)",false,false);
+  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/BBCMB_TpcVz_PosRank.pdf",run_type));
+
+  TH1F *hGoodBbc = (TH1F*)hn->Projection(0);
+  hGoodBbc->SetName("hGoodBbc");
+  hn->GetAxis(2)->SetRange(2,2);
+  TH1F *hGoodBbcVpd = (TH1F*)hn->Projection(0);
+  hGoodBbcVpd->SetName("hGoodBbcVpd");
+  hGoodBbcVpd->Sumw2();
+  hGoodBbc->Sumw2();
+  hGoodBbcVpd->Divide(hGoodBbc);
+  hGoodBbcVpd->SetMarkerStyle(21);
+  hGoodBbcVpd->SetMarkerSize(1.0);
+  TF1 *func1 = new TF1("func1","pol0",start_run,end_run);
+  hGoodBbcVpd->Fit(func1,"IR0");
+  c = draw1D(hGoodBbcVpd,"Efficiency of VPDMB trigger;RunId;(BBC&PosRank&VPD)/(BBC&PosRank)",false,true);
+  func1->SetLineColor(2);
+  func1->Draw("sames");
+  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/BBCMB_VpdEff.pdf",run_type));
+  
+  hn->GetAxis(1)->SetRange(0,-1);
+  hn->GetAxis(2)->SetRange(0,-1);
+  hn->GetAxis(3)->SetRange(0,-1);
+
+  // Obtain vertex cut efficiency for VPDMB
+  hn->GetAxis(2)->SetRange(2,2);
+  TH1F *hVpdAll = (TH1F*)hn->Projection(0);
+  hVpdAll->SetName("hVpdAll");
+  TH2F *hVpdVsZdcAll = (TH2F*)hn->Projection(0,6);
+  hVpdVsZdcAll->SetName("hVpdVsZdcAll");
+
+  TH1F *hTpcVpdDz[3];
+  hTpcVpdDz[0]= (TH1F*)hn->Projection(5);
+  hTpcVpdDz[0]->SetName("hTpcVpdDz_All");  
+
+  hn->GetAxis(3)->SetRange(3,3);
+  hTpcVpdDz[1]= (TH1F*)hn->Projection(5);
+  hTpcVpdDz[1]->SetName("hTpcVpdDz_PosRank");
+
+  hn->GetAxis(4)->SetRangeUser(-50,50);
+  hTpcVpdDz[2]= (TH1F*)hn->Projection(5);
+  hTpcVpdDz[2]->SetName("hTpcVpdDz_vz50cm");
+  TH2F *hDzVsRunRaw = (TH2F*)hn->Projection(5,0);
+  hDzVsRunRaw->SetName("hDzVsRunRaw");
+
+  for(int i=0; i<3; i++)
+    {
+      hTpcVpdDz[i]->SetLineColor(color[i]);
+    }
+  c = draw1D(hTpcVpdDz[0],"VPDMB: distribution of vz difference between TPC and VPD;vz_{TPC} - vz_{VPD} (cm)",true,false);
+  hTpcVpdDz[1]->Draw("samesHIST");
+  hTpcVpdDz[2]->Draw("samesHIST");
+  TLegend *leg = new TLegend(0.15, 0.65, 0.3, 0.8);
+  leg->SetBorderSize(0);
+  leg->SetFillColor(0);
+  leg->SetTextSize(0.04);
+  leg->AddEntry(hTpcVpdDz[0],"All","L");
+  leg->AddEntry(hTpcVpdDz[1],"+Ranking > 0","L");
+  leg->AddEntry(hTpcVpdDz[2],"+|vz_{TPC}| < 50 cm","L");
+  leg->Draw();
+  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/VPDMB_TpcVpdDz.pdf",run_type));
+
+  hn->GetAxis(5)->SetRangeUser(-5,5);
+  TH1F *hVpdAcc = (TH1F*)hn->Projection(0);
+  hVpdAcc->SetName("hVpdAcc");
+  TH2F *hVpdVsZdcAcc = (TH2F*)hn->Projection(0,6);
+  hVpdVsZdcAcc->SetName("hVpdVsZdcAcc");
+
+  TH1F *hVpdFrac = (TH1F*)hVpdAcc->Clone("hVpdFrac");
+  hVpdAll->Sumw2();
+  hVpdFrac->Divide(hVpdAll);
+  hVpdFrac->SetMarkerStyle(21);
+  c = draw1D(hVpdFrac,"Fraction of VPDMB events within vertxing cuts;RunId;fraction");
+  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/VPDMB_VtxCutEff.pdf",run_type));
+  
+
+  // Get equivalent # of MB events
+  TFile *fin = 0;
+  if(!saveHisto) fin = TFile::Open(Form("Rootfiles/%s.Luminosity.root",run_type),"read");
+  else           fin = TFile::Open(Form("Rootfiles/%s.Luminosity.root",run_type),"update");
+  TH1F *hNeventMtd = (TH1F*)fin->Get("hNevents_MTD-dimuon");
+  TH1F *hPrescaleMtd = (TH1F*)fin->Get("hPreScale_MTD-dimuon");
+  TH1F *hLivetimeMtd = (TH1F*)fin->Get("hLiveTime_MTD-dimuon");
+  TH1F *hNeventVpd = (TH1F*)fin->Get("hNevents_VPDMB");
+  TH1F *hPrescaleVpd = (TH1F*)fin->Get("hPreScale_VPDMB");
+  TH1F *hLivetimeVpd = (TH1F*)fin->Get("hLiveTime_VPDMB");
+
+  int nbins = hNeventMtd->GetNbinsX();
+  double nMtdEvents = 0;
+  double nVpdEvents = 0;
+  double nVpdEventsAcc = 0;
+
+  TH1F *hDzWeight = 0x0;
+  //hDzVsRunRaw->SetName("hDzVsRunRaw");
+  c = draw2D(hDzVsRunRaw);
+  for(int bin=1; bin<=nbins; bin++)
+    {
+      double mtdEvts =  hNeventMtd->GetBinContent(bin);
+      if(mtdEvts<=0) continue;
+      if(hPrescaleMtd->GetBinContent(bin)==0) continue;
+      if(hLivetimeVpd->GetBinContent(bin)==0) continue;
+      nMtdEvents += mtdEvts;
+      
+      int jbin = hVpdAcc->FindFixBin(hNeventMtd->GetBinCenter(bin));
+      double scale = hPrescaleVpd->GetBinContent(bin)/hPrescaleMtd->GetBinContent(bin) * hLivetimeMtd->GetBinContent(bin)/hLivetimeVpd->GetBinContent(bin);
+      nVpdEventsAcc += hNeventVpd->GetBinContent(bin) * hVpdFrac->GetBinContent(jbin) * scale;
+      //printf("[i] Run %d for VPD/MTD = %4.2f\n",14130000+bin-1,hNeventVpd->GetBinContent(bin)*scale/mtdEvts);
+
+
+      int kbin = hDzVsRunRaw->GetXaxis()->FindFixBin(hNeventMtd->GetBinCenter(bin));
+      cout << bin << "  " << kbin << endl;
+      
+      TH1F *htmp = (TH1F*)hDzVsRunRaw->ProjectionY(Form("hDz_%d",bin),kbin,kbin);
+      
+      if(!hDzWeight)
+	{
+	  hDzWeight = (TH1F*)htmp->Clone("hDzWeight");
+	  hDzWeight->Scale(scale);
+	}
+      else
+	{
+	  hDzWeight->Add(htmp,scale);
+	}
+      
+      //cout << nVpdEventsAcc << endl;
+      //cout << bin << "  " << hNeventMtd->GetBinCenter(bin) << "  " << jbin << "  " << hVpdFrac->GetBinContent(jbin)
+      //	   << "  " << hPrescaleVpd->GetBinContent(bin) << "  " << hLivetimeVpd->GetBinContent(bin) 
+      //	   << "  " << hPrescaleMtd->GetBinContent(bin) << "  " << hLivetimeMtd->GetBinContent(bin) << endl;
+    }
+  printf("[i] Processed MTD = %1.0f --> VPD = %1.0f\n",nMtdEvents,nVpdEventsAcc);
+
+  c = draw1D(hDzWeight);
+
+  TH1F *hMBevents = new TH1F("hMBevents","",2,0,2);
+  hMBevents->SetBinContent(1,nMtdEvents);
+  hMBevents->SetBinContent(2,nVpdEventsAcc);
+  if(saveHisto)
+    {
+      hMBevents->Write("",TObject::kOverwrite);
+    }
+  
+}
+
+//================================================
+void makeHisto(const int savePlot = 1, const int saveHisto = 1)
+{
+  const char *trigName = "VPD-ZDC-novtx-mon";
   
   TH1F *hPreScale = new TH1F(Form("hPreScale_%s",trigName), Form("%s: per-scale per run;runId;Pre-scale",trigName), end_run-start_run, start_run, end_run);
   TH1F *hLiveTime = new TH1F(Form("hLiveTime_%s",trigName), Form("%s: live-time per run;runId;Live-time",trigName), end_run-start_run, start_run, end_run);
   TH1F *hNevents = new TH1F(Form("hNevents_%s",trigName), Form("%s: # of events per run;runId;Nevts",trigName), end_run-start_run, start_run, end_run);
 
-  ifstream flumi, fnevt;
-  flumi.open(Form("Rootfiles/Luminosity/%s/lum_perrun_%s.txt",run_type,trigName));
-  fnevt.open(Form("Rootfiles/Luminosity/%s/nev_perday_unix_%s.txt",run_type,trigName));
-  char lumi[512], nevt[512];
-  int nevt_old = 0;
-  int nevt_new = 0;
-  int totalevents = 0;
-  while(!flumi.eof() && !fnevt.eof())
+  if(year==2013)
     {
-      flumi.getline(lumi,512);
-      fnevt.getline(nevt,512);
-      string slumi = lumi;
-      string snevt = nevt;
-      if(slumi.length()<=0) break;
-      int counter = 0;
-      int run, starttime;
-      double prescale, livetime;
-      //cout << slumi.c_str() << endl;
-      while(slumi.find(" ")!=string::npos)
+      ifstream flumi, fnevt;
+      flumi.open(Form("Rootfiles/Luminosity/%s/lum_perrun_%s.txt",run_type,trigName));
+      fnevt.open(Form("Rootfiles/Luminosity/%s/nev_perday_unix_%s.txt",run_type,trigName));
+      char lumi[512], nevt[512];
+      int nevt_old = 0;
+      int nevt_new = 0;
+      int totalevents = 0;
+      while(!flumi.eof() && !fnevt.eof())
 	{
-	  string sub = slumi.substr(0,slumi.find(" "));
-	  slumi.erase(0,slumi.find(" ")+1);
-	  if(counter==0) run = atoi(sub.c_str());
-	  if(counter==1) starttime = atoi(sub.c_str());
-	  if(counter==5) prescale = atof(sub.c_str());
-	  if(counter==6) livetime = atof(sub.c_str());
-	  counter++;
-	}
-      int starttime2 = atoi(snevt.substr(0,12).c_str());
-      nevt_new = atoi(snevt.erase(0,12).c_str());
-      int nevents = nevt_new - nevt_old;
-      nevt_old = nevt_new;
-      totalevents += nevents;
-      if(run>=start_run && run<end_run)
-	{
-	  int bin = run - start_run + 1;
-	  hPreScale->SetBinContent(bin, prescale);
-	  hPreScale->SetBinError(bin, 1e-10);
-	  hLiveTime->SetBinContent(bin, livetime);
-	  hLiveTime->SetBinError(bin, 1e-10);
-	  if(starttime2==starttime)
+	  flumi.getline(lumi,512);
+	  fnevt.getline(nevt,512);
+	  string slumi = lumi;
+	  string snevt = nevt;
+	  if(slumi.length()<=0) break;
+	  int counter = 0;
+	  int run, starttime;
+	  double prescale, livetime;
+	  while(slumi.find(" ")!=string::npos)
 	    {
-	      if(trigName=="MTD-dimuon")
+	      string sub = slumi.substr(0,slumi.find(" "));
+	      slumi.erase(0,slumi.find(" ")+1);
+	      if(counter==0) run = atoi(sub.c_str());
+	      if(counter==1) starttime = atoi(sub.c_str());
+	      if(counter==5) prescale = atof(sub.c_str());
+	      if(counter==6) livetime = atof(sub.c_str());
+	      counter++;
+	    }
+	  int starttime2 = atoi(snevt.substr(0,12).c_str());
+	  nevt_new = atoi(snevt.erase(0,12).c_str());
+	  int nevents = nevt_new - nevt_old;
+	  nevt_old = nevt_new;
+	  totalevents += nevents;
+	  if(run>=start_run && run<end_run)
+	    {
+	      int bin = run - start_run + 1;
+	      hPreScale->SetBinContent(bin, prescale);
+	      hPreScale->SetBinError(bin, 1e-10);
+	      hLiveTime->SetBinContent(bin, livetime);
+	      hLiveTime->SetBinError(bin, 1e-10);
+	      if(starttime2==starttime)
 		{
-		  if(run==14143081) nevents = 7384;
-		  if(run==14143090) nevents = 7670;
+		  if(trigName=="MTD-dimuon")
+		    {
+		      if(run==14143081) nevents = 7384;
+		      if(run==14143090) nevents = 7670;
+		    }
+		  hNevents->SetBinContent(bin, nevents);
+		  hNevents->SetBinError(bin, 1e-10);
 		}
+	      else
+		{
+		  printf("[e] mismatch %d != %d\n",starttime2,starttime);
+		}
+	    }
+	  printf("[i] Run %d starts at %d has %d events\n",run,starttime,nevents);
+	}
+      if(totalevents == nevt_new) printf("+++ Check is successful +++\n");
+    }
+  else if(year==2014)
+    {
+      ifstream flumi;
+      flumi.open(Form("Rootfiles/Luminosity/%s/lum_perrun_%s.txt",run_type,trigName));
+      char lumi[512], nevt[512];
+      int nevt_old = 0;
+      int nevt_new = 0;
+      int totalevents = 0;
+      while(!flumi.eof())
+	{
+	  flumi.getline(lumi,512);
+	  string slumi = lumi;
+	  if(slumi.length()<=0) break;
+	  int counter = 0;
+	  int run, nevents;
+	  double prescale, livetime;
+	  while(slumi.find(" ")!=string::npos)
+	    {
+	      string sub = slumi.substr(0,slumi.find(" "));
+	      slumi.erase(0,slumi.find(" ")+1);
+	      if(counter==0) run = atoi(sub.c_str());
+	      if(counter==4) nevents  = floor(atof(sub.c_str())*6e6+0.5);
+	      if(counter==5) prescale = atof(sub.c_str());
+	      if(counter==6) livetime = atof(sub.c_str());
+	      counter++;
+	    }
+	  if(run>=start_run && run<end_run)
+	    {
+	      int bin = run - start_run + 1;
+	      hPreScale->SetBinContent(bin, prescale);
+	      hPreScale->SetBinError(bin, 1e-10);
+	      hLiveTime->SetBinContent(bin, livetime);
+	      hLiveTime->SetBinError(bin, 1e-10);
 	      hNevents->SetBinContent(bin, nevents);
 	      hNevents->SetBinError(bin, 1e-10);
 	    }
-	  else
-	    {
-	      printf("[e] mismatch %d != %d\n",starttime2,starttime);
-	    }
+	  printf("[i] Run %d has %d events\n",run,nevents);
 	}
-      printf("[i] Run %d starts at %d has %d events\n",run,starttime,nevents);
     }
-  if(totalevents == nevt_new) printf("+++ Check is successful +++\n");
 
   hPreScale->SetMarkerStyle(21);
   c = draw1D(hPreScale);
@@ -280,130 +591,6 @@ void makePrescale(const int savePlot = 1, const int saveHisto = 1)
     }
 }
 
-
-//================================================
-void makeTrigBias(const int savePlot = 1, const int saveHisto = 1)
-{
-  TLegend *leg = new TLegend(0.4, 0.5, 0.6, 0.75);
-  leg->SetFillColor(10);
-  leg->SetFillStyle(10);
-  leg->SetLineStyle(4000);
-  leg->SetLineColor(10);
-  leg->SetLineWidth(0.);
-  leg->SetTextFont(42);
-  leg->SetTextSize(0.045);
-	
-  TCanvas *c1 = new TCanvas("c1","c1",800,600);
-  //c1->DrawFrame(0,0.45,8,1);
-
-  const int nPoints = nPtBins -1;
-  double arrayOfLowEdges[nPoints+1];
-  for(int i=0; i<nPoints; i++)
-    arrayOfLowEdges[i] = ptBins_low[i+1];
-  arrayOfLowEdges[nPoints] = ptBins_high[nPoints];
-
-  TFile *fin = new TFile("Rootfiles/CharmedSample.root");
-  TH2F *hPtEta_Mc = fin->Get("PtEta_Mc");
-  hPtEta_Mc->ProjectionX("Mc",11,30,"");
-  Mc->Rebin(nPoints,"hPtMc",arrayOfLowEdges);
-	
-  TH2F *hPtEta_Bbc = fin->Get("PtEta_Bbc");
-  hPtEta_Bbc->ProjectionX("PtBbc",11,30,"");
-  PtBbc->Rebin(nPoints,"hPtBbc",arrayOfLowEdges);
-	
-  TH2F *hPtEta_Vpd = fin->Get("PtEta_Vpd");
-  hPtEta_Vpd->ProjectionX("PtVpd",11,30,"");
-  PtVpd->Rebin(nPoints,"hPtVpd",arrayOfLowEdges);
-    
-  //************************ BBC and VDP efficiency ********************************
-	
-  TGraphAsymmErrors *gEffPtBbc = new TGraphAsymmErrors(hPtBbc,hPtMc,"w");
-  TGraphAsymmErrors *gEffPtVpd = new TGraphAsymmErrors(hPtVpd,hPtMc,"w");
-  gEffPtBbc->SetMarkerStyle(25);
-  gEffPtBbc->SetMarkerColor(kGreen+2);
-  gEffPtBbc->SetLineColor(kGreen+2);
-  gEffPtVpd->SetMarkerStyle(25);
-  gEffPtVpd->SetMarkerColor(2);
-  gEffPtVpd->SetLineColor(2);
-  gEffPtBbc->SetTitle(";p_{T,D} (GeV/c)");
-  gEffPtBbc->GetYaxis()->SetRangeUser(0.45,1);
-  gEffPtBbc->Draw("AP");
-  gEffPtVpd->Draw("Psame");
-    
-  //**************************** BBC and VPD efficiency with vertexing **************************
-	
-  TH2F *hPtEta_Vtx = fin->Get("PtEta_Vtx");
-  hPtEta_Vtx->ProjectionX("PtVtx",11,30,"");
-  PtVtx->Rebin(nPoints,"hPtVtx",arrayOfLowEdges);
-  TGraphAsymmErrors *gEffPtVtx = new TGraphAsymmErrors(hPtVtx,hPtMc,"w");
-  gEffPtVtx->SetMarkerStyle(24);
-  gEffPtVtx->SetMarkerColor(1);
-  gEffPtVtx->SetLineColor(1);
-  gEffPtVtx->Draw("Psame");
-    
-  TH2F *hPtEta_VpdVtx = fin->Get("PtEta_VpdVtx");
-  hPtEta_VpdVtx->ProjectionX("PtVpdVtx",11,30,"");
-  PtVpdVtx->Rebin(nPoints,"hPtVpdVtx",arrayOfLowEdges);
-  TGraphAsymmErrors *gEffPtVpdVtx = new TGraphAsymmErrors(hPtVpdVtx,hPtMc,"w");
-
-		
-  gEffPtVpdVtx->SetMarkerStyle(20);
-  gEffPtVpdVtx->SetMarkerColor(1);
-  gEffPtVpdVtx->SetLineColor(1);
-  gEffPtVpdVtx->Draw("Psame");
-
-  double gx[100], gy[100], gy1[100], gy2[100];
-  int n = 0;
-  for (int i=0; i<gEffPtVpdVtx->GetN(); i++) {
-    double x,y,y1,y2;
-    gEffPtVpdVtx->GetPoint(i,x,y);
-    y1 = gEffPtVpdVtx->GetErrorYhigh(i);
-    y2 = gEffPtVpdVtx->GetErrorYlow(i);
-    gx[i] = x;
-    if(y>0){
-      gx[i] = x;
-      gy[i] = 0.388234/y;
-      gy1[i] = gy[i]*y1/y;
-      gy2[i] = gy[i]*y2/y;
-      n++;
-    }
-  }
-  TGraphAsymmErrors *gTrgBias = new TGraphAsymmErrors(n, gx, gy, 0, 0, gy2, gy1);
-  gTrgBias->SetMarkerStyle(29);
-  gTrgBias->SetMarkerColor(4);
-  gTrgBias->SetLineColor(4);
-  gTrgBias->SetMarkerSize(2);
-  gTrgBias->Draw("Psame");
-
-  TH1F *hTrgBias = new TH1F("VPDMB_TrigBias","VPDMB_TrigBias",nPoints,arrayOfLowEdges);
-  double x,y;
-  for(int i=0; i<nPoints; i++)
-    {
-      gTrgBias->GetPoint(i,x,y);
-      hTrgBias->SetBinContent(i+1,y);
-      hTrgBias->SetBinError(i+1,gy1[i]);
-    }
-    
-  leg->AddEntry(gEffPtBbc,"BBC Coincidence","pl");
-  leg->AddEntry(gEffPtVpd,"VPD Coincidence","pl");
-  leg->AddEntry(gEffPtVtx,"Vertex Accepted","pl");
-  leg->AddEntry(gEffPtVpdVtx,"VPD Coincidence & Vertex Accepted","pl");
-  leg->AddEntry(gTrgBias,"Trigger Bias","pl");
-  leg->Draw();	
-
-  if(savePlot)
-    {
-      c1->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/VPDMB_TrigBias.pdf",run_type));
-      c1->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/VPDMB_TrigBias.png",run_type));
-    }
-
-  if(saveHisto)
-    {
-      TFile *fout = TFile::Open(Form("Rootfiles/%s.Luminosity.root",run_type),"update");
-      hTrgBias->Write("VPDMB_TrigBias",TObject::kOverwrite);
-      fout->Close();
-    }
-}
 
 //================================================
 void MTD(const int savePlot = 1)

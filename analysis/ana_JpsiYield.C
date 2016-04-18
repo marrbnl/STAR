@@ -43,9 +43,9 @@ void ana_JpsiYield()
 
   //makeHistos();
   //makeYield();
-  makeYieldRun13();
+  //makeYieldRun13();
   //prod_makeYield();
-  //anaYield();
+  anaYield();
 }
 
 //================================================
@@ -77,7 +77,7 @@ void anaYield(int savePlot = 1)
       legName[i] = Form("%s%%",cent_Name[i]);
     }
   if(year==2013) c = drawHistos(list,"Jpsi_FitYield","J/psi yield from bin counting;p_{T} (GeV/c);Counts",kFALSE,0,30,kTRUE,1e-6,1.2*hBinCountYield[0]->GetMaximum(),kFALSE,drawLegend,legName,drawLegend,"Centrality",0.45,0.75,0.55,0.8,kTRUE);
-  else c = drawHistos(list,"Jpsi_FitYield","J/psi yield from bin counting;p_{T} (GeV/c);Counts",kFALSE,0,30,kTRUE,1e-6,1600,kFALSE,kTRUE,legName,kTRUE,"Centrality",0.45,0.75,0.55,0.8,kTRUE);
+  else c = drawHistos(list,"Jpsi_FitYield","J/psi yield from bin counting;p_{T} (GeV/c);Counts",kFALSE,0,30,kTRUE,1e-6,10000,kFALSE,kTRUE,legName,kTRUE,"Centrality",0.45,0.75,0.55,0.8,kTRUE);
   
   for(int i=0; i<nCentBins; i++)
     {
@@ -125,7 +125,7 @@ void anaYield(int savePlot = 1)
 	{
 	  list->Add(hSignif[i][j]);
 	}
-      c = drawHistos(list,Form("%s_Signif",name[j]),Form("%s: J/psi significance;p_{T} (GeV/c)",name[j]),kFALSE,0,30,kTRUE,1e-6,15,kFALSE,drawLegend,legName,drawLegend,"Centrality",0.15,0.3,0.6,0.85,kTRUE);
+      c = drawHistos(list,Form("%s_Signif",name[j]),Form("%s: J/psi significance;p_{T} (GeV/c)",name[j]),kFALSE,0,30,kTRUE,1e-6,30,kFALSE,drawLegend,legName,drawLegend,"Centrality",0.15,0.3,0.6,0.85,kTRUE);
       if(savePlot) 
 	{
 	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiYield/%sJpsi_Significance_%s.pdf",run_type,run_cfg_name.Data(),name[j]));

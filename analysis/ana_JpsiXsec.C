@@ -20,10 +20,10 @@ void ana_JpsiXsec()
     }
 
 
-  //xsec();
+  xsec();
   //compare();
   //sfToMb();
-  xsec_Run13();
+  //xsec_Run13();
 }
 
 
@@ -223,13 +223,14 @@ void xsec_Run13(const bool savePlot = 0, const bool saveHisto = 0)
   funcFit->Draw("sames");
 
   c->cd();
-  funcFit->Draw("sames");
-  leg->AddEntry(funcFit,"Exp fit to Run11","L");
+  //funcFit->Draw("sames");
+  //leg->AddEntry(funcFit,"Exp fit to Run11","L");
   leg->Draw();
   if(savePlot)
     {
       c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiXsec/%sJpsiInvYield_Compare.pdf",run_type,run_config));
       c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiXsec/%sJpsiInvYield_Compare.png",run_type,run_config));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiXsec/%sJpsiInvYield_Compare.eps",run_type,run_config));
     }
   //return;
 
@@ -365,7 +366,7 @@ void sfToMb(const bool savePlot = 0)
 }
 
 //================================================
-void xsec(const bool savePlot = 1, const bool saveHisto = 1)
+void xsec(const bool savePlot = 0, const bool saveHisto = 0)
 {
   // Get the dimuon events number
   TFile *fdata = TFile::Open(Form("./output/Pico.Run14.AuAu200.jpsi.%sroot",run_config),"read");

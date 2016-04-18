@@ -13,9 +13,9 @@ const char *cent_Title[nCentBins] = {"0060","0020","2040","4060"};
 //================================================
 void projection()
 {  
-  //jpsi();
+  jpsi();
   //upsilon();
-  efficiency();
+  //efficiency();
 }
 
 //================================================
@@ -89,7 +89,7 @@ void efficiency(const bool savePlot = 1)
 }
 
 //================================================
-void jpsi(const bool savePlot = 1)
+void jpsi(const bool savePlot = 0)
 {
   gStyle->SetOptStat(0);
   const int marker_style[nCentBins] = {kFullCircle, kFullStar, kFullSquare, kFullCross};
