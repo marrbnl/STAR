@@ -1368,6 +1368,7 @@ void smear(const double mass, const int icent, const int nExpr, const double shi
     }
 }
 
+//-------------------------------------------------------
 void tuneSmear(const double masss, const int icent, const int nExpr, 
                const double shift, const double sigma, 
                TH1F *hInputPt, TH2F *hRcJpsiMassVsPt)

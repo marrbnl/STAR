@@ -10,17 +10,8 @@ void ana_JpsiXsec()
   gStyle->SetStatW(0.2);                
   gStyle->SetStatH(0.2);
 
-  if(year==2013)
-    {
-      run_type = "Run13_pp500";
-    }
-  else if(year==2014)
-    {
-      run_type = "Run14_AuAu200";
-    }
 
-
-  xsec();
+  xsec_Run14();
   //compare();
   //sfToMb();
   //xsec_Run13();
@@ -28,7 +19,7 @@ void ana_JpsiXsec()
 
 
 //================================================
-void xsec_Run13(const bool savePlot = 0, const bool saveHisto = 0)
+void xsec_Run13(const bool savePlot = 1, const bool saveHisto = 1)
 {
   // Get the dimuon events number
   TFile *fdata = TFile::Open(Form("./output/Pico.Run13.pp500.jpsi.%sroot",run_config),"read");
@@ -326,47 +317,8 @@ void xsec_Run13(const bool savePlot = 0, const bool saveHisto = 0)
 
 }
 
-
 //================================================
-void sfToMb(const bool savePlot = 0)
-{
-  const int nFiles = 3;
-  const char *name[nFiles] = {"high","mid","low"};
-  
-  TH1F *hScale[nFiles];
-  TList *list = new TList;
-  TString legName[nFiles];
-  for(int i=0; i<nFiles; i++)
-    {
-      //hScale[i] = new TH1F(Form("ScaleFactor_Prod_%s",name[i]),Form("Scale factor for production_%s;sf",name[i]),200,0,100);
-      hScale[i] = new TH1F(Form("ScaleFactor_Prod_%s",name[i]),Form("Scale factor for production_%s;sf",name[i]),2000,0,2000);
-      
-      ifstream inFile;
-      inFile.open(Form("Rootfiles/Run14.production.%s.sf.list",name[i]));
-      double sf;
-      int counter = 1;
-      while(!inFile.eof())
-	{
-	  inFile >> sf;
-	  //cout << sf << endl;
-	  //hScale[i]->Fill(sf);
-	  hScale[i]->SetBinContent(counter,sf);
-	  counter++;
-	}
-      inFile.close();
-      list->Add(hScale[i]);
-      legName[i] = Form("production_%s",name[i]);
-    }
-  c = drawHistos(list,"ScaleFactor","Scale factor for dimuon trigger to MB;sf",kFALSE,0,30,kFALSE,1e-6,1600,kFALSE,kTRUE,legName,kTRUE,"",0.45,0.75,0.55,0.8,kTRUE);
-  if(savePlot)
-    {
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiXsec/ScaleFactor_dimuon_to_MB.pdf",run_type));
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiXsec/ScaleFactor_dimuon_to_MB.png",run_type));
-    }
-}
-
-//================================================
-void xsec(const bool savePlot = 0, const bool saveHisto = 0)
+void xsec_Run14(const bool savePlot = 0, const bool saveHisto = 0)
 {
   // Get the dimuon events number
   TFile *fdata = TFile::Open(Form("./output/Pico.Run14.AuAu200.jpsi.%sroot",run_config),"read");
@@ -376,56 +328,43 @@ void xsec(const bool savePlot = 0, const bool saveHisto = 0)
   printf("acc di-muon events: %4.4e\n",hStat->GetBinContent(10));
   const double dimuon_events = hStat->GetBinContent(10);
 
-  // vertex cut efficiency
-  TH1F *hTpcVz = (TH1F*)fdata->Get("mhTpcVz_di_mu");
-  double vtx_eff = 1;
-  if(hTpcVz)
+  // Effective number of MB events
+  printf("+++++++++++++++++++++++++++++++++\n");
+  double mb_events[nCentBins];
+  TFile *fLumi = TFile::Open(Form("Rootfiles/Run14_AuAu200.Luminosity.root"),"read");
+  TH1F *hEvtRun = (TH1F*)fdata->Get("mhEvtRun_di_mu");
+  TH1F *hEvtRunAcc = (TH1F*)fdata->Get("mhEvtRunAcc_di_mu");
+  TH1F *hRF = (TH1F*)fLumi->Get("hRejectFactor_dimuon");
+  TH1F *hNeventsTake = (TH1F*)fLumi->Get("hNevents_dimuon");
+  TH1F *hEqMbEvents[nCentBins];
+  for(int i=0; i<nCentBins; i++)
     {
-      hTpcVz->SetMaximum(1.2*hTpcVz->GetMaximum());
-      c = draw1D(hTpcVz,"",kFALSE,kFALSE);
-      TLine *line = GetLine(-100,0,-100,0.5*hTpcVz->GetMaximum());
-      line->Draw();
-      line = GetLine(100,0,100,0.5*hTpcVz->GetMaximum());
-      line->Draw();
-      vtx_eff = hTpcVz->Integral(hTpcVz->GetXaxis()->FindBin(-100),hTpcVz->GetXaxis()->FindBin(100))/hTpcVz->Integral(0,-1);
-      TPaveText *t1 = GetPaveText(0.2,0.65,0.8,0.85,0.04,62);
-      t1->AddText(Form("Fraction of events within |vz|<100cm = %4.3f%%",vtx_eff*100));
-      t1->Draw();
-      if(savePlot)
+      hEqMbEvents[i] = (TH1F*)fLumi->Get(Form("EqMbEvtVtxCutWeight_cent%s_dimuon",cent_Title[i]));
+      mb_events[i] = 0;
+      for(int bin=1; bin<=hEvtRunAcc->GetNbinsX(); bin++)
 	{
-	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiXsec/VtxEff.pdf",run_type));
-	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiXsec/VtxEff.png",run_type));
+	  if(hEvtRunAcc->GetBinContent(bin)<=0) continue;
+	  double run = hEvtRunAcc->GetBinCenter(bin);
+	  double nEventsTaken = hNeventsTake->GetBinContent(hNeventsTake->FindFixBin(run));
+	  if(nEventsTaken==0) 
+	    {
+	      if(i==0) printf("[w] check run %1.0f\n",run);
+	      continue;
+	    }
+	  double nEventsRun = hEvtRun->GetBinContent(bin);
+	  double rf = hRF->GetBinContent(hRF->FindFixBin(run));
+	  double eq_mb = hEqMbEvents[i]->GetBinContent(hEqMbEvents[i]->FindFixBin(run));
+	  mb_events[i] += nEventsRun/rf/nEventsTaken * eq_mb;
+
 	}
-    }
-
-  // MB centrality distribution
-  TFile *fMB = TFile::Open("Rootfiles/VPDNovtx_Before_Ratio.root","read");
-  TH1F *hRefMult = (TH1F*)fMB->Get("mgRefMultTriggerCorr_0");
-  c = draw1D(hRefMult,"",kTRUE);
-  double bounds[9] = {1000,401,283,193,126,77,44,23,11};
-  double faction_0060 = 0;
-  for(int i=1; i<9; i++)
-    {
-      double value = bounds[i];
-      double height = hRefMult->GetBinContent(hRefMult->FindFixBin(value));
-      TLine *line = GetLine(value,0,value,height,2,1,1);
-      line->Draw();
-
-      int high_bin = hRefMult->FindBin(bounds[i-1]-0.5);
-      int low_bin = hRefMult->FindBin(bounds[i]+0.5);
-      double nevents = hRefMult->Integral(low_bin,high_bin);
-      printf("Centrality %d-%d%%: Nevents = %1.0f, fraction = %3.2f%%\n",i*10-10,i*10,nevents,nevents/hRefMult->GetEntries()*100);
-      if(i<7) faction_0060 += nevents/hRefMult->GetEntries();
-    }
-  if(savePlot)
-    {
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiXsec/MB_gRefMultCorr.pdf",run_type));
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiXsec/MB_gRefMultCorr.png",run_type));
+      printf("Effective # of MB events for %s%%: %4.4e\n",cent_Name[i],mb_events[i]);
     }
 
   // MTD acceptance loss
-  TH1F *hAccCounts = (TH1F*)fdata->Get("mhAccCounts_di_mu");
+  //TH1F *hAccCounts = (TH1F*)fdata->Get("mhAccCounts_di_mu");
   double accept_corr = 1;
+  /*
+    printf("Acceptance loss: %3.4f\n",sqrt(accept_corr)*100);
   if(hAccCounts)
     {
       c = draw1D(hAccCounts,"",kFALSE,kFALSE);
@@ -440,36 +379,17 @@ void xsec(const bool savePlot = 0, const bool saveHisto = 0)
 		     hAccCounts->GetBinContent(3)*120./122) / hAccCounts->GetEntries();
       accept_corr *= accept_corr;
     }
-
-  // Effective number of MB events
-  const double mb_events = dimuon_events / filter_factor * dimuon_to_mb * faction_0060 * accept_corr;
-
+  */
   printf("+++++++++++++++++++++++++++++++++\n");
-  printf("# of dimuon events is: %4.4e\n",dimuon_events);
-  printf("Vertex cut efficiency: %4.3f%%\n",vtx_eff*100);
-  printf("Filter factor: %1.1f\n",filter_factor);
-  printf("Scale factor: %3.4f\n",dimuon_to_mb);
-  printf("Acceptance loss: %3.4f\n",sqrt(accept_corr)*100);
-  printf("Effective # of MB events: %4.4e\n",mb_events);
-  printf("+++++++++++++++++++++++++++++++++\n");
-
 
   // Jpsi efficiency
-  char *embedEffName = Form("Run14.AuAu200.JpsiEff.%spt%1.1f.pt%1.1f.root",run_config,pt1_cut,pt2_cut);
-  char *trigEffName = Form("Run14.AuAu200.JpsiTrigEff.pt%1.1f.pt%1.1f.root",pt1_cut,pt2_cut);
-  printf("Embed   eff: %s\n",embedEffName);
-  printf("Trigger eff: %s\n",trigEffName);
-  TFile *fEmbedEff = TFile::Open(Form("Rootfiles/%s",embedEffName),"read");
-  TFile *fTrigEff = TFile::Open(Form("Rootfiles/%s",trigEffName),"read");
-  TH1F *hJpsiEffEmbed[nCentBins];
-  TH1F *hJpsiEffTrig[nCentBins];
-  TH1F *hJpsiRespEff[nCentBins];
+  TFile *fEff = TFile::Open(Form("Rootfiles/Run14_AuAu200.JpsiEff.pt%1.1f.pt%1.1f.root",pt1_cut,pt2_cut),"read");
+  TH1F *hJpsiEff[nCentBins];
   for(int k=0; k<nCentBins; k++)
     {
-      hJpsiEffEmbed[k] = (TH1F*)fEmbedEff->Get(Form("MTDreco_Jpsi_pT_%s_WeightPt_Eff_rebin",cent_Title[k]));
-      hJpsiEffTrig[k] = (TH1F*)fTrigEff->Get(Form("JpsiTrigEff_cent%s_rebin",cent_Title[k]));
-      hJpsiRespEff[k] = (TH1F*)fTrigEff->Get(Form("JpsiRespEff_cent%s_rebin",cent_Title[k]));
+      hJpsiEff[k] = (TH1F*)fEff->Get(Form("JpsiPtEff_cent%s",cent_Title[k]));
     }
+  
 
   // Jpsi raw counts
   char * yieldName = Form("Pico.Run14.AuAu200.jpsi.%spt%1.1f.pt%1.1f.yield.root",run_config,pt1_cut,pt2_cut);
@@ -478,7 +398,7 @@ void xsec(const bool savePlot = 0, const bool saveHisto = 0)
   TH1F *hJpsiCounts[nCentBins];
   for(int k=0; k<nCentBins; k++)
     {
-      hJpsiCounts[k] = (TH1F*)fYield->Get(Form("Jpsi_BinCountYield_cent%s",cent_Title[k]));
+      hJpsiCounts[k] = (TH1F*)fYield->Get(Form("Jpsi_BinCountYield_cent%s_weight",cent_Title[k]));
     }
 
   // Jpsi invariant yield
@@ -486,10 +406,8 @@ void xsec(const bool savePlot = 0, const bool saveHisto = 0)
   for(int k=0; k<nCentBins; k++)
     {
       hJpsiInvYield[k] = (TH1F*)hJpsiCounts[k]->Clone(Form("Jpsi_InvYield_cent%s",cent_Title[k]));
-      hJpsiInvYield[k]->Divide(hJpsiEffEmbed[k]);
-      hJpsiInvYield[k]->Divide(hJpsiEffTrig[k]);
-      hJpsiInvYield[k]->Divide(hJpsiRespEff[k]);
-      cout << hJpsiEffEmbed[k]->GetBinContent(1) << "  " << hJpsiEffTrig[k]->GetBinContent(1) << endl;
+      hJpsiInvYield[k]->Divide(hJpsiEff[k]);
+      cout << hJpsiEff[k]->GetBinContent(1) << endl;
       for(int bin=1; bin<=hJpsiInvYield[k]->GetNbinsX(); bin++)
 	{
 	  double bin_width = hJpsiInvYield[k]->GetBinWidth(bin); // dpT
@@ -498,8 +416,7 @@ void xsec(const bool savePlot = 0, const bool saveHisto = 0)
 	  hJpsiInvYield[k]->SetBinError(bin,hJpsiInvYield[k]->GetBinError(bin)/bin_width/bin_center);
 	}
 
-      double event = mb_events * (centBins_high[k]-centBins_low[k]+1) * 1./12;
-      hJpsiInvYield[k]->Scale(1./event); // N_evt
+      hJpsiInvYield[k]->Scale(1./mb_events[k]); // N_evt
       hJpsiInvYield[k]->Scale(1./(2*pi)); // 2pi
       hJpsiInvYield[k]->Scale(1./1.6); // dy
       hJpsiInvYield[k]->SetMarkerStyle(21);
@@ -508,7 +425,7 @@ void xsec(const bool savePlot = 0, const bool saveHisto = 0)
       hJpsiInvYield[k]->SetMarkerSize(1.5);
     }
 
-  TFile *fpub = TFile::Open("Rootfiles/Publication.Jpsi.200GeV.root","read");
+  TFile *fpub = TFile::Open("Rootfiles/Published/Jpsi_Raa_200/Publication.Jpsi.200GeV.root","read");
   TGraphAsymmErrors *gAuAuLowPt[nCentBins];
   TGraphAsymmErrors *gAuAuLowPtSys[nCentBins];
   TGraphAsymmErrors *gAuAuHighPt[nCentBins];
@@ -525,8 +442,8 @@ void xsec(const bool savePlot = 0, const bool saveHisto = 0)
 
   TCanvas *c = new TCanvas("AuAu200_Jpsi","AuAu200_Jpsi",1100,700);
   c->Divide(2,2);
-  TH1F *hAuAu = new TH1F("AuAu200_Jpsi",";p_{T} (GeV/c);d^{2}N/(2#pip_{T}dp_{T}dy) [(GeV/c)^{2}]",10,0,10);
-  hAuAu->GetYaxis()->SetRangeUser(1e-10,1e-4);
+  TH1F *hAuAu = new TH1F("AuAu200_Jpsi",";p_{T} (GeV/c);d^{2}N/(2#pip_{T}dp_{T}dy) [(GeV/c)^{2}]",15,0,15);
+  hAuAu->GetYaxis()->SetRangeUser(1e-11,1e-4);
   ScaleHistoTitle(hAuAu,0.06,1,0.05,0.06,1,0.05,62);
   for(int k=0; k<nCentBins; k++)
     {
@@ -571,6 +488,7 @@ void xsec(const bool savePlot = 0, const bool saveHisto = 0)
       c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiXsec/%sJpsiInvYield_compareToPub.pdf",run_type,run_config));
       c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiXsec/%sJpsiInvYield_compareToPub.png",run_type,run_config));
     }
+  //return;
 
   TCanvas *c = new TCanvas("AuAu200_Jpsi_ratio","AuAu200_Jpsi_ratio",1100,700);
   c->Divide(2,2);
@@ -578,7 +496,8 @@ void xsec(const bool savePlot = 0, const bool saveHisto = 0)
   for(int k=0; k<nCentBins; k++)
     {
       TH1F *hRatio = (TH1F*)hJpsiInvYield[k]->Clone(Form("%s_ratio",hJpsiInvYield[k]->GetName()));
-      for(int bin=1; bin<=hRatio->GetNbinsX(); bin++)
+      int endbin = hRatio->FindFixBin(9);
+      for(int bin=1; bin<=endbin; bin++)
 	{
 	  int start_bin = hTBW[k]->FindBin(hJpsiInvYield[k]->GetXaxis()->GetBinLowEdge(bin)+1e-6);
 	  int end_bin   = hTBW[k]->FindBin(hJpsiInvYield[k]->GetXaxis()->GetBinUpEdge(bin)-1e-6);
@@ -685,5 +604,44 @@ void compare(const bool savePlot = 1)
     {
       c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiXsec/CompareXsec_%s.pdf",run_type,save_name));
       c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiXsec/CompareXsec_%s.png",run_type,save_name));
+    }
+}
+
+
+//================================================
+void sfToMb(const bool savePlot = 0)
+{
+  const int nFiles = 3;
+  const char *name[nFiles] = {"high","mid","low"};
+  
+  TH1F *hScale[nFiles];
+  TList *list = new TList;
+  TString legName[nFiles];
+  for(int i=0; i<nFiles; i++)
+    {
+      //hScale[i] = new TH1F(Form("ScaleFactor_Prod_%s",name[i]),Form("Scale factor for production_%s;sf",name[i]),200,0,100);
+      hScale[i] = new TH1F(Form("ScaleFactor_Prod_%s",name[i]),Form("Scale factor for production_%s;sf",name[i]),2000,0,2000);
+      
+      ifstream inFile;
+      inFile.open(Form("Rootfiles/Run14.production.%s.sf.list",name[i]));
+      double sf;
+      int counter = 1;
+      while(!inFile.eof())
+	{
+	  inFile >> sf;
+	  //cout << sf << endl;
+	  //hScale[i]->Fill(sf);
+	  hScale[i]->SetBinContent(counter,sf);
+	  counter++;
+	}
+      inFile.close();
+      list->Add(hScale[i]);
+      legName[i] = Form("production_%s",name[i]);
+    }
+  c = drawHistos(list,"ScaleFactor","Scale factor for dimuon trigger to MB;sf",kFALSE,0,30,kFALSE,1e-6,1600,kFALSE,kTRUE,legName,kTRUE,"",0.45,0.75,0.55,0.8,kTRUE);
+  if(savePlot)
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiXsec/ScaleFactor_dimuon_to_MB.pdf",run_type));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiXsec/ScaleFactor_dimuon_to_MB.png",run_type));
     }
 }

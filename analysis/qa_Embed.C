@@ -3,7 +3,7 @@ const char *part_name[4] = {"Jpsi","Upsilon1S","Upsilon2S","Upsilon3S"};
 const char *part_text[4] = {"J/#psi","#Upsilon(1S)","#Upsilon(2S)","#Upsilon(3S)"};
 const double part_mass[4] = {3.09,9.46, 10.023, 10.34};
 const Bool_t iPico = 0;
-const int year = 2013;
+const int year = 2014;
 TString run_cfg_name;
 
 TFile *fdata, *fmc;
@@ -28,6 +28,7 @@ void qa_Embed()
     {
       run_type = "Run14_AuAu200";
       fmc   = TFile::Open(Form("./output/Run14.AuAu200.%s.Embed.root",part_name[part_type]),"read");
+      //fmc = TFile::Open("jpsi.embed.test.histos.root","read");
       fdata = TFile::Open(Form("./output/Run14.AuAu200.jpsi.EmbedQA.PicoData.root"),"read");
     }
   run_cfg_name = Form("%s",run_config);
@@ -108,9 +109,9 @@ void makePDF(char *outPDFName="")
   TH1F *h1 = (TH1F*)fmc->Get("hAnalysisCuts");
   Int_t counter = (Int_t)(h1->GetBinContent(3)/1e4);
   Double_t vtxz = h1->GetBinContent(1)/counter;
-  if(0)
+  if(1)
     {
-      t1->AddText(Form("Vertex cut: |vtx_z| < %1.0f cm",vtxz));
+      t1->AddText(Form("Vertex cut: |vz_{TPC}| < %d cm, |vz_{TPC}-vz_{VPD}| < 3 cm, vr < 2 cm",100));
     }
   else
     {
@@ -180,12 +181,12 @@ void makePDF(char *outPDFName="")
       if(i==0) 
 	{
 	  hJpsi_true->SetTitle(";M_{#mu#mu} (GeV/c^{2})");
-	  if(run_config=="Jpsi") hJpsi_true->GetXaxis()->SetRangeUser(0,4);
+	  if(part_type==0) hJpsi_true->GetXaxis()->SetRangeUser(0,4);
 	  else hJpsi_true->GetXaxis()->SetRangeUser(9,12);
 	}
       if(i==1)
 	{
-	  hJpsi_true->GetXaxis()->SetRangeUser(0,12);
+	  hJpsi_true->GetXaxis()->SetRangeUser(0,20);
 	}
       if(i==2)
 	{
@@ -426,7 +427,7 @@ void makePDF(char *outPDFName="")
   TH1F *hReco = (TH1F*)hJpsiUS_mc->Projection(0);
   hReco->SetName("hRecoSignal_TPC");
   hReco->GetXaxis()->SetRangeUser(part_mass[part_type]-1,part_mass[part_type]+1);
-  TF1 *func = new TF1("func","gaus",part_mass[part_type]-0.3,part_mass[part_type]+0.3);
+  TF1 *func = new TF1("func","gaus",part_mass[part_type]-0.1,part_mass[part_type]+0.1);
   hReco->Fit(func,"IR0");
   c = draw1D(hReco,Form("Reconstructed J/#psi peak using primary tracks in TPC;M_{#mu#mu} (GeV/c^{2})"),kFALSE,kFALSE);
   func->SetLineColor(2);
@@ -606,14 +607,14 @@ void makePDF(char *outPDFName="")
   PaintCanvasToPDF(c,pdf);
 
   TH2F *hdTofVsMod = (TH2F*)hn->Projection(0,4);
-  hdTofVsMod->GetYaxis()->SetRangeUser(-1,1);
+  hdTofVsMod->GetYaxis()->SetRangeUser(-2,2);
   c = draw2D(hdTofVsMod,"#Deltatof vs module of reconstructed MC tracks (primary);module");
   PaintCanvasToPDF(c,pdf);
 
   TH2F *hMcDeltaTofVsPt = (TH2F*)fmc->Get("hMcDeltaTof_di_mu");
   hMcDeltaTofVsPt->GetXaxis()->SetTitleOffset(1.1);
   hMcDeltaTofVsPt->GetXaxis()->SetRangeUser(0,10);
-  hMcDeltaTofVsPt->GetYaxis()->SetRangeUser(-1,1);
+  hMcDeltaTofVsPt->GetYaxis()->SetRangeUser(-2,2);
   c = draw2D(hMcDeltaTofVsPt,"#Deltatof vs p_{T} of reconstructed MC tracks (primary)");
   PaintCanvasToPDF(c,pdf);
 

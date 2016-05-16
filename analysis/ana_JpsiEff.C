@@ -1,4 +1,6 @@
 const int year = YEAR;
+const char *trkEffType[5] = {"MC","Tpc","MtdMth","MuonPid","MtdTrig"};
+const char *weight_name[2] = {"","_w"};
 
 //================================================
 void ana_JpsiEff()
@@ -10,22 +12,459 @@ void ana_JpsiEff()
   gStyle->SetStatW(0.2);                
   gStyle->SetStatH(0.2);
 
-  if(year==2013)
-    {
-      run_type = "Run13_pp500";
-    }
-  else if(year==2014)
-    {
-      run_type = "Run14_AuAu200";
-    }
+  //trackingEff();
+  //trackingRes();
+  JpsiEff();
 
   //ploEff();
   //plotEmbedEff();
-  makeMtdRespEff();
+  //makeMtdRespEff();
   //makeTrigEff();
   //makeEmbedEff();
   //hadronEmbed();
   //compTrigEff();
+}
+
+
+//================================================
+void JpsiEff(const int savePlot = 1, const int saveHisto = 1)
+{
+  TFile *fin;
+  if(saveHisto)   fin = TFile::Open(Form("Rootfiles/%s.JpsiEff.pt%1.1f.pt%1.1f.root",run_type,pt1_cut,pt2_cut),"update");
+  else            fin = TFile::Open(Form("Rootfiles/%s.JpsiEff.pt%1.1f.pt%1.1f.root",run_type,pt1_cut,pt2_cut),"read");
+
+  const int nbins = nPtBins -1;
+  double xbins[nbins+1];
+  for(int i=0; i<nbins; i++)
+    xbins[i] = ptBins_low[i+1];
+  xbins[nbins] = ptBins_high[nbins];
+
+  TList *list = new TList;
+  TString legName_cent[nCentBins];
+  for(int k=0; k<nCentBins; k++)
+    {
+      legName_cent[k] = Form("%s%%",cent_Name[k]);
+    }
+  TString legName_trg[gNTrgSetup-1];
+  for(int k=0; k<gNTrgSetup-1; k++)
+    {
+      legName_trg[k] = Form("AuAu_200%s",gTrgSetupTitle[k+1]);
+    }
+
+  TH1F *hJpsiPt[5][gNTrgSetup][nCentBins][2];
+  TH1F *hJpsiPtRebin[5][gNTrgSetup][nCentBins][2];
+  TH1F *hJpsiPtEff[5][gNTrgSetup][nCentBins][2];
+  TH1F *hJpsiPtEffRebin[5][gNTrgSetup][nCentBins][2];
+  TH1F *hJpsiPtEffFinal[gNTrgSetup][nCentBins][2];
+  TH1F *hJpsiPtEffFinalRebin[gNTrgSetup][nCentBins][2];
+
+  for(int i=0; i<5; i++)
+    {
+      for(int w=0; w<2; w++)
+	{
+	  for(int j=0; j<gNTrgSetup; j++)
+	    {
+	      for(int k=0; k<nCentBins; k++)
+		{
+		  hJpsiPt[i][j][k][w] = (TH1F*)fin->Get(Form("hJpsiPt_%s_cent%s%s%s",trkEffType[i],cent_Title[k],gTrgSetupTitle[j],weight_name[w]));
+		  hJpsiPtRebin[i][j][k][w] = (TH1F*)hJpsiPt[i][j][k][w]->Rebin(nbins,Form("%s_rebin",hJpsiPt[i][j][k][w]->GetName()),xbins);
+
+		  if(i>0)
+		    {
+		      //cout << hJpsiPt[i][j][k][w]->GetEntries() << " < " << hJpsiPt[i-1][j][k][w]->GetEntries() << endl;
+		      hJpsiPtEff[i][j][k][w] = DivideTH1ForEff(hJpsiPt[i][j][k][w],hJpsiPt[i-1][j][k][w],Form("hJpsiPtEff_%s_cent%s%s%s",trkEffType[i],cent_Title[k],gTrgSetupName[j],weight_name[w]));
+		      hJpsiPtEffRebin[i][j][k][w] = DivideTH1ForEff(hJpsiPtRebin[i][j][k][w],hJpsiPtRebin[i-1][j][k][w],Form("hJpsiPtEff_%s_cent%s%s%s_rebin",trkEffType[i],cent_Title[k],gTrgSetupName[j],weight_name[w]));
+		    }
+
+		  if(i==4)
+		    {
+		      hJpsiPtEffFinal[j][k][w] = DivideTH1ForEff(hJpsiPt[i][j][k][w],hJpsiPt[0][j][k][w],Form("hJpsiPtEff_Final_cent%s%s%s",cent_Title[k],gTrgSetupName[j],weight_name[w]));
+		      hJpsiPtEffFinalRebin[j][k][w] = DivideTH1ForEff(hJpsiPtRebin[i][j][k][w],hJpsiPtRebin[0][j][k][w],Form("JpsiPtEff_Final_cent%s%s%s_rebin",cent_Title[k],gTrgSetupName[j],weight_name[w]));
+		    }
+		}
+	    }
+	}
+    }
+
+  // various efficiency
+  const int jsetup = 4, kcent = 1;
+  list->Add(hJpsiPtEffFinal[jsetup][kcent][0]);
+  list->Add(hJpsiPtEffFinalRebin[jsetup][kcent][0]);
+  list->Add(hJpsiPtEffFinalRebin[jsetup][kcent][1]);
+  TString legName1[3] = {"Unweighted","Unweighted && rebinned","Weighted && rebinned"};
+  c = drawHistos(list,"JpsiEff_Check_Weight_Rebin",Form("Combined efficiency for J/#psi (AuAu_200%s);p_{T} (GeV/c);Efficiency",gTrgSetupTitle[jsetup]),false,2.0,3.8,true,1e-4,0.1,true,kTRUE,legName1,true,Form("%s%%",cent_Name[kcent]),0.5,0.7,0.2,0.45,kTRUE);
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/JpsiEffFinal_Check_Weight_Rebin.pdf",run_type));
+  list->Clear();
+
+  for(int i=1; i<5; i++)
+    {
+      list->Add(hJpsiPtEffRebin[i][jsetup][kcent][1]);
+    }
+  TString legName2[4] = {"TPC tracking + p_{T,#mu} cut","MTD matching","Muon PID","MTD triggering"};
+  c = drawHistos(list,"JpsiEff_AllEffs",Form("Efficiency for J/#psi (AuAu_200%s);p_{T} (GeV/c);Efficiency",gTrgSetupTitle[jsetup]),false,2.0,3.8,true,1e-5,1.5,false,kTRUE,legName2,true,Form("%s%%",cent_Name[kcent]),0.2,0.4,0.6,0.88,kTRUE);
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/JpsiEff_Various.pdf",run_type));
+  list->Clear();
+
+  TLegend *leg1 = new TLegend(0.2,0.15,0.4,0.35);
+  leg1->SetBorderSize(0);
+  leg1->SetFillColor(0);
+  leg1->SetTextSize(0.04);
+  TLegend *leg2 = new TLegend(0.55,0.15,0.7,0.35);
+  leg2->SetBorderSize(0);
+  leg2->SetFillColor(0);
+  leg2->SetTextSize(0.04);
+  for(int j=1; j<gNTrgSetup; j++)
+    {
+      for(int k=1; k<nCentBins; k++)
+	{
+	  hJpsiPtEffFinalRebin[j][k][1]->GetYaxis()->SetRangeUser(1e-5,0.1);
+	  hJpsiPtEffFinalRebin[j][k][1]->SetMarkerStyle(19+k);
+	  hJpsiPtEffFinalRebin[j][k][1]->SetMarkerColor(color[j-1]);
+	  hJpsiPtEffFinalRebin[j][k][1]->SetLineColor(color[j-1]);
+	  if(j==1 && k==1) c = draw1D(hJpsiPtEffFinalRebin[j][k][1],Form("Combined efficiency for J/#psi;p_{T} (GeV/c);Efficiency"),true,true);
+	  else hJpsiPtEffFinalRebin[j][k][1]->Draw("sames");
+	  if(k==1) leg1->AddEntry(hJpsiPtEffFinalRebin[j][k][1],Form("AuAu_200%s",gTrgSetupTitle[j]),"P");
+	  if(j==1) leg2->AddEntry(hJpsiPtEffFinalRebin[j][k][1],Form("%s%%",cent_Name[k]),"P");
+	}
+    }
+  leg1->Draw();
+  leg2->Draw();
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/JpsiEffFinal.pdf",run_type));
+
+  // final average efficiency
+  TFile *fYield = TFile::Open(Form("Rootfiles/Pico.Run14.AuAu200.jpsi.%spt%1.1f.pt%1.1f.yield.root",run_config,pt1_cut,pt2_cut),"read");
+  TH1F *hJpsiCounts[gNTrgSetup-1];
+  double nJpsi[nCentBins-1][gNTrgSetup-1];
+  double nJpsiCent[nCentBins-1];
+  double nJpsiAll = 0;
+  for(int k=0; k<nCentBins-1; k++)
+    {
+      nJpsiCent[k] = 0;
+    }
+  for(int i=0; i<gNTrgSetup-1; i++)
+    {
+      hJpsiCounts[i] = (TH1F*)fYield->Get(Form("NJpsiInCent_weight%s",gTrgSetupName[i+1]));
+      for(int bin=1; bin<=hJpsiCounts[i]->GetNbinsX(); bin++)
+	{
+	  nJpsi[bin-1][i] = hJpsiCounts[i]->GetBinContent(bin);
+	  nJpsiAll += hJpsiCounts[i]->GetBinContent(bin);
+	  nJpsiCent[bin-1] += hJpsiCounts[i]->GetBinContent(bin);
+	  printf("[i] %s%% %s: %4.2f Jpsi\n",cent_Title[bin],gTrgSetupTitle[i+1],nJpsi[bin-1][i]);
+	}
+    }
+
+  TH1F *hJpsiPtEffAvg[nCentBins];
+  for(int k=0; k<nCentBins; k++)
+    {
+      TH1F *hBase = (TH1F*)hJpsiPtRebin[0][0][0][0]->Clone(Form("hBase_%d",k));
+      hBase->Reset();
+      TH1F *hMatch = (TH1F*)hJpsiPtRebin[0][0][0][0]->Clone(Form("hMatch_%d",k));
+      hMatch->Reset();
+      for(int j=0; j<gNTrgSetup-1; j++)
+	{
+	  if(k==0)
+	    {
+	      for(int icent=0; icent<nCentBins-1; icent++)
+		{
+		  hBase->Add(hJpsiPtRebin[0][j+1][icent+1][1], nJpsi[icent][j]/nJpsiAll);
+		  hMatch->Add(hJpsiPtRebin[4][j+1][icent+1][1], nJpsi[icent][j]/nJpsiAll);
+		}
+	    }
+	  else
+	    {
+	      hBase->Add(hJpsiPtRebin[0][j+1][k][1], nJpsi[k-1][j]/nJpsiCent[k-1]);
+	      hMatch->Add(hJpsiPtRebin[4][j+1][k][1], nJpsi[k-1][j]/nJpsiCent[k-1]);
+	    }
+	}
+      hJpsiPtEffAvg[k] = DivideTH1ForEff(hMatch,hBase,Form("JpsiPtEff_cent%s",cent_Title[k]));
+      list->Add(hJpsiPtEffAvg[k]);
+    }
+  c = drawHistos(list,"JpsiEffCent",Form("Combined efficiency for J/#psi;p_{T} (GeV/c);Efficiency"),false,2.0,3.8,true,1e-4,0.1,true,kTRUE,legName_cent,true,run_type,0.5,0.7,0.15,0.45,kTRUE);
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/JpsiEffFinal_Cent.pdf",run_type));
+  list->Clear();
+
+  if(saveHisto)
+    {
+      fin->cd();
+      for(int k=0; k<nCentBins; k++)
+	{
+	  hJpsiPtEffAvg[k]->Write("",TObject::kOverwrite);
+	}
+    }
+}
+
+
+//================================================
+void trackingRes(const int savePlot = 1, const int saveHisto = 1)
+{
+  TFile *fin;
+  if(saveHisto)   fin = TFile::Open(Form("Rootfiles/%s.TrkEff.root",run_type),"update");
+  else            fin = TFile::Open(Form("Rootfiles/%s.TrkEff.root",run_type),"read");
+  TList *list = new TList;
+  TString legName_cent[nCentBins];
+  for(int k=0; k<nCentBins; k++)
+    {
+      legName_cent[k] = Form("%s%%",cent_Name[k]);
+    }
+
+  // track momentum resolution
+  TH2F *hResVsTruePt[nCentBins];
+  TH1F *hTrkPtRes[nCentBins];
+  TH1F *hTrkPtShift[nCentBins];
+  TF1 *funcRes[nCentBins];
+  list->Clear();
+  for(int k=0; k<nCentBins; k++)
+    {
+      hResVsTruePt[k] = (TH2F*) fin->Get(Form("PrimTrkRes_vs_TruePt_cent%s",cent_Title[k]));
+      hResVsTruePt[k]->RebinX(2);
+      char *title = Form("Transverse momentum resolution of primary muon tracks (%s%%)",cent_Name[k]);
+      c = draw2D(hResVsTruePt[k],title);
+      if(savePlot)
+	c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/DeltaPt_vs_Pt_cent%s.pdf",run_type,cent_Title[k]));
+
+      hTrkPtRes[k] = (TH1F*)hResVsTruePt[k]->ProjectionX(Form("PrimTrkRes_cent%s",cent_Title[k]));
+      hTrkPtRes[k]->Reset();
+      hTrkPtShift[k] = (TH1F*)hResVsTruePt[k]->ProjectionX(Form("PrimTrkShift_cent%s",cent_Title[k]));
+      hTrkPtShift[k]->Reset();
+
+      TCanvas *c = new TCanvas(Form("FitTrkRes_cent%d",k),Form("FitTrkRes_cent%d",k),800,600);
+      c->Divide(10,10);
+      for(int ibin=1; ibin<=hTrkPtRes[k]->GetNbinsX(); ibin++)
+	{
+	  TH1F *htmp = (TH1F*)hResVsTruePt[k]->ProjectionY(Form("TrkPt_bin%d_cent%d",ibin,k),ibin,ibin);
+	  htmp->GetXaxis()->SetRangeUser(-0.2,0.2);
+	  htmp->SetMarkerStyle(20);
+	  TF1 *func = new TF1(Form("func_bin%d",ibin),"gaus",-0.15,0.15);
+	  htmp->Fit(func,"IR0Q");
+	  c->cd(ibin);
+	  htmp->Draw("P");
+	  func->SetLineColor(2);
+	  func->Draw("same");
+	  hTrkPtRes[k]->SetBinContent(ibin,func->GetParameter(2));
+	  hTrkPtRes[k]->SetBinError(ibin,func->GetParError(2));
+	  hTrkPtShift[k]->SetBinContent(ibin,func->GetParameter(1));
+	  hTrkPtShift[k]->SetBinError(ibin,func->GetParError(1));
+	}
+
+      TH1F *htmp = (TH1F*)hTrkPtRes[k]->Clone(Form("%s_clone",hTrkPtRes[k]->GetName()));
+      list->Add(htmp);
+
+      funcRes[k] = new TF1(Form("FitPrimTrkRes_cent%s",cent_Title[k]),"sqrt([0]^2*x^2+[1]^2)",1,10);
+      funcRes[k]->SetParNames("a","b");
+      funcRes[k]->SetParameter(0.0004,0.0001);
+      hTrkPtRes[k]->Fit(funcRes[k],"IR0");
+      hTrkPtRes[k]->SetMarkerStyle(21);
+      hTrkPtRes[k]->GetYaxis()->SetRangeUser(0,0.15);
+      c = draw1D(hTrkPtRes[k],Form("Transverse momentum resolution of primary tracks (%s%%);p_{T,true} (GeV/c);#sigma(p_{T})/p_{T}",cent_Name[k]));
+      funcRes[k]->SetLineColor(2);
+      funcRes[k]->Draw("same");
+      leg = new TLegend(0.2,0.5,0.4,0.7);
+      leg->SetBorderSize(0);
+      leg->SetFillColor(0);
+      leg->SetTextSize(0.04);
+      leg->AddEntry(hTrkPtRes[k],"Embedding data","P");
+      leg->AddEntry(funcRes[k],"Fit: #sqrt{(a*p_{T})^{2}+b^{2}}","L");
+      leg->Draw();
+      if(savePlot)
+	c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/FitTrkPtRes_cent%s.pdf",run_type,cent_Title[k]));
+    }
+  bool drawLegend = true;
+  if(year==2013) drawLegend = false;
+  c = drawHistos(list,Form("TrkRes"),Form("p_{T} resolution of muon tracks;p_{T,MC} (GeV/c);#sigma(p_{T})/p_{T}"),kTRUE,0,20,kTRUE,0,0.1,kFALSE,drawLegend,legName_cent,drawLegend,"",0.3,0.5,0.6,0.85,kTRUE);
+  if(savePlot)
+    c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/McTrkPtRes_CentBins.pdf",run_type));
+
+  list->Clear();
+  for(int k=0; k<nCentBins; k++)
+    {
+      TH1F *htmp = (TH1F*)hTrkPtShift[k]->Clone(Form("%s_clone",hTrkPtShift[k]->GetName()));
+      htmp->Scale(100);
+      list->Add(htmp);
+    }
+  c = drawHistos(list,Form("TrkPtShift"),Form("p_{T} shift of muon tracks;p_{T,MC} (GeV/c);<#Deltap_{T}/p_{T}> (%%)"),kTRUE,0,20,kTRUE,-1,1,kFALSE,drawLegend,legName_cent,drawLegend,"",0.3,0.5,0.6,0.85,kTRUE);
+  if(savePlot)
+    c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/McTrkPtShift_CentBins.pdf",run_type));
+
+  if(saveHisto)
+    {
+      fin->cd();
+      for(int k=0; k<nCentBins; k++)
+	{
+	  hTrkPtRes[k]->Write("",TObject::kOverwrite);
+	  hTrkPtShift[k]->Write("",TObject::kOverwrite);
+	  funcRes[k]->Write("",TObject::kOverwrite);
+	}
+    }
+}
+
+//================================================
+void trackingEff(const int savePlot = 0, const int saveHisto = 0)
+{
+  TFile *fin;
+  if(saveHisto)   fin = TFile::Open(Form("Rootfiles/%s.TrkEff.root",run_type),"update");
+  else            fin = TFile::Open(Form("Rootfiles/%s.TrkEff.root",run_type),"read");
+  TList *list = new TList;
+  TString legName_cent[nCentBins];
+  for(int k=0; k<nCentBins; k++)
+    {
+      legName_cent[k] = Form("%s%%",cent_Name[k]);
+    }
+  TString legName_trg[gNTrgSetup-1];
+  for(int k=0; k<gNTrgSetup-1; k++)
+    {
+      legName_trg[k] = Form("AuAu_200%s",gTrgSetupTitle[k+1]);
+    }
+
+  // tracking efficiency
+  TH1F *hMcTrkPt[5][gNTrgSetup][nCentBins];
+  TH1F *hMcTrkPtEff[5][gNTrgSetup][nCentBins];
+  TH2F *hMcTrkPtVsZdc[5][gNTrgSetup][nCentBins];
+  TH2F *hMcTrkPtVsCent[5][gNTrgSetup];
+
+  for(int i=0; i<5; i++)
+    {
+      for(int j=0; j<gNTrgSetup; j++)
+	{
+	  hMcTrkPtVsCent[i][j] = (TH2F*)fin->Get(Form("hMcTrkPtVsCent_%s%s",trkEffType[i],gTrgSetupTitle[j]));
+	  hMcTrkPtVsCent[i][j]->RebinX(2);
+	  for(int k=0; k<nCentBins; k++)
+	    {
+	      hMcTrkPtVsZdc[i][j][k] = (TH2F*)fin->Get(Form("hMcTrkPtVsZdcRate_%s_cent%s%s",trkEffType[i],cent_Title[k],gTrgSetupTitle[j]));
+
+	      hMcTrkPt[i][j][k] = (TH1F*)fin->Get(Form("hMcTrkPt_%s_cent%s%s",trkEffType[i],cent_Title[k],gTrgSetupTitle[j]));
+	      hMcTrkPt[i][j][k]->Rebin(5);
+	      if(i>0) 
+		{
+		  hMcTrkPtEff[i][j][k] = DivideTH1ForEff(hMcTrkPt[i][j][k], hMcTrkPt[i-1][j][k], Form("hMcTrkPtEff_%s_cent%s%s",trkEffType[i],cent_Title[k],gTrgSetupTitle[j]));
+		}	
+	    }
+	}
+    }
+
+  TCanvas *c = new TCanvas("TpcEff_Lumi","TpcEff_Lumi",1100,700);
+  c->Divide(2,2);
+  TLegend *leg = new TLegend(0.2,0.5,0.5,0.85);
+  leg->SetBorderSize(0);
+  leg->SetFillColor(0);
+  leg->SetTextSize(0.06);
+  for(int k=1; k<nCentBins; k++)
+    {
+      c->cd(k);
+      SetPadMargin(gPad,0.13, 0.13, 0.03,0.1);
+      for(int j=1; j<gNTrgSetup; j++)
+	{
+	  TH1F *htmp = (TH1F*)hMcTrkPtEff[1][j][k]->Clone(Form("%s_clone",hMcTrkPtEff[1][j][k]->GetName()));
+	  htmp->SetMarkerStyle(20+j-1);
+	  htmp->SetLineColor(color[j-1]);
+	  htmp->SetMarkerColor(color[j-1]);
+	  htmp->GetYaxis()->SetRangeUser(0,1);
+	  htmp->GetYaxis()->SetTitle("Efficiency");
+	  ScaleHistoTitle(htmp,0.06,1,0.05,0.06,0.9,0.05,62);
+	  if(j==1) htmp->Draw();
+	  else     htmp->Draw("sames");
+	  if(k==1)
+	    {
+	      leg->AddEntry(htmp,Form("AuAu_200%s",gTrgSetupTitle[j]),"PL");
+	    }
+	}
+      TPaveText *t1 = GetTitleText(Form("TPC tracking efficiency (%s%%)",cent_Name[k]),0.06);
+      t1->Draw();
+      TLine *line = GetLine(1.2,0,1.2,0.8,1);
+      line->Draw();
+    }
+  c->cd(4);
+  leg->Draw();
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/McTpcEff_Lumi.pdf",run_type));
+
+  const double pt_cut = 3;
+  // efficiency vs luminosity
+  TH1F *hTpcEffVsLumi[gNTrgSetup][nCentBins];
+  for(int j=0; j<gNTrgSetup; j++)
+    {
+      for(int k=0; k<nCentBins; k++)
+	{
+	  int bin_cut = hMcTrkPtVsZdc[1][j][k]->GetYaxis()->FindFixBin(pt_cut);
+	  hTpcEffVsLumi[j][k] = (TH1F*)hMcTrkPtVsZdc[1][j][k]->ProjectionX(Form("hTpcEffVsLumi_cent%s%s",cent_Title[k],gTrgSetupTitle[j]),bin_cut,-1);
+	  TH1F *htmp = (TH1F*)hMcTrkPtVsZdc[0][j][k]->ProjectionX(Form("htmp_cent%s%s",cent_Title[k],gTrgSetupTitle[j]),bin_cut,-1);
+	  hTpcEffVsLumi[j][k]->Divide(htmp);
+	}
+    }
+  TCanvas *c = new TCanvas("TpcEff_vs_Lumi","TpcEff_vs_Lumi",1100,700);
+  c->Divide(2,2);
+  for(int k=1; k<nCentBins; k++)
+    {
+      c->cd(k);
+      SetPadMargin(gPad,0.13, 0.13, 0.03,0.1);
+      for(int j=1; j<gNTrgSetup; j++)
+	{
+	  hTpcEffVsLumi[j][k]->SetMarkerStyle(20+j-1);
+	  hTpcEffVsLumi[j][k]->SetLineColor(color[j-1]);
+	  hTpcEffVsLumi[j][k]->SetMarkerColor(color[j-1]);
+	  hTpcEffVsLumi[j][k]->GetYaxis()->SetRangeUser(0,1);
+	  hTpcEffVsLumi[j][k]->GetXaxis()->SetRangeUser(0,120);
+	  hTpcEffVsLumi[j][k]->GetYaxis()->SetTitle("Efficiency");
+	  ScaleHistoTitle(hTpcEffVsLumi[j][k],0.06,1,0.05,0.06,0.9,0.05,62);
+	  if(j==1) hTpcEffVsLumi[j][k]->Draw();
+	  else     hTpcEffVsLumi[j][k]->Draw("sames");
+	}
+      TPaveText *t1 = GetTitleText(Form("TPC tracking efficiency above %1.0f GeV/c (%s%%)",pt_cut,cent_Name[k]),0.06);
+      t1->Draw();
+    }
+  c->cd(4);
+  leg->Draw();
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/McTpcEff_vs_Lumi.pdf",run_type));
+
+  // efficiency vs centrality
+  list->Clear();
+  TH1F *hTpcEffVsCent[gNTrgSetup];
+  for(int j=1; j<gNTrgSetup; j++)
+    {
+      int bin_cut = hMcTrkPtVsCent[1][j]->GetYaxis()->FindFixBin(pt_cut);
+      hTpcEffVsCent[j] = (TH1F*)hMcTrkPtVsCent[1][j]->ProjectionX(Form("hTpcEffVsCent%s",gTrgSetupTitle[j]),bin_cut,-1);
+      TH1F *htmp = (TH1F*)hMcTrkPtVsCent[0][j]->ProjectionX(Form("htmp%s",gTrgSetupTitle[j]),bin_cut,-1);
+      hTpcEffVsCent[j]->Divide(htmp);
+      hTpcEffVsCent[j]->SetMarkerStyle(20+j-1);
+      hTpcEffVsCent[j]->SetLineColor(color[j-1]);
+      list->Add(hTpcEffVsCent[j]);
+      for(int bin=1; bin<=hTpcEffVsCent[j]->GetNbinsX(); bin++)
+	{
+	  hTpcEffVsCent[j]->GetXaxis()->SetBinLabel(bin,Form("%d-%d%%",80-bin*10,90-bin*10));
+	}
+      hTpcEffVsCent[j]->GetXaxis()->SetLabelSize(0.05);
+    }
+  c = drawHistos(list,"TpcEff_vs_Cent",Form("TPC tracking efficiency for tracks above %1.0f GeV/c;;Efficiency",pt_cut),false,2.0,3.8,true,0,1,kFALSE,kTRUE,legName_trg,true,"",0.5,0.7,0.2,0.45,kTRUE,0.04,0.04,false,1,false,true);
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/McTpcEff_vs_Cent.pdf",run_type));
+  
+  // other efficiencies
+  const char *trkEffTitle[3] = {"MTD matching","muon PID","MTD trigger"};
+  for(int i=2; i<5; i++)
+    {
+      TLegend *leg1 = new TLegend(0.2,0.2,0.4,0.4);
+      leg1->SetBorderSize(0);
+      leg1->SetFillColor(0);
+      leg1->SetTextSize(0.04);
+      TLegend *leg2 = new TLegend(0.55,0.2,0.7,0.4);
+      leg2->SetBorderSize(0);
+      leg2->SetFillColor(0);
+      leg2->SetTextSize(0.04);
+      for(int j=1; j<gNTrgSetup; j++)
+	{
+	  for(int k=1; k<nCentBins; k++)
+	    {
+	      if(i==2)  hMcTrkPtEff[i][j][k]->GetYaxis()->SetRangeUser(0,0.5);
+	      else      hMcTrkPtEff[i][j][k]->GetYaxis()->SetRangeUser(0,1.1);
+	      hMcTrkPtEff[i][j][k]->SetMarkerStyle(19+k);
+	      hMcTrkPtEff[i][j][k]->SetMarkerColor(color[j-1]);
+	      if(j==1 && k==1) c = draw1D(hMcTrkPtEff[i][j][k],Form("Efficiency of %s;p_{T}^{mc} (GeV/c);Efficiency",trkEffTitle[i-2]));
+	      else hMcTrkPtEff[i][j][k]->Draw("sames");
+	      if(k==1) leg1->AddEntry(hMcTrkPtEff[i][j][k],Form("AuAu_200%s",gTrgSetupTitle[j]),"P");
+	      if(j==1) leg2->AddEntry(hMcTrkPtEff[i][j][k],Form("%s%%",cent_Name[k]),"P");
+	    }
+	}
+      leg1->Draw();
+      leg2->Draw();
+      if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/McTrkEff_%s.pdf",run_type,trkEffType[i]));
+    }
 }
 
 //================================================
@@ -710,73 +1149,42 @@ void makeMtdRespEff(bool savePlot = 0, bool saveHisto = 0)
   gStyle->SetStatW(0.15);                
   gStyle->SetStatH(0.15);
   const char *name[2] = {"cosmic","embed"};
-  TGraphAsymmErrors *hMtdResponseEff[2];  
   TFile *fin = 0x0, *fEmbed = 0x0;
   if(year==2014)
     {
       //cosmic
-      fin = TFile::Open("Rootfiles/Run14.cosmic.MtdEff.root","read");
-      hMtdResponseEff[0] = (TGraphAsymmErrors*)fin->Get("RateDown");
-      fEmbed =  TFile::Open("output/Run14.AuAu200.Jpsi.Embed.LooseCut.root","read");
+      fin = TFile::Open("Rootfiles/Run14ResponseEffViaPtTemplate.root","read");
+      fEmbed =  TFile::Open("output/Run14.AuAu200.Jpsi.Embed.root","read");
     }
   else if(year==2013)
     {
-      fin = TFile::Open("Rootfiles/Run1314CosmicRayMTDResponseEfficiency.root","read");
-      hMtdResponseEff[0] = (TGraphAsymmErrors*)fin->Get("Run13BOTVsPt");
+      fin = TFile::Open("Rootfiles/Run13ResponseEffViaPtTemplate.root","read");
       fEmbed =  TFile::Open("output/Run13.pp500.jpsi.Embed.root","read");
     }
-
-  int npoints = hMtdResponseEff[0]->GetN();
-  const int nbins = npoints - 1;
-  double xbins[nbins+1];
-  double x,y;
-  for(int ip=0; ip<nbins; ip++)
-    {
-      hMtdResponseEff[0]->GetPoint(ip,x,y);
-      xbins[ip] = x - hMtdResponseEff[0]->GetErrorXlow(ip);
-      if(ip==nbins-1) xbins[ip+1] = x + hMtdResponseEff[0]->GetErrorXhigh(ip);
-    }
-  if(xbins[nbins]>10) xbins[nbins] = 10;
 
   // embedding
   TH2F *hProjVsPt = (TH2F*)fEmbed->Get("mhProjTrack");
   draw2D(hProjVsPt);
   TH2F *hMatchVsPt = (TH2F*)fEmbed->Get("mhMatchTrack");
   draw2D(hMatchVsPt);
-  TH1F *htmp = (TH1F*)hProjVsPt->ProjectionX("hProj_tmp");
-  TH1F *hProj = (TH1F*)htmp->Rebin(nbins,"hProj_1",xbins);
-  htmp  = (TH1F*)hMatchVsPt->ProjectionX("hMatch_tmp");
-  TH1F *hMatch = (TH1F*)htmp->Rebin(nbins,"hMatch_1",xbins);
-  hMtdResponseEff[1] = new TGraphAsymmErrors();
-  hMtdResponseEff[1]->Divide(hMatch,hProj,"cl=0.683 b(1,1) mode");
-
-  TH1F *hEff[2];
-  for(int i=0; i<2; i++)
-    {
-      hEff[i] = new TH1F(Form("MtdResponseEff_%s",name[i]), "MTD response efficiency;p_{T} (GeV/c);Efficiency", nbins, xbins);
-      for(int ip=0; ip<nbins; ip++)
-	{
-	  hMtdResponseEff[i]->GetPoint(ip,x,y);
-	  double error = hMtdResponseEff[i]->GetErrorYhigh(ip);
-	  if(error<hMtdResponseEff[i]->GetErrorYlow(ip)) error = hMtdResponseEff[i]->GetErrorYlow(ip);
-	  hEff[i]->SetBinContent(ip+1, y);
-	  hEff[i]->SetBinError(ip+1, error);
-	}
-      hEff[i]->SetMarkerStyle(20+i);
-      hEff[i]->SetLineColor(2-i);
-      hEff[i]->SetMarkerColor(2-i);
-      hEff[i]->GetXaxis()->SetRangeUser(0,10);
-      hEff[i]->GetYaxis()->SetRangeUser(0,1.2);
-    }
-  ScaleHistoTitle(hEff[0],0.045,1,0.035,0.045,1,0.035,62);
-
+  TH1F *hProj = (TH1F*)hProjVsPt->ProjectionX("hProj");
+  TH1F *hMatch = (TH1F*)hMatchVsPt->ProjectionX("hMatch");
+  TH1F *hMtdRespEffEmbed = (TH1F*)hMatch->Clone(Form("MtdResponseEff_%s",name[1]));
+  hMtdRespEffEmbed->Sumw2();
+  hMtdRespEffEmbed->Divide(hProj);
+  hMtdRespEffEmbed->SetMarkerStyle(20);
+  hMtdRespEffEmbed->SetLineColor(1);
+  hMtdRespEffEmbed->SetMarkerColor(1);
+  hMtdRespEffEmbed->GetXaxis()->SetRangeUser(0,10);
+  hMtdRespEffEmbed->GetYaxis()->SetRangeUser(0,1.2);
+  ScaleHistoTitle(hMtdRespEffEmbed,0.045,1,0.035,0.045,1,0.035,62);
 
   // Fit embedding data
-  TH1F *hEmbedFit = (TH1F*)hEff[1]->Clone("hEmbedFit");
-  TF1 *func = new TF1("func","[0]*exp(-pow([1]/x,[2])-pow([3]/x/x,[4]))",1,20);
-  func->SetParameters(1,0.1,1,0.01,1);
+  TH1F *hEmbedFit = (TH1F*)hMtdRespEffEmbed->Clone("hEmbedFit");
+  TF1 *func = new TF1("func","[0]*exp(-pow([1]/x,[2])-pow([3]/x/x,[4])-pow([5]/x/x/x,[6]))",1,20);
+  func->SetParameters(1,0.1,1,0.1,1,0.1,1);
   hEmbedFit->Fit(func,"IR0");
-  hEmbedFit->GetYaxis()->SetRangeUser(0,1.5);
+  hEmbedFit->GetYaxis()->SetRangeUser(0,1.8);
   c = draw1D(hEmbedFit,"MTD response efficiency from embedding;p_{T} (GeV/c);Efficiency");
   func->SetLineColor(4);
   func->Draw("sames");
@@ -785,7 +1193,7 @@ void makeMtdRespEff(bool savePlot = 0, bool saveHisto = 0)
   leg->SetFillColor(0);
   leg->SetTextSize(0.04);
   leg->AddEntry(hEmbedFit,"Embedding","PE");
-  leg->AddEntry(func,"Fit function: [0]*exp{-(#frac{[1]}{x})^{[2]}-(#frac{[3]}{x^{2}})^{[4]}}","L");
+  leg->AddEntry(func,"Fit function: [0]*exp{-(#frac{[1]}{x})^{[2]}-(#frac{[3]}{x^{2}})^{[4]}-(#frac{[5]}{x^{3}})^{[6]}}","L");
   leg->Draw();
   if(savePlot)
     {
@@ -793,16 +1201,26 @@ void makeMtdRespEff(bool savePlot = 0, bool saveHisto = 0)
       c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/FitEmbedMtdRespEff.png",run_type));
     }
 
-  // compare
-  c = draw1D(hEff[0],"MTD response efficiency;p_{T} (GeV/c);Efficiency");
-  hEff[1]->Draw("sames P");
-
-  TLegend *leg = new TLegend(0.5,0.2,0.7,0.4);
+  // cosmic
+  TF1 *funcCosmic[150];
+  for(int i=0; i<150; i++)
+    {
+      funcCosmic[i] = (TF1*)fin->Get(Form("fSclPtTmpBkl%d_Mod%d",i/5,i%5));
+      funcCosmic[i]->SetLineColor(4);
+      funcCosmic[i]->SetLineStyle(1);
+    }
+  hMtdRespEffEmbed->GetYaxis()->SetRangeUser(0,1.3);
+  c = draw1D(hMtdRespEffEmbed,"MTD response efficiency;p_{T} (GeV/c);Efficiency");
+  for(int i=0; i<150; i++)
+    {
+      funcCosmic[i]->Draw("sames");
+    }
+  TLegend *leg = new TLegend(0.2,0.75,0.35,0.85);
   leg->SetBorderSize(0);
   leg->SetFillColor(0);
   leg->SetTextSize(0.04);
-  leg->AddEntry(hEff[0],"Cosmic ray","PL");
-  leg->AddEntry(hEff[1],"Embedding","PL");
+  leg->AddEntry(hMtdRespEffEmbed,"Embedding","PE");
+  leg->AddEntry(funcCosmic[0],"Cosmic ray (module-wise)","L");
   leg->Draw();
   if(savePlot)
     {
@@ -810,23 +1228,14 @@ void makeMtdRespEff(bool savePlot = 0, bool saveHisto = 0)
       c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/CompareMtdRespEff.png",run_type));
     }
 
-  // make ratio
-  TH1F *hMtdRespCorr = (TH1F*)hEff[0]->Clone("MtdRespEffCorr");
-  hMtdRespCorr->Divide(hEff[1]);
-  c = draw1D(hMtdRespCorr,"Correction for MTD response efficiency: cosmic/embed;p_{T} (GeV/c);Cosmic/Embed");
-
-
   if(saveHisto)
     {
       TFile *fout = 0x0;
       if(year==2014) fout = TFile::Open("Rootfiles/Run14.AuAu200.MtdResponseEff.root","recreate");
       if(year==2013) fout = TFile::Open("Rootfiles/Run13.pp500.MtdResponseEff.root","recreate");
       
-      for(int i=0; i<2; i++)
-	{
-	  hEff[i]->Write();
-	}
-      func->Write(Form("Fit_%s",hEff[1]->GetName()));
+      hMtdRespEffEmbed->Write();
+      func->Write(Form("Fit_%s",hMtdRespEffEmbed->GetName()));
     }
 }
 
@@ -917,136 +1326,118 @@ void hadronEmbed()
 
 
 //================================================
-void makeTrigEff(const int savePlot = 0, const int saveHisto = 0)
+void makeTrigEff(const int savePlot = 1, const int saveHisto = 1)
 {
-  TF1 *funcTrigEff[nCentBins];
-  TF1 *funcTrigEffCorr[nCentBins];
-  for(int k=0; k<nCentBins; k++)
+  const char *trgSetupName[4] = {"AuAu_200_production_2014","AuAu_200_production_low_2014","AuAu_200_production_mid_2014","AuAu_200_production_high_2014"};
+  TF1 *funcTrigEff[4][nCentBins];
+  TF1 *funcTrigEffCorr[4][nCentBins];
+  for(int i=0; i<4; i++)
     {
-      funcTrigEff[k] = new TF1(Form("MuonTrigEff_cent%s",cent_Title[k]),"[0]-exp(-1*[1]*(x-[2]))",0,12);
-      if(k==0) funcTrigEff[k]->SetParameters(0.908, 2.09256, 1.03406e-14);      
-      if(k==1) funcTrigEff[k]->SetParameters(0.905465, 2.05892, 9.27036e-15);
-      if(k==2) funcTrigEff[k]->SetParameters(0.920748, 1.89851, 1.57097e-14);
-      if(k==3) funcTrigEff[k]->SetParameters(0.883885, 2.1119, 3.33068e-15);
+      for(int k=0; k<nCentBins; k++)
+	{
+	  funcTrigEff[i][k] = new TF1(Form("MuonTrigEff_cent%s%s",cent_Title[k],gTrgSetupName[i+1]),"[0]-exp(-1*[1]*(x-[2]))",0,12);
+	  funcTrigEffCorr[i][k] = new TF1(Form("MuonTrigEffCorr_cent%s%s",cent_Title[k],gTrgSetupName[i+1]),"[0]-exp(-1*[1]*(x-[2]))",0,12);
+	  if(i==1)
+	    {
+	      if(k==0) funcTrigEff[i][k]->SetParameters(0.951456, 2.32223, 6.61693e-14);      
+	      if(k==1) funcTrigEff[i][k]->SetParameters(0.948947, 2.55808, 0.0659758);
+	      if(k==2) funcTrigEff[i][k]->SetParameters(0.950789, 2.51311, 7.49401e-14);
+	      if(k==3) funcTrigEff[i][k]->SetParameters(0.968246, 2.45772, 8.27116e-15);
 
-      funcTrigEffCorr[k] = new TF1(Form("MuonTrigEffCorr_cent%s",cent_Title[k]),"[0]-exp(-1*[1]*(x-[2]))",0,12);
-      if(k==0) funcTrigEffCorr[k]->SetParameters(0.936584, 17.1834, 0.893653);      
-      if(k==1) funcTrigEffCorr[k]->SetParameters(0.945798, 11.6541, 0.838267);
-      if(k==2) funcTrigEffCorr[k]->SetParameters(0.935776, 5.75038, 0.499548);
-      if(k==3) funcTrigEffCorr[k]->SetParameters(0.938118, 13.9462, 0.875862);
+	      if(k==0) funcTrigEffCorr[i][k]->SetParameters(0.96023,  10.5511, 0.802917);      
+	      if(k==1) funcTrigEffCorr[i][k]->SetParameters(0.96918,  9.40215, 0.778563);
+	      if(k==2) funcTrigEffCorr[i][k]->SetParameters(0.964368, 3.65518, 0.298387);
+	      if(k==3) funcTrigEffCorr[i][k]->SetParameters(0.966162, 2.77122, 3.6e-15);
+	    }
+	  else
+	    {
+	      if(k==0) funcTrigEff[i][k]->SetParameters(0.908, 2.09256, 1.03406e-14);      
+	      if(k==1) funcTrigEff[i][k]->SetParameters(0.905465, 2.05892, 9.27036e-15);
+	      if(k==2) funcTrigEff[i][k]->SetParameters(0.920748, 1.89851, 1.57097e-14);
+	      if(k==3) funcTrigEff[i][k]->SetParameters(0.883885, 2.1119, 3.33068e-15);
+
+	      if(k==0) funcTrigEffCorr[i][k]->SetParameters(0.936584, 17.1834, 0.893653);      
+	      if(k==1) funcTrigEffCorr[i][k]->SetParameters(0.945798, 11.6541, 0.838267);
+	      if(k==2) funcTrigEffCorr[i][k]->SetParameters(0.935776, 5.75038, 0.499548);
+	      if(k==3) funcTrigEffCorr[i][k]->SetParameters(0.938118, 13.9462, 0.875862);
+	    }
+	}
     }
 
-  TCanvas *c = new TCanvas("MuonTrigEff","MuonTrigEff",1100,700);
-  c->Divide(2,2);
-  for(int k=0; k<nCentBins; k++)
+  for(int i=0; i<4; i++)
     {
-      c->cd(k+1);
-      SetPadMargin(gPad,0.15,0.15,0.05,0.1);
-      gPad->SetGrid(1,1);
-      ScaleHistoTitle(funcTrigEff[k]->GetHistogram(),0.06,1,0.05,0.06,0.9,0.05,62);
-      funcTrigEff[k]->SetTitle(";p_{T} (GeV/c);Trigger efficiency");
-      funcTrigEff[k]->SetMaximum(1.1);
-      funcTrigEff[k]->SetMinimum(0.5);
-      funcTrigEff[k]->SetLineColor(1);
-      funcTrigEff[k]->Draw();
-      funcTrigEffCorr[k]->SetLineColor(4);
-      funcTrigEffCorr[k]->Draw("sames");
-      TPaveText *t1 = GetPaveText(0.7,0.8,0.8,0.85,0.06,62);
-      t1->AddText(Form("%s%%",cent_Name[k]));
-      t1->Draw();
-    }
-  c->cd(1);
-  TLegend *leg = new TLegend(0.45,0.25,0.65,0.45);
-  leg->SetBorderSize(0);
-  leg->SetFillColor(0);
-  leg->SetTextSize(0.05);
-  leg->AddEntry(funcTrigEff[0],"VPDMB5","L");
-  leg->AddEntry(funcTrigEffCorr[0],"NoVtx/VPDMB5","L");
-  leg->Draw();
+      TCanvas *c = new TCanvas(Form("MuonTrigEff%s",gTrgSetupName[i+1]),Form("MuonTrigEff%s",gTrgSetupName[i+1]),1100,700);
+      c->Divide(2,2);
+      for(int k=0; k<nCentBins; k++)
+	{
+	  c->cd(k+1);
+	  SetPadMargin(gPad,0.15,0.15,0.05,0.1);
+	  gPad->SetGrid(1,1);
+	  ScaleHistoTitle(funcTrigEff[i][k]->GetHistogram(),0.06,1,0.05,0.06,0.9,0.05,62);
+	  funcTrigEff[i][k]->SetTitle(Form("%s: %s%%;p_{T} (GeV/c);Trigger efficiency",trgSetupName[i],cent_Name[k]));
+	  funcTrigEff[i][k]->SetMaximum(1.1);
+	  funcTrigEff[i][k]->SetMinimum(0.5);
+	  funcTrigEff[i][k]->SetLineColor(1);
+	  funcTrigEff[i][k]->Draw();
+	  funcTrigEffCorr[i][k]->SetLineColor(4);
+	  funcTrigEffCorr[i][k]->Draw("sames");
+	}
+      c->cd(1);
+      TLegend *leg = new TLegend(0.45,0.25,0.65,0.45);
+      leg->SetBorderSize(0);
+      leg->SetFillColor(0);
+      leg->SetTextSize(0.05);
+      leg->AddEntry(funcTrigEff[i][0],"VPDMB5","L");
+      leg->AddEntry(funcTrigEffCorr[i][0],"NoVtx/VPDMB5","L");
+      leg->Draw();
   
-  if(savePlot)
-    {
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/MuonTrigEff_CentBins.pdf",run_type));
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/MuonTrigEff_CentBins.png",run_type));
+      if(savePlot)
+	{
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/MuonTrigEff_CentBins%s.pdf",run_type,gTrgSetupName[i+1]));
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/MuonTrigEff_CentBins%s.png",run_type,gTrgSetupName[i+1]));
+	}
     }
 
-  TH1F *hMuonTrigEff[nCentBins];
+  TH1F *hMuonTrigEff[4][nCentBins];
   TString legName[nCentBins];
   TList *list = new TList;
-  for(int k=0; k<nCentBins; k++)
+  for(int i=0; i<4; i++)
     {
-      hMuonTrigEff[k] = new TH1F(Form("MuonTrigEff_cent%s",cent_Title[k]),"Muon efficiency",1000,0,10);
-      for(int bin=1; bin<=hMuonTrigEff[k]->GetNbinsX(); bin++)
+      for(int k=0; k<nCentBins; k++)
 	{
-	  double x = hMuonTrigEff[k]->GetXaxis()->GetBinCenter(bin);
-	  hMuonTrigEff[k]->SetBinContent(bin,funcTrigEff[k]->Eval(x)*funcTrigEffCorr[k]->Eval(x));
-	  hMuonTrigEff[k]->SetBinError(bin,0);
+	  hMuonTrigEff[i][k] = new TH1F(Form("CombinedMuonTrigEff_cent%s%s",cent_Title[k],gTrgSetupName[i+1]),"Muon efficiency",1000,0,10);
+	  for(int bin=1; bin<=hMuonTrigEff[i][k]->GetNbinsX(); bin++)
+	    {
+	      double x = hMuonTrigEff[i][k]->GetXaxis()->GetBinCenter(bin);
+	      hMuonTrigEff[i][k]->SetBinContent(bin,funcTrigEff[i][k]->Eval(x)*funcTrigEffCorr[i][k]->Eval(x));
+	      hMuonTrigEff[i][k]->SetBinError(bin,0);
+	    }
+	  list->Add(hMuonTrigEff[i][k]);
+	  legName[k] = Form("%s%%",cent_Name[k]);
 	}
-      list->Add(hMuonTrigEff[k]);
-      legName[k] = Form("%s%%",cent_Name[k]);
-    }
-  c = drawHistos(list,"MuonTrigEff_CentBins","Single muon trigger efficiency;p_{T} (GeV/c);Efficiency",kTRUE,0.5,10,kTRUE,0.5,1.0,kFALSE,kTRUE,legName,kTRUE,"",0.4,0.6,0.3,0.55,kTRUE);
-  if(savePlot)
-    {
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/MuonTrigEffCombined_CentBins.pdf",run_type));
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/MuonTrigEffCombined_CentBins.png",run_type));
+      c = drawHistos(list,Form("MuonTrigEff_CentBins%s",gTrgSetupName[i+1]),Form("Single muon trigger efficiency (%s);p_{T} (GeV/c);Efficiency",trgSetupName[i]),kTRUE,0.5,10,kTRUE,0.5,1.0,kFALSE,kTRUE,legName,kTRUE,"",0.4,0.6,0.3,0.55,kTRUE);
+      if(savePlot)
+	{
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/MuonTrigEffCombined_CentBins%s.pdf",run_type,gTrgSetupName[i+1]));
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/MuonTrigEffCombined_CentBins%s.png",run_type,gTrgSetupName[i+1]));
+	}
+      list->Clear();
     }
   
   if(saveHisto)
     {
       char *outName = "Run14.AuAu200.MuonTrigEff.root";
       TFile *fout = TFile::Open(Form("Rootfiles/%s",outName),"recreate");
-      for(int k=0; k<nCentBins; k++)
+      for(int i=0; i<4; i++)
 	{
-	  funcTrigEff[k]->Write("",TObject::kOverwrite);
-	  funcTrigEffCorr[k]->Write("",TObject::kOverwrite);
+	  for(int k=0; k<nCentBins; k++)
+	    {
+	      funcTrigEff[i][k]->Write("",TObject::kOverwrite);
+	      funcTrigEffCorr[i][k]->Write("",TObject::kOverwrite);
+	      hMuonTrigEff[i][k]->Write("",TObject::kOverwrite);
+	    }
 	}
       fout->Close();
     }
-}
-
-
-//================================================
-void compTrigEff(const int savePlot = 0)
-{
-  TF1 *funcTrigEff[2];
-  TF1 *funcTrigEffCorr[2];
-  funcTrigEff[0] = new TF1(Form("MuonTrigEff_mid"),"[0]-exp(-1*[1]*(x-[2]))",0,12);
-  funcTrigEff[0]->SetParameters(0.908, 2.09256, 1.03406e-14);      
-  funcTrigEffCorr[0] = new TF1(Form("MuonTrigEffCorr_mid"),"[0]-exp(-1*[1]*(x-[2]))",0,12);
-  funcTrigEffCorr[0]->SetParameters(0.936584, 17.1834, 0.893653); 
-
-  funcTrigEff[1] = new TF1(Form("MuonTrigEff_low"),"[0]-exp(-1*[1]*(x-[2]))",0,12);
-  funcTrigEff[1]->SetParameters(0.951456, 2.32223, 6.61693e-14);      
-  funcTrigEffCorr[1] = new TF1(Form("MuonTrigEffCorr_low"),"[0]-exp(-1*[1]*(x-[2]))",0,12);
-  funcTrigEffCorr[1]->SetParameters(0.96023, 10.5511, 0.803); 
-
-  TH1F *hMuonTrigEff[2];
-  TString legName[2] = {"Production_mid","Production_low"};
-  TList *list = new TList;
-  for(int k=0; k<2; k++)
-    {
-      hMuonTrigEff[k] = new TH1F(Form("MuonTrigEff_%d",k),"Single muon efficiency",1000,0,10);
-      for(int bin=1; bin<=hMuonTrigEff[k]->GetNbinsX(); bin++)
-	{
-	  double x = hMuonTrigEff[k]->GetXaxis()->GetBinCenter(bin);
-	  hMuonTrigEff[k]->SetBinContent(bin,funcTrigEff[k]->Eval(x)*funcTrigEffCorr[k]->Eval(x));
-	  hMuonTrigEff[k]->SetBinError(bin,0);
-	}
-      list->Add(hMuonTrigEff[k]);
-    }
-  c = drawHistos(list,"MuonTrigEff_CentBins","Single muon trigger efficiency;p_{T} (GeV/c);Efficiency",kTRUE,0.5,10,kTRUE,0.5,1.0,kFALSE,kTRUE,legName,kTRUE,"",0.4,0.6,0.3,0.55,kTRUE);
-
-  TH1F *hRatio = (TH1F*)hMuonTrigEff[1]->Clone("hRatio");
-  hRatio->GetXaxis()->SetRangeUser(1,3);
-  hRatio->Divide(hMuonTrigEff[0]);
-  c = draw1D(hRatio,";p_{T,#mu} (GeV/c);Prod_low/Prod_mid");
-  /*
-  if(savePlot)
-    {
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/CompareMuonTrigEffCombined.pdf",run_type));
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/CompareMuonTrigEffCombined.png",run_type));
-    }
-  */
 }
 

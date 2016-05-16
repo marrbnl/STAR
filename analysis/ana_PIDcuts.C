@@ -1,4 +1,4 @@
-const int year = 2013;
+const int year = YEAR;
 TF1 *fResVsPt[3];
 double ptbound = 100;
 double nsigma1 = 2, nsigma2 = 2;
@@ -9,17 +9,21 @@ void ana_PIDcuts()
   gStyle->SetOptStat(0);
   gStyle->SetOptFit(1);
   gStyle->SetStatY(0.9);                
-  gStyle->SetStatX(0.9);  
+  gStyle->SetStatX(0.98);  
   gStyle->SetStatW(0.2);                
   gStyle->SetStatH(0.2);
 
   if(year==2013)
     {
-      run_type = "Run13_pp500";
     }
   else if(year==2014)
     {
-      run_type = "Run14_AuAu200";
+      ptbound = 3;
+      nsigma2 = 2.5;
+    }
+  else if(year==2015)
+    {
+      run_type = "Run15_pp200";
       ptbound = 3;
       nsigma2 = 2.5;
     }
@@ -39,85 +43,70 @@ void ana_PIDcuts()
 }
 
 //================================================
-void anaData(const bool savePlot = 1, const bool saveHisto = 1)
+void anaData(const bool savePlot = 1, const bool saveHisto = 0)
 {
-  TFile *fin = 0x0;
-  if(year==2013) fin = TFile::Open("Rootfiles/Run13.pp500.PIDcuts.root","update");
+  TFile *fembed = TFile::Open(Form("Rootfiles/%s.PIDcuts.root",run_type),"update");
+  TFile *fdata = 0x0;
+  if(year==2014) fdata = TFile::Open("./output/Pico.Run14.AuAu200.jpsi.root","read");
+  if(year==2015) fdata = TFile::Open("./output/Pico.Run15.pp200.jpsi.muon.root","read");
 
-  const char *name[4] = {"Dz","Dy","Dtof","NsigmaPi"};
-  const char *title[4] = {"#Deltaz","#Deltay","#Deltatof","n#sigma_{#pi}"};
-  const char *unit[4] = {" (cm)"," (cm)", " (ns)",""};
+  const int nHistos = 3;
+  const char *name[nHistos] = {"Dz","Dy","NsigmaPi"};
+  const char *title[nHistos] = {"#Deltaz","#Deltay","n#sigma_{#pi}"};
+  const char *unit[nHistos] = {" (cm)"," (cm)",""};
   const int nbins = 6;
-  const double xbins[nbins+1] = {1.0,1.5,2.0,2.5,3.0,5.0,10.0};
+  const double xbins[nbins+1] = {1.2,1.5,2.0,2.5,3.0,5.0,10.0};
+  const int rebin[nHistos] = {4,4,2};
+  const double minimum[nHistos] = {-100, -50, -5};
+  const double maximum[nHistos] = {100, 50, 5};
 
-  TH2F *hDataDisVsPt[4];
-  TH2F *hEmbedDisVsPt[4];
-  TH1F *hEmbedEff[4];
-  for(int i=0; i<4; i++)
+  TH2F *hDataUL[nHistos];
+  TH2F *hDataLS[nHistos];
+  TH2F *hDataDisVsPt[nHistos];
+  TH2F *hEmbedDisVsPt[nHistos];
+  TH1F *hEmbedEff[nHistos];
+  for(int i=0; i<nHistos; i++)
     {
-      hDataDisVsPt[i]  = (TH2F*)fin->Get(Form("Data_JpsiMuon_%sVsPt",name[i]));
-      hEmbedDisVsPt[i] = (TH2F*)fin->Get(Form("Embed_JpsiMuon_%sVsPt",name[i]));
-      hEmbedEff[i]     = (TH1F*)fin->Get(Form("Embed_JpsiMuon_%s_Eff",name[i]));
+      hDataUL[i]       = (TH2F*)fdata->Get(Form("mhJpsiMuon%s_UL_di_mu",name[i]));
+      hDataUL[i]->Sumw2();
+      hDataLS[i]       = (TH2F*)fdata->Get(Form("mhJpsiMuon%s_LS_di_mu",name[i]));
+      hDataLS[i]->Sumw2();
+      hDataDisVsPt[i]  = (TH2F*)hDataUL[i]->Clone(Form("mhJpsiMuon%s_UL_di_mu_Clone",name[i]));
+      hDataDisVsPt[i]->Add(hDataLS[i], -1);
+      hEmbedDisVsPt[i] = (TH2F*)fembed->Get(Form("Embed_JpsiMuon_%sVsPt",name[i]));
+      hEmbedEff[i]     = (TH1F*)fembed->Get(Form("Embed_JpsiMuon_%s_Eff",name[i]));
     }
 
-  // Data vs embed
-  TH1F *hData[4][nbins];
-  TH1F *hEmbed[4][nbins];
-  const int rebin[4] = {4,4,5,2};
-  const double minimum[4] = {-100, -50, -3, -5};
-  const double maximum[4] = {100, 50, 4, 5};
-  for(int i=0; i<4; i++)
+  // UL vs LS
+  TH1F *hUL[nHistos][nbins];
+  TH1F *hLS[nHistos][nbins];
+  for(int i=0; i<nHistos; i++)
     {
-      TCanvas *c = new TCanvas(Form("%s_distribution",name[i]),Form("%s_distribution",name[i]),1100,700);
+      TCanvas *c = new TCanvas(Form("%s_UL_vs_LS",name[i]),Form("%s_UL_vs_LS",name[i]),1100,700);
       c->Divide(3,2);
 
       for(int bin=1; bin<=nbins; bin++)
 	{
 	  c->cd(bin);
-	  int start_bin = hDataDisVsPt[i]->GetXaxis()->FindBin(xbins[bin-1]+1e-4);
-	  int end_bin   = hDataDisVsPt[i]->GetXaxis()->FindBin(xbins[bin]-1e-4);
-	  hData[i][bin-1] = (TH1F*)hDataDisVsPt[i]->ProjectionY(Form("Data_%s_bin%d",name[i],bin),start_bin,end_bin);
-	  hData[i][bin-1]->SetMarkerStyle(20);
-	  hData[i][bin-1]->SetMarkerColor(1);
-	  hData[i][bin-1]->SetLineColor(1);
-	  hData[i][bin-1]->Rebin(rebin[i]);
-	  hData[i][bin-1]->GetXaxis()->SetRangeUser(minimum[i], maximum[i]);
-	  hData[i][bin-1]->Scale(1./hData[i][bin-1]->Integral());
-	  hData[i][bin-1]->Draw("P");
+	  int start_bin = hDataUL[i]->GetXaxis()->FindBin(xbins[bin-1]+1e-4);
+	  int end_bin   = hDataUL[i]->GetXaxis()->FindBin(xbins[bin]-1e-4);
+	  hUL[i][bin-1] = (TH1F*)hDataUL[i]->ProjectionY(Form("Data_UL_%s_bin%d",name[i],bin),start_bin,end_bin);
+	  hUL[i][bin-1]->SetMarkerStyle(20);
+	  hUL[i][bin-1]->SetMarkerStyle(20);
+	  hUL[i][bin-1]->Rebin(rebin[i]);
+	  hUL[i][bin-1]->SetMaximum(1.5*hUL[i][bin-1]->GetMaximum());
+	  hUL[i][bin-1]->GetXaxis()->SetRangeUser(minimum[i], maximum[i]);
+	  hUL[i][bin-1]->SetTitle("");
+	  hUL[i][bin-1]->Draw("P");
 
-	  hEmbed[i][bin-1] = (TH1F*)hEmbedDisVsPt[i]->ProjectionY(Form("Emebd_%s_bin%d",name[i],bin),start_bin,end_bin);
-	  hEmbed[i][bin-1]->SetLineColor(2);
-	  hEmbed[i][bin-1]->Rebin(rebin[i]);
-	  hEmbed[i][bin-1]->Scale(1./hEmbed[i][bin-1]->Integral());
-	  //if(i!=2) hEmbed[i][bin-1]->Scale(1./hEmbed[i][bin-1]->Integral());
-	  //else     hEmbed[i][bin-1]->Scale(hData[i][bin-1]->GetMaximum()/hEmbed[i][bin-1]->GetBinContent(hEmbed[i][bin-1]->FindBin(0)));
-	  hEmbed[i][bin-1]->Draw("sames HIST");
+	  hLS[i][bin-1] = (TH1F*)hDataLS[i]->ProjectionY(Form("Data_LS_%s_bin%d",name[i],bin),start_bin,end_bin);
+	  hLS[i][bin-1]->SetMarkerStyle(24);
+	  hLS[i][bin-1]->SetMarkerColor(2);
+	  hLS[i][bin-1]->SetLineColor(2);
+	  hLS[i][bin-1]->Rebin(rebin[i]);
+	  hLS[i][bin-1]->Draw("samesP");
 
-	  double up = hData[i][bin-1]->GetMaximum();
-	  double low = hData[i][bin-1]->GetMinimum();
-	  double pt = (xbins[bin-1]+xbins[bin])/2;
-	  double min = -999, max = -999;
-	  if(i<2)
-	    {
-	      double sigma = fResVsPt[i]->Eval(pt);
-	      if(pt<ptbound) min = -1 * nsigma1 * sigma;
-	      else           min = -1 * nsigma2 * sigma;
-	      max = -1 * min;
-	    }
-	  else if (i==2)
-	    {
-	      min = -100;
-	      max = fResVsPt[i]->Eval(pt);
-	    }
-	  else
-	    { min = -1; max = 3; }
-
-	  TLine *line = GetLine(min,low,min,up,4);
-	  line->Draw();
-	  TLine *line = GetLine(max,low,max,up,4);
-	  line->Draw();
-
-          TPaveText *t1 = GetTitleText(Form("J/#psi #mu: %1.1f < p_{T} < %1.1f",xbins[bin-1],xbins[bin]),0.06);
+	  TPaveText *t1 = GetTitleText(Form("J/#psi #mu: %1.1f < p_{T} < %1.1f",xbins[bin-1],xbins[bin]),0.06);
           t1->Draw();
 	}
       c->cd(1);
@@ -125,63 +114,16 @@ void anaData(const bool savePlot = 1, const bool saveHisto = 1)
       leg->SetBorderSize(0);
       leg->SetFillColor(0);
       leg->SetTextSize(0.05);
-      leg->AddEntry(hData[i][0],"Data","P");
-      leg->AddEntry(hEmbed[i][0],"Embedding","L");
+      leg->AddEntry(hUL[i][0],"Unlike-sign","PL");
+      leg->AddEntry(hLS[i][0],"Like-sign","PL");
       leg->Draw();
 
       if(savePlot)
-	{
-	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_PIDcuts/DataVsEmbed_%s_InPtBins.pdf",run_type,name[i]));
-	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_PIDcuts/DataVsEmbed_%s_InPtBins.png",run_type,name[i]));
-	}
+	c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_PIDcuts/Data_ULvsLS_%s_InPtBins.pdf",run_type,name[i]));
     }
 
-  TH1F *hDisAll[4], *hDisAcc[4], *hEff[4];
-  for(int i=0; i<4; i++)
+  for(int i=0; i<nHistos; i++)
     {
-      //if(i==1 || i==2) hDataDisVsPt[i]->RebinY(4);
-      hDisAll[i] = new TH1F(Form("Data_JpsiMuon_%s_all",name[i]),Form("%s distribution of input muon tracks;p_{T} (GeV/c)",name[i]),nbins,xbins);
-      hDisAcc[i] = new TH1F(Form("Data_JpsiMuon_%s_Acc",name[i]),Form("%s distribution of accepted muon tracks;p_{T} (GeV/c)",name[i]),nbins,xbins);
-      for(int bin=1; bin<=nbins; bin++)
-	{
-	  int start_bin = hDataDisVsPt[i]->GetXaxis()->FindBin(xbins[bin-1]+1e-4);
-	  int end_bin = hDataDisVsPt[i]->GetXaxis()->FindBin(xbins[bin]-1e-4);
-	  TH1F *htmp = (TH1F*)hDataDisVsPt[i]->ProjectionY(Form("%s_%d",name[i],bin),start_bin,end_bin);
-	  double all_err;
-	  double all = htmp->IntegralAndError(0,-1,all_err);
-	  hDisAll[i]->SetBinContent(bin,all);
-	  hDisAll[i]->SetBinError(bin,all_err);
-
-	  double pt = hDisAll[i]->GetBinCenter(bin);
-	  double min = -999, max = -999;
-	  if(i<2)
-	    {
-	      double sigma = fResVsPt[i]->Eval(pt);
-	      if(pt<ptbound) min = -1 * nsigma1 * sigma;
-	      else           min = -1 * nsigma2 * sigma;
-	      max = -1 * min;
-	    }
-	  else if (i==2)
-	    {
-	      min = -100;
-	      max = fResVsPt[i]->Eval(pt);
-	    }
-	  else
-	    { min = -1; max = 3; }
-	  double acc_err;
-	  double acc = htmp->IntegralAndError(htmp->FindBin(min),htmp->FindBin(max),acc_err);
-	  if(i==-1)
-	    {
-	      cout << all << "  " << all_err << endl;
-	      cout << htmp->FindBin(min) << "  " << htmp->FindBin(max) << endl;
-	      cout << acc << "  " << acc_err << endl;
-	    }
-	  hDisAcc[i]->SetBinContent(bin,acc);
-	  hDisAcc[i]->SetBinError(bin,acc_err);
-	}
-      hEff[i] = (TH1F*)hDisAcc[i]->Clone(Form("Data_JpsiMuon_%s_Eff",name[i]));
-      hEff[i]->Divide(hDisAll[i]);
-
       hDataDisVsPt[i]->GetXaxis()->SetRangeUser(0,10);
       hDataDisVsPt[i]->GetYaxis()->SetRangeUser(minimum[i], maximum[i]);
       c = draw2D(hDataDisVsPt[i],Form("Data: %s distribution for J/#psi muon;p_{T,#mu} (GeV/c);%s%s",title[i],title[i],unit[i]));
@@ -215,12 +157,6 @@ void anaData(const bool savePlot = 1, const bool saveHisto = 1)
 	      func22->Draw("sames");
 	    }
 	}
-      else if(i==2)
-	{
-	  TF1 *func = (TF1*)fResVsPt[i]->Clone(Form("%s_upBound",fResVsPt[i]->GetName()));
-	  func->SetRange(0.5,10);
-	  func->Draw("sames");
-	}
       else
 	{
 	  TLine *line = GetLine(0,-1,10,-1);
@@ -229,42 +165,188 @@ void anaData(const bool savePlot = 1, const bool saveHisto = 1)
 	  line->Draw(); 
 	}
       if(savePlot)
-	{
-	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_PIDcuts/Data_muon_%s_vs_pt.pdf",run_type,name[i]));
-	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_PIDcuts/Data_muon_%s_vs_pt.png",run_type,name[i]));
-	}
+	c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_PIDcuts/Data_muon_%s_vs_pt.pdf",run_type,name[i]));
+    }
 
+  // Data vs embed
+  TH1F *hData[nHistos][nbins];
+  TH1F *hEmbed[nHistos][nbins];
+  for(int i=0; i<nHistos; i++)
+    {
+      TCanvas *c = new TCanvas(Form("%s_distribution",name[i]),Form("%s_distribution",name[i]),1100,700);
+      c->Divide(3,2);
+
+      for(int bin=1; bin<=nbins; bin++)
+	{
+	  c->cd(bin);
+	  int start_bin = hDataDisVsPt[i]->GetXaxis()->FindBin(xbins[bin-1]+1e-4);
+	  int end_bin   = hDataDisVsPt[i]->GetXaxis()->FindBin(xbins[bin]-1e-4);
+	  hData[i][bin-1] = (TH1F*)hDataDisVsPt[i]->ProjectionY(Form("Data_%s_bin%d",name[i],bin),start_bin,end_bin);
+	  hData[i][bin-1]->SetMarkerStyle(20);
+	  hData[i][bin-1]->SetMarkerColor(1);
+	  hData[i][bin-1]->SetLineColor(1);
+	  hData[i][bin-1]->Rebin(rebin[i]);
+	  hData[i][bin-1]->GetXaxis()->SetRangeUser(minimum[i], maximum[i]);
+	  hData[i][bin-1]->Scale(1./hData[i][bin-1]->Integral());
+	  hData[i][bin-1]->SetTitle("");
+	  hData[i][bin-1]->Draw("P");
+
+	  hEmbed[i][bin-1] = (TH1F*)hEmbedDisVsPt[i]->ProjectionY(Form("Emebd_%s_bin%d",name[i],bin),start_bin,end_bin);
+	  hEmbed[i][bin-1]->SetLineColor(2);
+	  hEmbed[i][bin-1]->Rebin(rebin[i]);
+	  hEmbed[i][bin-1]->Scale(1./hEmbed[i][bin-1]->Integral());
+	  hEmbed[i][bin-1]->Draw("sames HIST");
+
+	  double up = hData[i][bin-1]->GetMaximum();
+	  double low = hData[i][bin-1]->GetMinimum();
+	  double pt = (xbins[bin-1]+xbins[bin])/2;
+	  double min = -999, max = -999;
+	  if(i<2)
+	    {
+	      double sigma = fResVsPt[i]->Eval(pt);
+	      if(pt<ptbound) min = -1 * nsigma1 * sigma;
+	      else           min = -1 * nsigma2 * sigma;
+	      max = -1 * min;
+	    }
+	  else
+	    { min = -1; max = 3; }
+
+	  TLine *line = GetLine(min,low,min,up,4);
+	  line->Draw();
+	  TLine *line = GetLine(max,low,max,up,4);
+	  line->Draw();
+
+          TPaveText *t1 = GetTitleText(Form("J/#psi #mu: %1.1f < p_{T} < %1.1f",xbins[bin-1],xbins[bin]),0.06);
+          t1->Draw();
+	}
+      c->cd(1);
+      TLegend *leg = new TLegend(0.6,0.68,0.8,0.88);
+      leg->SetBorderSize(0);
+      leg->SetFillColor(0);
+      leg->SetTextSize(0.05);
+      leg->AddEntry(hData[i][0],"Data","P");
+      leg->AddEntry(hEmbed[i][0],"Embedding","L");
+      leg->Draw();
+
+      if(savePlot)
+	c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_PIDcuts/DataVsEmbed_%s_InPtBins.pdf",run_type,name[i]));
+    }
+
+  // Fit data to extract efficiency
+  TH1F *hFitDataEff[nHistos];
+  for(int i=0; i<nHistos; i++)
+    {
+      hFitDataEff[i] = new TH1F(Form("Data_JpsiMuon_%s_FitEff",name[i]),Form("%s efficiency from fitting data;p_{T} (GeV/c)",name[i]),nbins,xbins);
+      TCanvas *c = new TCanvas(Form("FitData_%s",name[i]),Form("FitData_%s",name[i]),1100,700);
+      c->Divide(3,2);
+
+      for(int bin=1; bin<=nbins; bin++)
+	{
+	  TH1F *hFit = (TH1F*)hData[i][bin-1]->Clone(Form("Fit_%s",hData[i][bin-1]->GetName()));
+	  TF1 *func = new TF1(Form("func_%d_%d",i,bin),"gaus",minimum[i], maximum[i]);
+	  func->SetParameter(2,5);
+	  hFit->Fit(func,"IR0Q");
+	  c->cd(bin);
+	  hFit->Draw();
+	  func->SetLineColor(4);
+	  func->Draw("sames");
+	  TPaveText *t1 = GetTitleText(Form("J/#psi #mu: %1.1f < p_{T} < %1.1f",xbins[bin-1],xbins[bin]),0.06);
+	  t1->Draw();
+	  double min = -999, max = -999;
+	  double pt = (xbins[bin-1]+xbins[bin])/2;
+	  if(i<2)
+	    {
+	      double sigma = fResVsPt[i]->Eval(pt);
+	      if(pt<ptbound) min = -1 * nsigma1 * sigma;
+	      else           min = -1 * nsigma2 * sigma;
+	      max = -1 * min;
+	    }
+	  else
+	    { min = -1; max = 3; }
+	  double all = func->Integral(minimum[i], maximum[i]);
+	  double all_err = func->IntegralError(minimum[i], maximum[i]);
+	  double acc = func->Integral(min,max);
+	  double acc_err = func->IntegralError(min,max);
+	  hFitDataEff[i]->SetBinContent(bin,acc/all);
+	  hFitDataEff[i]->SetBinError(bin,acc_err/all);
+	}
+      if(savePlot)
+	c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_PIDcuts/Fit_Data_muon_%s.pdf",run_type,name[i]));
+    }
+  
+
+  TH1F *hDisAll[nHistos], *hDisAcc[nHistos], *hEff[nHistos];
+  for(int i=0; i<nHistos; i++)
+    {
+      hDisAll[i] = new TH1F(Form("Data_JpsiMuon_%s_all",name[i]),Form("%s distribution of input muon tracks;p_{T} (GeV/c)",name[i]),nbins,xbins);
+      hDisAcc[i] = new TH1F(Form("Data_JpsiMuon_%s_Acc",name[i]),Form("%s distribution of accepted muon tracks;p_{T} (GeV/c)",name[i]),nbins,xbins);
+      for(int bin=1; bin<=nbins; bin++)
+	{
+	  int start_bin = hDataDisVsPt[i]->GetXaxis()->FindBin(xbins[bin-1]+1e-4);
+	  int end_bin = hDataDisVsPt[i]->GetXaxis()->FindBin(xbins[bin]-1e-4);
+	  TH1F *htmp = (TH1F*)hDataDisVsPt[i]->ProjectionY(Form("%s_%d",name[i],bin),start_bin,end_bin);
+	  double all_err;
+	  double all = htmp->IntegralAndError(0,-1,all_err);
+	  hDisAll[i]->SetBinContent(bin,all);
+	  hDisAll[i]->SetBinError(bin,all_err);
+
+	  double pt = hDisAll[i]->GetBinCenter(bin);
+	  double min = -999, max = -999;
+	  if(i<2)
+	    {
+	      double sigma = fResVsPt[i]->Eval(pt);
+	      if(pt<ptbound) min = -1 * nsigma1 * sigma;
+	      else           min = -1 * nsigma2 * sigma;
+	      max = -1 * min;
+	    }
+	  else
+	    { min = -1; max = 3; }
+	  double acc_err;
+	  double acc = htmp->IntegralAndError(htmp->FindBin(min),htmp->FindBin(max),acc_err);
+	  if(i==-1)
+	    {
+	      cout << all << "  " << all_err << endl;
+	      cout << htmp->FindBin(min) << "  " << htmp->FindBin(max) << endl;
+	      cout << acc << "  " << acc_err << endl;
+	    }
+	  hDisAcc[i]->SetBinContent(bin,acc);
+	  hDisAcc[i]->SetBinError(bin,acc_err);
+	}
+      hEff[i] = (TH1F*)hDisAcc[i]->Clone(Form("Data_JpsiMuon_%s_Eff",name[i]));
+      hEff[i]->Divide(hDisAll[i]);
       hEff[i]->SetMarkerStyle(21);
       hEff[i]->GetYaxis()->SetRangeUser(0.3,1.3);
       c = draw1D(hEff[i],Form("Single muon efficiency of %s cut;p_{T,#mu} (GeV/c);Efficiency",title[i]));
       gPad->SetGridy();
       hEmbedEff[i]->SetMarkerColor(2);
       hEmbedEff[i]->Draw("sames");
+      hFitDataEff[i]->SetMarkerStyle(33);
+      hFitDataEff[i]->SetMarkerSize(2);
+      hFitDataEff[i]->SetMarkerColor(4);
+      hFitDataEff[i]->SetLineColor(4);
+      hFitDataEff[i]->Draw("sames");
       TLegend *leg = new TLegend(0.2,0.15,0.4,0.35);
       leg->SetBorderSize(0);
       leg->SetFillColor(0);
       leg->SetTextSize(0.04);
-      leg->AddEntry(hEff[i],"Data","P");
+      leg->AddEntry(hEff[i],"Data counting","P");
+      leg->AddEntry(hFitDataEff[i],"Data fitting","P");
       leg->AddEntry(hEmbedEff[i],"Embedding","P");
       leg->Draw();
 
       if(savePlot)
-	{
-	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_PIDcuts/Data_muon_%s_eff.pdf",run_type,name[i]));
-	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_PIDcuts/Data_muon_%s_eff.png",run_type,name[i]));
-	}
+	c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_PIDcuts/Data_muon_%s_eff.pdf",run_type,name[i]));
     }
 
   if(saveHisto)
     {
-      TFile *fout = 0x0;
-      if(year==2013) fout = TFile::Open("Rootfiles/Run13.pp500.PIDcuts.root","update");
-      if(year==2014) fout = TFile::Open("Rootfiles/Run14.AuAu200.PIDcuts.root","update");
-      for(int i=0; i<4; i++)
+      fembed->cd();
+      for(int i=0; i<nHistos; i++)
 	{
 	  hDisAll[i]->Write("",TObject::kOverwrite);
 	  hDisAcc[i]->Write("",TObject::kOverwrite);
 	  hEff[i]->Write("",TObject::kOverwrite);
+	  hFitDataEff[i]->Write("",TObject::kOverwrite);
 	}
     }
 }
@@ -281,7 +363,7 @@ void anaEmbed(const bool savePlot = 1, const bool saveHisto = 1)
   TH2F *hMuonDisVsPt[4];
   hMuonDisVsPt[0] = (TH2F*)fEmbed->Get("hTrkDzVsPt_MCreco_di_mu");
   hMuonDisVsPt[1] = (TH2F*)fEmbed->Get("hTrkDyVsPt_MCreco_di_mu");
-  hMuonDisVsPt[2] = (TH2F*)fEmbed->Get("hMcDeltaTof_di_mu");
+  hMuonDisVsPt[2] = (TH2F*)fEmbed->Get("hTrkDtofVsPt_MCreco_di_mu");
   hMuonDisVsPt[3] = (TH2F*)fEmbed->Get("hTrkNSigmaPi_MCreco_di_mu");
   const int nbins = 24;
   const double xbins[nbins+1] = {0,0.2,0.4,0.6,0.8,1.0,1.2,1.4,1.6,1.8,2.0,2.2,2.4,2.6,2.8,3.0,3.5,4.0,4.5,5.0,5.5,6.0,7.0,8.0,10.0};
@@ -320,7 +402,7 @@ void anaEmbed(const bool savePlot = 1, const bool saveHisto = 1)
       hFitSigma[i]->SetLineColor(2);
       hFitSigma[i]->GetYaxis()->SetRangeUser(0,30);
       c = draw1D(hFitSigma[i],"");
-      funcCut[i]= new TF1(Form("Embed_JpsiMuon_%s_sigma",name[i]),"[0]+[1]*exp([2]/x)",1,10);
+      funcCut[i]= new TF1(Form("Embed_JpsiMuon_Fit%s_sigma",name[i]),"[0]+[1]*exp([2]/x)",1,10);
       funcCut[i]->SetParameters(-10,10,1);
       hFitSigma[i]->Fit(funcCut[i],"IR0");
       funcCut[i]->SetLineColor(4);
@@ -430,15 +512,14 @@ void anaEmbed(const bool savePlot = 1, const bool saveHisto = 1)
 
   if(saveHisto)
     {
-      TFile *fout = 0x0;
-      if(year==2013) fout = TFile::Open("Rootfiles/Run13.pp500.PIDcuts.root","update");
-      if(year==2014) fout = TFile::Open("Rootfiles/Run14.AuAu200.PIDcuts.root","update");
+      TFile *fout = TFile::Open(Form("Rootfiles/%s.PIDcuts.root",run_type),"update");
       for(int i=0; i<4; i++)
 	{
 	  hMuonDisVsPt[i]->Write(Form("Embed_JpsiMuon_%sVsPt",name[i]),TObject::kOverwrite);
 	  hDisAll[i]->Write("",TObject::kOverwrite);
 	  hDisAcc[i]->Write("",TObject::kOverwrite);
 	  hEff[i]->Write("",TObject::kOverwrite);
+	  if(i<2)  funcCut[i]->Write("",TObject::kOverwrite);
 	}
     }
 }
