@@ -28,14 +28,15 @@ void ana_JpsiYield()
   printf("all di-muon events: %4.4e\n",hStat->GetBinContent(3));
   printf("acc di-muon events: %4.4e\n",hStat->GetBinContent(10));
 
-  anaYield();
-  //yieldVsLumi();
+  //anaYield();
+  yieldVsLumi();
   //pt2scan();
 }
 
 //================================================
-void yieldVsLumi(int savePlot = 1, int saveHisto = 0)
+void yieldVsLumi(int savePlot = 1, int saveHisto = 1)
 {
+  const int gApplyWeight = 1;
   const int nSetup = 4;
   const char *setup_name[nSetup] = {"production_2014","production_low_2014","production_mid_2014","production_high_2014"};
   TList *list = new TList;

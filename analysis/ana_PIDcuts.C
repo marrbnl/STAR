@@ -45,9 +45,10 @@ void ana_PIDcuts()
 //================================================
 void anaData(const bool savePlot = 1, const bool saveHisto = 0)
 {
+  const int year = 2014;
   TFile *fembed = TFile::Open(Form("Rootfiles/%s.PIDcuts.root",run_type),"update");
   TFile *fdata = 0x0;
-  if(year==2014) fdata = TFile::Open("./output/Pico.Run14.AuAu200.jpsi.root","read");
+  if(year==2014) fdata = TFile::Open("./output/Pico.Run14.AuAu200.jpsi.dtof0.4.root","read");
   if(year==2015) fdata = TFile::Open("./output/Pico.Run15.pp200.jpsi.muon.root","read");
 
   const int nHistos = 3;

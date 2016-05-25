@@ -25,8 +25,8 @@ void make_Embed()
   TH1F *hStat = (TH1F*)f->Get("hEventStat");
   printf("[i] # of events: %4.4e\n",hStat->GetBinContent(3));
 
-  makeTracks();
-  //makeJets();
+  //makeTracks();
+  makeJets();
 }
 
 //================================================
@@ -35,6 +35,7 @@ void makeJets(const bool saveHisto = 1)
   THnSparseF *hnJpsiInfo[6][2];
   TH1F *hJpsiInvMass[6][gNTrgSetup][nCentBins][2];
   TH1F *hJpsiPt[6][gNTrgSetup][nCentBins][2];
+  TH2F *hJpsiMassVsPt[6][gNTrgSetup][nCentBins][2];
   TH1F *hJpsiRapdity[6][gNTrgSetup][nCentBins][2];
 
   for(int i=0; i<6; i++)
@@ -62,7 +63,13 @@ void makeJets(const bool saveHisto = 1)
 		  hJpsiPt[i][j][k][w] = (TH1F*)hnJpsiInfo[i][w]->Projection(1);
 		  hJpsiPt[i][j][k][w]->SetName(Form("hJpsiPt_%s_cent%s%s%s",trkEffType[i],cent_Title[k],gTrgSetupTitle[j],weight_name[w]));
 		  hJpsiPt[i][j][k][w]->SetTitle("");
+		  hJpsiPt[i][j][k][w]->SetBinContent(hJpsiPt[i][j][k][w]->GetNbinsX()+1,0); // reset overflow bin
 		  hJpsiPt[i][j][k][w]->Sumw2();
+
+		  hJpsiMassVsPt[i][j][k][w] = (TH2F*)hnJpsiInfo[i][w]->Projection(0,1);
+		  hJpsiMassVsPt[i][j][k][w]->SetName(Form("hJpsiMassVsPt_%s_cent%s%s%s",trkEffType[i],cent_Title[k],gTrgSetupTitle[j],weight_name[w]));
+		  hJpsiMassVsPt[i][j][k][w]->SetTitle("");
+		  hJpsiMassVsPt[i][j][k][w]->Sumw2();
 
 		  hJpsiRapdity[i][j][k][w] = (TH1F*)hnJpsiInfo[i][w]->Projection(2);
 		  hJpsiRapdity[i][j][k][w]->SetName(Form("hJpsiRapdity_%s_cent%s%s%s",trkEffType[i],cent_Title[k],gTrgSetupTitle[j],weight_name[w]));
@@ -89,6 +96,7 @@ void makeJets(const bool saveHisto = 1)
 		{
 		  for(int k=0; k<nCentBins; k++)
 		    {
+		      hJpsiMassVsPt[i][j][k][w]->Write();
 		      hJpsiInvMass[i][j][k][w]->Write();
 		      hJpsiPt[i][j][k][w]->Write();
 		      hJpsiRapdity[i][j][k][w]->Write();
@@ -111,26 +119,47 @@ void makeTracks(const bool saveHisto = 1)
   for(int i=0; i<6; i++)
     {
       hnMcTrkPt[i] = (THnSparseF*)f->Get(Form("mhMcTrkPtEff_%s_di_mu",trkEffType[i]));
+      hnMcTrkPt[i]->GetAxis(0)->SetRangeUser(0,20);
+      hnMcTrkPt[i]->GetAxis(1)->SetRangeUser(-0.45,0.45);
+
       for(int j=0; j<gNTrgSetup; j++)
 	{
-	  if(j>0) hnMcTrkPt[i]->GetAxis(3)->SetRange(j,j);
-	  hMcTrkPtVsCent[i][j] = (TH2F*)hnMcTrkPt[i]->Projection(0,1);
+	  if(j>0) hnMcTrkPt[i]->GetAxis(4)->SetRange(j,j);
+	  hMcTrkPtVsCent[i][j] = (TH2F*)hnMcTrkPt[i]->Projection(0,2);
 	  hMcTrkPtVsCent[i][j]->SetName(Form("hMcTrkPtVsCent_%s%s",trkEffType[i],gTrgSetupTitle[j]));
 	  hMcTrkPtVsCent[i][j]->SetTitle("");
 
 	  for(int k=0; k<nCentBins; k++)
 	    {
-	      hnMcTrkPt[i]->GetAxis(1)->SetRange(centBins_low[k],centBins_high[k]);
+	      hnMcTrkPt[i]->GetAxis(2)->SetRange(centBins_low[k],centBins_high[k]);
 	      hMcTrkPt[i][j][k] = (TH1F*)hnMcTrkPt[i]->Projection(0);
 	      hMcTrkPt[i][j][k]->SetName(Form("hMcTrkPt_%s_cent%s%s",trkEffType[i],cent_Title[k],gTrgSetupTitle[j]));
 	      hMcTrkPt[i][j][k]->SetTitle("");
 
-	      hMcTrkPtVsZdc[i][j][k] = (TH2F*)hnMcTrkPt[i]->Projection(0,2);
+	      hMcTrkPtVsZdc[i][j][k] = (TH2F*)hnMcTrkPt[i]->Projection(0,3);
 	      hMcTrkPtVsZdc[i][j][k]->SetName(Form("hMcTrkPtVsZdcRate_%s_cent%s%s",trkEffType[i],cent_Title[k],gTrgSetupTitle[j]));
 	      hMcTrkPtVsZdc[i][j][k]->SetTitle("");
-	      hnMcTrkPt[i]->GetAxis(1)->SetRange(0,-1);
+	      hnMcTrkPt[i]->GetAxis(2)->SetRange(0,-1);
 	    }
-	  hnMcTrkPt[i]->GetAxis(3)->SetRange(0,-1);
+	  hnMcTrkPt[i]->GetAxis(4)->SetRange(0,-1);
+	}
+    }
+
+  TH1F *hMcTrkPt2[6][gNTrgSetup][6];
+  for(int i=0; i<6; i++)
+    {
+      for(int j=0; j<gNTrgSetup; j++)
+	{
+	  if(j>0) hnMcTrkPt[i]->GetAxis(4)->SetRange(j,j);
+	  for(int k=0; k<6; k++)
+	    {
+	      hnMcTrkPt[i]->GetAxis(2)->SetRange(5+k*2,6+k*2);
+	      hMcTrkPt2[i][j][k] = (TH1F*)hnMcTrkPt[i]->Projection(0);
+	      hMcTrkPt2[i][j][k]->SetName(Form("hMcTrkPt_%s_cent%d%d%s",trkEffType[i],50-k*10,60-k*10,gTrgSetupTitle[j]));
+	      hMcTrkPt2[i][j][k]->SetTitle("");
+	      hnMcTrkPt[i]->GetAxis(2)->SetRange(0,-1);
+	    }
+	  hnMcTrkPt[i]->GetAxis(4)->SetRange(0,-1);
 	}
     }
 
@@ -174,9 +203,13 @@ void makeTracks(const bool saveHisto = 1)
 		{
 		  hMcTrkPt[i][j][k]->Sumw2();
 		  hMcTrkPt[i][j][k]->Write();
-
 		  hMcTrkPtVsZdc[i][j][k]->Sumw2();
 		  hMcTrkPtVsZdc[i][j][k]->Write();
+		}
+	      for(int k=0; k<6; k++)
+		{
+		  hMcTrkPt2[i][j][k]->Sumw2();
+		  hMcTrkPt2[i][j][k]->Write();
 		}
 	    }
 	}

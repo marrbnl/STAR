@@ -85,13 +85,13 @@ void makeYieldRun14(const int isetup = 0, const int icent = 0, const int isys = 
 
   // global setup
   double g_mix_scale_low = 2.6;
-  double g_mix_scale_high = 3.6;
+  double g_mix_scale_high = 4;
   double g_bin_width = 0.04; // 40 MeV
   TString g_func1 = "pol3";
   TString g_func2 = "pol1";
   int g_func1_npar = 4;
   int g_func2_npar = 2;
-  double g_sig_fit_min = 2.6;
+  double g_sig_fit_min = 2.5;
   double g_sig_fit_max = 4;
   if(isys==1) { g_mix_scale_low = 2.5; g_mix_scale_high = 3.7; }
   if(isys==2) { g_mix_scale_low = 2.9; g_mix_scale_high = 3.3; }
@@ -145,6 +145,12 @@ void makeYieldRun14(const int isetup = 0, const int icent = 0, const int isys = 
       hMixScale[i]->Fit(funcScale[i],"IR0Q");
       hFitScaleFactor->SetBinContent(i,funcScale[i]->GetParameter(0));
       hFitScaleFactor->SetBinError(i,funcScale[i]->GetParError(0));
+
+      if(i==1)
+	{
+	  g_mix_scale_low = 2.5;
+	  g_mix_scale_high = 2.7;
+	}
 
       // bin counting method
       double se = 0, se_err = 0, me = 0, me_err = 0;
@@ -295,13 +301,13 @@ void makeYieldRun14(const int isetup = 0, const int icent = 0, const int isys = 
   // Fit residual
   double fix_mean[nPtBins] = {0};
   double fix_sigma[nPtBins];
-  if(icent>0)
+  if(icent>0 || isetup > 0)
     {
       TFile *fFit = 0;
       if(isys==0)  fFit = TFile::Open(outName,"read");
       else         fFit = TFile::Open(outNameSys,"read");
-      TH1F *h1 = (TH1F*)fFit->Get(Form("Jpsi_FitMean_cent%s%s%s%s",cent_Title[0],gWeightName[gApplyWeight],gTrgSetupName[isetup],sys_name[isys]));
-      TH1F *h2 = (TH1F*)fFit->Get(Form("Jpsi_FitSigma_cent%s%s%s%s",cent_Title[0],gWeightName[gApplyWeight],gTrgSetupName[isetup],sys_name[isys]));
+      TH1F *h1 = (TH1F*)fFit->Get(Form("Jpsi_FitMean_cent%s%s%s%s",cent_Title[0],gWeightName[gApplyWeight],gTrgSetupName[0],sys_name[isys]));
+      TH1F *h2 = (TH1F*)fFit->Get(Form("Jpsi_FitSigma_cent%s%s%s%s",cent_Title[0],gWeightName[gApplyWeight],gTrgSetupName[0],sys_name[isys]));
       for(int bin=0; bin<=h1->GetNbinsX(); bin++)
 	{
 	  fix_mean[bin] = h1->GetBinContent(bin);
@@ -358,7 +364,7 @@ void makeYieldRun14(const int isetup = 0, const int icent = 0, const int isys = 
       funcSignal[i]->SetParameter(0,100);
       funcSignal[i]->SetParameter(1,3.09);
       funcSignal[i]->SetParameter(2,0.1);
-      if(icent>0 && fix_mean[0]>0)
+      if(fix_mean[0]>0)
 	{
 	  funcSignal[i]->FixParameter(1,fix_mean[i]);
 	  funcSignal[i]->FixParameter(2,fix_sigma[i]);
@@ -480,9 +486,9 @@ void makeYieldRun14(const int isetup = 0, const int icent = 0, const int isys = 
       t->SetTextAlign(11);
       t->Draw();
     }
-  t = GetPaveText(0.7,0.8,0.16,0.22,0.06);
+  t = GetPaveText(0.7,0.8,0.3,0.35,0.06);
   t->SetTextFont(62);
-  t->AddText("LS-MIX(LS)");
+  t->AddText("LS-MIX(UL)");
   t->SetTextColor(4);
   cFit->cd(1);
   t->Draw();

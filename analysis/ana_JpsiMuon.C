@@ -45,7 +45,7 @@ void MtdVpdTacDiff(const Int_t savePlot = 1)
   TFile *fdata[nHistos];
   for(int i=0; i<nHistos; i++)
     {
-      if(i==0) fdata[i] = TFile::Open("./output/Pico.Run14.AuAu200.jpsi.root","read");
+      if(i==0) fdata[i] = TFile::Open("./output/Pico.Run14.AuAu200.jpsi.dtof0.4.root","read");
       if(i==1) fdata[i] = TFile::Open("./output/Pico.Run15.pp200.jpsi.muon.root","read");
       hDataUL[i]       = (TH2F*)fdata[i]->Get("mhJpsiMuonMtdVpdTacDiff_UL_di_mu");
       hDataUL[i]->SetName(Form("%s_%d",hDataUL[i]->GetName(),i));

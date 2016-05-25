@@ -318,7 +318,7 @@ void xsec_Run13(const bool savePlot = 1, const bool saveHisto = 1)
 }
 
 //================================================
-void xsec_Run14(const bool savePlot = 0, const bool saveHisto = 0)
+void xsec_Run14(const bool savePlot = 1, const bool saveHisto = 1)
 {
   // Get the dimuon events number
   TFile *fdata = TFile::Open(Form("./output/Pico.Run14.AuAu200.jpsi.%sroot",run_config),"read");
@@ -328,6 +328,7 @@ void xsec_Run14(const bool savePlot = 0, const bool saveHisto = 0)
   printf("acc di-muon events: %4.4e\n",hStat->GetBinContent(10));
   const double dimuon_events = hStat->GetBinContent(10);
 
+  // =============================================
   // Effective number of MB events
   printf("+++++++++++++++++++++++++++++++++\n");
   double mb_events[nCentBins];
@@ -359,35 +360,56 @@ void xsec_Run14(const bool savePlot = 0, const bool saveHisto = 0)
 	}
       printf("Effective # of MB events for %s%%: %4.4e\n",cent_Name[i],mb_events[i]);
     }
-
-  // MTD acceptance loss
-  //TH1F *hAccCounts = (TH1F*)fdata->Get("mhAccCounts_di_mu");
-  double accept_corr = 1;
-  /*
-    printf("Acceptance loss: %3.4f\n",sqrt(accept_corr)*100);
-  if(hAccCounts)
-    {
-      c = draw1D(hAccCounts,"",kFALSE,kFALSE);
-      if(savePlot)
-	{
-	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiXsec/MTD_acceptance_loss.pdf",run_type));
-	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiXsec/MTD_acceptance_loss.png",run_type));
-	}
-
-      accept_corr = (hAccCounts->GetBinContent(1)*113./122 + 
-		     hAccCounts->GetBinContent(2)*116./122 +
-		     hAccCounts->GetBinContent(3)*120./122) / hAccCounts->GetEntries();
-      accept_corr *= accept_corr;
-    }
-  */
   printf("+++++++++++++++++++++++++++++++++\n");
+  // =============================================
+  //
+  //
+
+  // =============================================
+  // MTD acceptance loss
+  double evtCount[4] = {0,0,0,0};
+  for(int bin=1; bin<=hEvtRunAcc->GetNbinsX(); bin++)
+    {
+      if(hEvtRunAcc->GetBinContent(bin)<=0) continue;
+      double run = hEvtRunAcc->GetBinCenter(bin);
+      double evt = hEvtRunAcc->GetBinContent(bin);
+      if(run<15098067) evtCount[0] += evt;
+      else if(run<15106131) evtCount[1] += evt;
+      else evtCount[2] += evt;
+      evtCount[3] += evt;
+    }
+  TList *list = new TList;
+  TString legName[4] = {"Run < 15098067","15098068 <= Run < 15106131","Run >= 15106131","Average correction factor"};
+  TFile *fAcc = TFile::Open(Form("Rootfiles/%s.AcceptanceLoss.root",run_type),"read");
+  TH1F *hAccLoss[3];
+  for(int i=0; i<3; i++)
+    {
+      hAccLoss[i] = (TH1F*)fAcc->Get(Form("hAccepLoss_%d",i));
+    }
+  TH1F *hAccCorr = (TH1F*)hAccLoss[0]->Clone("hAccCorr");
+  hAccCorr->Reset();
+  for(int i=0; i<3; i++)
+    {
+      hAccCorr->Add(hAccLoss[i],evtCount[i]/evtCount[3]);
+      list->Add(hAccLoss[i]);
+      legName[i] = Form("%s: %2.1f%%",legName[i].Data(),evtCount[i]/evtCount[3]*100);
+    }
+  list->Add(hAccCorr);
+  c = drawHistos(list,"MTD_Acceptance","Correction for MTD acceptance loss",kFALSE,0,30,true,0.8,1.02,kFALSE,kTRUE,legName,kTRUE,"",0.35,0.75,0.18,0.45,kTRUE);
+  if(savePlot)
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiXsec/MTD_AccepLoss.pdf",run_type));
+    }
+  // =============================================
+  //
+  //
 
   // Jpsi efficiency
   TFile *fEff = TFile::Open(Form("Rootfiles/Run14_AuAu200.JpsiEff.pt%1.1f.pt%1.1f.root",pt1_cut,pt2_cut),"read");
   TH1F *hJpsiEff[nCentBins];
   for(int k=0; k<nCentBins; k++)
     {
-      hJpsiEff[k] = (TH1F*)fEff->Get(Form("JpsiPtEff_cent%s",cent_Title[k]));
+      hJpsiEff[k] = (TH1F*)fEff->Get(Form("JpsiPtEff_cent%s_corr",cent_Title[k]));
     }
   
 
@@ -407,6 +429,7 @@ void xsec_Run14(const bool savePlot = 0, const bool saveHisto = 0)
     {
       hJpsiInvYield[k] = (TH1F*)hJpsiCounts[k]->Clone(Form("Jpsi_InvYield_cent%s",cent_Title[k]));
       hJpsiInvYield[k]->Divide(hJpsiEff[k]);
+      hJpsiInvYield[k]->Divide(hAccCorr);
       cout << hJpsiEff[k]->GetBinContent(1) << endl;
       for(int bin=1; bin<=hJpsiInvYield[k]->GetNbinsX(); bin++)
 	{

@@ -42,8 +42,8 @@ void ana_Embed()
   TH1F *hStat = (TH1F*)f->Get("hEventStat");
   printf("# of events: %4.4e\n",hStat->GetBinContent(3));
 
-  //makeHistos(outName);
-  efficiency(outName);
+  makeHistos(outName);
+  //efficiency(outName);
   //TrkEff3D(outName, outPDF);
 }
 
