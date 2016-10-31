@@ -9,5 +9,8 @@
   gROOT->LoadMacro(Form("%s/Utility.C",dir));
   gROOT->LoadMacro(Form("%s/HistUtility.C",dir));
   gROOT->LoadMacro(Form("%s/projectToPtSlice.C",dir));
-  gROOT->LoadMacro("~/Work/STAR/util/defs.C");
+  gROOT->LoadMacro("~/Work/STAR/util/defs.h");
+
+  //TString path = "~/Work/ALICE/Utility/drawHistos_C.so";
+  //int res = gSystem->Load(path.Data());
 } 

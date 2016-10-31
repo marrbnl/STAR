@@ -173,7 +173,7 @@ void TrkEffCentDep(const int savePlot, const int saveHisto)
     {
       for(int k=0; k<nCentBins-1; k++)
 	{ 
-	  TH1F *htmp = (TH1F*)fTrigEff->Get(Form("MuonTrigEff_Cent%d%s",k,gTrgSetupName[j+1]));
+	  TH1F *htmp = (TH1F*)fTrigEff->Get(Form("MuonTrigEff_Cent%d%s",0,gTrgSetupName[j+1]));
 	  cout << htmp->GetName() << endl;
 	  hTrigEff[j][k] = new TH1F(Form("MuonTrigEff_Cent%s%s",cent_Title[k+1],gTrgSetupName[j+1]),"",(int)(30/htmp->GetBinWidth(1)),0,30);
 	  for(int bin=1; bin<=hTrigEff[j][k]->GetNbinsX(); bin++)
@@ -187,24 +187,24 @@ void TrkEffCentDep(const int savePlot, const int saveHisto)
 	}
     }
 
-  // 1/eff efficiency
-  TH1F *hTrkOneOverEff[gNTrgSetup-1][nHistos];
+  // tracking * trigger efficiency
+  TH1F *hTrkEffTrg[gNTrgSetup-1][nHistos];
   for(int j=0; j<gNTrgSetup-1; j++)
     {
       for(int k=0; k<nHistos; k++)
 	{
-	  hTrkOneOverEff[j][k] = (TH1F*)hMcTrkPt[0][j][k]->Clone(Form("hTrkOneOverEff_cent%s%s",centTitle[k],gTrgSetupTitle[j+1]));
-	  hTrkOneOverEff[j][k]->Divide(hMcTrkPt[1][j][k]);
+	  hTrkEffTrg[j][k] = (TH1F*)hMcTrkPt[1][j][k]->Clone(Form("hTrkEffTrg_cent%s%s",centTitle[k],gTrgSetupTitle[j+1]));
+	  hTrkEffTrg[j][k]->Divide(hMcTrkPt[0][j][k]);
 	  int index = k-1;
 	  if(k==0) index = 0;
 	  if(k>=nCentBins) index = (k-4)/2;
-	  for(int bin=1; bin<=hTrkOneOverEff[j][k]->GetNbinsX(); bin++)
+	  for(int bin=1; bin<=hTrkEffTrg[j][k]->GetNbinsX(); bin++)
 	    {
-	      double x = hTrkOneOverEff[j][k]->GetBinCenter(bin);
+	      double x = hTrkEffTrg[j][k]->GetBinCenter(bin);
 	      double jbin = hTrigEff[j][index]->FindFixBin(x);
 	      double eff = hTrigEff[j][index]->GetBinContent(jbin);
-	      hTrkOneOverEff[j][k]->SetBinContent(bin,hTrkOneOverEff[j][k]->GetBinContent(bin)/eff);
-	      hTrkOneOverEff[j][k]->SetBinError(bin,hTrkOneOverEff[j][k]->GetBinError(bin)/eff);
+	      hTrkEffTrg[j][k]->SetBinContent(bin,hTrkEffTrg[j][k]->GetBinContent(bin)*eff);
+	      hTrkEffTrg[j][k]->SetBinError(bin,hTrkEffTrg[j][k]->GetBinError(bin)*eff);
 	    }
 	}
     }
@@ -221,7 +221,7 @@ void TrkEffCentDep(const int savePlot, const int saveHisto)
     { 
       for(int j=0; j<gNTrgSetup-1; j++)
 	{
-	  hTrkEff[0]->Add(hTrkOneOverEff[j][k], nJpsi[k-1][j]/nJpsiAll);
+	  hTrkEff[0]->Add(hTrkEffTrg[j][k], nJpsi[k-1][j]/nJpsiAll);
 	}
     }
   // other centralities
@@ -231,10 +231,11 @@ void TrkEffCentDep(const int savePlot, const int saveHisto)
 	{
 	  int index = k-1;
 	  if(k>=nCentBins) index = (k-4)/2;
-	  hTrkEff[k]->Add(hTrkOneOverEff[j][k], nJpsi[index][j]/nJpsiCent[index]);
+	  hTrkEff[k]->Add(hTrkEffTrg[j][k], nJpsi[index][j]/nJpsiCent[index]);
 	}
     }
 
+  /*
   for(int k=0; k<nHistos; k++)
     { 
       for(int bin=1; bin<=hTrkEff[k]->GetNbinsX(); bin++)
@@ -245,6 +246,7 @@ void TrkEffCentDep(const int savePlot, const int saveHisto)
 	  hTrkEff[k]->SetBinError(bin, 1./value * error/value);
 	}
     }
+  */
 
   TLegend *leg = new TLegend(0.3,0.2,0.5,0.45);
   leg->SetBorderSize(0);
@@ -274,25 +276,78 @@ void TrkEffCentDep(const int savePlot, const int saveHisto)
     {
       TH1F *hfit = (TH1F*)hTrkEff[k]->Clone(Form("Fit_%s",hTrkEff[k]->GetName()));
       hfit->GetXaxis()->SetRangeUser(0.5,20);
-      hfit->GetYaxis()->SetRangeUser(0,0.8);
+      hfit->GetYaxis()->SetRangeUser(0,0.9);
       hfit->SetMarkerStyle(25);
       hfit->SetMarkerColor(1);
-      func[k] = new TF1(Form("func_%d",k),"[0]*exp(-pow([1]/x,[2])-pow([3]/x/x,[4])-pow([5]/x/x/x,[6]))",1.2,20);
-      func[k]->SetParameters(1,0.1,1,0.1,1,0.1,1);
+      //func[k] = new TF1(Form("func_%d",k),"[0]*exp(-pow([1]/x,[2])-pow([3]/x/x,[4])-pow([5]/x/x/x,[6]))",1,20);
+      func[k] = new TF1(Form("func_%d",k),"[0]*exp(-pow([1]/x,[2]))",1,5);
+      func[k]->SetParameters(1,0.1,1);
       hfit->Fit(func[k],"RQ0");
       c->cd(k+1);
       hfit->SetTitle("");
       hfit->Draw();
+      TF1 *funcTmp = (TF1*)func[k]->Clone(Form("%s_clone",func[k]->GetName()));
+      funcTmp->SetRange(1,20);
+      funcTmp->SetLineColor(2);
+      funcTmp->SetLineStyle(2);
+      funcTmp->Draw("sames");
       func[k]->SetLineColor(4);
       func[k]->Draw("sames");
       TPaveText *t1 = GetTitleText(Form("TPC tracking efficiency (%s%%)",centTitle[k]),0.06);
       t1->Draw();
+      printf("[i] Efficiency for %s is %4.2f%%\n",centTitle[k],funcTmp->Eval(10)*100);
     }
   if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/FitTrkEff_InCent.pdf",run_type));
+
+
+  // Fit efficiency for each trigger setup
+  c = new TCanvas("fit_trkeff2","fit_trkeff2",1200,600);
+  c->Divide(4,4);
+  TF1 *func2[gNTrgSetup-1][nCentBins];
+  TH1F *hTrkEff2[gNTrgSetup-1][nCentBins];
+  for(int j=0; j<gNTrgSetup-1; j++)
+    {
+      double nJpsiSetup = nJpsi[0][j] + nJpsi[1][j] + nJpsi[2][j];
+      for(int k=0; k<nCentBins; k++)
+	{
+	  hTrkEff2[j][k] = (TH1F*)hTrkEffTrg[j][k]->Clone(Form("hTrkEff2_cent%s%s",centTitle[k],gTrgSetupTitle[j+1]));
+	  if(k==0)
+	    {
+	      hTrkEff2[j][k]->Reset();
+	      for(int icent=1; icent<nCentBins; icent++)
+		{
+		  hTrkEff2[j][k]->Add(hTrkEffTrg[j][icent], nJpsi[icent-1][j]/nJpsiSetup);
+		}
+	    }
+
+	  TH1F *hfit = (TH1F*)hTrkEff2[j][k]->Clone(Form("Fit_%s",hTrkEff2[j][k]->GetName()));
+	  hfit->GetXaxis()->SetRangeUser(0.5,20);
+	  hfit->GetYaxis()->SetRangeUser(0,0.8);
+	  hfit->SetMarkerStyle(25);
+	  hfit->SetMarkerColor(1);
+	  func2[j][k] = new TF1(Form("func_%d_%d",j,k),"[0]*exp(-pow([1]/x,[2]))",1,5);
+	  func2[j][k]->SetParameters(1,0.1,1);
+	  hfit->Fit(func2[j][k],"RQ0");
+	  c->cd(j*nCentBins+k+1);
+	  hfit->SetTitle("");
+	  hfit->Draw();
+	  TF1 *funcTmp = (TF1*)func2[j][k]->Clone(Form("%s_clone",func2[j][k]->GetName()));
+	  funcTmp->SetRange(1,20);
+	  funcTmp->SetLineColor(2);
+	  funcTmp->SetLineStyle(2);
+	  funcTmp->Draw("sames");
+	  func2[j][k]->SetLineColor(4);
+	  func2[j][k]->Draw("sames");
+	  TPaveText *t1 = GetTitleText(Form("TPC tracking efficiency (%s,%s%%)",gTrgSetupTitle[j+1],centTitle[k]),0.06);
+	  t1->Draw();
+	  printf("[i] Efficiency for %s in %s is %4.2f%%\n",centTitle[k],gTrgSetupTitle[j+1],funcTmp->Eval(10)*100);
+	}
+    }
 
   // Toy MC
   TH1F *hInJpsiPt;
   TH1F *hOutJpsiPt[nHistos];
+  TH1F *hOutJpsiPt2[gNTrgSetup-1][nCentBins];
 
   const int nbins = nPtBins -1;
   double xbins[nbins+1];
@@ -306,6 +361,14 @@ void TrkEffCentDep(const int savePlot, const int saveHisto)
     {
       hOutJpsiPt[i] = new TH1F(Form("hOutJpsiPt_%d",i),"p_{T} distribution of reconstructed J/#Psi;p_{T} (GeV/c)",nbins,xbins);
       hOutJpsiPt[i]->Sumw2();
+    }
+  for(int j=0; j<gNTrgSetup-1; j++)
+    {
+      for(int k=0; k<nCentBins; k++)
+	{
+	  hOutJpsiPt2[j][k] = new TH1F(Form("hOutJpsiPt_%d_%d",j,k),"p_{T} distribution of reconstructed J/#Psi;p_{T} (GeV/c)",nbins,xbins);
+	  hOutJpsiPt2[j][k]->Sumw2();
+	}
     }
 
 
@@ -350,6 +413,21 @@ void TrkEffCentDep(const int savePlot, const int saveHisto)
 	      hOutJpsiPt[k]->Fill(mc_pt,weight);
 	    }
 	}
+
+      for(int j=0; j<gNTrgSetup-1; j++)
+	{
+	  for(int k=0; k<nCentBins; k++)
+	    {
+	      double eff1 = func2[j][k]->Eval(pt1);
+	      double eff2 = func2[j][k]->Eval(pt2);
+	      double pro1 = myRandom->Uniform(0., 1.);
+	      double pro2 = myRandom->Uniform(0., 1.);
+	      if(pro1<eff1 && pro2<eff2)
+		{
+		  hOutJpsiPt2[j][k]->Fill(mc_pt,weight);
+		}
+	    }
+	}
     }
 
   TH1F *hJpsiEff[nCentBins];
@@ -375,6 +453,30 @@ void TrkEffCentDep(const int savePlot, const int saveHisto)
   leg->AddEntry(hTrkEff[3],Form("%s%%/%s%%",cent_Name[3],cent_Name[1]),"PL");
   leg->Draw();
   if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/JpsiEffCorr_ToCentral.pdf",run_type));
+
+
+  TH1F *hJpsiEff2[gNTrgSetup-1][nCentBins];
+  for(int j=0; j<gNTrgSetup-1; j++)
+    {
+      for(int k=0; k<nCentBins; k++)
+	{
+	  hJpsiEff2[j][k] = (TH1F*)hOutJpsiPt2[j][k]->Clone(Form("hJpsiEffCorr_cent%s%s",centTitle[k],gTrgSetupTitle[j+1]));
+	  hJpsiEff2[j][k]->Divide(hOutJpsiPt2[j][1]);
+	  //hJpsiEff2[j][k]->Divide(hOutJpsiPt[1]);
+	  hJpsiEff2[j][k]->SetMarkerStyle(20+k);
+	  hJpsiEff2[j][k]->SetMarkerColor(TMath::Power(2,j));
+	  hJpsiEff2[j][k]->SetTitle("Ratio of J/#psi efficiency");
+	  hJpsiEff2[j][k]->GetYaxis()->SetRangeUser(0.4,1.8);
+	}
+    }
+  c = draw1D(hJpsiEff2[0][0]);
+  for(int j=0; j<gNTrgSetup-1; j++)
+    {
+      for(int k=0; k<nCentBins; k++)
+	{
+	  hJpsiEff2[j][k]->Draw("sames");
+	}
+    }
 
   // Npart analysis
   int ptCuts[2] = {0,5};
@@ -409,6 +511,14 @@ void TrkEffCentDep(const int savePlot, const int saveHisto)
 	{
 	  hJpsiEff[k]->SetTitle("");
 	  hJpsiEff[k]->Write("",TObject::kOverwrite);
+	}
+      for(int j=0; j<gNTrgSetup-1; j++)
+	{
+	  for(int k=0; k<nCentBins; k++)
+	    {
+	      hJpsiEff2[j][k]->SetTitle("");
+	      hJpsiEff2[j][k]->Write("",TObject::kOverwrite);
+	    }
 	}
       fout->Close();
 

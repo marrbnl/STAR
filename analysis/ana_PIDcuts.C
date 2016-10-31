@@ -38,8 +38,8 @@ void ana_PIDcuts()
 
   //makeData();
   //anaEmbed();
-  anaData();
-  //nSigmaPi();
+  //anaData();
+  nSigmaPi();
 }
 
 //================================================
@@ -48,7 +48,7 @@ void anaData(const bool savePlot = 1, const bool saveHisto = 0)
   const int year = 2014;
   TFile *fembed = TFile::Open(Form("Rootfiles/%s.PIDcuts.root",run_type),"update");
   TFile *fdata = 0x0;
-  if(year==2014) fdata = TFile::Open("./output/Pico.Run14.AuAu200.jpsi.dtof0.4.root","read");
+  if(year==2014) fdata = TFile::Open("./output/Pico.Run14.AuAu200.jpsi.root","read");
   if(year==2015) fdata = TFile::Open("./output/Pico.Run15.pp200.jpsi.muon.root","read");
 
   const int nHistos = 3;
@@ -63,6 +63,8 @@ void anaData(const bool savePlot = 1, const bool saveHisto = 0)
 
   TH2F *hDataUL[nHistos];
   TH2F *hDataLS[nHistos];
+  TH2F *hInvMassVpPtUL[nHistos];
+  TH2F *hInvMassVpPtLS[nHistos];
   TH2F *hDataDisVsPt[nHistos];
   TH2F *hEmbedDisVsPt[nHistos];
   TH1F *hEmbedEff[nHistos];
@@ -74,9 +76,61 @@ void anaData(const bool savePlot = 1, const bool saveHisto = 0)
       hDataLS[i]->Sumw2();
       hDataDisVsPt[i]  = (TH2F*)hDataUL[i]->Clone(Form("mhJpsiMuon%s_UL_di_mu_Clone",name[i]));
       hDataDisVsPt[i]->Add(hDataLS[i], -1);
+
+      hInvMassVpPtUL[i]       = (TH2F*)fdata->Get(Form("mhJpsiMassVsPt_%s_UL_di_mu",name[i]));
+      hInvMassVpPtUL[i]->Sumw2();
+      hInvMassVpPtLS[i]       = (TH2F*)fdata->Get(Form("mhJpsiMassVsPt_%s_LS_di_mu",name[i]));
+      hInvMassVpPtLS[i]->Sumw2();
+
       hEmbedDisVsPt[i] = (TH2F*)fembed->Get(Form("Embed_JpsiMuon_%sVsPt",name[i]));
       hEmbedEff[i]     = (TH1F*)fembed->Get(Form("Embed_JpsiMuon_%s_Eff",name[i]));
     }
+
+  /*
+  // compare invariant mass
+  TH1F *hInvMassUL[nHistos][nbins];
+  TH1F *hInvMassLS[nHistos][nbins];
+  for(int i=0; i<nHistos; i++)
+    {
+      TCanvas *c = new TCanvas(Form("%s_InvMass",name[i]),Form("%s_InvMass",name[i]),1100,700);
+      c->Divide(3,2);
+      for(int bin=1; bin<=nbins; bin++)
+	{
+	  c->cd(bin);
+	  int start_bin = hInvMassVpPtUL[i]->GetXaxis()->FindBin(xbins[bin-1]+1e-4);
+	  int end_bin   = hInvMassVpPtUL[i]->GetXaxis()->FindBin(xbins[bin]-1e-4);
+	  hInvMassUL[i][bin-1] = (TH1F*)hInvMassVpPtUL[i]->ProjectionY(Form("Data_InvMass_UL_%s_bin%d",name[i],bin),start_bin,end_bin);
+	  hInvMassUL[i][bin-1]->SetMarkerStyle(20);
+	  hInvMassUL[i][bin-1]->SetMarkerStyle(20);
+	  hInvMassUL[i][bin-1]->Rebin(10);
+	  hInvMassUL[i][bin-1]->SetMaximum(1.5*hInvMassUL[i][bin-1]->GetMaximum());
+	  hInvMassUL[i][bin-1]->GetXaxis()->SetRangeUser(2,4);
+	  hInvMassUL[i][bin-1]->SetTitle("");
+	  hInvMassUL[i][bin-1]->Draw("P");
+
+	  hInvMassLS[i][bin-1] = (TH1F*)hInvMassVpPtLS[i]->ProjectionY(Form("Data_InvMass_LS_%s_bin%d",name[i],bin),start_bin,end_bin);
+	  hInvMassLS[i][bin-1]->SetMarkerStyle(24);
+	  hInvMassLS[i][bin-1]->SetMarkerColor(2);
+	  hInvMassLS[i][bin-1]->SetLineColor(2);
+	  hInvMassLS[i][bin-1]->Rebin(10);
+	  hInvMassLS[i][bin-1]->Draw("samesP");
+
+	  TPaveText *t1 = GetTitleText(Form("J/#psi: %1.1f < p_{T} < %1.1f",xbins[bin-1],xbins[bin]),0.06);
+          t1->Draw();
+	}
+      c->cd(1);
+      TLegend *leg = new TLegend(0.6,0.68,0.8,0.88);
+      leg->SetBorderSize(0);
+      leg->SetFillColor(0);
+      leg->SetTextSize(0.05);
+      leg->AddEntry(hInvMassUL[i][0],"Unlike-sign","PL");
+      leg->AddEntry(hInvMassLS[i][0],"Like-sign","PL");
+      leg->Draw();
+
+      if(savePlot)
+	c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_PIDcuts/Data_InvMass_ULvsLS_%s_InPtBins.pdf",run_type,name[i]));
+    }
+  */
 
   // UL vs LS
   TH1F *hUL[nHistos][nbins];
@@ -326,6 +380,19 @@ void anaData(const bool savePlot = 1, const bool saveHisto = 0)
       hFitDataEff[i]->SetMarkerColor(4);
       hFitDataEff[i]->SetLineColor(4);
       hFitDataEff[i]->Draw("sames");
+      TH1F *hSys = 0x0;
+      if(i==2)
+	{
+	  hSys = (TH1F*)hEmbedEff[i]->Clone(Form("%s_sys",hEmbedEff[i]->GetName()));
+	  for(int ibin=1; ibin<=hSys->GetNbinsX(); ibin++)
+	    {
+	      hSys->SetBinContent(ibin,hSys->GetBinContent(ibin)-0.05);
+	    }
+	  hSys->SetLineColor(2);
+	  hSys->SetLineWidth(2);
+	  hSys->SetLineStyle(2);
+	  hSys->Draw("HISTsames");
+	}
       TLegend *leg = new TLegend(0.2,0.15,0.4,0.35);
       leg->SetBorderSize(0);
       leg->SetFillColor(0);
@@ -333,6 +400,7 @@ void anaData(const bool savePlot = 1, const bool saveHisto = 0)
       leg->AddEntry(hEff[i],"Data counting","P");
       leg->AddEntry(hFitDataEff[i],"Data fitting","P");
       leg->AddEntry(hEmbedEff[i],"Embedding","P");
+      if(hSys) leg->AddEntry(hSys,"Uncertainty","L");
       leg->Draw();
 
       if(savePlot)
@@ -353,7 +421,7 @@ void anaData(const bool savePlot = 1, const bool saveHisto = 0)
 }
 
 //================================================
-void anaEmbed(const bool savePlot = 1, const bool saveHisto = 1)
+void anaEmbed(const bool savePlot = 0, const bool saveHisto = 0)
 {
   TFile *fEmbed = 0x0;
   if(year==2013) fEmbed = TFile::Open("output/Run13.pp500.jpsi.Embed.root","read");
@@ -599,48 +667,211 @@ void makeData()
 
 
 //================================================
-void nSigmaPi(const bool savePlot = 1, const bool saveHisto = 0)
+void nSigmaPi(const bool savePlot = 0, const bool saveHisto = 0)
 {
-  const char *name[2] = {"Data","Embed"};
-  TH2F *hNsigmaPiVsPt[2];
-
-  TFile *fMB = TFile::Open("Rootfiles/MB.V0.pion.root","read");
-  hNsigmaPiVsPt[0] = (TH2F*)fMB->Get("hPinSigmaPivsPt");
-
-  TFile *fEmbed = TFile::Open("output/Run14.AuAu200.Pion.Embed.root","read");
-  hNsigmaPiVsPt[1] = (TH2F*)fEmbed->Get("mhNsigmaPiVsPt");
-
-  const int nbins = 24;
-  const double xbins[nbins+1] = {0,0.2,0.4,0.6,0.8,1.0,1.2,1.4,1.6,1.8,2.0,2.2,2.4,2.6,2.8,3.0,3.5,4.0,4.5,5.0,5.5,6.0,7.0,8.0,10.0};
-  TH1F *hEff[2];
+  const int nbins = 6;
+  const double xbins[nbins+1] = {1.2,1.5,2.0,2.5,3.0,5.0,10.0};
   TList *list = new TList;
-  TString legName[2] = {"Data","Embed"};
-  for(int i=0; i<2; i++)
+
+  const char *trgName[3] = {"low","mid","high"};
+  TFile *fMB = TFile::Open("output/Run14.AuAu200.Pion.root","read");
+  TH2F *hDataPion[3];
+  TH1F *hDataPionMean[3];
+  TH1F *hDataPionSigma[3];
+  TH1F *hDataPionEff[3];
+  for(int i=0; i<3; i++)
     {
-      draw2D(hNsigmaPiVsPt[i]);
-      hEff[i] = new TH1F(Form("_%s_pion_eff",name[i]),Form("%s: efficiency of n#sigma_{#pi} cut for #pi sample;p_{T} (GeV/c)",name[i]),nbins,xbins);
+      hDataPion[i] = (TH2F*)fMB->Get(Form("hPtnSigmaPi_%s",trgName[i]));
+      ScaleHistoTitle(hDataPion[i],0.04,1.1,0.035,0.04,0.8,0.035,62);
+      c = draw2D(hDataPion[i],Form("Run14_AuAu200: n#sigma_{#pi} vs p_{T} for #pi from weak decays (prod_%s)",trgName[i]));
+      if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_PIDcuts/DataPion_nSigmaPiVsPt_%s.pdf",run_type,trgName[i]));
+
+      hDataPionMean[i] = new TH1F(Form("hDataPionMean_%s",trgName[i]),Form("Data: mean of n#sigma_{#pi} distribution for #pi sample;p_{T} (GeV/c);<n#sigma_{#pi}>"),nbins,xbins);
+      hDataPionSigma[i] = new TH1F(Form("hDataPionSigma_%s",trgName[i]),Form("Data: width of n#sigma_{#pi} distribution for #pi sample;p_{T} (GeV/c);#sigma(n#sigma_{#pi})"),nbins,xbins);
+
+      hDataPionEff[i] = new TH1F(Form("hDataPionEff_%s",trgName[i]),Form("n#sigma_{#pi} efficiency from fitting data;p_{T} (GeV/c)"),nbins,xbins);
+      TCanvas *c = new TCanvas(Form("FitDataPion_%s",trgName[i]),Form("FitDataPion_%s",trgName[i]),1100,700);
+      c->Divide(3,2);
+
       for(int bin=1; bin<=nbins; bin++)
 	{
 	  double pt1 = xbins[bin-1]; 
 	  double pt2 = xbins[bin];
+	  int start_bin = hDataPion[i]->GetXaxis()->FindBin(pt1+1e-4);
+	  int end_bin = hDataPion[i]->GetXaxis()->FindBin(pt2-1e-4);
+	  TH1F *hFit = (TH1F*)hDataPion[i]->ProjectionY(Form("%s_%d",hDataPion[i]->GetName(),bin),start_bin,end_bin);
+	  hFit->Rebin(4);
+	  TF1 *func = new TF1(Form("funcFitDataPion_%d_%d",i,bin),"gaus",-3,3);
+	  func->SetParameter(2,5);
+	  hFit->Fit(func,"IR0Q");
+	  c->cd(bin);
+	  hFit->SetMaximum(1.2*hFit->GetMaximum());
+	  hFit->Draw();
+	  func->SetLineColor(2);
+	  func->Draw("sames");
+	  TPaveText *t1 = GetTitleText(Form("#pi: %1.1f < p_{T} < %1.1f",xbins[bin-1],xbins[bin]),0.06);
+	  t1->Draw();
+	  double all = func->Integral(-3,3);
+	  double all_err = func->IntegralError(-3,3);
+	  double acc = func->Integral(-1.5,2.5);
+	  double acc_err = func->IntegralError(-1.5,2.5);
+	  hDataPionEff[i]->SetBinContent(bin,acc/all);
+	  hDataPionEff[i]->SetBinError(bin,acc_err/all);
+	  hDataPionMean[i]->SetBinContent(bin,func->GetParameter(1));
+	  hDataPionMean[i]->SetBinError(bin,func->GetParError(1));
+	  hDataPionSigma[i]->SetBinContent(bin,func->GetParameter(2));
+	  hDataPionSigma[i]->SetBinError(bin,func->GetParError(2));
+	}
+      c->cd(1);
+      TPaveText *t1 = GetPaveText(0.15,0.55,0.72,0.85,0.05);
+      t1->AddText("Run14_AuAu200");
+      t1->AddText(Form("prod_%s",trgName[i]));
+      t1->SetTextColor(4);
+      t1->SetTextFont(62);
+      t1->SetTextAlign(11);
+      t1->Draw();
+      if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_PIDcuts/DataPion_FitnSigmaPi_%s.pdf",run_type,trgName[i]));
+    }
+  TString legName[3];
+  for(int i=0; i<3; i++)
+    {
+      list->Add(hDataPionMean[i]);
+      legName[i] = Form("prod_%s",trgName[i]);
+    }
+  c = drawHistos(list,"DataPion_nSigmaPi_Mean","",false,-0.5,0.1,true,-0.5,0.1,kFALSE,kTRUE,legName,kTRUE,run_type,0.5,0.7,0.15,0.4,kTRUE);
+  list->Clear();
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_PIDcuts/DataPion_nSigmaPiMean.pdf",run_type));
+
+  for(int i=0; i<3; i++)
+    {
+      list->Add(hDataPionSigma[i]);
+    }
+  c = drawHistos(list,"DataPion_nSigmaPi_Sigma","",false,-0.5,0.1,true,0.5,1.5,kFALSE,kTRUE,legName,kTRUE,run_type,0.5,0.7,0.15,0.4,kTRUE);
+  list->Clear();
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_PIDcuts/DataPion_nSigmaPiSigma.pdf",run_type));
+
+  // compare data with simulation
+  const int nHistos = 4;
+  const char *hName[nHistos] = {"EmbedMuon","EmbedPion","DataMuon","DataPion"};
+  TH2F *hNsigmaPiVsPt[nHistos];
+
+  TFile *fdata = TFile::Open("./output/Pico.Run14.AuAu200.jpsi.root","read");
+  hNsigmaPiVsPt[2] = (TH2F*)fdata->Get(Form("mhJpsiMuonNsigmaPi_UL_di_mu"));
+  TH2F *hDataLS    = (TH2F*)fdata->Get(Form("mhJpsiMuonNsigmaPi_LS_di_mu"));
+  hNsigmaPiVsPt[2]->Sumw2();
+  hNsigmaPiVsPt[2]->Add(hDataLS, -1);
+
+  TFile *fEmbed = TFile::Open("output/Run14.AuAu200.Jpsi.Embed.root","read");
+  hNsigmaPiVsPt[0] = (TH2F*)fEmbed->Get("hTrkNSigmaPi_MCreco_di_mu");
+
+  hNsigmaPiVsPt[3] = (TH2F*)hDataPion[0]->Clone("DataPion_hNsigmaPiVsPt");
+  hNsigmaPiVsPt[3]->Add(hDataPion[1]);
+
+  TFile *fEmbed2 = TFile::Open("output/Run14.AuAu200.Pion.Embed.root","read");
+  hNsigmaPiVsPt[1] = (TH2F*)fEmbed2->Get("mhNsigmaPiVsPt");
+
+  TH1F *hNsigmaPiMean[nHistos];
+  TH1F *hNsigmaPiSigma[nHistos];
+  TH1F *hNsigmaPiEff[nHistos];
+  for(int i=0; i<nHistos; i++)
+    {
+      ScaleHistoTitle(hNsigmaPiVsPt[i],0.04,1.1,0.035,0.04,0.8,0.035,62);
+      c = draw2D(hNsigmaPiVsPt[i],Form("%s: n#sigma_{#pi} vs p_{T} distribution",hName[i]));
+      if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_PIDcuts/%s_nSigmaPiVsPt.pdf",run_type,hName[i]));
+
+      if(i<2)
+	{
+	  const int nbins1 = 11;
+	  const double xbins1[nbins1+1] = {1.2,1.5,2.0,2.5,3.0,4.0,5.0,6.0,7.0,8.0,9.0,10.0};
+	}
+      else
+	{
+	  const int nbins1 = 6;
+	  const double xbins1[nbins1+1] = {1.2,1.5,2.0,2.5,3.0,5.0,10.0};
+	}
+
+      hNsigmaPiMean[i] = new TH1F(Form("hNsigmaPiMean_%s",hName[i]),Form("Mean of n#sigma_{#pi} distribution;p_{T} (GeV/c);<n#sigma_{#pi}>"),nbins1,xbins1);
+      hNsigmaPiSigma[i] = new TH1F(Form("hNsigmaPiSigma_%s",hName[i]),Form("Width of n#sigma_{#pi} distribution;p_{T} (GeV/c);#sigma(n#sigma_{#pi})"),nbins1,xbins1);
+      hNsigmaPiEff[i] = new TH1F(Form("hNsigmaPiEff_%s",hName[i]),Form("n#sigma_{#pi} efficiency from fitting;p_{T} (GeV/c)"),nbins1,xbins1);
+
+      TCanvas *c = new TCanvas(Form("Fit_%s",hName[i]),Form("Fit_%s",hName[i]),1100,700);
+      if(i<2) c->Divide(4,3);
+      else    c->Divide(3,2);
+
+      for(int bin=1; bin<=nbins1; bin++)
+	{
+	  double pt1 = xbins1[bin-1]; 
+	  double pt2 = xbins1[bin];
 	  int start_bin = hNsigmaPiVsPt[i]->GetXaxis()->FindBin(pt1+1e-4);
 	  int end_bin = hNsigmaPiVsPt[i]->GetXaxis()->FindBin(pt2-1e-4);
-	  TH1F *htmp = (TH1F*)hNsigmaPiVsPt[i]->ProjectionY(Form("%s_%d",hNsigmaPiVsPt[i]->GetName(),bin),start_bin,end_bin);
-	  double all = htmp->Integral(htmp->FindBin(-5),htmp->FindBin(5));
-	  double acc = htmp->Integral(htmp->FindBin(-1.5),htmp->FindBin(2.5));
-	  if(all>0 && acc>0)
+	  TH1F *hFit = (TH1F*)hNsigmaPiVsPt[i]->ProjectionY(Form("%s_%d",hNsigmaPiVsPt[i]->GetName(),bin),start_bin,end_bin);
+	  if(i>1) hFit->Rebin(2);
+	  TF1 *func = new TF1(Form("funcFit_%s_%d",hName[i],bin),"gaus",-3,3);
+	  func->SetParameter(2,5);
+	  hFit->Fit(func,"IR0Q");
+	  c->cd(bin);
+	  hFit->SetMaximum(1.2*hFit->GetMaximum());
+	  hFit->SetMarkerStyle(21);
+	  hFit->GetXaxis()->SetRangeUser(-5,5);
+	  hFit->Draw();
+	  func->SetLineColor(2);
+	  func->Draw("sames");
+	  TPaveText *t1 = 0x0;
+	  if(i%2==0) t1 = GetTitleText(Form("#mu: %1.1f < p_{T} < %1.1f",xbins1[bin-1],xbins1[bin]),0.06);
+	  else       t1 = GetTitleText(Form("#pi: %1.1f < p_{T} < %1.1f",xbins1[bin-1],xbins1[bin]),0.06);
+	  t1->Draw();
+	  double all = func->Integral(-3,3);
+	  double all_err = func->IntegralError(-3,3);
+	  double acc, acc_err;
+	  if(i%2==0)
 	    {
-	      hEff[i]->SetBinContent(bin,acc/all);
-	      hEff[i]->SetBinError(bin,acc/all * sqrt(1./all + 1./acc));
+	      acc = func->Integral(-1,3);
+	      acc_err = func->IntegralError(-1,3);
 	    }
+	  else
+	    {
+	      acc = func->Integral(-1.5,2.5);
+	      acc_err = func->IntegralError(-1.5,2.5);
+	    }
+	  hNsigmaPiEff[i]->SetBinContent(bin,acc/all);
+	  hNsigmaPiEff[i]->SetBinError(bin,acc_err/all);
+	  hNsigmaPiMean[i]->SetBinContent(bin,func->GetParameter(1));
+	  hNsigmaPiMean[i]->SetBinError(bin,func->GetParError(1));
+	  hNsigmaPiSigma[i]->SetBinContent(bin,func->GetParameter(2));
+	  hNsigmaPiSigma[i]->SetBinError(bin,func->GetParError(2));
 	}
-      list->Add(hEff[i]);
+      c->cd(1);
+      TPaveText *t1 = GetPaveText(0.15,0.55,0.72,0.85,0.05);
+      t1->AddText("Run14_AuAu200");
+      t1->AddText(Form("%s",hName[i]));
+      t1->SetTextColor(4);
+      t1->SetTextFont(62);
+      t1->SetTextAlign(11);
+      t1->Draw();
+      if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_PIDcuts/%s_FitnSigmaPi.pdf",run_type,hName[i]));
     }
-  c = drawHistos(list,"nSigmaPi_eff","Efficiency of n#sigma_{#pi} cut for #pi sample;p_{T} (GeV/c)",kFALSE,0,10,kTRUE,0.5,1,kFALSE,kTRUE,legName,kTRUE,"",0.5,0.7,0.3,0.5,kTRUE);
-  if(savePlot)
+  TString legName2[nHistos] = {"Embedding: muon","Embedding: pion","Data: muon","Data: pion"};
+  for(int i=0; i<nHistos; i++)
     {
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_PIDcuts/DataVsEmbed_nSigmaPi_eff.pdf",run_type));
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_PIDcuts/DataVsEmbed_nSigmaPi_eff.png",run_type));
+      list->Add(hNsigmaPiMean[i]);
     }
-  
+  c = drawHistos(list,"nSigmaPi_Mean","",false,-0.5,0.1,true,-0.5,0.5,kFALSE,kTRUE,legName2,kTRUE,run_type,0.5,0.7,0.15,0.4,kTRUE);
+  list->Clear();
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_PIDcuts/Compare_nSigmaPiMean.pdf",run_type));
+
+  for(int i=0; i<nHistos; i++)
+    {
+      list->Add(hNsigmaPiSigma[i]);
+    }
+  c = drawHistos(list,"nSigmaPi_Sigma","",false,-0.5,0.1,true,0.2,1.2,kFALSE,kTRUE,legName2,kTRUE,run_type,0.5,0.7,0.15,0.4,kTRUE);
+  list->Clear();
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_PIDcuts/Compare_nSigmaPiSigma.pdf",run_type));
+
+  for(int i=0; i<nHistos; i++)
+    {
+      list->Add(hNsigmaPiEff[i]);
+    }
+  c = drawHistos(list,"nSigmaPi_Eff","",false,-0.5,0.1,true,0.7,1,kFALSE,kTRUE,legName2,kTRUE,run_type,0.5,0.7,0.15,0.4,kTRUE);
+  list->Clear();
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_PIDcuts/Compare_nSigmaPiEff.pdf",run_type));
 }

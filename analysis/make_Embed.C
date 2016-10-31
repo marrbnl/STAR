@@ -1,5 +1,5 @@
 const int year = YEAR;
-const char *trkEffType[6] = {"MC","Tpc","MtdMth","Fake","MuonPid","MtdTrig"};
+const char *trkEffType[7] = {"MC","Tpc","MtdMth","Fake","MuonPid","MtdTrig","TrigUnit"};
 const char *weight_name[2] = {"","_w"};
 
 TFile *f;
@@ -21,6 +21,7 @@ void make_Embed()
   else if(year==2014)
     {
       f = TFile::Open(Form("./output/Run14.AuAu200.Jpsi.Embed.root"),"read");
+      //f = TFile::Open(Form("./output/Run14.AuAu200.Upsilon.root"),"read");
     }
   TH1F *hStat = (TH1F*)f->Get("hEventStat");
   printf("[i] # of events: %4.4e\n",hStat->GetBinContent(3));
@@ -32,13 +33,13 @@ void make_Embed()
 //================================================
 void makeJets(const bool saveHisto = 1)
 {
-  THnSparseF *hnJpsiInfo[6][2];
-  TH1F *hJpsiInvMass[6][gNTrgSetup][nCentBins][2];
-  TH1F *hJpsiPt[6][gNTrgSetup][nCentBins][2];
-  TH2F *hJpsiMassVsPt[6][gNTrgSetup][nCentBins][2];
-  TH1F *hJpsiRapdity[6][gNTrgSetup][nCentBins][2];
+  THnSparseF *hnJpsiInfo[7][2];
+  TH1F *hJpsiInvMass[7][gNTrgSetup][nCentBins][2];
+  TH1F *hJpsiPt[7][gNTrgSetup][nCentBins][2];
+  TH2F *hJpsiMassVsPt[7][gNTrgSetup][nCentBins][2];
+  TH1F *hJpsiRapdity[7][gNTrgSetup][nCentBins][2];
 
-  for(int i=0; i<6; i++)
+  for(int i=0; i<7; i++)
     {
       for(int w=0; w<2; w++)
 	{
@@ -88,7 +89,7 @@ void makeJets(const bool saveHisto = 1)
     {
       printf("+++ Save histograms +++\n");
       TFile *fout = TFile::Open(Form("Rootfiles/%s.JpsiEff.pt%1.1f.pt%1.1f.root",run_type,pt1_cut,pt2_cut),"recreate");
-      for(int i=0; i<6; i++)
+      for(int i=0; i<7; i++)
 	{
 	  for(int w=0; w<2; w++)
 	    {

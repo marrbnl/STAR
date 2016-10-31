@@ -1,6 +1,6 @@
 TFile *f;
 const Bool_t iPico = 1;
-const int year = YEAR;
+const int year = 2015;
 TString run_cfg_name;
 
 //================================================
@@ -25,15 +25,101 @@ void qa_vertex()
       if(iPico) fileName = Form("Pico.Run14.AuAu200.jpsi.%sroot",run_config);
       else      fileName = Form("Run14.AuAu200.jpsi.%sroot",run_config);
     }
+  else if(year==2015)
+    {
+      run_type = "Run15_pAu200";
+      fileName = Form("Run15.pAu200.QA.root",run_config);
+    }
 
   f = TFile::Open(Form("./output/%s",fileName.Data()),"read");
 
   run_cfg_name = run_config;
   if(iPico) run_cfg_name = Form("Pico.%s",run_cfg_name.Data());
 
-  vtxCuts();
+  //vtxCuts();
   //cuts();
   //qa();
+  vtxSelection();
+}
+
+//================================================
+void vtxSelection(const Int_t save = 1)
+{
+  gStyle->SetOptStat(0);
+
+  // TPC vz
+  TH1F *hTpcVz = (TH1F*)f->Get("hVertexZ");
+  hTpcVz->SetMaximum(1.2*hTpcVz->GetMaximum());
+  c = draw1D(hTpcVz,Form("v_{z} of primary vertex reconstructed using TPC"),kFALSE,kFALSE);
+  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_vertex/vtxSel_TpcVz.pdf",run_type));
+
+  // TPC vy vs vx
+  TH2F *hTpcVyVx = (TH2F*)f->Get("hVertexXY");
+  c = draw2D(hTpcVyVx,Form("v_{y} vs v_{x} of primary vertex reconstructed using TPC"));
+  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_vertex/vtxSel_TpcVyVx.pdf",run_type));
+
+  TH2F *hTpcVxVz = (TH2F*)f->Get("hVertexXZ");
+  c = draw2D(hTpcVxVz,Form("v_{x} vs v_{z} of primary vertex reconstructed using TPC"));
+  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_vertex/vtxSel_TpcVxVz.pdf",run_type));
+
+  TH2F *hTpcVyVz = (TH2F*)f->Get("hVertexYZ");
+  c = draw2D(hTpcVyVz,Form("v_{y} vs v_{z} of primary vertex reconstructed using TPC"));
+  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_vertex/vtxSel_TpcVyVz.pdf",run_type));
+
+  // TPC-VPD
+  TH2F *hVtxZvsVpdVz[2];
+  TH1F *hVtxZDiff[2];
+  hVtxZvsVpdVz[0] = (TH2F*)f->Get("hVtxZvsVpdVzDefault");
+  hVtxZvsVpdVz[1] = (TH2F*)f->Get("hVtxZvsVpdVzClosest");
+  hVtxZDiff[0] = (TH1F*)f->Get("hVtxZDiffDefault");
+  hVtxZDiff[1] = (TH1F*)f->Get("hVtxZDiffClosest");
+
+  const char *name[2] = {"default","closest"};
+  for(int i=0; i<2; i++)
+    {
+      c = draw2D(hVtxZvsVpdVz[i],"");
+      if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_vertex/vtxSel_TpcVpdVz_%s.pdf",run_type,name[i]));
+
+      hVtxZDiff[i]->Rebin(4);
+      hVtxZDiff[i]->SetMarkerStyle(21);
+      hVtxZDiff[i]->GetXaxis()->SetRangeUser(-15,20);
+      TF1 *func = new TF1(Form("func_VzDiff_%d",i),"gaus",-4,3);
+      hVtxZDiff[i]->Fit(func,"IR0");
+      func->SetLineColor(2);
+      c = draw1D(hVtxZDiff[i],Form("TPC vz - VPD vz (%s)",name[i]));
+      func->Draw("sames");
+      TPaveText *t1 = GetPaveText(0.2,0.3,0.7,0.8,0.04);
+      t1->AddText(Form("|#Deltaz| < 5 cm: %4.2f%%",hVtxZDiff[i]->Integral(hVtxZDiff[i]->FindBin(-5),hVtxZDiff[i]->FindBin(5))/hVtxZDiff[i]->GetEntries()*100));
+      t1->Draw();
+      if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_vertex/vtxSel_FitDiffVz_%s.pdf",run_type,name[i]));
+    }
+
+  // vertex selection
+  TH2F *hVtxIndex = (TH2F*)f->Get("hVtxIndClosestVsRank");
+  hVtxIndex->GetXaxis()->SetRangeUser(0,12);
+  hVtxIndex->GetYaxis()->SetRangeUser(0,12);
+  c = draw2D(hVtxIndex,"");
+  double good = 0, all = 0;
+  for(int bin=1; bin<=hVtxIndex->GetNbinsX(); bin++)
+    {
+      good += hVtxIndex->GetBinContent(bin,bin);
+      for(int bin2=1; bin2<=hVtxIndex->GetNbinsY(); bin2++)
+	{
+	  all += hVtxIndex->GetBinContent(bin,bin2);
+	}
+    }
+  TPaveText *t1 = GetPaveText(0.25,0.35,0.7,0.8,0.04);
+  t1->AddText(Form("Diagonal: %4.2f%%",good/all*100));
+  t1->Draw();
+  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_vertex/vtxSel_VtxIndex.pdf",run_type));
+
+  // cloest
+  TH1F *hVtxIndexClosest = (TH1F*)hVtxIndex->ProjectionX();
+  c = draw1D(hVtxIndexClosest,"Index of TPC vertex closest to VPD",true,false);
+  TPaveText *t1 = GetPaveText(0.5,0.55,0.7,0.8,0.04);
+  t1->AddText(Form("Index=0: %4.2f%%",hVtxIndexClosest->GetBinContent(1)/hVtxIndexClosest->GetEntries()*100));
+  t1->Draw();
+  if(save) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_vertex/vtxSel_VtxIndexClosest.pdf",run_type));
 }
 
 

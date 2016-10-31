@@ -1,5 +1,5 @@
 const int year = YEAR;
-const char *trkEffType[5] = {"MC","Tpc","MtdMth","MuonPid","MtdTrig"};
+const char *trkEffType[6] = {"MC","Tpc","MtdMth","MuonPid","MtdTrig","TrigUnit"};
 const char *weight_name[2] = {"","_w"};
 
 //================================================
@@ -13,8 +13,8 @@ void ana_JpsiEff()
   gStyle->SetStatH(0.2);
 
   //trackingEff();
-  trackingRes();
-  //JpsiEff();
+  //trackingRes();
+  JpsiEff();
   //makeTrigEff();
 
   //ploEff();
@@ -28,7 +28,7 @@ void ana_JpsiEff()
 
 
 //================================================
-void JpsiEff(const int savePlot = 1, const int saveHisto = 1)
+void JpsiEff(const int savePlot = 0, const int saveHisto = 1)
 {
   TFile *fin;
   if(saveHisto)   fin = TFile::Open(Form("Rootfiles/%s.JpsiEff.pt%1.1f.pt%1.1f.root",run_type,pt1_cut,pt2_cut),"update");
@@ -52,14 +52,15 @@ void JpsiEff(const int savePlot = 1, const int saveHisto = 1)
       legName_trg[k] = Form("AuAu_200%s",gTrgSetupTitle[k+1]);
     }
 
-  TH1F *hJpsiPt[5][gNTrgSetup][nCentBins][2];
-  TH1F *hJpsiPtRebin[5][gNTrgSetup][nCentBins][2];
-  TH1F *hJpsiPtEff[5][gNTrgSetup][nCentBins][2];
-  TH1F *hJpsiPtEffRebin[5][gNTrgSetup][nCentBins][2];
+  const int nHistos = 6;
+  TH1F *hJpsiPt[nHistos][gNTrgSetup][nCentBins][2];
+  TH1F *hJpsiPtRebin[nHistos][gNTrgSetup][nCentBins][2];
+  TH1F *hJpsiPtEff[nHistos][gNTrgSetup][nCentBins][2];
+  TH1F *hJpsiPtEffRebin[nHistos][gNTrgSetup][nCentBins][2];
   TH1F *hJpsiPtEffFinal[gNTrgSetup][nCentBins][2];
   TH1F *hJpsiPtEffFinalRebin[gNTrgSetup][nCentBins][2];
 
-  for(int i=0; i<5; i++)
+  for(int i=0; i<nHistos; i++)
     {
       for(int w=0; w<2; w++)
 	{
@@ -76,7 +77,7 @@ void JpsiEff(const int savePlot = 1, const int saveHisto = 1)
 		      hJpsiPtEffRebin[i][j][k][w] = DivideTH1ForEff(hJpsiPtRebin[i][j][k][w],hJpsiPtRebin[i-1][j][k][w],Form("hJpsiPtEff_%s_cent%s%s%s_rebin",trkEffType[i],cent_Title[k],gTrgSetupName[j],weight_name[w]));
 		    }
 
-		  if(i==4)
+		  if(i==nHistos-1)
 		    {
 		      hJpsiPtEffFinal[j][k][w] = DivideTH1ForEff(hJpsiPt[i][j][k][w],hJpsiPt[0][j][k][w],Form("hJpsiPtEff_Final_cent%s%s%s",cent_Title[k],gTrgSetupName[j],weight_name[w]));
 		      hJpsiPtEffFinalRebin[j][k][w] = DivideTH1ForEff(hJpsiPtRebin[i][j][k][w],hJpsiPtRebin[0][j][k][w],Form("JpsiPtEff_Final_cent%s%s%s_rebin",cent_Title[k],gTrgSetupName[j],weight_name[w]));
@@ -88,22 +89,32 @@ void JpsiEff(const int savePlot = 1, const int saveHisto = 1)
 
   // various efficiency
   const int jsetup = 4, kcent = 1;
+  TH1F *h11 = (TH1F*)hJpsiPtEffFinalRebin[jsetup][kcent][0]->Clone("h1_clone");
+  TH1F *h12 = (TH1F*)hJpsiPtEffFinalRebin[jsetup][kcent][1]->Clone("h1_clone");
   list->Add(hJpsiPtEffFinal[jsetup][kcent][0]);
-  list->Add(hJpsiPtEffFinalRebin[jsetup][kcent][0]);
-  list->Add(hJpsiPtEffFinalRebin[jsetup][kcent][1]);
+  list->Add(h11);
+  list->Add(h12);
   TString legName1[3] = {"Unweighted","Unweighted && rebinned","Weighted && rebinned"};
   c = drawHistos(list,"JpsiEff_Check_Weight_Rebin",Form("Combined efficiency for J/#psi (AuAu_200%s);p_{T} (GeV/c);Efficiency",gTrgSetupTitle[jsetup]),false,2.0,3.8,true,1e-4,0.1,true,kTRUE,legName1,true,Form("%s%%",cent_Name[kcent]),0.5,0.7,0.2,0.45,kTRUE);
   if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/JpsiEffFinal_Check_Weight_Rebin.pdf",run_type));
   list->Clear();
 
-  for(int i=1; i<5; i++)
+  for(int i=1; i<nHistos; i++)
     {
       list->Add(hJpsiPtEffRebin[i][jsetup][kcent][1]);
     }
-  TString legName2[4] = {"TPC tracking + p_{T,#mu} cut","MTD matching","Muon PID","MTD triggering"};
+  TString legName2[5] = {"TPC tracking + p_{T,#mu} cut","MTD matching","Muon PID","MTD triggering","Trigger unit"};
   c = drawHistos(list,"JpsiEff_AllEffs",Form("Efficiency for J/#psi (AuAu_200%s);p_{T} (GeV/c);Efficiency",gTrgSetupTitle[jsetup]),false,2.0,3.8,true,1e-5,1.5,false,kTRUE,legName2,true,Form("%s%%",cent_Name[kcent]),0.2,0.4,0.6,0.88,kTRUE);
   if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/JpsiEff_Various.pdf",run_type));
   list->Clear();
+
+  TH1F *hTrigUnit = (TH1F*)hJpsiPtEffRebin[5][0][0][1]->Clone("hTrigUnit");
+  hTrigUnit->SetMarkerStyle(21);
+  hTrigUnit->SetMarkerColor(1);
+  hTrigUnit->SetLineColor(1);
+  hTrigUnit->GetYaxis()->SetRangeUser(0.8,1.1);
+  c = draw1D(hTrigUnit,"Efficiency loss due to both muon daughters hitting same trigger unit");
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/JpsiEff_TrigUnit.pdf",run_type));
 
   TLegend *leg1 = new TLegend(0.2,0.15,0.4,0.35);
   leg1->SetBorderSize(0);
@@ -130,6 +141,17 @@ void JpsiEff(const int savePlot = 1, const int saveHisto = 1)
   leg1->Draw();
   leg2->Draw();
   if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/JpsiEffFinal.pdf",run_type));
+
+
+  TString legName3[4] = {"Run14_AuAu200_production","Run14_AuAu200_production_low","Run14_AuAu200_production_mid","Run14_AuAu200_production_high"};
+  for(int j=1; j<gNTrgSetup; j++)
+    {
+      TH1F *hEff = (TH1F*)hJpsiPtEffFinalRebin[j][1][1]->Clone(Form("hJpseEff_%d",j));
+      list->Add(hEff);
+    }
+  c = drawHistos(list,"JpsiEff_CompLumi",Form("Efficiency for J/#psi;p_{T} (GeV/c);Efficiency",gTrgSetupTitle[jsetup]),false,2.0,3.8,true,0,0.025,false,kTRUE,legName3,true,"0-20%",0.15,0.35,0.65,0.88,kTRUE);
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/JpsiEff_CompLumi.pdf",run_type));
+  list->Clear();
 
   // final average efficiency
   TFile *fYield = TFile::Open(Form("Rootfiles/Pico.Run14.AuAu200.jpsi.%spt%1.1f.pt%1.1f.yield.root",run_config,pt1_cut,pt2_cut),"read");
@@ -171,6 +193,7 @@ void JpsiEff(const int savePlot = 1, const int saveHisto = 1)
 	}
     }
 
+
   for(int k=0; k<nCentBins; k++)
     {
       printf("+++++ %s%% +++++\n",cent_Name[k]);
@@ -204,6 +227,7 @@ void JpsiEff(const int savePlot = 1, const int saveHisto = 1)
   if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/JpsiEffFinal_Cent.pdf",run_type));
   list->Clear();
 
+  /*
   // correct efficiency w.r.t. 0-20%
   TH1F *hJpsiPtEffAvgCorr[nCentBins];
   TH1F *hEffCorr[nCentBins];
@@ -217,49 +241,20 @@ void JpsiEff(const int savePlot = 1, const int saveHisto = 1)
   c = drawHistos(list,"JpsiEffCentCorr",Form("Combined efficiency for J/#psi;p_{T} (GeV/c);Efficiency"),false,2.0,3.8,true,1e-4,0.1,true,kTRUE,legName_cent,true,run_type,0.5,0.7,0.15,0.45,kTRUE);
   if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/JpsiEffFinal_Cent_corr.pdf",run_type));
   list->Clear();
-
-  /*
-  for(int k=0; k<nCentBins; k++)
-    {
-      printf("+++++ %s%% +++++\n",cent_Name[k]);
-      TH1F *hBase = (TH1F*)hJpsiPtRebin[0][0][0][0]->Clone(Form("hBase_%d",k));
-      hBase->Reset();
-      TH1F *hMatch = (TH1F*)hJpsiPtRebin[0][0][0][0]->Clone(Form("hMatch_%d",k));
-      hMatch->Reset();
-      for(int j=0; j<gNTrgSetup-1; j++)
-	{
-	  if(k==0)
-	    {
-	      for(int icent=0; icent<nCentBins-1; icent++)
-		{
-		  hBase->Add(hJpsiPtRebin[0][j+1][icent+1][1], nJpsi[icent][j]/nJpsiAll);
-		  hMatch->Add(hJpsiPtRebin[4][j+1][icent+1][1], nJpsi[icent][j]/nJpsiAll);
-		}
-	    }
-	  else
-	    {
-	      hBase->Add(hJpsiPtRebin[0][j+1][k][1], nJpsi[k-1][j]/nJpsiCent[k-1]);
-	      hMatch->Add(hJpsiPtRebin[4][j+1][k][1], nJpsi[k-1][j]/nJpsiCent[k-1]);
-	    }
-	}
-      hJpsiPtEffAvg[k] = DivideTH1ForEff(hMatch,hBase,Form("JpsiPtEff_cent%s",cent_Title[k]));
-      for(int bin=1; bin<=hJpsiPtEffAvg[k]->GetNbinsX(); bin++)
-	{
-	  printf("[i] pt = %2.1f with eff = %4.2e, err = %4.2f%%\n",hJpsiPtEffAvg[k]->GetBinCenter(bin),hJpsiPtEffAvg[k]->GetBinContent(bin),hJpsiPtEffAvg[k]->GetBinError(bin)/hJpsiPtEffAvg[k]->GetBinContent(bin)*100);
-	}
-      list->Add(hJpsiPtEffAvg[k]);
-    }
   */
-  
-
-
+ 
   if(saveHisto)
     {
       fin->cd();
       for(int k=0; k<nCentBins; k++)
 	{
 	  hJpsiPtEffAvg[k]->Write("",TObject::kOverwrite);
-	  hJpsiPtEffAvgCorr[k]->Write("",TObject::kOverwrite);
+	  //hJpsiPtEffAvgCorr[k]->Write("",TObject::kOverwrite);
+	}
+      for(int j=0; j<gNTrgSetup; j++)
+	{
+	  hJpsiPtEffFinalRebin[j][1][1]->Write("",TObject::kOverwrite);
+	  hJpsiPtEffFinal[j][1][1]->Write("",TObject::kOverwrite);
 	}
     }
 }
@@ -509,8 +504,8 @@ void trackingEff(const int savePlot = 0, const int saveHisto = 0)
   if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/McTpcEff_vs_Cent.pdf",run_type));
   
   // other efficiencies
-  const char *trkEffTitle[3] = {"MTD matching","muon PID","MTD trigger"};
-  for(int i=2; i<5; i++)
+  const char *trkEffTitle[4] = {"Tpc tracking","MTD matching","muon PID","MTD trigger"};
+  for(int i=1; i<5; i++)
     {
       TLegend *leg1 = new TLegend(0.2,0.2,0.4,0.4);
       leg1->SetBorderSize(0);
@@ -528,7 +523,7 @@ void trackingEff(const int savePlot = 0, const int saveHisto = 0)
 	      else      hMcTrkPtEff[i][j][k]->GetYaxis()->SetRangeUser(0,1.1);
 	      hMcTrkPtEff[i][j][k]->SetMarkerStyle(19+k);
 	      hMcTrkPtEff[i][j][k]->SetMarkerColor(color[j-1]);
-	      if(j==1 && k==1) c = draw1D(hMcTrkPtEff[i][j][k],Form("Single muon efficiency of %s (|#eta_{#mu}| < 0.5);p_{T}^{mc} (GeV/c);Efficiency",trkEffTitle[i-2]));
+	      if(j==1 && k==1) c = draw1D(hMcTrkPtEff[i][j][k],Form("Single muon efficiency of %s (|#eta_{#mu}| < 0.5);p_{T}^{mc} (GeV/c);Efficiency",trkEffTitle[i-1]));
 	      else hMcTrkPtEff[i][j][k]->Draw("sames");
 	      if(k==1) leg1->AddEntry(hMcTrkPtEff[i][j][k],Form("AuAu_200%s",gTrgSetupTitle[j]),"P");
 	      if(j==1) leg2->AddEntry(hMcTrkPtEff[i][j][k],Form("%s%%",cent_Name[k]),"P");

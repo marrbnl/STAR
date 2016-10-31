@@ -15,9 +15,96 @@ void ana_Lumi()
   //makeHistoData();
 
   //Lumi2013();
-  Lumi2014();
+  //Lumi2014();
+  Nevents();
+
   //MB();
   //MTD();
+}
+
+//================================================
+void Nevents(const char *icent = "0080")
+{
+  if(year!=2014)
+    {
+      printf("[e] Not suitable for %d\n",year);
+      return;
+    }
+
+  // Get the dimuon events number
+  TFile *fdata = TFile::Open(Form("./output/Pico.Run14.AuAu200.jpsi.%sroot",run_config),"read");
+  TH1F *hStat = (TH1F*)fdata->Get("hEventStat");
+  printf("all         events: %4.4e\n",hStat->GetBinContent(1));
+  printf("all di-muon events: %4.4e\n",hStat->GetBinContent(3));
+  printf("acc di-muon events: %4.4e\n",hStat->GetBinContent(10));
+
+  // =============================================
+  // Effective number of MB events
+  printf("+++++++++++++++++++++++++++++++++\n");
+  TFile *fLumi = TFile::Open(Form("Rootfiles/Run14_AuAu200.Luminosity.root"),"read");
+  TH1F *hEvtRun = (TH1F*)fdata->Get("mhEvtRun_di_mu");
+  TH1F *hEvtRunAcc = (TH1F*)fdata->Get("mhEvtRunAcc_di_mu");
+  TH1F *hRF = (TH1F*)fLumi->Get("hRejectFactor_dimuon");
+  TH1F *hNeventsTake = (TH1F*)fLumi->Get("hNevents_dimuon");
+  TH1F *hEqMbEvents =  (TH1F*)fLumi->Get(Form("EqMbEvtVtxCutWeight_cent%s_dimuon",icent));
+  
+  double mb_events[5];
+  for(int i=0; i<5; i++) mb_events[i] = 0;
+  for(int bin=1; bin<=hEvtRunAcc->GetNbinsX(); bin++)
+    {
+      if(hEvtRunAcc->GetBinContent(bin)<=0) continue;
+      double run = hEvtRunAcc->GetBinCenter(bin);
+      double nEventsTaken = hNeventsTake->GetBinContent(hNeventsTake->FindFixBin(run));
+      if(nEventsTaken==0) 
+	{
+	  if(i==0) printf("[w] check run %1.0f\n",run);
+	  continue;
+	}
+      double nEventsRun = hEvtRun->GetBinContent(bin);
+      double rf = hRF->GetBinContent(hRF->FindFixBin(run));
+      if(rf==0)
+	{
+	  printf("[w] rf = 0 for run %1.0f\n",run);
+	  rf = 0.49;
+	}
+      double eq_mb = hEqMbEvents->GetBinContent(hEqMbEvents->FindFixBin(run));
+      mb_events[0] += nEventsRun/rf/nEventsTaken * eq_mb;
+    }
+  printf("Effective # of MB events for %s%%: %4.4e\n",icent,mb_events[0]);
+
+
+  const char *trgSetupName[4] = {"","_low","_mid","_high"};
+  for(int j=1; j<gNTrgSetup; j++)
+    {
+      ifstream fruns;
+      fruns.open(Form("Rootfiles/Luminosity/%s/AuAu_200_production%s_2014.list",run_type,trgSetupName[j-1]));
+      int runnumber;
+      while(!fruns.eof())
+	{
+	  fruns >> runnumber;
+	  int bin = hEvtRunAcc->FindBin(runnumber);
+	  if(hEvtRunAcc->GetBinContent(bin)<=0) continue;
+	  double nEventsTaken = hNeventsTake->GetBinContent(hNeventsTake->FindFixBin(runnumber));
+	  if(nEventsTaken==0) 
+	    {
+	      if(i==0) printf("[w] check run %1.0f\n",runnumber);
+	      continue;
+	    }
+	  double nEventsRun = hEvtRun->GetBinContent(bin);
+	  double rf = hRF->GetBinContent(hRF->FindFixBin(runnumber));
+	  if(rf==0)
+	    {
+	      printf("[w] rf = 0 for run %1.0f\n",run);
+	      rf = 0.49;
+	    }
+	  double eq_mb = hEqMbEvents->GetBinContent(hEqMbEvents->FindFixBin(runnumber));
+	  mb_events[j] += nEventsRun/rf/nEventsTaken * eq_mb;
+	}
+      printf("[i] # of events for %s: %4.4e\n",trgSetupName[j-1],mb_events[j]);
+    }
+  printf("[i]Check %1.0f =? %1.0f\n",mb_events[0],mb_events[1]+mb_events[2]+mb_events[3]+mb_events[4]);
+  printf("+++++++++++++++++++++++++++++++++\n");
+
 }
 
 //================================================
@@ -183,18 +270,21 @@ void Lumi2014(const int savePlot = 0, const int saveHisto = 0)
   TString legName[3] = {"|vr_{TPC}| < 2 cm", "+|vz_{TPC}| < 100 cm", "+ |vz_{TPC}-vz_{VPD}| < 3 cm"};
   const char *trgSetupName[4] = {"production","production_low","production_mid","production_high"};
   const char *setupName[4] = {"prod","prod_low","prod_mid","prod_high"};
+  const int nCentBins = 13;
+  const char *cent_Name[nCentBins] = {"0-60","0-20","20-40","40-60","0-10","10-30","30-60","10-20","20-30","30-40","40-50","50-60","0-80"};
+  const char *cent_Title[nCentBins] = {"0060","0020","2040","4060","0010","1030","3060","1020","2030","3040","4050","5060","0080"};
+
   TString legName2[4];
   for(int i=0; i<4; i++)
     {
       legName2[i] = Form("AuAu_200_%s_2014",trgSetupName[i]);
     }
   TString legName3[2] = {"w/o weights","w/ weights"};
-  TString legName4[nCentBins];
-  for(int i=0; i<nCentBins; i++) legName4[i] = Form("%s%%",cent_Name[i]);
+  TString legName4[4];
+  for(int i=0; i<4; i++) legName4[i] = Form("%s%%",cent_Name[i]);
   const int max_vz = 100;
   const int max_dz = 3;
   const int max_vr = 2;
-
 
   // MTD triggers
   TFile *fMtd = TFile::Open(Form("./output/Pico.Run14.AuAu200.jpsi.root"),"read");
@@ -317,14 +407,9 @@ void Lumi2014(const int savePlot = 0, const int saveHisto = 0)
       hNEvents[i][3] = (TH1F*)fMB->Get(Form("NEvents_VrVzDzCut_cent%s_all",cent_Title[i]));
     }
 
-  list->Clear();
   TH1F *hVtxEff[nCentBins][3];
-  TCanvas *c = new TCanvas("MB_VtxCutEff","MB_VtxCutEff",1100,650);
-  c->Divide(2,2);
   for(int i=0; i<nCentBins; i++)
     {
-      list->Clear();
-      c->cd(i+1);
       for(int j=0; j<3; j++)
 	{
 	  hVtxEff[i][j] = (TH1F*)hNEvents[i][j+1]->Clone(Form("%s_eff",hNEvents[i][j+1]->GetName()));
@@ -349,6 +434,16 @@ void Lumi2014(const int savePlot = 0, const int saveHisto = 0)
 		  //printf("[e] Mismatch eff: %4.2f != %4.2f\n",y,hVtxEff[i][j]->GetBinContent(bin));
 		}
 	    }
+	}
+    }
+
+  TCanvas *c = new TCanvas("MB_VtxCutEff","MB_VtxCutEff",1100,650);
+  c->Divide(2,2);
+  for(int i=0; i<4; i++)
+    {
+      c->cd(i+1);
+      for(int j=0; j<3; j++)
+	{
 	  hVtxEff[i][j]->SetMarkerStyle(20);
 	  hVtxEff[i][j]->SetMarkerColor(color[j]);
 	  hVtxEff[i][j]->SetLineColor(color[j]);
@@ -399,7 +494,7 @@ void Lumi2014(const int savePlot = 0, const int saveHisto = 0)
     }
   c = new TCanvas("MB_VtxCutEffLumi","MB_VtxCutEffLumi",1100,650);
   c->Divide(2,2);
-  for(int j=0; j<nCentBins; j++)
+  for(int j=0; j<4; j++)
     {
       c->cd(j+1);
       for(int i=0; i<4; i++)
@@ -524,7 +619,7 @@ void Lumi2014(const int savePlot = 0, const int saveHisto = 0)
 	}
     }
   printf("+++ %d runs (%4.2fM) are missing +++\n\n",nRF,nRFevts/1e6);
-
+  
   // get equivalent # of MB events
   /// Raw # of events
   TH1F *hNEventsRawAll[5];
@@ -532,10 +627,18 @@ void Lumi2014(const int savePlot = 0, const int saveHisto = 0)
   TH1F *hNevtVtxCutWeight[nCentBins][5];
 
   hNEventsRawAll[0] = (TH1F*)fMB->Get("NEvents_all");
+  for(int j=0; j<4; j++)
+    {
+      hNEventsRawAll[j+1] = (TH1F*)fMB->Get(Form("NEvents_%s",setupName[j]));
+    }
   for(int i=0; i<nCentBins; i++)
     {
      hNEventsRaw[i][0] = (TH1F*)fMB->Get(Form("NEvents_cent%s_all",cent_Title[i]));
      hNevtVtxCutWeight[i][0] = (TH1F*)fMB->Get(Form("NEvents_VrVzDzCut_cent%s_all_w",cent_Title[i]));
+     for(int j=0; j<4; j++)
+       {
+	 hNevtVtxCutWeight[i][j+1] = (TH1F*)fMB->Get(Form("NEvents_VrVzDzCut_cent%s_%s_w",cent_Title[i],setupName[j]));
+       }
     }
 
   TFile *fout = TFile::Open(Form("Rootfiles/%s.Luminosity.root",run_type),"update");
@@ -552,10 +655,9 @@ void Lumi2014(const int savePlot = 0, const int saveHisto = 0)
 	  if(eqevt<=0) continue;
 	  int bin = hNEventsRawAll[0]->FindFixBin(run);
 	  double rawevt = hNEventsRawAll[0]->GetBinContent(bin);
-	  double evtcent = hNEventsRaw[i][0]->GetBinContent(bin);
 	  double evtw = hNevtVtxCutWeight[i][0]->GetBinContent(bin);
 	  if(rawevt<=0) continue;
-	  double value = eqevt/rawevt*evtw;
+	  double value = eqevt*evtw/rawevt;
 	  double error = evtw<=0? 0 : value * 1./sqrt(evtw);
 	  hEqMbEvtVtxCutWeight[i]->SetBinContent(ibin, value);
 	  hEqMbEvtVtxCutWeight[i]->SetBinError(ibin, error);
@@ -563,30 +665,37 @@ void Lumi2014(const int savePlot = 0, const int saveHisto = 0)
     }
 
   // Fit event fraction after vertex and centrality selections
-  TF1 *funcMbVtxEff[4][4];
+  TH1F *hNevtRatio[nCentBins][4];
+  TF1 *funcMbVtxEff[nCentBins][4];
+  for(int i=0; i<4; i++)
+    {
+      for(int j=0; j<nCentBins; j++)
+	{
+	  hNevtRatio[j][i] = (TH1F*)hNevtVtxCutWeight[j][i+1]->Clone(Form("Fit_%s",hNevtVtxCutWeight[j][i+1]->GetName()));
+	  hNevtRatio[j][i]->Divide(hNEventsRawAll[i+1]);
+	  if(i==3)
+	    {
+	      double run = 15119021;
+	      int bin = hNevtRatio[j][i]->FindFixBin(run);
+	      hNevtRatio[j][i]->SetBinContent(bin,0);
+	      hNevtRatio[j][i]->SetBinError(bin,0);
+	    }
+	  funcMbVtxEff[j][i] = new TF1(Form("Func_%s",hNevtVtxCutWeight[j][i+1]->GetName()),"pol0",start_run,end_run);
+	  hNevtRatio[j][i]->Fit(funcMbVtxEff[j][i],"IR0Q");
+	  printf("[i] %s%% for %s: %4.2f%%\n",cent_Name[j],setupName[i],funcMbVtxEff[j][i]->GetParameter(0)*100);
+	}
+    }
+
   c = new TCanvas("Fit_MB_VtxEff","Fit_MB_VtxEff",1200,700);
   c->Divide(4,4);
   for(int i=0; i<4; i++)
     {
-      hNEventsRawAll[i+1] = (TH1F*)fMB->Get(Form("NEvents_%s",setupName[i]));
-      for(int j=0; j<nCentBins; j++)
+      for(int j=0; j<4; j++)
 	{
-	  hNevtVtxCutWeight[j][i+1] = (TH1F*)fMB->Get(Form("NEvents_VrVzDzCut_cent%s_%s_w",cent_Title[j],setupName[i]));
-	  TH1F *htmp = (TH1F*)hNevtVtxCutWeight[j][i+1]->Clone(Form("Fit_%s",hNevtVtxCutWeight[j][i+1]->GetName()));
-	  htmp->Divide(hNEventsRawAll[i+1]);
-	  if(i==3)
-	    {
-	      double run = 15119021;
-	      int bin = htmp->FindFixBin(run);
-	      htmp->SetBinContent(bin,0);
-	      htmp->SetBinError(bin,0);
-	    }
-	  funcMbVtxEff[j][i] = new TF1(Form("Func_%s",hNevtVtxCutWeight[j][i+1]->GetName()),"pol0",start_run,end_run);
-	  htmp->Fit(funcMbVtxEff[j][i],"IR0Q");
 	  c->cd(i*4+j+1);
-	  htmp->SetMarkerStyle(29);
-	  htmp->GetYaxis()->SetRangeUser(0,1);
-	  htmp->Draw();
+	  hNevtRatio[j][i]->SetMarkerStyle(29);
+	  hNevtRatio[j][i]->GetYaxis()->SetRangeUser(0,1);
+	  hNevtRatio[j][i]->Draw();
 	  TPaveText *t1 = GetTitleText(Form("%s: %s%%",setupName[i],cent_Name[j]),0.08);
 	  t1->Draw();
 	  funcMbVtxEff[j][i]->SetLineColor(2);
@@ -594,7 +703,6 @@ void Lumi2014(const int savePlot = 0, const int saveHisto = 0)
 	}
     }
   if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/MB_EvtFractionWithVtxCutCent.pdf",run_type));
-  //setupName
   
   // check vertex efficiency
   printf("+++ check vertex efficiency +++\n");
@@ -605,7 +713,7 @@ void Lumi2014(const int savePlot = 0, const int saveHisto = 0)
       double run = hEvtRunAcc->GetBinCenter(ibin);
       if(hEvtRunAcc->GetBinContent(ibin)>0)
 	{
-	  for(int i=0; i<4; i++)
+	  for(int i=0; i<nCentBins; i++)
 	    {
 	      int bin = hEqMbEvtVtxCutWeight[i]->FindFixBin(run);
 	      if(hEqMbEvtVtxCutWeight[i]->GetBinContent(bin)<=0)
@@ -645,7 +753,7 @@ void Lumi2014(const int savePlot = 0, const int saveHisto = 0)
   printf("+++ %d runs (%4.2fM) are missing +++\n\n",nVE,nVEevts/1e6);
 
   list->Clear();
-  for(int i=0; i<nCentBins; i++)
+  for(int i=0; i<4; i++)
     {
       list->Add(hEqMbEvtVtxCutWeight[i]);
     }
@@ -670,8 +778,8 @@ void Lumi2014(const int savePlot = 0, const int saveHisto = 0)
 //================================================
 void makeHistoLumi(const int savePlot = 0, const int saveHisto = 0)
 {
-  const char *trigName = "VPD-ZDC-novtx-mon";
-  //const char *trigName = "dimuon";
+  //const char *trigName = "VPD-ZDC-novtx-mon";
+  const char *trigName = "dimuon";
   
   TH1F *hPreScale = new TH1F(Form("hPreScale_%s",trigName), Form("%s: per-scale per run;runId;Pre-scale",trigName), end_run-start_run+1, start_run-0.5, end_run+0.5);
   TH1F *hLiveTime = new TH1F(Form("hLiveTime_%s",trigName), Form("%s: live-time per run;runId;Live-time",trigName), end_run-start_run+1, start_run-0.5, end_run+0.5);
@@ -801,6 +909,11 @@ void makeHistoData(const int savePlot = 0, const int saveHisto = 1)
   const char *wName[2] = {"","_w"};
   const char *setupName[5] = {"all","prod","prod_low","prod_mid","prod_high"};
   const char *trgSetupName[4] = {"production","production_low","production_mid","production_high"};
+  const int nCentBins = 13;
+  const int centBins_low[nCentBins]  = {5,  13, 9,  5, 15, 11, 5,  13, 11, 9,  7, 5, 1};
+  const int centBins_high[nCentBins] = {16, 16, 12, 8, 16, 14, 10, 14, 12, 10, 8, 6, 16};
+  const char *cent_Name[nCentBins] = {"0-60","0-20","20-40","40-60","0-10","10-30","30-60","10-20","20-30","30-40","40-50","50-60","0-80"};
+  const char *cent_Title[nCentBins] = {"0060","0020","2040","4060","0010","1030","3060","1020","2030","3040","4050","5060","0080"};
   TH1F *hNEvents[5][2];
   TH1F *hTpcVz[5][nCentBins];
   TH1F *hDiffVz[5][nCentBins];

@@ -11,10 +11,10 @@ const double npart[nCentBins] = {161, 280, 142, 62};
 void plot_AuAu200()
 {  
   //rawSignal();
-  xsec();
+  //xsec();
   //upsilon();
   //publication();
-  //v2();
+  v2();
   //efficiency();
 }
 
@@ -143,7 +143,7 @@ void v2(const bool savePlot = 0)
   ifstream ifs;
   string tempstr;
   float pt_Ulrich_visHydro_T120_00_100[80], v2_Ulrich_visHydro_T120_00_100[80];
-  ifs.open("v2/JpsiSpv2020T120Tau6-00100.dat");
+  ifs.open("Rootfiles/Published/Jpsi_v2_200/JpsiSpv2020T120Tau6-00100.dat");
   for(int i=0; i<80; i++)
     {
       ifs>>pt_Ulrich_visHydro_T120_00_100[i]>>tempstr>>v2_Ulrich_visHydro_T120_00_100[i]>>tempstr;
@@ -896,6 +896,29 @@ void xsec(const bool savePlot = 0)
       c3->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/Run14_JpsiRaa_vs_pub.jpg",run_type,run_cfg_name.Data()));
       c3->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/Run14_JpsiRaa_vs_pub.eps",run_type,run_cfg_name.Data()));
     }
+
+  if(0)
+    {
+      TFile *fout = TFile::Open("Rootfiles/2015QM.root","recreate");
+      hJpsipp->Write();
+      for(int k=0; k<nCentBins; k++)
+	{
+	  for(int i=0; i<hJpsiXsec[k]->GetN(); i++)
+	    {
+	      hJpsiXsec[k]->GetPoint(i,x,y);
+	      hJpsiXsec[k]->SetPoint(i,x,y/scale_factor[k]);
+	      hJpsiXsec[k]->SetPointError(i,0,hJpsiXsec[k]->GetErrorY(i)/scale_factor[k]);
+	      
+	      hJpsiXsecSys[k]->SetPoint(i,x,y/scale_factor[k]);
+	      hJpsiXsecSys[k]->SetPointError(i,0.2,hSys->GetBinContent(i+1)*y/scale_factor[k]);
+	    }
+	  hJpsiXsec[k]->Write();
+	  hJpsiXsecSys[k]->Write();
+	  hJpsiRaa[k]->Write();
+	  hJpsiRaaSys[k]->Write();
+	}
+    }
+  return;
 
   ifstream ifin;
   char tmp[256];

@@ -40,9 +40,9 @@ void make_JpsiYield()
   printf("acc di-muon events: %4.4e\n",hStat->GetBinContent(10));
 
   //makeHistos();
-  //makeYieldRun14();
+  makeYieldRun14();
   //makeYieldRun13();
-  prod_makeYield();
+  //prod_makeYield();
 }
 
 //================================================
@@ -62,7 +62,7 @@ void prod_makeYield()
 }
 
 //===============================================
-void makeYieldRun14(const int isetup = 0, const int icent = 0, const int isys = 0, int savePlot = 0, int saveHisto = 0)
+void makeYieldRun14(const int isetup = 0, const int icent = 0, const int isys = 0, int savePlot = 1, int saveHisto = 1)
 {
   const char *sys_name[7] = {"","_LargeScale","_SmallScale","_pol1","_LargeFit","_SmallFit","_Rebin"};
   const char *sys_title[7] = {"","Sys.LargeScale.","Sys.SmallScale.","Sys.pol1.","Sys.LargeFit.","Sys.SmallFit.","Sys.Rebin"};
@@ -91,8 +91,8 @@ void makeYieldRun14(const int isetup = 0, const int icent = 0, const int isys = 
   TString g_func2 = "pol1";
   int g_func1_npar = 4;
   int g_func2_npar = 2;
-  double g_sig_fit_min = 2.5;
-  double g_sig_fit_max = 4;
+  double g_sig_fit_min = 2.6;
+  double g_sig_fit_max = 4.0;
   if(isys==1) { g_mix_scale_low = 2.5; g_mix_scale_high = 3.7; }
   if(isys==2) { g_mix_scale_low = 2.9; g_mix_scale_high = 3.3; }
   if(isys==3) { g_func2 = "pol3"; g_func2_npar = 4; }
@@ -140,30 +140,42 @@ void makeYieldRun14(const int isetup = 0, const int icent = 0, const int isys = 
       htmp->Rebin(int(hMixScale[i]->GetBinWidth(1)/hMixLS[i]->GetBinWidth(1)));
       hMixScale[i]->Divide(htmp);
 
+      double g_mix_scale_low_tmp = g_mix_scale_low;
+      double g_mix_scale_high_tmp = g_mix_scale_high;
+      if(icent<=2 && i==1)
+	{
+	  g_mix_scale_low_tmp = 2.5;
+	  g_mix_scale_high_tmp = 2.7;
+	  if(isys==1)
+	    {
+	      g_mix_scale_low_tmp = 2.4;
+	      g_mix_scale_high_tmp = 2.8;
+	    }
+	  if(isys==2)
+	    {
+	      g_mix_scale_low_tmp = 2.6;
+	      g_mix_scale_high_tmp = 2.9;
+	    }
+	}
+
       // fitting method
-      funcScale[i] = new TF1(Form("Fit_%s",hMixScale[i]->GetName()),"pol0",g_mix_scale_low,g_mix_scale_high);
+      funcScale[i] = new TF1(Form("Fit_%s",hMixScale[i]->GetName()),"pol0",g_mix_scale_low_tmp,g_mix_scale_high_tmp);
       hMixScale[i]->Fit(funcScale[i],"IR0Q");
       hFitScaleFactor->SetBinContent(i,funcScale[i]->GetParameter(0));
       hFitScaleFactor->SetBinError(i,funcScale[i]->GetParError(0));
 
-      if(i==1)
-	{
-	  g_mix_scale_low = 2.5;
-	  g_mix_scale_high = 2.7;
-	}
-
       // bin counting method
       double se = 0, se_err = 0, me = 0, me_err = 0;
-      int low_bin = hSeLS[i]->FindFixBin(g_mix_scale_low+1e-4);
-      int high_bin = hSeLS[i]->FindFixBin(g_mix_scale_high-1e-4);
+      int low_bin = hSeLS[i]->FindFixBin(g_mix_scale_low_tmp+1e-4);
+      int high_bin = hSeLS[i]->FindFixBin(g_mix_scale_high_tmp-1e-4);
       for(int bin=low_bin; bin<=high_bin; bin++)
 	{
 	  se += hSeLS[i]->GetBinContent(bin);
 	  se_err += TMath::Power(hSeLS[i]->GetBinError(bin),2);
 	}
 
-      int low_bin_me = hMixLS[i]->FindFixBin(g_mix_scale_low+1e-4);
-      int high_bin_me = hMixLS[i]->FindFixBin(g_mix_scale_high-1e-4);
+      int low_bin_me = hMixLS[i]->FindFixBin(g_mix_scale_low_tmp+1e-4);
+      int high_bin_me = hMixLS[i]->FindFixBin(g_mix_scale_high_tmp-1e-4);
       for(int bin=low_bin_me; bin<=high_bin_me; bin++)
 	{
 	  me += hMixLS[i]->GetBinContent(bin);
@@ -228,8 +240,8 @@ void makeYieldRun14(const int isetup = 0, const int icent = 0, const int isys = 
     {
       hAcc[i] = (TH1F*)hMixUL[i]->Clone(Form("Mix_Acceptance_cent%s_pt%s",cent_Title[icent],pt_Name[i]));
       TH1F *htmp = (TH1F*)hMixLS[i]->Clone(Form("%s_clone2",hMixLS[i]->GetName()));
-      hAcc[i]->Rebin(10);
-      htmp->Rebin(10);
+      hAcc[i]->Rebin(g_bin_width/hAcc[i]->GetBinWidth(1));
+      htmp->Rebin(g_bin_width/htmp->GetBinWidth(1));
       hAcc[i]->Divide(htmp);
       if(i>0)
 	{
@@ -345,12 +357,14 @@ void makeYieldRun14(const int isetup = 0, const int icent = 0, const int isys = 
 	    }
 	}
       hSignal[i]->Add(hMixBkg[i],-1);
+      //hSeLS[i]->Multiply(hAcc[i]);
+      //hSignal[i]->Add(hSeLS[i],-1);
       hSignal[i]->SetLineColor(1);
       hSignal[i]->SetMarkerColor(1);
       hSignalSave[i] = (TH1F*)hSignal[i]->Clone(Form("Jpsi_Signal_pt%s_%s",pt_Name[i],suffix.Data()));
 
       // Fit signal
-      if(i<8)
+      if(i<5)
       	{
 	  funcForm = g_func1; 
 	  nPar = g_func1_npar;
@@ -361,9 +375,9 @@ void makeYieldRun14(const int isetup = 0, const int icent = 0, const int isys = 
 	  nPar = g_func2_npar;
       	}
       funcSignal[i] = new TF1(Form("Jpsi_FitSig_pt%s_%s",pt_Name[i],suffix.Data()),Form("gausn(0)+%s(3)",funcForm.Data()),g_sig_fit_min,g_sig_fit_max);
-      funcSignal[i]->SetParameter(0,100);
+      funcSignal[i]->SetParameter(0,1000);
       funcSignal[i]->SetParameter(1,3.09);
-      funcSignal[i]->SetParameter(2,0.1);
+      funcSignal[i]->SetParameter(2,0.05);
       if(fix_mean[0]>0)
 	{
 	  funcSignal[i]->FixParameter(1,fix_mean[i]);
@@ -488,7 +502,7 @@ void makeYieldRun14(const int isetup = 0, const int icent = 0, const int isys = 
     }
   t = GetPaveText(0.7,0.8,0.3,0.35,0.06);
   t->SetTextFont(62);
-  t->AddText("LS-MIX(UL)");
+  t->AddText("UL-MIX(UL)");
   t->SetTextColor(4);
   cFit->cd(1);
   t->Draw();

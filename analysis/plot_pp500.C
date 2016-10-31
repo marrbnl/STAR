@@ -6,7 +6,7 @@ const int low_tofMult[nMultBins] = {0,1,3,6};
 const int high_tofMult[nMultBins] = {30,2,5,30};
 const Double_t low_mass = 2.8;
 const Double_t high_mass = 3.3;
-TString run_cfg_name = "paper";
+TString run_cfg_name = "2015HP";
 
 //================================================
 void plot_pp500()
@@ -15,15 +15,15 @@ void plot_pp500()
   gStyle->SetOptFit(0);
   run_type = "Run13_pp500";
 
-  jpsi_xsec();
-  //evtAct();
+  //jpsi_xsec();
+  evtAct();
   //Run13_signal();
   //Run13_ptDependence();
   //Run11_TofMult();
 }
 
 //================================================
-void jpsi_xsec(const bool save = 1, const bool saveHisto = 1)
+void jpsi_xsec(const bool save = 0, const bool saveHisto = 0)
 {
   TCanvas *c2 = new TCanvas("c2","c2", 700, 700);
   SetPadMargin(gPad,0.12, 0.14, 0.03,0.03);
@@ -277,7 +277,7 @@ void evtAct(const bool save = 0)
   syserr_2->SetTextColor(1);
 
   gStyle->SetEndErrorSize(6);
-  TFile *fin = TFile::Open(Form("Rootfiles/HP2015/Pico.Run13.pp500.jpsi.EvtAct.Rank1.VtxDz0.pt0-10.root"),"read");
+  TFile *fin = TFile::Open(Form("Rootfiles/2015HP/Pico.Run13.pp500.jpsi.EvtAct.Rank1.VtxDz0.pt0-10.root"),"read");
 
   const char *draw_style = "sameE5";
 
@@ -315,7 +315,7 @@ void evtAct(const bool save = 0)
   sys->Draw(draw_style);
   
   // Compare to Qian
-  TFile *fHT = TFile::Open("Rootfiles/HP2015/Spectrum_in_bin_Rank.root");
+  TFile *fHT = TFile::Open("Rootfiles/2015HP/Spectrum_in_bin_Rank.root");
   TGraphErrors *gr = (TGraphErrors*)fHT->Get("event_Act");
   gr->SetMarkerStyle(29);
   gr->SetMarkerColor(4);
@@ -381,7 +381,7 @@ void evtAct(const bool save = 0)
   h->DrawCopy();
 
   TGraphErrors *gPythia[2];
-  TFile *fpythia = TFile::Open("Rootfiles/HP2015/jpsi-pt.default.20150629.root");
+  TFile *fpythia = TFile::Open("Rootfiles/2015HP/jpsi-pt.default.20150629.root");
   for(int i=0; i<2; i++)
     {
       gPythia[i] = (TGraphErrors*)fpythia->Get(Form("Graph;%d",i+1));
@@ -575,7 +575,7 @@ void evtAct(const bool save = 0)
 
   ratio->Draw("sames PEZ");
   sys->Draw(draw_style);
-  TFile *fHT2 = TFile::Open("Rootfiles/HP2015/Spectrum_in_bin_Rank.root");
+  TFile *fHT2 = TFile::Open("Rootfiles/2015HP/Spectrum_in_bin_Rank.root");
   TGraphErrors *graph[3];
   graph[0] = (TGraphErrors*)fHT2->Get("event_Act");
   graph[1] = (TGraphErrors*)fHT2->Get("evAct_lowpT");
@@ -650,7 +650,7 @@ void evtAct(const bool save = 0)
 
   if(0)
     {
-      TFile *fout = TFile::Open("Rootfiles/HP2015/HP2015.pp.Jpsi.root","recreate");
+      TFile *fout = TFile::Open("Rootfiles/2015HP/HP2015.pp.Jpsi.root","recreate");
       ratio->Write("STAR_Run13_pp500_Jpsi_mumu_pT0");
       sys->Write("STAR_Run13_pp500_Jpsi_mumu_pT0_sys");
       gr->Write("STAR_Run11_pp500_Jpsi_ee_pT4");

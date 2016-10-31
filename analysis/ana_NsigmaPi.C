@@ -1,20 +1,340 @@
 TFile *f;
-const Int_t func_color[4] = {2,8,4,6};
+const int year = 2014;
 
 //================================================
 void ana_NsigmaPi()
 {
   gStyle->SetOptStat(0);
-  f = TFile::Open("./output/Run13.pp500.jpsi.CutRanking.root","read");
+  gStyle->SetOptFit(0);
 
-  fit_NsigmaPi();
-  //fix_NsigmaPi();
+  if(year==2013)
+    {
+      //f = TFile::Open("./output/Run13.pp500.jpsi.CutRanking.root","read");
+    }
+  else if(year==2014)
+    {
+      f = TFile::Open("./output/Pico.Run14.AuAu200.V0.root","read");
+    }
+
+  fix_NsigmaPi_V0();
+
+  //fit_NsigmaPiDiff();
+  //fix_NsigmaPi_m2();
+}
+
+//================================================
+void fix_NsigmaPi_V0(const Int_t savePlot = 0)
+{
+  const int kNcent = 3, kNlumi = 4, kNpart = 2;
+  const char* cent_name[kNcent] = {"0020","2040","4060"};
+  const char* lumi_name[kNlumi] = {"all","low","mid","high"};
+  const char* V0_name[kNpart] = {"K0s","Lambda"};
+
+  const char* cent_title[kNcent] = {"0-20%","20-40%","40-60%"};
+  const char* lumi_title[kNlumi] = {"all","prod_low","prod_mid","prod_high"}; 
+  const char* V0_title[kNpart] = {"K^{0}_{s}","#Lambda"};
+
+  TH2F *hV0MassVsPtUL[kNpart][kNcent][kNlumi];
+  TH2F *hV0MassVsPtLS[kNpart][kNcent][kNlumi];
+  
+  for(int i=0; i<kNpart; i++)
+    {
+      for(int j=0; j<kNcent; j++)
+	{
+	  for(int k=1; k<kNlumi; k++)
+	    {
+	      hV0MassVsPtUL[i][j][k] = (TH2F*)f->Get(Form("mh%sMassVsPtUL_di_mu_%s_%s",V0_name[i],cent_name[j],lumi_name[k]));
+	      hV0MassVsPtLS[i][j][k] = (TH2F*)f->Get(Form("mh%sMassVsPtLS_di_mu_%s_%s",V0_name[i],cent_name[j],lumi_name[k]));
+	      hV0MassVsPtUL[i][j][k]->Sumw2();
+	      hV0MassVsPtLS[i][j][k]->Sumw2();
+	      if(k==1)
+		{
+		  hV0MassVsPtUL[i][j][0] = (TH2F*)hV0MassVsPtUL[i][j][k]->Clone(Form("mh%sMassVsPtUL_di_mu_%s_%s",V0_name[i],cent_name[j],lumi_name[0]));
+		  hV0MassVsPtLS[i][j][0] = (TH2F*)hV0MassVsPtLS[i][j][k]->Clone(Form("mh%sMassVsPtLS_di_mu_%s_%s",V0_name[i],cent_name[j],lumi_name[0]));
+		}
+	      else
+		{
+		  hV0MassVsPtUL[i][j][0]->Add(hV0MassVsPtUL[i][j][k]);
+		  hV0MassVsPtLS[i][j][0]->Add(hV0MassVsPtLS[i][j][k]);
+		}
+	    }
+	}
+    }
+
+  const Int_t nV0PtBin = 6;
+  const Double_t V0PtBins[nV0PtBin+1] = {0,1,2,3,4,5,10};
+  const double min_mass[2] = {0.48, 1.110};
+  const double max_mass[2] = {0.52, 1.123};
+  const double min_fit[2] = {0.44, 1.11};
+  const double max_fit[2] = {0.55, 1.15};
+  const double v0_mass[2] = {0.4976, 1.12};
+  TF1 *funcV0[kNpart][kNcent][kNlumi][nV0PtBin];
+  TF1 *funcV0Bkg[kNpart][kNcent][kNlumi][nV0PtBin];
+
+  for(int i=0; i<kNpart; i++)
+    {
+      for(int j=0; j<kNcent; j++)
+	{
+	  TCanvas *c = new TCanvas(Form("MassVsPt_%d_%d",i,j),Form("MassVsPt_%s_%s",V0_name[i],cent_name[j]),1200,700);
+	  c->Divide(2,2);
+	  for(int k=0; k<kNlumi; k++)
+	    {
+	      c->cd(k+1);
+	      gPad->SetLogz();
+	      hV0MassVsPtUL[i][j][k]->SetTitle();
+	      hV0MassVsPtUL[i][j][k]->Draw("colz");
+	      TPaveText *t1 = GetTitleText(Form("Invariant mass vs. p_{T} for %s candidates (%s, %s)",V0_title[i],cent_title[j],lumi_title[k]),0.05);
+	      t1->Draw();
+
+	      TCanvas *c1 = new TCanvas(Form("Mass_%d_%d_%d",i,j,k),Form("MassVsPt_%s_%s_%s",V0_name[i],cent_name[j],lumi_name[k]),1200,700);
+	      c1->Divide(3,2);
+	      for(int p=0; p<nV0PtBin; p++)
+		{
+		  int low_bin  = hV0MassVsPtUL[i][j][k]->GetXaxis()->FindFixBin(V0PtBins[p]+1e-4);
+		  int high_bin = hV0MassVsPtUL[i][j][k]->GetXaxis()->FindFixBin(V0PtBins[p+1]-1e-4);
+		  TH1F *hUL = (TH1F*)hV0MassVsPtUL[i][j][k]->ProjectionY(Form("%s_bin%d",hV0MassVsPtUL[i][j][k]->GetName(),p),low_bin,high_bin);
+
+		  if(i==1 && p==0) continue;
+
+		  // fit V0 signal+background
+		  funcV0[i][j][k][p] = new TF1(Form("func_%s",hUL->GetName()),"gaus(0)+pol3(3)",min_fit[i],max_fit[i]);
+		  funcV0[i][j][k][p]->SetParameter(0,hUL->GetBinContent(hUL->FindFixBin(v0_mass[i])));
+		  funcV0[i][j][k][p]->SetParameter(1, v0_mass[i]);
+		  funcV0[i][j][k][p]->SetParameter(2, 0.001);
+		  hUL->Fit(funcV0[i][j][k][p],"IRQ0");
+
+		  funcV0Bkg[i][j][k][p] = new TF1(Form("funcBkg_%s",hUL->GetName()),"pol3",min_fit[i],max_fit[i]);
+		  for(int ipar=0; ipar<4; ipar++)
+		    {
+		      funcV0Bkg[i][j][k][p]->SetParameter(ipar, funcV0[i][j][k][p]->GetParameter(ipar+3));
+		      funcV0Bkg[i][j][k][p]->SetParError(ipar, funcV0[i][j][k][p]->GetParError(ipar+3));
+		    }
+
+		  hUL->SetLineColor(2);
+		  hUL->SetMarkerColor(2);
+		  hUL->SetMarkerStyle(20);
+		  if(i==0) hUL->GetXaxis()->SetRangeUser(0.44,0.55);
+		  if(i==1) hUL->GetXaxis()->SetRangeUser(1.08,1.15);
+		  hUL->SetMaximum((1.5*hUL->GetMaximum()));
+		  c1->cd(p+1);
+		  hUL->Draw("P");					
+		  funcV0[i][j][k][p]->SetLineColor(4);
+		  funcV0[i][j][k][p]->SetLineStyle(2);
+		  funcV0[i][j][k][p]->Draw("sames");
+		  funcV0Bkg[i][j][k][p]->SetLineColor(4);
+		  funcV0Bkg[i][j][k][p]->SetLineStyle(2);
+		  funcV0Bkg[i][j][k][p]->Draw("sames");
+		  TH1F *hLS = (TH1F*)hV0MassVsPtLS[i][j][k]->ProjectionY(Form("%s_bin%d",hV0MassVsPtLS[i][j][k]->GetName(),p),low_bin,high_bin);
+		  hLS->Draw("samesHIST");
+		  TPaveText *t1 = GetTitleText(Form("%1.1f < %s p_{T} < %1.1f GeV/c",V0PtBins[p],V0_title[i],V0PtBins[p+1]),0.05);
+		  t1->Draw();
+		  double ymax = hUL->GetMaximum();
+		  TLine *line = GetLine(min_mass[i],0,min_mass[i],0.8*ymax,1);
+		  line->Draw();
+		  line = GetLine(max_mass[i],0,max_mass[i],0.8*ymax,1);
+		  line->Draw();
+		}
+	      c1->cd(1);
+	      TPaveText *t1 = GetPaveText(0.15,0.3,0.65,0.8,0.045);
+	      t1->AddText(Form("%s, %s",cent_title[j],lumi_title[k]));
+	      t1->AddText(Form("%s candidates",V0_title[i]));
+	      t1->SetTextAlign(11);
+	      t1->Draw();
+	      if(savePlot)  c1->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_NsigmaPi/%sMassInPtBins_%s_%s.pdf",run_type,V0_name[i],cent_name[j],lumi_name[k]));
+	    }
+	  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_NsigmaPi/%sMassVsPt_%s.pdf",run_type,V0_name[i],cent_name[j]));
+	}
+    }
+  return;
+
+  // pure pion from K0s decay
+  // pure pronton from Lambda decay
+  const char* part_name[kNpart] = {"K0sPion","LambdaProton"};
+  const char* part_title[kNpart] = {"pion","proton"};
+  TH2F *hNsigmaPiVsPtUL[kNpart][kNcent][kNlumi];
+  TH2F *hNsigmaPiVsPtLS[kNpart][kNcent][kNlumi];
+  
+  for(int i=0; i<kNpart; i++)
+    {
+      for(int j=0; j<kNcent; j++)
+	{
+	  for(int k=1; k<kNlumi; k++)
+	    {
+	      hNsigmaPiVsPtUL[i][j][k] = (TH2F*)f->Get(Form("mh%sUL_di_mu_%s_%s",part_name[i],cent_name[j],lumi_name[k]));
+	      hNsigmaPiVsPtLS[i][j][k] = (TH2F*)f->Get(Form("mh%sLS_di_mu_%s_%s",part_name[i],cent_name[j],lumi_name[k]));
+	      hNsigmaPiVsPtUL[i][j][k]->Sumw2();
+	      hNsigmaPiVsPtLS[i][j][k]->Sumw2();
+	      if(k==1)
+		{
+		  hNsigmaPiVsPtUL[i][j][0] = (TH2F*)hNsigmaPiVsPtUL[i][j][k]->Clone(Form("mh%sUL_di_mu_%s_%s",part_name[i],cent_name[j],lumi_name[0]));
+		  hNsigmaPiVsPtLS[i][j][0] = (TH2F*)hNsigmaPiVsPtLS[i][j][k]->Clone(Form("mh%sLS_di_mu_%s_%s",part_name[i],cent_name[j],lumi_name[0]));
+		}
+	      else
+		{
+		  hNsigmaPiVsPtUL[i][j][0]->Add(hNsigmaPiVsPtUL[i][j][k]);
+		  hNsigmaPiVsPtLS[i][j][0]->Add(hNsigmaPiVsPtLS[i][j][k]);
+		}
+	    }
+	  for(int k=0; k<kNlumi; k++)
+	    {
+	      hNsigmaPiVsPtUL[i][j][k]->Add(hNsigmaPiVsPtLS[i][j][k],-1);
+	    }
+	}
+    }
+
+  TH1F *hFitMean[kNpart][kNcent][kNlumi];
+  TH1F *hFitSigma[kNpart][kNcent][kNlumi];
+  const Int_t nPartPtBin = 21;
+  const Double_t partPtBins[nPartPtBin+1] = {0,0.2,0.4,0.6,0.8,1,1.2,1.4,1.6,1.8,2.0,2.2,2.4,2.6,2.8,3.0,3.5,4.0,5.0,6.0,8.0,10.0};
+  for(int i=0; i<kNpart; i++)
+    {
+      for(int j=0; j<kNcent; j++)
+	{
+	  for(int k=0; k<kNlumi; k++)
+	    {
+	      hFitMean[i][j][k]  = new TH1F(Form("hNsigmaPiMean_%s_%s_%s",part_name[i],cent_name[j],lumi_name[k]),";p_{T} (GeV/c);<n#sigma_{#pi}>",nPartPtBin,partPtBins);
+	      hFitSigma[i][j][k] = new TH1F(Form("hNsigmaPiSigma_%s_%s_%s",part_name[i],cent_name[j],lumi_name[k]),";p_{T} (GeV/c);#sigma(n#sigma_{#pi})",nPartPtBin,partPtBins);
+
+	      TCanvas *c1 = new TCanvas(Form("FitNsigmaPi_%d_%d_%d",i,j,k),Form("FitNsigmaPi_%s_%s_%s",part_name[i],cent_name[j],lumi_name[k]),1200,800);
+	      c1->Divide(4,6);
+	      for(int p=0; p<nPartPtBin; p++)
+		{
+		  int low_bin  = hNsigmaPiVsPtUL[i][j][k]->GetXaxis()->FindFixBin(partPtBins[p]+1e-4);
+		  int high_bin = hNsigmaPiVsPtUL[i][j][k]->GetXaxis()->FindFixBin(partPtBins[p+1]-1e-4);
+		  TH1F *hUL = (TH1F*)hNsigmaPiVsPtUL[i][j][k]->ProjectionY(Form("%s_bin%d",hNsigmaPiVsPtUL[i][j][k]->GetName(),p),low_bin,high_bin);
+		  hUL->SetLineColor(1);
+		  hUL->SetMarkerColor(1);
+		  hUL->SetMarkerStyle(24);
+		  hUL->GetXaxis()->SetRangeUser(-5,5);
+		  hUL->SetMaximum((1.5*hUL->GetMaximum()));
+		  TF1 *func = new TF1(Form("Fit_%s",hUL->GetName()),"gaus",-2.5,2.5);
+		  if(i==1) func->SetRange(-3,1);
+		  hUL->Fit(func,"R0Q");
+		  c1->cd(p+2);
+		  hUL->SetTitle("");
+		  hUL->Draw("P");
+		  func->SetLineColor(2);
+		  func->Draw("sames");
+		  TPaveText *t1 = GetTitleText(Form("%1.1f < p_{T} < %1.1f GeV/c",partPtBins[p],partPtBins[p+1]),0.09);
+		  t1->Draw();
+		  hFitMean[i][j][k]->SetBinContent(p+1, func->GetParameter(1));
+		  hFitMean[i][j][k]->SetBinError(p+1, func->GetParError(1));
+		  hFitSigma[i][j][k]->SetBinContent(p+1, func->GetParameter(2));
+		  hFitSigma[i][j][k]->SetBinError(p+1, func->GetParError(2));
+		}
+	      c1->cd(1);
+	      TPaveText *t1 = GetPaveText(0.3,0.6,0.3,0.8,0.12);
+	      t1->AddText(run_type);
+	      t1->AddText(Form("%s, %s",cent_title[j],lumi_title[k]));
+	      t1->AddText(Form("%s candidates",part_title[i]));
+	      t1->SetTextAlign(11);
+	      t1->Draw();
+	      if(savePlot)  c1->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_NsigmaPi/FitNsigmaPi_%s_%s_%s.pdf",run_type,part_title[i],cent_name[j],lumi_name[k]));
+	    }
+	}
+    }
+  
+  for(int i=0; i<kNpart; i++)
+    {
+      TCanvas *c1 = new TCanvas(Form("NsigmaPiMean_%d",i),Form("CompNsigmaPiMean_%s",part_name[i]),1100,700);
+      c1->Divide(2,2);
+      TLegend *leg11 = new TLegend(0.6,0.6,0.8,0.85);
+      leg11->SetBorderSize(0);
+      leg11->SetFillColor(0);
+      leg11->SetTextSize(0.05);
+      for(int j=0; j<kNcent; j++)
+	{
+	  for(int k=0; k<kNlumi; k++)
+	    {
+	      c1->cd(j+1);
+	      hFitMean[i][j][k]->SetMarkerStyle(20+j);
+	      hFitMean[i][j][k]->SetMarkerColor(color[k]);
+	      hFitMean[i][j][k]->SetLineColor(color[k]);
+	      if(i==0) hFitMean[i][j][k]->GetYaxis()->SetRangeUser(-2,2);
+	      if(i==1) hFitMean[i][j][k]->GetYaxis()->SetRangeUser(-4,2);
+	      SetPadMargin(gPad,0.12,0.1,0.1,0.1);
+	      ScaleHistoTitle(hFitMean[i][j][k],0.05,1.0,0.04,0.05,0.9,0.04,62);
+	      if(k==0) 
+		{
+		  hFitMean[i][j][k]->Draw();
+		  TPaveText *t1 = GetTitleText(Form("Mean of n#sigma_{#pi} for %s from %s decay (%s)",part_title[i],V0_title[i],cent_title[j]),0.05);
+		  t1->Draw();
+		}
+	      else     
+		{
+		  hFitMean[i][j][k]->Draw("sames");
+		}
+	      if(j==0) leg11->AddEntry(hFitMean[i][j][k],lumi_title[k],"P");
+	    }
+	}
+      c1->cd(1);
+      leg11->Draw();
+      c1->cd(4);
+      SetPadMargin(gPad,0.12,0.1,0.1,0.1);
+      TLegend *leg12 = new TLegend(0.6,0.6,0.8,0.85);
+      leg12->SetBorderSize(0);
+      leg12->SetFillColor(0);
+      leg12->SetTextSize(0.05);
+      leg12->SetHeader(run_type);
+      for(int j=0; j<kNcent; j++)
+	{
+	  if(j==0) hFitMean[i][j][0]->Draw();
+	  else     hFitMean[i][j][0]->Draw("sames");
+	  leg12->AddEntry(hFitMean[i][j][0],cent_title[j],"P");
+	}
+      TPaveText *t1 = GetTitleText(Form("Mean of n#sigma_{#pi} for %s from %s decay",part_title[i],V0_title[i]),0.05);
+      t1->Draw();
+      leg12->Draw();
+      if(savePlot)  c1->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_NsigmaPi/%sNSigmaPiMean.pdf",run_type,part_name[i]));
+
+
+      // width vs. pt
+      TCanvas *c2 = new TCanvas(Form("NsigmaPiWidth_%d",i),Form("CompNsigmaPiWidth_%s",part_name[i]),1100,700);
+      c2->Divide(2,2);
+      for(int j=0; j<kNcent; j++)
+	{
+	  for(int k=0; k<kNlumi; k++)
+	    {
+	      c2->cd(j+1);
+	      hFitSigma[i][j][k]->SetMarkerStyle(20+j);
+	      hFitSigma[i][j][k]->SetMarkerColor(color[k]);
+	      hFitSigma[i][j][k]->SetLineColor(color[k]);
+	      hFitSigma[i][j][k]->GetYaxis()->SetRangeUser(0,2);
+	      SetPadMargin(gPad,0.12,0.1,0.1,0.1);
+	      ScaleHistoTitle(hFitSigma[i][j][k],0.05,1.0,0.04,0.05,0.9,0.04,62);
+	      if(k==0) 
+		{
+		  hFitSigma[i][j][k]->Draw();
+		  TPaveText *t1 = GetTitleText(Form("Width of n#sigma_{#pi} for %s from %s decay (%s)",part_title[i],V0_title[i],cent_title[j]),0.05);
+		  t1->Draw();
+		}
+	      else     
+		{
+		  hFitSigma[i][j][k]->Draw("sames");
+		}
+	    }
+	}
+      c2->cd(1);
+      leg11->Draw();
+      c2->cd(4);
+      SetPadMargin(gPad,0.12,0.1,0.1,0.1);
+      for(int j=0; j<kNcent; j++)
+	{
+	  if(j==0) hFitSigma[i][j][0]->Draw();
+	  else     hFitSigma[i][j][0]->Draw("sames");
+	}
+      TPaveText *t1 = GetTitleText(Form("Width of n#sigma_{#pi} for %s from %s decay",part_title[i],V0_title[i]),0.05);
+      t1->Draw();
+      leg12->Draw();
+      if(savePlot)  c2->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_NsigmaPi/%sNSigmaPiWidth.pdf",run_type,part_name[i]));
+    }
 }
 
 
 //================================================
-void fit_NsigmaPi(const Int_t save = 0)
+void fit_NsigmaPiDiff(const Int_t save = 0)
 {
+  const Int_t func_color[4] = {2,8,4,6};
   gStyle->SetOptFit(1);
   // gStyle->SetStatY(0.98);                
   // gStyle->SetStatX(0.98);  
@@ -290,7 +610,7 @@ void fit_NsigmaPi(const Int_t save = 0)
 
 
 //================================================
-void fix_NsigmaPi(const Int_t save = 0)
+void fix_NsigmaPi_m2(const Int_t save = 0)
 {
   gStyle->SetOptStat(0);
   gStyle->SetOptFit(1);

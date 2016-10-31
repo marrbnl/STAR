@@ -168,7 +168,7 @@ void ana_JpsiRes()
   hMtdRespEffCosmic = (TH1F*)fCosmic->Get("MtdResponseEff_cosmic");
   hMtdRespEffEmbed = (TH1F*)fCosmic->Get("MtdResponseEff_embed");
 
-  tuneResolution(0,0);
+  tuneResolution(0,1);
   //trigEff();
 }
 
@@ -259,7 +259,7 @@ void trigEff()
 //================================================
 void tuneResolution(const int icent, const bool savePlot)
 {
-  const int anaType = 2; // 0 - scan; 1 - determine smear & shift; 2 - generate final smear
+  const int anaType = 1; // 0 - scan; 1 - determine smear & shift; 2 - generate final smear
   const int nShiftScan = 10;
   const double shiftStep = -0.005;
   const int nSmearScan = 10;
@@ -382,10 +382,15 @@ void tuneResolution(const int icent, const bool savePlot)
     {
       fscan = TFile::Open(outName.Data(),"update");
       TH2F *hMassVsPtEmbed = (TH2F*)fscan->Get(Form("hRcJpsiMass_%s_%s_final_def",det_name[index],cent_Title[icent]));
-      
       TObjArray embedSlice;
       hMassVsPtEmbed->FitSlicesY(0, 0, -1, 0, "QNR", &embedSlice);
-      TH1F *hEmbSmearMean  =  (TH1F*)((TH1F*)embedSlice[1])->Clone("hEmbSmearMean");
+
+      TH2F *hMassVsPtEmbed2 = (TH2F*)fscan->Get(Form("hRcJpsiMass_%s_%s_final_def",det_name[4],cent_Title[icent]));
+      TObjArray embedSlice2;
+      hMassVsPtEmbed2->FitSlicesY(0, 0, -1, 0, "QNR", &embedSlice2);
+      
+
+      TH1F *hEmbSmearMean  =  (TH1F*)((TH1F*)embedSlice2[1])->Clone("hEmbSmearMean");
       TH1F *hEmbSmearSigma =  (TH1F*)((TH1F*)embedSlice[2])->Clone("hEmbSmearSigma");      
   
       if(year==2014) fdata = TFile::Open(Form("Rootfiles/Pico.Run14.AuAu200.jpsi.pt%1.1f.pt%1.1f.yield.root",pt1_cut,pt2_cut),"read");
@@ -473,14 +478,14 @@ void tuneResolution(const int icent, const bool savePlot)
       hSignalSub->SetMarkerStyle(21);
       hSignalSub->GetXaxis()->SetRangeUser(2.5,4);
       hSignalSub->SetMaximum(1.6*hSignalSub->GetMaximum());
-      hSignalSub->Scale(1./hSignalSub->Integral("width"));
-      hSignalSub->GetYaxis()->SetRangeUser(-2,15);
+      hSignalSub->Scale(1./hSignalSub->GetBinContent(hSignalSub->FindBin(3.09)));
+      hSignalSub->GetYaxis()->SetRangeUser(-0.2,1.8);
       hSignalSub->SetMarkerColor(2);
       hSignalSub->SetLineColor(2);
       c = draw1D(hSignalSub);
       TH1F *hSignalEmb = (TH1F*)hMassVsPtEmbed->ProjectionY("hSignalEmb");
       hSignalEmb->SetMarkerStyle(25);
-      hSignalEmb->Scale(1./hSignalEmb->Integral("width"));
+      hSignalEmb->Scale(1./hSignalEmb->GetBinContent(hSignalEmb->FindBin(3.09)));
       hSignalEmb->Draw("sames");
       leg->Draw();
       if(savePlot)
@@ -694,7 +699,7 @@ void tuneResolution(const int icent, const bool savePlot)
       TF1 *hFitShiftChi2[3];
       for(int i=0; i<3; i++)
 	{
-	  hShiftChi2[i] = new TH1F(Form("hShiftChi2_%s",sysName[i]),";shift (%); #chi^{2}", nShiftScan, (nShiftScan-1)*shiftStep+shiftStep/2, 0-shiftStep/2);
+	  hShiftChi2[i] = new TH1F(Form("hShiftChi2_%s",sysName[i]),";shift; #chi^{2}", nShiftScan, (nShiftScan-1)*shiftStep+shiftStep/2, 0-shiftStep/2);
 	  for(int j=0; j<nShiftScan; j++)
 	    {
 	      int bin = nShiftScan - j;
@@ -810,7 +815,7 @@ void tuneResolution(const int icent, const bool savePlot)
       TF1 *hFitSmearChi2[3];
       for(int i=0; i<3; i++)
 	{
-	  hSmearChi2[i] = new TH1F(Form("hSmearChi2_%s",sysName[i]),";smear (%); #chi^{2}", nSmearScan, 0-smearStep/2, (nSmearScan-1)*smearStep+smearStep/2);
+	  hSmearChi2[i] = new TH1F(Form("hSmearChi2_%s",sysName[i]),";smear; #chi^{2}", nSmearScan, 0-smearStep/2, (nSmearScan-1)*smearStep+smearStep/2);
 	  for(int j=0; j<nSmearScan; j++)
 	    {
 	      int bin = j + 1;
@@ -993,7 +998,7 @@ void smear(const double mass, const int icent, const int nExpr, const double shi
 	  if(debug) printf("MTD trig eff 2 = %3.2f\n",trig_eff_2);
 	  if( myRandom->Uniform(0., 1.) >  trig_eff_2) continue;
 	}
-      hJpsiMassVsPt[4]->Fill(rc_parent.Pt(),rc_parent.M(),weight);
+      hJpsiMassVsPt[4]->Fill(rc_parent.Pt(),rc_parent.M(),1);
 
       // MTD response efficiency
       int resp_index1 = hMtdRespEffCosmic->FindBin(rc_pt1);
@@ -1064,7 +1069,7 @@ void tuneSmear(const double masss, const int icent, const int nExpr,
       rc_daughter1.SetPtEtaPhiM(rc_pt1,eta1,phi1,muMass);
       rc_daughter2.SetPtEtaPhiM(rc_pt2,eta2,phi2,muMass);
       TLorentzVector rc_parent = rc_daughter1 + rc_daughter2;
-      hRcJpsiMassVsPt->Fill(rc_parent.Pt(),rc_parent.M(),weight);
+      hRcJpsiMassVsPt->Fill(rc_parent.Pt(),rc_parent.M(),1);
     }
 }
 
