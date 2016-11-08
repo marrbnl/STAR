@@ -48,13 +48,13 @@ void ana_JpsiMuon()
       f = TFile::Open(Form("./output/Pico.Run14.AuAu200.jpsi.%sroot",run_config),"read");
     }
 
-  DeltaTof();
-  //MtdVpdTacDiff();
+  //DeltaTof();
+  MtdVpdTacDiff();
   //kink();
 }
 
 //================================================
-void MtdVpdTacDiff(const Int_t savePlot = 1)
+void MtdVpdTacDiff(const Int_t savePlot = 0)
 {
   TList *list = new TList;
 
@@ -374,7 +374,7 @@ void MtdVpdTacDiff(const Int_t savePlot = 1)
     }
 
   // systematic uncertainty
-  const int mode = 1; // 0 - randomize efficiency; 1 - randomize MtdVpdTacDiff
+  const int mode = 0; // 0 - randomize efficiency; 1 - randomize MtdVpdTacDiff
   gStyle->SetOptFit(0);
   TRandom3 *rndm = new TRandom3();
   const int nexpr = 1000;

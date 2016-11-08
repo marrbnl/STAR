@@ -33,7 +33,94 @@ void qa_Embed()
   run_cfg_name = Form("%s",run_config);
   if(iPico) run_cfg_name = Form("Pico.%s",run_cfg_name.Data());
 
-  makePDF();
+  compWithData();
+  //makePDF();
+}
+
+//================================================
+void compWithData(const int savePlot = 1)
+{
+  // TPC vz distribution
+  TH1F *hTpcVz[2];
+  hTpcVz[0] = (TH1F*)fdata->Get("mhTpcVzWithCut_di_mu");
+  hTpcVz[1] = (TH1F*)fmc  ->Get("mhDataVtxZ_di_mu");
+  for(int i=0; i<2; i++)
+    {
+      hTpcVz[i]->Sumw2();
+      hTpcVz[i]->Rebin(2);
+      hTpcVz[i]->Scale(1./hTpcVz[i]->Integral());
+      hTpcVz[i]->SetMarkerStyle(20+1);
+      hTpcVz[i]->SetLineColor(i+1);
+      hTpcVz[i]->SetMarkerColor(i+1);
+      hTpcVz[i]->GetXaxis()->SetRangeUser(-110,110);
+    }
+  c = draw1D(hTpcVz[1],"Run14_AuAu: z distribution of TPC vertex");
+  hTpcVz[0]->Draw("samesHIST");
+  TLegend *leg = new TLegend(0.7,0.7,0.85,0.88);
+  leg->SetBorderSize(0);
+  leg->SetFillColor(0);
+  leg->SetTextSize(0.04);
+  leg->AddEntry(hTpcVz[0],"Data","L");
+  leg->AddEntry(hTpcVz[1],"Embed","P");
+  leg->Draw();
+  if(savePlot)
+    c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_Embed/DataVsEmbed_TpcVzWithCut.pdf",run_type));
+
+  // gRefMult
+  TH1F *hgRefMult[2];
+  hgRefMult[0] = (TH1F*)fdata->Get("mhgRefMultCorr_di_mu");
+  hgRefMult[1] = (TH1F*)fmc  ->Get("mhgRefMultCorr_di_mu");
+  for(int i=0; i<2; i++)
+    {
+      hgRefMult[i]->SetName(Form("hgRefMultCorr_%d",i));
+      hgRefMult[i]->Sumw2();
+      hgRefMult[i]->Rebin(2);
+      hgRefMult[i]->Scale(1./hgRefMult[i]->Integral());
+      hgRefMult[i]->SetMarkerStyle(20+1);
+      hgRefMult[i]->SetLineColor(i+1);
+      hgRefMult[i]->SetMarkerColor(i+1);
+      hgRefMult[i]->GetXaxis()->SetRangeUser(0,800);
+    }
+  c = draw1D(hgRefMult[1],"Run14_AuAu: corrected global reference multiplicity distribution");
+  hgRefMult[0]->Draw("samesHIST");
+  TLegend *leg = new TLegend(0.7,0.7,0.85,0.88);
+  leg->SetBorderSize(0);
+  leg->SetFillColor(0);
+  leg->SetTextSize(0.04);
+  leg->AddEntry(hgRefMult[0],"Data","L");
+  leg->AddEntry(hgRefMult[1],"Embed","P");
+  leg->Draw();
+  if(savePlot)
+    c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_Embed/DataVsEmbed_gReflMultCorr.pdf",run_type));
+
+  // centrality
+  TH1F *hCentrality[2];
+  hCentrality[0] = (TH1F*)fdata->Get("mhCentrality_di_mu");
+  hCentrality[1] = (TH1F*)fmc  ->Get("mhCentrality_di_mu");
+  for(int i=0; i<2; i++)
+    {
+      hCentrality[i]->SetName(Form("hCentrality_%d",i));
+      hCentrality[i]->Sumw2();
+      hCentrality[i]->Rebin(2);
+      hCentrality[i]->Scale(1./hCentrality[i]->Integral());
+      hCentrality[i]->SetMarkerStyle(20+1);
+      hCentrality[i]->SetLineColor(i+1);
+      hCentrality[i]->SetMarkerColor(i+1);
+      hCentrality[i]->GetXaxis()->SetRangeUser(0,16);
+    }
+  c = draw1D(hCentrality[1],"Run14_AuAu: centrality distribution");
+  gPad->SetLogy();
+  hCentrality[0]->Draw("samesHIST");
+  TLegend *leg = new TLegend(0.6,0.25,0.8,0.4);
+  leg->SetBorderSize(0);
+  leg->SetFillColor(0);
+  leg->SetTextSize(0.04);
+  leg->AddEntry(hCentrality[0],"Data","L");
+  leg->AddEntry(hCentrality[1],"Embed","P");
+  leg->Draw();
+  if(savePlot)
+    c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_Embed/DataVsEmbed_Centrality.pdf",run_type));
+  
 }
 
 //================================================
