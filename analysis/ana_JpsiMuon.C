@@ -54,102 +54,118 @@ void ana_JpsiMuon()
 }
 
 //================================================
-void MtdVpdTacDiff(const Int_t savePlot = 0)
+void MtdVpdTacDiff(const Int_t savePlot = 0, const int saveHisto = 0)
 {
   TList *list = new TList;
 
-  const int nHistos = 2;
-  const char *name[2] = {"AuAu200","pp200"};
-  const char *title[2] = {"Run14_AuAu_200","Run15_pp_200"};
+  const char *name = "AuAu200";
+  const char *title = "Run14_AuAu200";
   const int nbins = 6;
-  const double xbins[nbins+1] = {1.2,1.5,2.0,2.5,3.0,5.0,10.0};
-  const double minimum[nHistos] = {760, 880};
-  const double maximum[nHistos] = {840, 980};
+  const double xbins[nbins+1] = {1.3,1.5,2.0,2.5,3.0,5.0,10.0};
+  const double minimum = 760;
+  const double maximum = 840;
+  const double min_mass[3] = {3.0, 2.6, 3.3};
+  const double max_mass[3] = {3.2, 2.9, 3.6};
+  TH1F *htmp = 0x0;
 
-  TH2F *hDataUL[nHistos];
-  TH2F *hDataLS[nHistos];
-  TH2F *hDataDisVsPt[nHistos];
+  TFile *fdata = TFile::Open("./output/Pico.Run14.AuAu200.jpsi.root","read");
 
-  TFile *fdata[nHistos];
-  for(int i=0; i<nHistos; i++)
+  //==============================================
+  // single muon UL vs LS
+  //==============================================
+  TH2F *hJpsiMassVsMuonPt[2];
+  TH1F *hMuonPtSide[2];
+  hJpsiMassVsMuonPt[0] = (TH2F*)fdata->Get(Form("mhJpsiMassVsMuonPt_MtdVpdTacDiff_UL_di_mu"));
+  hJpsiMassVsMuonPt[1] = (TH2F*)fdata->Get(Form("mhJpsiMassVsMuonPt_MtdVpdTacDiff_LS_di_mu"));
+  for(int i=0; i<2; i++)
     {
-      if(i==0) fdata[i] = TFile::Open("./output/Pico.Run14.AuAu200.jpsi.root","read");
-      if(i==1) fdata[i] = TFile::Open("./output/Pico.Run15.pp200.jpsi.muon.root","read");
-      hDataUL[i]       = (TH2F*)fdata[i]->Get("mhJpsiMuonMtdVpdTacDiff_UL_di_mu");
-      hDataUL[i]->SetName(Form("%s_%d",hDataUL[i]->GetName(),i));
-      hDataUL[i]->Sumw2();
-
-      hDataLS[i]       = (TH2F*)fdata[i]->Get(Form("mhJpsiMuonMtdVpdTacDiff_LS_di_mu"));
-      hDataLS[i]->SetName(Form("%s_%d",hDataLS[i]->GetName(),i));
-      hDataLS[i]->Sumw2();
-
-      hDataDisVsPt[i]  = (TH2F*)hDataUL[i]->Clone(Form("JpsiMuonMtdVpdTacDiff_%d",i));
-      hDataDisVsPt[i]->Add(hDataLS[i], -1);
-      
+      // Get the muon distribution in the side-band region
+      hJpsiMassVsMuonPt[i]->Sumw2();
+      hMuonPtSide[i] = (TH1F*)hJpsiMassVsMuonPt[i]->ProjectionX(Form("hMuonPt_MtdVpdTacDiff_SideBand_%d",i));
+      hMuonPtSide[i]->Reset();
+      for(int j=0; j<2; j++)
+	{
+	  int low_bin = hJpsiMassVsMuonPt[i]->GetYaxis()->FindFixBin(min_mass[j+1]);
+	  int up_bin  = hJpsiMassVsMuonPt[i]->GetYaxis()->FindFixBin(max_mass[j+1]);
+	  htmp = (TH1F*)hJpsiMassVsMuonPt[i]->ProjectionX(Form("hMuonPt_MtdVpdTacDiff_SideBand%d_%d",j,i),low_bin,up_bin);
+	  hMuonPtSide[i]->Add(htmp);
+	}
     }
 
-  // UL vs LS
+
+  TH2F *hDataUL = (TH2F*)fdata->Get("mhJpsiMuon_MtdVpdTacDiff_UL_di_mu");
+  hDataUL->Sumw2();
+  TH2F *hDataLS = (TH2F*)fdata->Get("mhJpsiMuon_MtdVpdTacDiff_LS_di_mu");
+  hDataLS->Sumw2();
+  TH2F *hDataDisVsPt = (TH2F*)hDataUL->Clone(Form("JpsiMuonMtdVpdTacDiff"));
+  hDataDisVsPt->Add(hDataLS, -1);
+  
+
   const int rebin = 2;
-  TH1F *hUL[nHistos][nbins];
-  TH1F *hLS[nHistos][nbins];
-  TH1F *hMuon[nHistos][nbins];
-  double mean_pt[nHistos][nbins];
-  double mean_pt_err[nHistos][nbins];
-  for(int i=0; i<nHistos; i++)
+  TH1F *hUL[nbins];
+  TH1F *hLS[nbins];
+  TH1F *hMuon[nbins];
+  double mean_pt[nbins];
+  double mean_pt_err[nbins];
+  TCanvas *c = new TCanvas(Form("MtdVpdTacDiff_UL_vs_LS"),Form("MtdVpdTacDiff_UL_vs_LS"),1100,700);
+  c->Divide(3,2);
+
+  // calculate mean pt of each bin
+  int bin1 = hDataDisVsPt->GetYaxis()->FindBin(minimum);
+  int bin2 = hDataDisVsPt->GetYaxis()->FindBin(maximum);
+  htmp = (TH1F*)hDataDisVsPt->ProjectionX(Form("%s_tmp",hDataDisVsPt->GetName()),bin1,bin2);
+  for(int bin=1; bin<=nbins; bin++)
     {
-      TCanvas *c = new TCanvas(Form("%s_UL_vs_LS",name[i]),Form("%s_UL_vs_LS",name[i]),1100,700);
-      c->Divide(3,2);
+      htmp->GetXaxis()->SetRangeUser(xbins[bin-1]+1e-4, xbins[bin]-1e-4);
+      mean_pt[bin-1] = htmp->GetMean();
+      mean_pt_err[bin-1] = htmp->GetMeanError();
 
-      // calculate mean pt of each bin
-      int bin1 = hDataDisVsPt[i]->GetYaxis()->FindBin(minimum[i]);
-      int bin2 = hDataDisVsPt[i]->GetYaxis()->FindBin(maximum[i]);
-      TH1F *htmp = (TH1F*)hDataDisVsPt[i]->ProjectionX(Form("%s_tmp",name[i]),bin1,bin2);
-      for(int bin=1; bin<=nbins; bin++)
-	{
-	  htmp->GetXaxis()->SetRangeUser(xbins[bin-1]+1e-4, xbins[bin]-1e-4);
-	  mean_pt[i][bin-1] = htmp->GetMean();
-	  mean_pt_err[i][bin-1] = htmp->GetMeanError();
+      c->cd(bin);
+      int start_bin = hDataUL->GetXaxis()->FindBin(xbins[bin-1]+1e-4);
+      int end_bin   = hDataUL->GetXaxis()->FindBin(xbins[bin]-1e-4);
 
-	  c->cd(bin);
-	  int start_bin = hDataUL[i]->GetXaxis()->FindBin(xbins[bin-1]+1e-4);
-	  int end_bin   = hDataUL[i]->GetXaxis()->FindBin(xbins[bin]-1e-4);
+      hUL[bin-1] = (TH1F*)hDataUL->ProjectionY(Form("%s_DataMtdVpdTacDiff_UL_bin%d",name,bin),start_bin,end_bin);
+      hUL[bin-1]->SetMarkerStyle(20);
+      hUL[bin-1]->SetMarkerStyle(20);
+      hUL[bin-1]->Rebin(rebin);
+      hUL[bin-1]->SetMaximum(1.5*hUL[bin-1]->GetMaximum());
+      hUL[bin-1]->GetXaxis()->SetRangeUser(minimum,maximum);
+      hUL[bin-1]->SetTitle("");
+      hUL[bin-1]->Draw("P");
 
-	  hUL[i][bin-1] = (TH1F*)hDataUL[i]->ProjectionY(Form("%s_DataMtdVpdTacDiff_UL_bin%d",name[i],bin),start_bin,end_bin);
-	  hUL[i][bin-1]->SetMarkerStyle(20);
-	  hUL[i][bin-1]->SetMarkerStyle(20);
-	  hUL[i][bin-1]->Rebin(rebin);
-	  hUL[i][bin-1]->SetMaximum(1.5*hUL[i][bin-1]->GetMaximum());
-	  hUL[i][bin-1]->GetXaxis()->SetRangeUser(minimum[i],maximum[i]);
-	  hUL[i][bin-1]->SetTitle("");
-	  hUL[i][bin-1]->Draw("P");
+      hLS[bin-1] = (TH1F*)hDataLS->ProjectionY(Form("%s_DataMtdVpdTacDiff_LS_bin%d",name,bin),start_bin,end_bin);
+      hLS[bin-1]->SetMarkerStyle(24);
+      hLS[bin-1]->SetMarkerColor(2);
+      hLS[bin-1]->SetLineColor(2);
+      hLS[bin-1]->Rebin(rebin);
+      hLS[bin-1]->Draw("samesP");
 
-	  hLS[i][bin-1] = (TH1F*)hDataLS[i]->ProjectionY(Form("%s_DataMtdVpdTacDiff_LS_bin%d",name[i],bin),start_bin,end_bin);
-	  hLS[i][bin-1]->SetMarkerStyle(24);
-	  hLS[i][bin-1]->SetMarkerColor(2);
-	  hLS[i][bin-1]->SetLineColor(2);
-	  hLS[i][bin-1]->Rebin(rebin);
-	  hLS[i][bin-1]->Draw("samesP");
+      start_bin = hMuonPtSide[0]->GetXaxis()->FindBin(xbins[bin-1]+1e-4);
+      end_bin   = hMuonPtSide[0]->GetXaxis()->FindBin(xbins[bin]-1e-4);
+      double scale = hMuonPtSide[0]->Integral(start_bin,end_bin)/hMuonPtSide[1]->Integral(start_bin,end_bin);
 
-	  hMuon[i][bin-1] = (TH1F*)hUL[i][bin-1]->Clone(Form("%s_DataMtdVpdTacDiff_bin%d",name[i],bin));
-	  hMuon[i][bin-1]->Add(hLS[i][bin-1],-1);
+      hMuon[bin-1] = (TH1F*)hUL[bin-1]->Clone(Form("%s_DataMtdVpdTacDiff_bin%d",name,bin));
+      hMuon[bin-1]->Add(hLS[bin-1],-1);
 
-	  TPaveText *t1 = GetTitleText(Form("J/#psi #mu: %1.1f < p_{T} < %1.1f",xbins[bin-1],xbins[bin]),0.06);
-          t1->Draw();
-	}
-      c->cd(1);
-      TLegend *leg = new TLegend(0.5,0.6,0.8,0.88);
-      leg->SetBorderSize(0);
-      leg->SetFillColor(0);
-      leg->SetTextSize(0.05);
-      leg->SetHeader(title[i]);
-      leg->AddEntry(hUL[i][0],"Unlike-sign","PL");
-      leg->AddEntry(hLS[i][0],"Like-sign","PL");
-      leg->Draw();
+      TPaveText *t1 = GetTitleText(Form("J/#psi #mu: %1.1f < p_{T} < %1.1f",xbins[bin-1],xbins[bin]),0.06);
+      t1->Draw();
+      t1 = GetPaveText(0.6,0.8,0.75,0.8,0.05);
+      t1->AddText(Form("Scale = %4.3f",scale));
+      t1->Draw();
+    }
+  c->cd(1);
+  TLegend *leg = new TLegend(0.15,0.63,0.35,0.88);
+  leg->SetBorderSize(0);
+  leg->SetFillColor(0);
+  leg->SetTextSize(0.05);
+  leg->SetHeader(title);
+  leg->AddEntry(hUL[0],"Unlike-sign","PL");
+  leg->AddEntry(hLS[0],"Like-sign","PL");
+  leg->Draw();
 
-      if(savePlot)
-	c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/%s_MtdVpdTacDiff_ULvsLS.pdf",run_type,name[i]));
-    } 
-
+  if(savePlot)
+    c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/%s_MtdVpdTacDiff_ULvsLS.pdf",run_type,name));
+  return;
   // Fit data to extract efficiency
   const int nLumi = 2;
   const char *name_lumi[nLumi] = {"prod_high","prod_low"};
@@ -769,14 +785,12 @@ void MtdVpdTacDiff(const Int_t savePlot = 0)
 }
 
 //================================================
-void DeltaTof()
+void DeltaTof(const Int_t savePlot = 0, const int saveHisto = 0)
 {
-  const Int_t savePlot = 1;
   TList *list = new TList;
 
-  const int nHistos = 2;
-  const char *name[2] = {"AuAu200","pp200"};
-  const char *title[2] = {"Run14_AuAu_200","Run15_pp_200"};
+  const char *name = "AuAu200";
+  const char *title = "Run14_AuAu_200";
   const int nbins = 6;
   const double xbins[nbins+1] = {1.3,1.5,2.0,2.5,3.0,5.0,10.0};
 

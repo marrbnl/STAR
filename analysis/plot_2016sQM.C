@@ -8,9 +8,9 @@ const double ppInelasticErr = 3.; // mb
 void plot_2016sQM()
 {  
   //rawSignal();
-  //xsec();
+  xsec();
   //ppRef();
-  nPart();
+  //nPart();
   //compareQM2015();
 }
 
@@ -791,7 +791,7 @@ void nPart(const bool savePlot = 0, const bool saveHisto = 1)
 }
 
 //================================================
-void xsec(const bool savePlot = 1, const bool saveHisto = 0)
+void xsec(const bool savePlot = 0, const bool saveHisto = 1)
 {
   gStyle->SetOptStat(0);
   const double ncoll[nCentBins] = {393., 785., 300., 95.}; 
