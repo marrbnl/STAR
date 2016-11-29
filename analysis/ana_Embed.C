@@ -21,7 +21,8 @@ void ana_Embed()
   TString outName;
   TString outPDF;
 
-  const char *particle = "Upsilon";
+  //const char *particle = "Upsilon";
+  const char *particle = "UpsCut";
 
   if(year==2013)
     {
@@ -29,10 +30,11 @@ void ana_Embed()
     }
   else if(year==2014)
     {
-      fileName = Form("Run14.AuAu200.%s.Embed.root",particle);
+      fileName = Form("Run14.AuAu200.Embed.%s.root",particle);
     }
   outName = Form("%s.SingleTrkEff.%s.root",run_type,particle);
   outPDF = Form("%s_Embed_SingleTrkEff.%s.pdf",run_type,particle);
+
 
   run_cfg_name = run_config;
 
@@ -583,7 +585,7 @@ void makeHistos(TString outName, const bool save = 1)
 }
 
 //================================================
-void TrkEff3D(TString inName, TString outPDFName, const bool savePlot = 0, const bool saveHisto = 0)
+void TrkEff3D(TString inName, TString outPDFName, const bool savePlot = 0, const bool saveHisto = 1)
 {
   if(year==2013) const int nCentBins = 1;
 

@@ -40,7 +40,7 @@ void ana_PIDcuts()
 
   //makeData();
   //makeEmbed();
-  //dataVsEmbed();
+  dataVsEmbed();
   //DyDzCut();
 }
 
@@ -512,10 +512,11 @@ void makeEmbed(const bool savePlot = 0, const bool saveHisto = 1)
 
 
 //================================================
-void makeData(const int savePlot = 0, const int saveHisto = 0)
+void makeData(const int savePlot = 1, const int saveHisto = 1)
 {
   TFile *fdata = 0x0;
-  if(year==2014) fdata = TFile::Open("./output/Pico.Run14.AuAu200.jpsi.root","read");
+  //if(year==2014) fdata = TFile::Open("./output/Pico.Run14.AuAu200.jpsi.root","read");
+  if(year==2014) fdata = TFile::Open("./output/Pico.Run14.AuAu200.JpsiMuon.dtof0.4.root","read");
   if(year==2015) fdata = TFile::Open("./output/Pico.Run15.pp200.jpsi.muon.root","read");
 
 
@@ -806,8 +807,8 @@ void makeData(const int savePlot = 0, const int saveHisto = 0)
 	{
 	  TH1F *hFit = (TH1F*)hMuon[i][bin-1]->Clone(Form("Fit_%s",hMuon[i][bin-1]->GetName()));
 	  func[i][bin-1] = new TF1(Form("Data_JpsiMuon_%sFit_bin%d",name[i],bin),"gaus",minimum[i], maximum[i]);
-	  func[i][bin-1]->SetParameter(2,5);
-	  ptr[i][bin-1] = hFit->Fit(func[i][bin-1],"IR0QS");
+	  if(i==1 && bin==1) ptr[i][bin-1] = hFit->Fit(func[i][bin-1],"R0QS");
+	  else ptr[i][bin-1] = hFit->Fit(func[i][bin-1],"IR0QS");
 	  hFitDataMean[i]->SetBinContent(bin,func[i][bin-1]->GetParameter(1));
 	  hFitDataMean[i]->SetBinError(bin,func[i][bin-1]->GetParError(1));
 	  hFitDataSigma[i]->SetBinContent(bin,func[i][bin-1]->GetParameter(2));
@@ -921,7 +922,7 @@ void makeData(const int savePlot = 0, const int saveHisto = 0)
       SetPadMargin(gPad,0.13,0.13,0.05,0.1);
       gPad->SetGridy();
       gCountDataEff[i]->SetMarkerStyle(20);
-      gCountDataEff[i]->GetYaxis()->SetRangeUser(0.5,1.05);
+      gCountDataEff[i]->GetYaxis()->SetRangeUser(0.5,1.2);
       gCountDataEff[i]->GetXaxis()->SetRangeUser(1.3,10);
       gCountDataEff[i]->SetMarkerSize(1.2);
       gCountDataEff[i]->SetTitle(";p_{T,#mu} (GeV/c);Efficiency");

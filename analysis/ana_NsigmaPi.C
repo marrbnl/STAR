@@ -15,8 +15,8 @@ void ana_NsigmaPi()
     {
     }
 
-  //NsigmaPi_V0();
-  NsigmaPi_m2();
+  NsigmaPi_V0();
+  //NsigmaPi_m2();
   //jpsiMuon();
   //NsigmaPiDiff();
 
