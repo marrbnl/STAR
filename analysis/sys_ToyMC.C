@@ -84,8 +84,8 @@ void sys_ToyMC()
   TDatime *clock = new TDatime();
   myRandom->SetSeed(clock->GetTime());
 
-  //anaSys(1);
-  plotSys_MtdTrigEff(1, 1);
+  anaSys(1);
+  //plotSys_MtdTrigEff(1, 1);
 }
 
 //================================================
@@ -284,9 +284,9 @@ void anaSys(const int saveHisto)
 
   // single muon efficiency
   TFile *fMuonEff = TFile::Open(Form("Rootfiles/%s.JpsiMuon.root",run_type),"read");
-  hMuonPtEff[0] = (TF1*)fMuonEff->Get("Data_JpsiMuon_MtdTrigEff_BinCount_prod_high_FitFunc");
-  hMuonPtEff[1] = (TF1*)fMuonEff->Get("Data_JpsiMuon_MtdTrigEff_BinCount_prod_high_Sys1_up");
-  hMuonPtEff[2] = (TF1*)fMuonEff->Get("Data_JpsiMuon_MtdTrigEff_BinCount_prod_high_Sys1_low");
+  hMuonPtEff[0] = (TF1*)fMuonEff->Get("DataJpsiMuon_DtofEff75_BinCount_FitFunc");
+  hMuonPtEff[1] = (TF1*)fMuonEff->Get("DataJpsiMuon_DtofEff75_BinCount_FitFunc_Sysup");
+  hMuonPtEff[2] = (TF1*)fMuonEff->Get("DataJpsiMuon_DtofEff75_BinCount_FitFunc_Sysdown");
 
   // save histogram
   TFile *fout = 0x0;
@@ -357,7 +357,7 @@ void makeHisto(TString name, const double mass, const int nExpr)
   for(int i=0; i<3; i++)
     {
       hName =  hMuonPtEff[i]->GetName();
-      hName.ReplaceAll("Data_JpsiMuon",Form("%sEffVsPt",name.Data()));
+      hName.ReplaceAll("DataJpsiMuon",Form("%sEffVsPt",name.Data()));
       hOutJpsiPt[i] = new TH1F(hName.Data(), "", nbinsPt, xbinsPt);
       hOutJpsiPt[i]->Sumw2();
 
@@ -397,7 +397,7 @@ void makeHisto(TString name, const double mass, const int nExpr)
 void toyMC(const double mass, const int nExpr, const int debug)
 {
   double pt1_cut = 1.5;
-  double pt2_cut = 1.4;
+  double pt2_cut = 1.3;
   if(mass>8) //Upsilon
     {
       pt1_cut = 4.0;

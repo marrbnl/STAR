@@ -7,6 +7,13 @@ const int high_tofMult[nMultBins] = {30,2,5,30};
 const Double_t low_mass = 2.8;
 const Double_t high_mass = 3.3;
 TString run_cfg_name = "2015HP";
+#include <iomanip>
+#include <iostream>
+#include <fstream>
+#include <time.h>
+
+using namespace std;
+using std::left;
 
 //================================================
 void plot_pp500()
@@ -372,8 +379,38 @@ void evtAct(const bool save = 0)
       c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/Jpsi_vs_EvtAct.jpg",run_type,run_cfg_name.Data()));
       c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/Jpsi_vs_EvtAct.eps",run_type,run_cfg_name.Data()));
     }
+
+  if(1)
+    {
+      ofstream outfile;
+      outfile.open("Rootfiles/2015HP/HP2015.pp.Jpsi.dat", ios::out);
+      outfile << "Measurement of relative J/psi yield as a function of event activity" << endl
+	      << "in pp collisions at 500 GeV by the STAR experiment."
+	      << endl << endl;
+
+      const int nmax = 20;
+      outfile.setf(ios::left, ios::adjustfield);
+
+      outfile << "pT > 0 GeV/c" << endl;
+      outfile << std::setw(nmax)  << "Mult/<Mult> " << std::setw(nmax) << " J/psi/<J/psi>" << std::setw(nmax) << "Sys" << endl;
+      for(int i=0; i<ratio->GetN(); i++)
+	{
+	  ratio->GetPoint(i, x, y);
+	  outfile<< std::setw(nmax) << Form("%4.2f",x) << std::setw(nmax) << Form("%4.2f+/-%4.2f",y,ratio->GetErrorY(i))<< std::setw(nmax) << Form("+/-%4.2f",sys->GetErrorYhigh(i)) << endl;
+	}
+      outfile << "Global +15% uncertainty for both x- and y-axes" << endl << endl;
+
+      outfile << "pT > 4 GeV/c" << endl;
+      outfile << std::setw(nmax)  << "Mult/<Mult> " << std::setw(nmax) << " J/psi/<J/psi>" << std::setw(nmax) << "Sys" << endl;
+      for(int i=0; i<gr->GetN(); i++)
+	{
+	  gr->GetPoint(i, x, y);
+	  outfile<< std::setw(nmax) << Form("%4.2f",x) << std::setw(nmax) << Form("%4.2f+/-%4.2f",y,gr->GetErrorY(i))<< std::setw(nmax) << Form("+/-%4.2f",grSys->GetErrorYhigh(i)) << endl;
+	}
+      outfile << "Global +15% uncertainty for both x- and y-axes" << endl;
+    }
  
-  //return;
+  return;
   // Compare to PYTHIA
   TCanvas *c = new TCanvas("RHIC_vs_PYTHIA","RHIC_vs_PYTHIA",850,750);
   SetPadMargin(gPad,0.13,0.13,0.05,0.05);

@@ -20,8 +20,6 @@
 #include "TLegend.h"
 #include "TEfficiency.h"
 #include "TFitResult.h"
-//#include "/Users/admin/Work/ALICE/Utility/drawHistos.h"
-//#include "/Users/admin/Work/STAR/util/defs.h"
 
 #include <cmath>
 using namespace std;
@@ -48,10 +46,8 @@ void ana_JpsiMuon()
       f = TFile::Open(Form("./output/Pico.Run14.AuAu200.jpsi.%sroot",run_config),"read");
     }
 
-  //DeltaTof();
-  MtdVpdTacDiff();
-  //getDtofCut();
-  //kink();
+  DeltaTof();
+  //MtdVpdTacDiff();
 }
 
 //================================================
@@ -111,7 +107,7 @@ void MtdVpdTacDiff(const Int_t savePlot = 0, const int saveHisto = 0)
   hScaleFactor->GetYaxis()->SetRangeUser(0.95,1.15);
   c = draw1D(hScaleFactor);
   if(savePlot)
-    c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/Data_JpsiMuon_MtdVpdTacDiff_ScaleFactor.pdf",run_type));
+    c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/DataJpsiMuon_MtdVpdTacDiff_ScaleFactor.pdf",run_type));
 
 
   TH2F *hDataUL = (TH2F*)fdata->Get("mhJpsiMuon_MtdVpdTacDiff_UL_di_mu");
@@ -154,7 +150,7 @@ void MtdVpdTacDiff(const Int_t savePlot = 0, const int saveHisto = 0)
       hLS[bin-1]->SetLineColor(2);
 
       double scale = hScaleFactor->GetBinContent(bin);
-      hMuonFineBin[bin-1] = (TH1F*)hUL[bin-1]->Clone(Form("Data_JpsiMuon_MtdVpdTacDiff_bin%d",bin));
+      hMuonFineBin[bin-1] = (TH1F*)hUL[bin-1]->Clone(Form("DataJpsiMuon_MtdVpdTacDiff_bin%d",bin));
       hMuonFineBin[bin-1]->Add(hLS[bin-1],-1.0*scale);
 
       // rebin
@@ -164,7 +160,7 @@ void MtdVpdTacDiff(const Int_t savePlot = 0, const int saveHisto = 0)
       htmp1 = (TH1F*)hLS[bin-1]->Clone(Form("%s_rebin_tmp",hLS[bin-1]->GetName()));
       hLS[bin-1] = (TH1F*)htmp1->Rebin(nbins1,Form("%s_Rebin",hLS[bin-1]->GetName()),xbins1);
       scaleHisto(hLS[bin-1], 1, 1, true);
-      hMuon[bin-1] = (TH1F*)hUL[bin-1]->Clone(Form("Data_JpsiMuon_MtdVpdTacDiff_bin%d_Rebin",bin));
+      hMuon[bin-1] = (TH1F*)hUL[bin-1]->Clone(Form("DataJpsiMuon_MtdVpdTacDiff_bin%d_Rebin",bin));
       hMuon[bin-1]->Add(hLS[bin-1],-1.0*scale);
 
       c->cd(bin);
@@ -188,21 +184,21 @@ void MtdVpdTacDiff(const Int_t savePlot = 0, const int saveHisto = 0)
   leg->AddEntry(hUL[0],"Unlike-sign","PL");
   leg->AddEntry(hLS[0],"Like-sign","PL");
   leg->Draw();
-  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/Data_JpsiMuon_MtdVpdTacDiff_ULvsLS.pdf",run_type));
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/DataJpsiMuon_MtdVpdTacDiff_ULvsLS.pdf",run_type));
 
   //==============================================
   // Fit data distributions
   //==============================================
   TF1 *funcFitData[nbins];
   TFitResultPtr ptr[nbins];
-  TH1F *hFitDataMean = new TH1F(Form("Data_JpsiMuon_MtdVpdTacDiff_FitMean"),Form("%s: mean of MtdVpdTacDiff;p_{T} (GeV/c)",name),nbins,xbins);
-  TH1F *hFitDataSigma = new TH1F(Form("Data_JpsiMuon_MtdVpdTacDiff_FitSigma"),Form("%s: sigma of MtdVpdTacDiff;p_{T} (GeV/c)",name),nbins,xbins);
+  TH1F *hFitDataMean = new TH1F(Form("DataJpsiMuon_MtdVpdTacDiff_FitMean"),Form("%s: mean of MtdVpdTacDiff;p_{T} (GeV/c)",name),nbins,xbins);
+  TH1F *hFitDataSigma = new TH1F(Form("DataJpsiMuon_MtdVpdTacDiff_FitSigma"),Form("%s: sigma of MtdVpdTacDiff;p_{T} (GeV/c)",name),nbins,xbins);
   c = new TCanvas(Form("Fit_MtdVpdTacDiff"),Form("Fit_MtdVpdTacDiff"),1100,700);
   c->Divide(3,2);
   for(int bin=1; bin<=nbins; bin++)
     {
       TH1F *hFit = (TH1F*)hMuon[bin-1]->Clone(Form("Fit_%s",hMuon[bin-1]->GetName()));
-      funcFitData[bin-1] = new TF1(Form("Data_JpsiMuon_MtdVpdTacDiffFit_bin%d",bin),"gaus",789,maximum);
+      funcFitData[bin-1] = new TF1(Form("DataJpsiMuon_MtdVpdTacDiffFit_bin%d",bin),"gaus",789,maximum);
       funcFitData[bin-1]->SetParameter(2,5);
       ptr[bin-1] = hFit->Fit(funcFitData[bin-1],"IR0QS");
       hFitDataMean->SetBinContent(bin,funcFitData[bin-1]->GetParameter(1));
@@ -220,17 +216,17 @@ void MtdVpdTacDiff(const Int_t savePlot = 0, const int saveHisto = 0)
       TPaveText *t1 = GetTitleText(Form("J/#psi #mu: %1.1f < p_{T} < %1.1f",xbins[bin-1],xbins[bin]),0.06);
       t1->Draw();
     }
-  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/Data_JpsiMuon_MtdVpdTacDiffFit.pdf",run_type));
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/DataJpsiMuon_MtdVpdTacDiffFit.pdf",run_type));
 
   hFitDataMean->SetMarkerStyle(21);
   hFitDataMean->GetYaxis()->SetRangeUser(780,810);
   c = draw1D(hFitDataMean,"Mean of TAC_{MTD}-TAC_{VPD} distribution for J/#psi muons;p_{T} (GeV/c);Mean");
-  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/Data_JpsiMuon_MtdVpdTacDiff_FitMean.pdf",run_type));
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/DataJpsiMuon_MtdVpdTacDiff_FitMean.pdf",run_type));
 
   hFitDataSigma->SetMarkerStyle(21);
   hFitDataSigma->GetYaxis()->SetRangeUser(0,14);
   c = draw1D(hFitDataSigma,"Sigma of TAC_{MTD}-TAC_{VPD} distribution for J/#psi muons;p_{T} (GeV/c);#sigma");
-  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/Data_JpsiMuon_MtdVpdTacDiff_FitSigma.pdf",run_type));
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/DataJpsiMuon_MtdVpdTacDiff_FitSigma.pdf",run_type));
 
   //==============================================
   // calculate efficiency
@@ -266,7 +262,7 @@ void MtdVpdTacDiff(const Int_t savePlot = 0, const int saveHisto = 0)
 	  hMatch[k][0]->SetBinError(bin,acc_err);
 	}
       gDataEff[k][0] = new TGraphAsymmErrors(hMatch[k][0], hBase[k][0],"cl=0.683 b(1,1) mode");
-      gDataEff[k][0]->SetName(Form("Data_JpsiMuon_MtdTrigEff_Fitting_%s",name_lumi[k]));
+      gDataEff[k][0]->SetName(Form("DataJpsiMuon_MtdTrigEff_Fitting_%s",name_lumi[k]));
       for(int ipoint=0; ipoint<nbins; ipoint++)
 	{
 	  gDataEff[k][0]->GetPoint(ipoint,x,y);
@@ -319,7 +315,7 @@ void MtdVpdTacDiff(const Int_t savePlot = 0, const int saveHisto = 0)
 	  //printf("[i] acc: %f\n",value);
 	}
       gDataEff[k][1] = new TGraphAsymmErrors(hMatch[k][1], hBase[k][1],"cl=0.683 b(1,1) mode");
-      gDataEff[k][1]->SetName(Form("Data_JpsiMuon_MtdTrigEff_BinCount_%s",name_lumi[k]));
+      gDataEff[k][1]->SetName(Form("DataJpsiMuon_MtdTrigEff_BinCount_%s",name_lumi[k]));
       for(int ipoint=0; ipoint<nbins; ipoint++)
 	{
 	  gDataEff[k][1]->GetPoint(ipoint,x,y);
@@ -367,10 +363,11 @@ void MtdVpdTacDiff(const Int_t savePlot = 0, const int saveHisto = 0)
 	}
       leg->Draw();
       if(savePlot)
-	cFuncBay[k]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/Data_JpsiMUuon_MtdTrigEff_ProbDis_%s.pdf",run_type,name_lumi[k]));
+	cFuncBay[k]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/DataJpsiMuon_MtdTrigEff_ProbDis_%s.pdf",run_type,name_lumi[k]));
     }
   
   // trigger efficiency
+  const int defMed = 1;
   TFile *fTrigEff = TFile::Open("Rootfiles/Run14.AuAu200.MuonTrigEff.root","read");
   TCanvas *cTrigEff[nLumi];
   TF1 *funcEff[nLumi];
@@ -392,8 +389,8 @@ void MtdVpdTacDiff(const Int_t savePlot = 0, const int saveHisto = 0)
       gDataEff[k][1]->GetXaxis()->SetRangeUser(1.2,8);
       gDataEff[k][1]->Draw("samesPE");
 
-      TGraphAsymmErrors *gfit = (TGraphAsymmErrors*)gDataEff[k][1]->Clone(Form("Fit_%s",gDataEff[k][1]->GetName()));
-      funcEff[k] = new TF1(Form("%s_FitFunc",gDataEff[k][1]->GetName()),"[0]-exp(-1*[1]*(x-[2]))",1.3,7);
+      TGraphAsymmErrors *gfit = (TGraphAsymmErrors*)gDataEff[k][defMed]->Clone(Form("Fit_%s",gDataEff[k][defMed]->GetName()));
+      funcEff[k] = new TF1(Form("%s_FitFunc",gDataEff[k][defMed]->GetName()),"[0]-exp(-1*[1]*(x-[2]))",1.3,7);
       gfit->Fit(funcEff[k],"R0");
       funcEff[k]->SetLineColor(2);
       funcEff[k]->Draw("sames");
@@ -413,18 +410,20 @@ void MtdVpdTacDiff(const Int_t savePlot = 0, const int saveHisto = 0)
       legdata[k]->AddEntry(funcEff[k],"Fit to bin counting","L");
       legdata[k]->AddEntry(fExtrap[k],"Extrapolation method","L");
       legdata[k]->Draw();
-      if(savePlot) cTrigEff[k]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/Data_JpsiMuon_MtdTrigEff_%s.pdf",run_type,name_lumi[k]));
+      if(savePlot) cTrigEff[k]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/DataJpsiMuon_MtdTrigEff_%s.pdf",run_type,name_lumi[k]));
     }
 
   //==============================================
   // systematic uncertainty
   //==============================================
-  //Method 1 - randomize efficiency
+  // three sources:
+  // i)   statistical error: randomization method
+  // ii)  difference between default and central value of randomization
+  // iii) level of asymmetry using Run15 data
   gStyle->SetOptFit(0);
   TRandom3 *rndm = new TRandom3();
   TDatime *clock = new TDatime();
   rndm->SetSeed(clock->GetTime());
-  const int defMed = 1;
   const int nexpr = 400;
   TGraphAsymmErrors *gEffRndm[nLumi][nexpr];
   for(int k=0; k<nLumi; k++)
@@ -455,9 +454,9 @@ void MtdVpdTacDiff(const Int_t savePlot = 0, const int saveHisto = 0)
   const int nbins_rndm = 11;
   double xbins_rndm[nbins_rndm] = {1.4,1.5,1.75,2,2.25,2.5,3,4,5,6,8};
   TH1F *hSpread[nLumi][nbins_rndm];
-  TGraphErrors *gLimits[nLumi][2];
-  TF1 *funcLimits[nLumi][2];
-  const char *limit_name[2] = {"low","up"};
+  TGraphErrors *gLimits[nLumi][3];
+  TF1 *funcLimits[nLumi][3];
+  const char *limit_name[3] = {"center","low","up"};
   for(int k=0; k<nLumi; k++)
     {
       c = new TCanvas(Form("cEff_%s",name_lumi[k]),Form("cEff_%s",name_lumi[k]),800,600);
@@ -496,6 +495,7 @@ void MtdVpdTacDiff(const Int_t savePlot = 0, const int saveHisto = 0)
 
       gLimits[k][0] = new TGraphErrors(nbins_rndm);
       gLimits[k][1] = new TGraphErrors(nbins_rndm);
+      gLimits[k][2] = new TGraphErrors(nbins_rndm);
       for(int l=0; l<nbins_rndm; l++)
 	{
 	  cFit->cd(l+1);
@@ -516,8 +516,6 @@ void MtdVpdTacDiff(const Int_t savePlot = 0, const int saveHisto = 0)
 	  hSpread[k][l]->Draw();
 	  TPaveText *t1 = GetTitleText(Form("p_{T} = %1.1f GeV/c\n",xbins_rndm[l]),0.06);
 	  t1->Draw();
-	  double boundary = hSpread[k][l]->GetBinCenter(hSpread[k][l]->GetMaximumBin());
-	  cout << boundary << endl;
 
 	  TF1 *funcTmp2 = new TF1(Form("FitFunc2_%s",hSpread[k][l]->GetName()),"[0]*exp(-pow((x-[1])/sqrt(2)/[2],2))",0.5,1);
 	  funcTmp2->SetParameter(0,hSpread[k][l]->GetMaximum());
@@ -528,24 +526,17 @@ void MtdVpdTacDiff(const Int_t savePlot = 0, const int saveHisto = 0)
 	  funcTmp2->SetLineStyle(2);
 	  funcTmp2->Draw("sames");
 
-	  double pt = xbins_rndm[l];
-	  //double mean = funcTmp2->GetParameter(1);
-	  double mean = funcEff[k]->Eval(pt);
-	  //double width = TMath::Abs(funcTmp2->GetParameter(2));
-	  //double error = funcTmp2->GetParError(2);
-	  //double mean  = hSpread[k][l]->GetMean();
-	  double nSigma = 1;
-	  if(l<3) nSigma = 3;
-	  double width = hSpread[k][l]->GetRMS() * nSigma;
-	  double error = hSpread[k][l]->GetRMSError() * nSigma;
-	  // if(l<2) 
-	  //   {
-	  //     mean  = hSpread[k][l]->GetMean();
-	  //   }
-	  gLimits[k][1]->SetPoint(l,pt,mean+width);
-	  gLimits[k][1]->SetPointError(l,0,error);
-	  gLimits[k][0]->SetPoint(l,pt,mean-width);
+	  double pt    = xbins_rndm[l];
+	  double mean  = hSpread[k][l]->GetMean();
+	  double width = hSpread[k][l]->GetRMS();
+	  double error = hSpread[k][l]->GetRMSError();
+
+	  gLimits[k][0]->SetPoint(l,pt,mean);
 	  gLimits[k][0]->SetPointError(l,0,error);
+	  gLimits[k][1]->SetPoint(l,pt,mean-width);
+	  gLimits[k][1]->SetPointError(l,0,error);
+	  gLimits[k][2]->SetPoint(l,pt,mean+width);
+	  gLimits[k][2]->SetPointError(l,0,error);
 
 	  TPaveText *t1 = GetPaveText(0.6,0.7,0.7,0.85,0.06);
 	  t1->SetTextAlign(11);
@@ -558,12 +549,12 @@ void MtdVpdTacDiff(const Int_t savePlot = 0, const int saveHisto = 0)
       t1->AddText(name);
       t1->AddText(name_lumi[k]);
       t1->Draw();
-      if(savePlot) cFit->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/Data_MuonJpsi_MtdTrigEff_RndmFit_%s.pdf",run_type,name_lumi[k]));
+      if(savePlot) cFit->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/DataJpsiMuon_MtdTrigEff_RndmFit_%s.pdf",run_type,name_lumi[k]));
 
       c->cd();
       leg->Draw();
-      if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/Data_MuonJpsi_MtdTrigEff_RndmCurve_%s.pdf",run_type,name_lumi[k]));
-      for(int t=0; t<2; t++)
+      if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/DataJpsiMuon_MtdTrigEff_RndmCurve_%s.pdf",run_type,name_lumi[k]));
+      for(int t=0; t<3; t++)
 	{
 	  gLimits[k][t]->SetMarkerStyle(20);
 	  gLimits[k][t]->SetMarkerColor(2+2*t);
@@ -572,19 +563,211 @@ void MtdVpdTacDiff(const Int_t savePlot = 0, const int saveHisto = 0)
 
 	  funcLimits[k][t] = new TF1(Form("%s_Sys1_%s",gDataEff[k][defMed]->GetName(),limit_name[t]),"[0]-exp(-1*[1]*(x-[2]))",1,8);
 	  funcLimits[k][t]->SetParameters(0.95,2,0.2);
-	  gLimits[k][t]->Fit(funcLimits[k][t],"R0");
+	  gLimits[k][t]->Fit(funcLimits[k][t],"R0Q");
 	  funcLimits[k][t]->SetLineColor(gLimits[k][t]->GetMarkerColor());
+	  if(t>0) funcLimits[k][t]->SetLineStyle(2);
 	  funcLimits[k][t]->DrawCopy("sames");
 	}
-      leg->AddEntry(gLimits[k][0],"Lower limit","PL");
-      leg->AddEntry(gLimits[k][1],"Upper limit","PL");
+      leg->AddEntry(gLimits[k][0],"Central value","PL");
+      leg->AddEntry(gLimits[k][1],"Lower limit","PL");
+      leg->AddEntry(gLimits[k][2],"Upper limit","PL");
       leg->Draw();
-      if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/Data_MuonJpsi_MtdTrigEff_RndmLimits_%s.pdf",run_type,name_lumi[k]));
+      if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/DataJpsiMuon_MtdTrigEff_RndmLimits_%s.pdf",run_type,name_lumi[k]));
     }
-  return;
 
   TCanvas *cSys[2];
+  TGraphErrors *gSys[2][3]; // three sources for prod_low/high
   for(int k=0; k<2; k++)
+    {
+      cSys[k] = new TCanvas(Form("gSys_%s",name_lumi[k]),Form("gSys_%s",name_lumi[k]),1000,700);
+      cSys[k]->Divide(2,2);
+
+      int npoints = gDataEff[k][defMed]->GetN();
+      for(int s=0; s<3; s++)
+	{
+	  gSys[k][s] = new TGraphErrors(npoints);
+	  gSys[k][s]->SetName(Form("%s_S%d",gDataEff[k][defMed]->GetName(),s));
+	  gSys[k][s]->SetTitle(Form("Systematic uncertainty %d (%s);p_{T} (GeV/c)",s+1,name_lumi[k]));
+	  gSys[k][s]->SetMarkerStyle(20);
+	}
+
+      // source 1
+      for(int ipoint=0; ipoint<npoints; ipoint++)
+	{
+	  gDataEff[k][defMed]->GetPoint(ipoint, x, y);
+	  double def   = funcLimits[k][0]->Eval(x);
+	  double lower = funcLimits[k][1]->Eval(x);
+	  double upper = funcLimits[k][2]->Eval(x);
+	  double error = (upper-def) > (def-lower) ? (upper-def) : (def-lower);
+	  gSys[k][0]->SetPoint(ipoint, x, 1);
+	  gSys[k][0]->SetPointError(ipoint, 0, error/def);
+	}
+      cSys[k]->cd(1);
+      gSys[k][0]->GetXaxis()->SetRangeUser(1.3,8);
+      gSys[k][0]->GetYaxis()->SetRangeUser(0.95,1.05);
+      gSys[k][0]->Draw("APZ");
+
+      // source 2
+      for(int ipoint=0; ipoint<npoints; ipoint++)
+	{
+	  gDataEff[k][defMed]->GetPoint(ipoint, x, y);
+	  double def  = funcEff[k]->Eval(x);
+	  double diff = funcLimits[k][0]->Eval(x);
+	  double error = fabs(diff/def-1);
+	  gSys[k][1]->SetPoint(ipoint, x, 1);
+	  gSys[k][1]->SetPointError(ipoint, 0, error);
+	}
+      cSys[k]->cd(2);
+      gSys[k][1]->GetXaxis()->SetRangeUser(1.3,8);
+      gSys[k][1]->GetYaxis()->SetRangeUser(0.95,1.05);
+      gSys[k][1]->Draw("APZ");
+    }
+
+  // source 3 
+  TFile *fdata_Run15pp = TFile::Open("output/Pico.Run15.pp200.JpsiMuon.root","read");
+  const char *data_name = "Run15_pp200";
+  double Run15pp_mean_pt[nbins];
+  double Run15pp_mean_pt_err[nbins];
+  TH1F *hMuonTacDiffFineBin_Run15pp[nbins];
+  TH1F *hMuonTacDiff_Run15pp[nbins];
+  getMuonTacDiff(savePlot, data_name, nbins, xbins, min_mass, max_mass, fdata_Run15pp, Run15pp_mean_pt, Run15pp_mean_pt_err, hMuonTacDiffFineBin_Run15pp);
+  return;
+
+  //+++++ Fit muon distributions
+  TF1 *funcFitData_Run15pp[nbins][2];
+  TFitResultPtr ptr_Run15pp[nbins][2];
+  c = new TCanvas("Run15pp_Fit_MtdVpdTacDiff","Run15pp_Fit_MtdVpdTacDiff",1100,700);
+  c->Divide(3,2);
+  double min_Run15pp[nLumi][nbins];
+  double max_Run15pp[nLumi][nbins];
+  TLegend *leg = new TLegend(0.15,0.67,0.5,0.88);
+  leg->SetBorderSize(0);
+  leg->SetFillColor(0);
+  leg->SetTextSize(0.045);
+  leg->SetHeader(data_name);
+  TLegend *leg1 = new TLegend(0.15,0.45,0.5,0.65);
+  leg1->SetBorderSize(0);
+  leg1->SetFillColor(0);
+  leg1->SetTextSize(0.045);
+  for(int bin=1; bin<=nbins; bin++)
+    {
+      hMuonTacDiff_Run15pp[bin-1] = (TH1F*)hMuonTacDiffFineBin_Run15pp[bin-1]->Clone(Form("%s_Rebin",hMuonTacDiffFineBin_Run15pp[bin-1]->GetName()));
+      hMuonTacDiff_Run15pp[bin-1]->Rebin(4);
+      if(bin==nbins) continue;
+
+      TH1F *hFit = (TH1F*)hMuonTacDiff_Run15pp[bin-1]->Clone(Form("Fit_%s",hMuonTacDiff_Run15pp[bin-1]->GetName()));
+      // Gaussian function
+      funcFitData_Run15pp[bin-1][0] = new TF1(Form("%s_MtdVpdTacDiffFit0_bin%d",data_name,bin),"gaus",915,960);
+      funcFitData_Run15pp[bin-1][0]->SetParameter(2,5);
+      ptr_Run15pp[bin-1][0] = hFit->Fit(funcFitData_Run15pp[bin-1][0],"IR0S");
+
+      // Crystal-ball function
+      funcFitData_Run15pp[bin-1][1] = new TF1(Form("%s_MtdVpdTacDiffFit1_bin%d",data_name,bin),CrystalBall,880,960,5);
+      funcFitData_Run15pp[bin-1][1]->SetParameters(1, 928, 8, 0.5, funcFitData_Run15pp[bin-1][0]->GetParameter(0));
+      funcFitData_Run15pp[bin-1][1]->SetParLimits(3, 0, 20);
+      //ptr_Run15pp[bin-1][1] = hFit->Fit(funcFitData_Run15pp[bin-1][1],"IR0S");
+
+      c->cd(bin);
+      hFit->SetMaximum(1.5*hFit->GetMaximum());
+      hFit->SetTitle("");
+      hFit->SetMarkerStyle(20);
+      hFit->GetXaxis()->SetRangeUser(880,960);
+      hFit->Draw();
+      funcFitData_Run15pp[bin-1][0]->SetRange(880, 960);
+      funcFitData_Run15pp[bin-1][0]->SetLineColor(4);
+      funcFitData_Run15pp[bin-1][0]->Draw("sames");
+      funcFitData_Run15pp[bin-1][1]->SetLineColor(6);
+      funcFitData_Run15pp[bin-1][1]->Draw("sames");
+      TPaveText *t1 = GetTitleText(Form("J/#psi #mu: %1.1f < p_{T} < %1.1f",xbins[bin-1],xbins[bin]),0.06);
+      t1->Draw();
+
+      if(bin==1)
+	{
+	  leg->AddEntry(hFit,"Data","P");
+	  leg->AddEntry(funcFitData_Run15pp[bin-1][0],"Gaussian fit","L");
+	  leg->AddEntry(funcFitData_Run15pp[bin-1][1],"Crystal-ball fit","L");
+	}
+
+      // determine equivalent cut ranges
+      for(int k=0; k<nLumi; k++)
+	{
+	  min_Run15pp[k][bin-1] = funcFitData_Run15pp[bin-1][0]->GetParameter(1) - (funcFitData[bin-1]->GetParameter(1)-min[k])/funcFitData[bin-1]->GetParameter(2) * funcFitData_Run15pp[bin-1][0]->GetParameter(2);
+	  max_Run15pp[k][bin-1] = funcFitData_Run15pp[bin-1][0]->GetParameter(1) + (max[k]-funcFitData[bin-1]->GetParameter(1))/funcFitData[bin-1]->GetParameter(2) * funcFitData_Run15pp[bin-1][0]->GetParameter(2);
+
+	  TLine *line = GetLine(min_Run15pp[k][bin-1], 0, min_Run15pp[k][bin-1], 0.7*hFit->GetMaximum(), k+1);
+	  line->Draw();
+	  if(bin==2) leg1->AddEntry(line,Form("Cut for %s",name_lumi[k]),"L");
+	}
+    }
+  c->cd(nbins);
+  leg->Draw();
+  leg1->Draw();
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/%s_MuonTacDiffFit.pdf",run_type,data_name));
+
+  //+++++ calculate efficiency
+  c = new TCanvas(Form("%s_MtdTrigEff",data_name),Form("%s_MtdTrigEff",data_name),1100,500);
+  c->Divide(2,1);
+  TGraphAsymmErrors *gDataEff_Run15pp[nLumi][2];
+  TF1 *funcEff_Run15pp[nLumi][2];
+  for(int k=0; k<nLumi; k++)
+    {
+      for(int i=0; i<2; i++)
+	{
+	  TH1F *hBaseTmp  = new TH1F(Form("hBaseTmp_%d_M%d",k,i),"",nbins,xbins);
+	  TH1F *hMatchTmp = new TH1F(Form("hMatchTmp_%d_M%d",k,i),"",nbins,xbins);
+	  for(int bin=1; bin<=nbins-1; bin++)
+	    {
+	      double all = funcFitData_Run15pp[bin-1][i]->Integral(860,980);
+	      double all_err = funcFitData_Run15pp[bin-1][i]->IntegralError(860,980,funcFitData_Run15pp[bin-1][i]->GetParameters(),ptr_Run15pp[bin-1][i]->GetCovarianceMatrix().GetMatrixArray());
+	      hBaseTmp->SetBinContent(bin,all);
+	      hBaseTmp->SetBinError(bin,all_err);
+	      double acc = funcFitData_Run15pp[bin-1][i]->Integral(min_Run15pp[k][bin-1],980);
+	      double acc_err = funcFitData_Run15pp[bin-1][i]->IntegralError(min_Run15pp[k][bin-1],980,funcFitData_Run15pp[bin-1][i]->GetParameters(),ptr_Run15pp[bin-1][i]->GetCovarianceMatrix().GetMatrixArray());
+	      hMatchTmp->SetBinContent(bin,acc);
+	      hMatchTmp->SetBinError(bin,acc_err);
+	    }
+	  gDataEff_Run15pp[k][i] = new TGraphAsymmErrors(hMatchTmp, hBaseTmp,"cl=0.683 b(1,1) mode");
+	  gDataEff_Run15pp[k][i]->SetName(Form("%s_MtdTrigEff_Fit%d_%s",data_name,i,name_lumi[k]));
+	  gDataEff_Run15pp[k][i]->SetMarkerStyle(20+i);
+	  gDataEff_Run15pp[k][i]->SetMarkerColor(i+1);
+	  gDataEff_Run15pp[k][i]->SetLineColor(i+1);
+	  for(int ipoint=0; ipoint<nbins-1; ipoint++)
+	    {
+	      gDataEff_Run15pp[k][i]->GetPoint(ipoint,x,y);
+	      gDataEff_Run15pp[k][i]->SetPoint(ipoint,Run15pp_mean_pt[ipoint],y);
+	      gDataEff_Run15pp[k][i]->SetPointEXhigh(ipoint,Run15pp_mean_pt_err[ipoint]);
+	      gDataEff_Run15pp[k][i]->SetPointEXlow(ipoint,Run15pp_mean_pt_err[ipoint]);
+	    }
+	  funcEff_Run15pp[k][i] = new TF1(Form("%s_FitFunc",gDataEff_Run15pp[k][i]->GetName()),"[0]-exp(-1*[1]*(x-[2]))",1.3,5);
+	  funcEff_Run15pp[k][i]->SetParameters(0.9, 5, 1);
+	  gDataEff_Run15pp[k][i]->Fit(funcEff_Run15pp[k][i],"R0");
+	}
+      c->cd(k+1);
+      gDataEff_Run15pp[k][0]->GetYaxis()->SetRangeUser(0.55,1);
+      gDataEff_Run15pp[k][0]->SetTitle(Form(";p_{T}^{#mu} (GeV/c);"));
+      gDataEff_Run15pp[k][0]->Draw("AZP");
+      gDataEff_Run15pp[k][1]->Draw("samesPEZ");
+      for(int i=0; i<2; i++)
+	{
+	  funcEff_Run15pp[k][i]->SetLineStyle(2);
+	  funcEff_Run15pp[k][i]->SetLineColor(i+1);
+	  funcEff_Run15pp[k][i]->Draw("sames");
+	}
+      TPaveText *t1 = GetTitleText(Form("%s: MTD trigger efficiency for %s cut",data_name,name_lumi[k]),0.04);
+      t1->Draw();
+      if(k==0)
+	{
+	  TLegend *leg = new TLegend(0.5,0.2,0.7,0.35);
+	  leg->SetBorderSize(0);
+	  leg->SetFillColor(0);
+	  leg->SetTextSize(0.04);
+	  leg->AddEntry(gDataEff_Run15pp[k][0], "Gaussian fit", "P");
+	  leg->AddEntry(gDataEff_Run15pp[k][1], "Crystal-ball fit", "P");
+	  leg->Draw();
+	}
+    }
+  /*
+  {     
     {
       TGraphAsymmErrors *gtmp = (TGraphAsymmErrors*)gDataEff[k][defMed]->Clone(Form("%s_sys",gDataEff[k][defMed]->GetName()));
       gtmp->GetXaxis()->SetRangeUser(1.3,8);
@@ -610,8 +793,9 @@ void MtdVpdTacDiff(const Int_t savePlot = 0, const int saveHisto = 0)
       leg->AddEntry(funcEff[k],"Fit to bin counting","L");
       leg->AddEntry(funcLimits[k][0],"Uncertainty","L");
       leg->Draw();
-      if(savePlot) cSys[k]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/Data_JpsiMuon_MtdTrigEffSys_%s.pdf",run_type,name_lumi[k]));
+      if(savePlot) cSys[k]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/DataJpsiMuon_MtdTrigEffSys_%s.pdf",run_type,name_lumi[k]));
     }  
+  */
 return;
   //Method 2 - assume correlated statistical errors
   TCanvas *cSys2[2];
@@ -664,7 +848,7 @@ return;
       leg->AddEntry(funcEff[k],"Fit to bin counting","L");
       leg->AddEntry(funcLimits2[k][0],"Uncertainty","L");
       leg->Draw();
-      if(savePlot) cSys2[k]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/Data_JpsiMuon_MtdTrigEffSys2_%s.pdf",run_type,name_lumi[k]));
+      if(savePlot) cSys2[k]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/DataJpsiMuon_MtdTrigEffSys2_%s.pdf",run_type,name_lumi[k]));
     }
  
   
@@ -696,6 +880,183 @@ return;
     }
 }
 
+
+//================================================
+void getMuonTacDiff(const int savePlot, const char *name, const int nbins, const double *xbins, 
+		    const double *min_mass, const double *max_mass,
+		    TFile *fdata, double *mean_pt, double *mean_pt_err, TH1F **hMuonDis)
+{
+  TH1F *htmp = 0x0;
+
+  //==============================================
+  // compare invariant mass
+  //==============================================
+  const int nbinsJpsi = 5;
+  const double xbinsJpsi[nbinsJpsi+1] = {0,1.0,2.0,3.0,5.0,10.0};
+  TH2F *hInvMassVsPtUL = (TH2F*)fdata->Get(Form("mhJpsiMassVsPt_MtdVpdTacDiff_UL_di_mu"));
+  TH2F *hInvMassVsPtLS = (TH2F*)fdata->Get(Form("mhJpsiMassVsPt_MtdVpdTacDiff_LS_di_mu"));
+  hInvMassVsPtUL->Sumw2();
+  hInvMassVsPtLS->Sumw2();
+
+  TCanvas *c = new TCanvas(Form("%s_InvMass_MtdVpdTacDiff",name),Form("%s_InvMass_MtdVpdTacDiff",name),1100,700);
+  c->Divide(3,2);
+  TLegend *leg = new TLegend(0.2,0.4,0.5,0.8);
+  leg->SetBorderSize(0);
+  leg->SetFillColor(0);
+  leg->SetTextSize(0.06);
+  leg->SetHeader(name);
+  for(int bin=1; bin<=nbinsJpsi; bin++)
+    {
+      int start_bin = hInvMassVsPtUL->GetXaxis()->FindBin(xbinsJpsi[bin-1]+1e-4);
+      int end_bin   = hInvMassVsPtUL->GetXaxis()->FindBin(xbinsJpsi[bin]-1e-4);
+      TH1F *hInvMassUL = (TH1F*)hInvMassVsPtUL->ProjectionY(Form("%s_InvMassUL_bin%d",name,bin),start_bin,end_bin);
+      hInvMassUL->SetMarkerStyle(20);
+      hInvMassUL->SetMarkerStyle(20);
+      hInvMassUL->Rebin(5);
+      hInvMassUL->SetMaximum(1.5*hInvMassUL->GetMaximum());
+      hInvMassUL->SetMinimum(0);
+      hInvMassUL->GetXaxis()->SetRangeUser(2.2,4);
+      hInvMassUL->SetTitle("");
+      if(bin==1) leg->AddEntry(hInvMassUL,"Unlike-sign","PL");
+
+      TH1F *hInvMassLS = (TH1F*)hInvMassVsPtLS->ProjectionY(Form("%s_InvMassLS_bin%d",name,bin),start_bin,end_bin);
+      hInvMassLS->SetMarkerStyle(24);
+      hInvMassLS->SetMarkerColor(2);
+      hInvMassLS->SetLineColor(2);
+      hInvMassLS->Rebin(5);
+      if(bin==1) leg->AddEntry(hInvMassLS,"Like-sign","PL");
+
+      c->cd(bin);
+      hInvMassUL->Draw("P");
+      double binwidth = hInvMassUL->GetBinWidth(1);
+      for(int itmp=0; itmp<3; itmp++)
+	{
+	  TH1F *htmp = new TH1F(Form("%s_tmp%d",hInvMassUL->GetName(),itmp),"",int((max_mass[itmp]-min_mass[itmp])/binwidth+0.5),min_mass[itmp],max_mass[itmp]);
+	  for(int ibin=1; ibin<=htmp->GetNbinsX(); ibin++)
+	    {
+	      int jbin = hInvMassUL->FindFixBin(htmp->GetBinCenter(ibin));
+	      htmp->SetBinContent(ibin,hInvMassUL->GetBinContent(jbin));
+	    }
+	  if(itmp==0) htmp->SetFillColor(7);
+	  else htmp->SetFillColor(5);
+	  htmp->Draw("sames");
+	  if(bin==1 && itmp==0) leg->AddEntry(htmp,"Signal","F");
+	  if(bin==1 && itmp==1) leg->AddEntry(htmp,"Side-band","F");
+	}
+      hInvMassLS->Draw("samesP");
+      TPaveText *t1 = GetTitleText(Form("J/#psi: %1.1f < p_{T} < %1.1f GeV/c",xbinsJpsi[bin-1],xbinsJpsi[bin]),0.05);
+      t1->Draw();
+      int low_bin  = hInvMassUL->FindFixBin(min_mass[0]+1e-4);
+      int high_bin = hInvMassUL->FindFixBin(max_mass[0]-1e-4);
+      double all = hInvMassUL->Integral(low_bin, high_bin);
+      double bkg = hInvMassLS->Integral(low_bin, high_bin);
+      TPaveText *t1 = GetPaveText(0.15,0.5,0.72,0.85,0.05);
+      t1->SetTextAlign(11);
+      t1->AddText(Form("S/B = %4.2f:1",(all-bkg)/bkg));
+      t1->Draw();
+    }
+  c->cd(6);
+  leg->Draw();
+  if(savePlot)
+    c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/%s_MuonTacDiff_InvMassLSvsUL.pdf",run_type,name));
+
+  //==============================================
+  // single muon UL vs LS
+  //==============================================
+  TH2F *hJpsiMassVsMuonPt[2];
+  TH1F *hMuonPtSide[2];
+  hJpsiMassVsMuonPt[0] = (TH2F*)fdata->Get(Form("mhJpsiMassVsMuonPt_MtdVpdTacDiff_UL_di_mu"));
+  hJpsiMassVsMuonPt[1] = (TH2F*)fdata->Get(Form("mhJpsiMassVsMuonPt_MtdVpdTacDiff_LS_di_mu"));
+  for(int i=0; i<2; i++)
+    {
+      // Get the muon distribution in the side-band region
+      hJpsiMassVsMuonPt[i]->Sumw2();
+      hMuonPtSide[i] = (TH1F*)hJpsiMassVsMuonPt[i]->ProjectionX(Form("hMuonPt_MtdVpdTacDiff_SideBand_%d",i));
+      hMuonPtSide[i]->Reset();
+      for(int j=0; j<2; j++)
+	{
+	  int low_bin = hJpsiMassVsMuonPt[i]->GetYaxis()->FindFixBin(min_mass[j+1]);
+	  int up_bin  = hJpsiMassVsMuonPt[i]->GetYaxis()->FindFixBin(max_mass[j+1]);
+	  htmp = (TH1F*)hJpsiMassVsMuonPt[i]->ProjectionX(Form("hMuonPt_MtdVpdTacDiff_SideBand%d_%d",j,i),low_bin,up_bin);
+	  hMuonPtSide[i]->Add(htmp);
+	}
+    }
+
+  TH1F *hScaleFactor = new TH1F(Form("%s_hScaleFactor",name),"Scale factor for unlike-sign background (online trigger efficiency);p_{T} (GeV/c)",nbins,xbins);
+  for(int bin=1; bin<=nbins; bin++)
+    {
+      int start_bin = hMuonPtSide[0]->GetXaxis()->FindBin(xbins[bin-1]+1e-4);
+      int end_bin   = hMuonPtSide[0]->GetXaxis()->FindBin(xbins[bin]-1e-4);
+      double ul = hMuonPtSide[0]->Integral(start_bin,end_bin);
+      double ls = hMuonPtSide[1]->Integral(start_bin,end_bin);
+      double scale = ul/ls;
+      double error = scale * sqrt(1/ul+1/ls);
+      hScaleFactor->SetBinContent(bin, scale);
+      hScaleFactor->SetBinError(bin, error);
+    }
+  hScaleFactor->SetMarkerStyle(21);
+
+
+  TH2F *hDataUL = (TH2F*)fdata->Get("mhJpsiMuon_MtdVpdTacDiff_UL_di_mu");
+  hDataUL->Sumw2();
+  TH2F *hDataLS = (TH2F*)fdata->Get("mhJpsiMuon_MtdVpdTacDiff_LS_di_mu");
+  hDataLS->Sumw2();
+  TH2F *hDataDisVsPt = (TH2F*)hDataUL->Clone(Form("JpsiMuonMtdVpdTacDiff"));
+  hDataDisVsPt->Add(hDataLS, -1);
+  TH1F *hUL[nbins];
+  TH1F *hLS[nbins];
+
+  // calculate mean pt of each bin
+  int bin1 = hDataDisVsPt->GetYaxis()->FindBin(500);
+  int bin2 = hDataDisVsPt->GetYaxis()->FindBin(1000);
+  htmp = (TH1F*)hDataDisVsPt->ProjectionX(Form("%s_tmp",hDataDisVsPt->GetName()),bin1,bin2);
+  TCanvas *c = new TCanvas(Form("%s_MtdVpdTacDiff_USvsLS",name),Form("%s_MtdVpdTacDiff_USvsLS",name),1100,700);
+  c->Divide(3,2);
+  for(int bin=1; bin<=nbins; bin++)
+    {
+      htmp->GetXaxis()->SetRangeUser(xbins[bin-1]+1e-4, xbins[bin]-1e-4);
+      mean_pt[bin-1] = htmp->GetMean();
+      mean_pt_err[bin-1] = htmp->GetMeanError();
+
+      int start_bin = hDataUL->GetXaxis()->FindBin(xbins[bin-1]+1e-4);
+      int end_bin   = hDataUL->GetXaxis()->FindBin(xbins[bin]-1e-4);
+
+      hUL[bin-1] = (TH1F*)hDataUL->ProjectionY(Form("%s_DataMtdVpdTacDiff_UL_bin%d",name,bin),start_bin,end_bin);
+      hLS[bin-1] = (TH1F*)hDataLS->ProjectionY(Form("%s_DataMtdVpdTacDiff_LS_bin%d",name,bin),start_bin,end_bin);
+      double scale = hScaleFactor->GetBinContent(bin);
+      hMuonDis[bin-1] = (TH1F*)hUL[bin-1]->Clone(Form("%s_DataJpsiMuon_MtdVpdTacDiff_bin%d",name,bin));
+      hMuonDis[bin-1]->Add(hLS[bin-1],-1.0*scale);
+
+      c->cd(bin);
+      hUL[bin-1]->Rebin(4);
+      hUL[bin-1]->SetMarkerStyle(20);
+      hUL[bin-1]->SetMaximum(1.5*hUL[bin-1]->GetMaximum());
+      hUL[bin-1]->GetXaxis()->SetRangeUser(880,960);
+      hUL[bin-1]->SetTitle("");
+      hUL[bin-1]->Draw("P");
+      hLS[bin-1]->Rebin(4);
+      hLS[bin-1]->SetMarkerStyle(24);
+      hLS[bin-1]->SetMarkerColor(2);
+      hLS[bin-1]->SetLineColor(2);
+      hLS[bin-1]->Draw("samesP");
+      TPaveText *t1 = GetTitleText(Form("J/#psi #mu: %1.1f < p_{T} < %1.1f",xbins[bin-1],xbins[bin]),0.06);
+      t1->Draw();
+      t1 = GetPaveText(0.6,0.8,0.8,0.85,0.05);
+      t1->AddText(Form("Scale = %4.3f",scale));
+      t1->Draw();
+    }
+  c->cd(1);
+  TLegend *leg = new TLegend(0.15,0.63,0.35,0.88);
+  leg->SetBorderSize(0);
+  leg->SetFillColor(0);
+  leg->SetTextSize(0.05);
+  leg->SetHeader(name);
+  leg->AddEntry(hUL[0],"Unlike-sign","PL");
+  leg->AddEntry(hLS[0],"Like-sign","PL");
+  leg->Draw();
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/%s_MuonTacDiff_ULvsLS.pdf",run_type,name));
+}
+
 //================================================
 void DeltaTof(const Int_t savePlot = 0, const int saveHisto = 0)
 {
@@ -707,6 +1068,8 @@ void DeltaTof(const Int_t savePlot = 0, const int saveHisto = 0)
   const double maximum = 3;
   const double min_mass[3] = {3.0, 2.6, 3.3};
   const double max_mass[3] = {3.2, 2.9, 3.6};
+  const double dtof_cut_min = -3;
+  const double dtof_cut_max = 0.75;
 
   TFile *fdata = TFile::Open("./output/Pico.Run14.AuAu200.jpsi.root","read");
 
@@ -779,7 +1142,7 @@ void DeltaTof(const Int_t savePlot = 0, const int saveHisto = 0)
   c->cd(6);
   leg->Draw();
   if(savePlot)
-    c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/Data_JpsiMuon_Dtof_InvMassLSvsUL.pdf",run_type));
+    c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/DataJpsiMuon_Dtof_InvMassLSvsUL.pdf",run_type));
 
   //==============================================
   // single muon UL vs LS
@@ -819,7 +1182,7 @@ void DeltaTof(const Int_t savePlot = 0, const int saveHisto = 0)
   hScaleFactor->GetYaxis()->SetRangeUser(0.95,1.15);
   c = draw1D(hScaleFactor);
   if(savePlot)
-    c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/Data_JpsiMuon_Dtof_ScaleFactor.pdf",run_type));
+    c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/DataJpsiMuon_Dtof_ScaleFactor.pdf",run_type));
 
 
   TH2F *hDataUL = (TH2F*)fdata->Get("mhJpsiMuon_Dtof_UL_di_mu");
@@ -861,11 +1224,11 @@ void DeltaTof(const Int_t savePlot = 0, const int saveHisto = 0)
       hLS[bin-1]->SetLineColor(2);
 
       double scale = hScaleFactor->GetBinContent(bin);
-      hMuonFineBin[bin-1] = (TH1F*)hUL[bin-1]->Clone(Form("Data_JpsiMuon_Dtof_bin%d",bin));
+      hMuonFineBin[bin-1] = (TH1F*)hUL[bin-1]->Clone(Form("DataJpsiMuon_Dtof_bin%d",bin));
       hMuonFineBin[bin-1]->Add(hLS[bin-1],-1.0*scale);
 
       // rebin
-      hMuon[bin-1] = (TH1F*)hMuonFineBin[bin-1]->Clone(Form("Data_JpsiMuon_Dtof_bin%d_Rebin",bin));
+      hMuon[bin-1] = (TH1F*)hMuonFineBin[bin-1]->Clone(Form("DataJpsiMuon_Dtof_bin%d_Rebin",bin));
       hMuon[bin-1]->Rebin(rebin);
       
       c->cd(bin);
@@ -891,25 +1254,26 @@ void DeltaTof(const Int_t savePlot = 0, const int saveHisto = 0)
   leg->AddEntry(hUL[0],"Unlike-sign","PL");
   leg->AddEntry(hLS[0],"Like-sign","PL");
   leg->Draw();
-  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/Data_JpsiMuon_Dtof_ULvsLS.pdf",run_type));
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/DataJpsiMuon_Dtof_MuonULvsLS.pdf",run_type));
 
   //==============================================
   // Fit data distributions
   //==============================================
   TF1 *funcFitData[nbins];
   TFitResultPtr ptr[nbins];
-  TH1F *hFitDataMean = new TH1F(Form("Data_JpsiMuon_Dtof_FitMean"),Form("%s: mean of #Deltatof;p_{T} (GeV/c)",name),nbins,xbins);
-  TH1F *hFitDataSigma = new TH1F(Form("Data_JpsiMuon_Dtof_FitSigma"),Form("%s: sigma of #Deltatof;p_{T} (GeV/c)",name),nbins,xbins);
+  TH1F *hFitDataMean = new TH1F(Form("DataJpsiMuon_Dtof_FitMean"),Form("%s: mean of #Deltatof;p_{T} (GeV/c)",name),nbins,xbins);
+  TH1F *hFitDataSigma = new TH1F(Form("DataJpsiMuon_Dtof_FitSigma"),Form("%s: sigma of #Deltatof;p_{T} (GeV/c)",name),nbins,xbins);
   c = new TCanvas(Form("Fit_Dtof"),Form("Fit_Dtof"),1100,700);
   c->Divide(3,2);
   for(int bin=1; bin<=nbins; bin++)
     {
       TH1F *hFit = (TH1F*)hMuon[bin-1]->Clone(Form("Fit_%s",hMuon[bin-1]->GetName()));
 
-      //funcFitData[bin-1] = new TF1(Form("Data_JpsiMuon_Dtof_bin%d_Fit",bin),CrystalBall,-3,3,5);
-      //funcFitData[bin-1]->SetParameters(-1.5, -0.05, 0.2, 50, hFit->GetMaximum());
-      funcFitData[bin-1] = new TF1(Form("func_%d_%d",i,bin),"gaus",-3,3);
+      funcFitData[bin-1] = new TF1(Form("DataJpsiMuon_Dtof_bin%d_Fit",bin),CrystalBall,-3,3,5);
+      funcFitData[bin-1]->SetParameters(-1.5, -0.05, 0.2, 50, hFit->GetMaximum());
+      //funcFitData[bin-1] = new TF1(Form("func_%d_%d",i,bin),"gaus",-3,3);
       ptr[bin-1] = hFit->Fit(funcFitData[bin-1],"IR0QS");
+      ptr[bin-1]->SetName(Form("DataJpsiMuon_Dtof_bin%d_FitResult",bin));
 
       hFitDataMean->SetBinContent(bin,funcFitData[bin-1]->GetParameter(1));
       hFitDataMean->SetBinError(bin,funcFitData[bin-1]->GetParError(1));
@@ -926,24 +1290,21 @@ void DeltaTof(const Int_t savePlot = 0, const int saveHisto = 0)
       TPaveText *t1 = GetTitleText(Form("J/#psi #mu: %1.1f < p_{T} < %1.1f",xbins[bin-1],xbins[bin]),0.06);
       t1->Draw();
     }
-  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/Data_JpsiMuon_DtofFit.pdf",run_type));
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/DataJpsiMuon_Dtof_Fit.pdf",run_type));
 
   hFitDataMean->SetMarkerStyle(21);
   hFitDataMean->GetYaxis()->SetRangeUser(-1,1);
   c = draw1D(hFitDataMean,"Mean of #Deltatof distribution for J/#psi muons;p_{T} (GeV/c);Mean");
-  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/Data_JpsiMuon_Dtof_FitMean.pdf",run_type));
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/DataJpsiMuon_Dtof_FitMean.pdf",run_type));
 
   hFitDataSigma->SetMarkerStyle(21);
   hFitDataSigma->GetYaxis()->SetRangeUser(0,1);
   c = draw1D(hFitDataSigma,"Width of #Deltatof distribution for J/#psi muons;p_{T} (GeV/c);#sigma");
-  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/Data_JpsiMuon_Dtof_FitSigma.pdf",run_type));
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/DataJpsiMuon_Dtof_FitSigma.pdf",run_type));
 
   //==============================================
   // extract efficiency
   //==============================================
-  const double dtof_cut_min = -3;
-  const double dtof_cut_max = 0.46;
-
   // bin counting method for data
   double x,y;
   TH1F *hBase = new TH1F("hBase","hBase",nbins,xbins);
@@ -968,17 +1329,62 @@ void DeltaTof(const Int_t savePlot = 0, const int saveHisto = 0)
       hMatch2->SetBinContent(bin,acc);
       hMatch2->SetBinError(bin,acc_err);
     }
+
+  // recalculate statistical errors
+  hMatch->Divide(hBase);
+  TRandom3 *rndm = new TRandom3();
+  TDatime *clock = new TDatime();
+  rndm->SetSeed(clock->GetTime());
+  const int nRndm = 1e3;
+  for(int bin=1; bin<=nbins; bin++)
+    {
+      if(hMatch->GetBinContent(bin)<1) continue;
+      TH1F *hRndmDis = new TH1F(Form("RndmDis_Bin%d",bin),"",50,0.8,1.2);
+      double all, all_err, acc, acc_err;
+      int all_low_bin = hMuonFineBin[bin-1]->FindFixBin(minimum+1e-4);
+      int all_high_bin = hMuonFineBin[bin-1]->FindFixBin(maximum-1e-4);
+      int acc_low_bin = hMuonFineBin[bin-1]->FindFixBin(dtof_cut_min+1e-4);
+      int acc_high_bin = hMuonFineBin[bin-1]->FindFixBin(dtof_cut_max-1e-4);
+      int nbinsx = hMuonFineBin[bin-1]->GetNbinsX();
+      for(int i=0; i<nRndm; i++)
+	{
+	  TH1F *htmp = (TH1F*)hMuonFineBin[bin-1]->Clone(Form("%s_rndm%d", hMuonFineBin[bin-1]->GetName(), i));
+	  htmp->Reset();
+	  for(int ibin=1; ibin<=nbinsx; ibin++)
+	    {
+	      double mean = hMuonFineBin[bin-1]->GetBinContent(ibin);
+	      double error = hMuonFineBin[bin-1]->GetBinError(ibin);
+	      htmp->SetBinContent(ibin, rndm->Gaus(mean, error));
+	      htmp->SetBinError(ibin, error);
+	    }
+	  all = htmp->IntegralAndError(all_low_bin, all_high_bin, all_err);
+	  acc = htmp->IntegralAndError(acc_low_bin, acc_high_bin, acc_err);
+	  hRndmDis->Fill(acc/all);
+	}
+      hRndmDis->SetMarkerStyle(21);
+      c = draw1D(hRndmDis,Form("Randomized efficiency for %1.1f < p_{T}^{#mu} < %1.1f GeV/c;Efficiency",xbins[bin-1],xbins[bin]));
+      TF1 *funcRndm = new TF1(Form("Fit_%s",hRndmDis->GetName()),"gaus",0.8,1.2);
+      hRndmDis->Fit(funcRndm,"IR0Q");
+      funcRndm->SetLineColor(2);
+      funcRndm->Draw("sames");
+      TPaveText *t1 = GetPaveText(0.2,0.35,0.7,0.85,0.04);
+      t1->SetTextAlign(11);
+      t1->AddText(Form("RMS=%4.3f",hRndmDis->GetRMS()));
+      t1->AddText(Form("#sigma=%4.3f",TMath::Abs(funcRndm->GetParameter(2))));
+      t1->Draw();
+      printf("[i] Check the mean for bin %d: %4.2f =? %4.2f\n",bin, hMatch->GetBinContent(bin), funcRndm->GetParameter(1));
+      hMatch->SetBinError(bin, hRndmDis->GetRMS());
+      if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/DataJpsiMuon_DtofEff%1.0f_RndmBin%d.pdf",run_type,dtof_cut_max*100,bin));
+    }
   
   TGraphAsymmErrors *gCountDataEff = new TGraphAsymmErrors(hMatch2, hBase,"cl=0.683 b(1,1) mode");
-  gCountDataEff->SetName(Form("Data_JpsiMuon_DtofEff%1.0f_BinCount",dtof_cut_max*100));
-  hMatch->Divide(hBase);
+  gCountDataEff->SetName(Form("DataJpsiMuon_DtofEff%1.0f_BinCount",dtof_cut_max*100));
   for(int ipoint=0; ipoint<nbins; ipoint++)
     {
       gCountDataEff->GetPoint(ipoint,x,y);
       gCountDataEff->SetPoint(ipoint,mean_pt[ipoint],y);
       gCountDataEff->SetPointEXhigh(ipoint,mean_pt_err[ipoint]);
       gCountDataEff->SetPointEXlow(ipoint,mean_pt_err[ipoint]);	 
-      cout << hMatch->GetBinContent(ipoint+1) << endl;
       if(hMatch->GetBinContent(ipoint+1)>1)
 	{
 	  gCountDataEff->SetPoint(ipoint,mean_pt[ipoint],hMatch->GetBinContent(ipoint+1));
@@ -995,14 +1401,14 @@ void DeltaTof(const Int_t savePlot = 0, const int saveHisto = 0)
       double all = funcFitData[bin-1]->Integral(minimum,maximum);
       double all_err = funcFitData[bin-1]->IntegralError(minimum,maximum,funcFitData[bin-1]->GetParameters(), ptr[bin-1]->GetCovarianceMatrix().GetMatrixArray());
       double acc = funcFitData[bin-1]->Integral(dtof_cut_min, dtof_cut_max);
-      double acc_err = funcFitData[bin-1]->IntegralError(dtof_cut_min, dtof_cut_max,funcFitData[bin-1]->GetParameters(), ptr[i]->GetCovarianceMatrix().GetMatrixArray());
+      double acc_err = funcFitData[bin-1]->IntegralError(dtof_cut_min, dtof_cut_max,funcFitData[bin-1]->GetParameters(), ptr[bin-1]->GetCovarianceMatrix().GetMatrixArray());
       hBase->SetBinContent(bin,all);
       hBase->SetBinError(bin,all_err);
       hMatch->SetBinContent(bin,acc);
       hMatch->SetBinError(bin,acc_err);
     }
   TGraphAsymmErrors *gFitDataEff = new TGraphAsymmErrors(hMatch, hBase,"cl=0.683 b(1,1) mode");
-  gFitDataEff->SetName(Form("Data_JpsiMuon_DtofEff%1.0f_Fitting",dtof_cut_max*100));
+  gFitDataEff->SetName(Form("DataJpsiMuon_DtofEff%1.0f_Fitting",dtof_cut_max*100));
   for(int ipoint=0; ipoint<nbins; ipoint++)
     {
       gFitDataEff->GetPoint(ipoint,x,y);
@@ -1016,34 +1422,273 @@ void DeltaTof(const Int_t savePlot = 0, const int saveHisto = 0)
   hplot->GetYaxis()->SetRangeUser(0.6,1.05);
   hplot->GetXaxis()->SetRangeUser(1.2,7);
   hplot->SetTitle(";p_{T,#mu} (GeV/c);Efficiency");
-  c = new TCanvas("DtofEff_Comp","DtofEff_Comp",800,600);
+  TCanvas *cEff = new TCanvas("DtofEff_Comp","DtofEff_Comp",800,600);
   gPad->SetGridy();
   hplot->DrawCopy();
-  gCountDataEff->SetMarkerStyle(21);
-  gCountDataEff->SetMarkerSize(1.3);
-  gCountDataEff->Draw("PZsames");
   gFitDataEff->SetMarkerSize(1.3);
   gFitDataEff->SetMarkerStyle(24);
   gFitDataEff->SetMarkerColor(2);
   gFitDataEff->SetLineColor(2);
   gFitDataEff->Draw("PZsames");
+  gCountDataEff->SetMarkerStyle(21);
+  gCountDataEff->SetMarkerSize(1.3);
+  gCountDataEff->Draw("PZsames");
   TGraphAsymmErrors *gfit = (TGraphAsymmErrors*)gCountDataEff->Clone(Form("Fit_%s",gCountDataEff->GetName()));
   TF1 *funcEff = new TF1(Form("%s_FitFunc",gCountDataEff->GetName()),"[0]-exp(-1*[1]*(x-[2]))",1.2,7);
   gfit->Fit(funcEff,"R0");
   funcEff->SetLineColor(2);
   funcEff->Draw("sames");
 
-  TPaveText *t1 = GetTitleText(Form("Efficiency for %1.0f < #DeltaTof < %1.2f ns",dtof_cut_min,dtof_cut_max),0.04);
+  TPaveText *t1 = GetTitleText(Form("Efficiency for %1.0f < #DeltaTof < %1.2f ns cut",dtof_cut_min,dtof_cut_max),0.04);
   t1->Draw();
-  TLegend *leg = new TLegend(0.3,0.2,0.5,0.45);
+  TLegend *leg = new TLegend(0.45,0.25,0.6,0.5);
   leg->SetBorderSize(0);
   leg->SetFillColor(0);
   leg->SetTextSize(0.04);
   leg->SetHeader(run_type);
-  leg->AddEntry(gCountDataEff,Form("Data: bin counting"),"p");
   leg->AddEntry(gFitDataEff,Form("Data: fitting"),"p");
+  leg->AddEntry(gCountDataEff,Form("Data: bin counting"),"p");
+  leg->AddEntry(funcEff,"Fit to bin counting","L");
   leg->Draw();
-  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/Data_JpsiMuon_DtofEff_FitVsCount.pdf",run_type));
+  if(savePlot) cEff->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/DataJpsiMuon_DtofEff%1.0f_FitVsCount.pdf",run_type,dtof_cut_max*100));
+
+
+  //==============================================
+  // systematic uncertainty
+  //==============================================
+  // three sources:
+  // i)   statistical error: randomization method
+  // ii)  difference between default and central value of randomization
+  gStyle->SetOptFit(0);
+  TRandom3 *rndm = new TRandom3();
+  TDatime *clock = new TDatime();
+  rndm->SetSeed(clock->GetTime());
+  const int nexpr = 400;
+  TGraphAsymmErrors *gEffRndm[nexpr];
+  double *exh = gCountDataEff->GetEXhigh();
+  double *exl = gCountDataEff->GetEXlow();
+  double *eyh = gCountDataEff->GetEYhigh();
+  double *eyl = gCountDataEff->GetEYlow();
+  for(int j = 0; j < nexpr; j++)
+    {
+      int npoint = gCountDataEff->GetN();
+      gEffRndm[j] = new TGraphAsymmErrors(npoint);
+      gEffRndm[j]->SetName(Form("%s_Rndm%d",gCountDataEff->GetName(),j));
+      for(int ipoint=0; ipoint<npoint; ipoint++)
+	{
+	  gCountDataEff->GetPoint(ipoint,x,y);
+	  double sigma = eyl[ipoint] > eyh[ipoint] ? eyl[ipoint] : eyl[ipoint];
+	  y = rndm->Gaus(y, sigma);
+	  gEffRndm[j]->SetPoint(ipoint,x,y);
+	  gEffRndm[j]->SetPointError(ipoint,exl[ipoint],exh[ipoint],eyl[ipoint],eyh[ipoint]);	 
+	}
+    }
+
+  hplot->GetYaxis()->SetRangeUser(0.6,1.1);
+  hplot->GetXaxis()->SetRangeUser(1.3,7);
+  const int nbins_rndm = 11;
+  double xbins_rndm[nbins_rndm] = {1.4,1.5,1.75,2,2.25,2.5,3,4,5,6,8};
+  TH1F *hSpread[nbins_rndm];
+  TGraphErrors *gLimits[3];
+  TF1 *funcLimits[3];
+  const char *limit_name[3] = {"center","low","up"};
+
+  c = new TCanvas(Form("cEff"),Form("cEff"),800,600);
+  hplot->DrawCopy();
+  TPaveText *t1 = GetTitleText("Estimation of trigger efficiency uncertainty");
+  t1->Draw();
+  TLegend *leg = new TLegend(0.4,0.2,0.6,0.45);
+  leg->SetBorderSize(0);
+  leg->SetFillColor(0);
+  leg->SetTextSize(0.04);
+  leg->SetHeader(Form("%s",title));
+
+  for(int l=0; l<nbins_rndm; l++)
+    {
+      hSpread[l] = new TH1F(Form("hSpread_%d",l),Form("hSpread_%d",l),600,0,1.2);
+    }
+  for(int j = 0; j < nexpr; j++)
+    {
+      TF1 *funcTmp = new TF1(Form("FitFunc_%s",gEffRndm[j]->GetName()),"[0]-exp(-1*[1]*(x-[2]))",1,7);
+      funcTmp->SetParLimits(0,0,1);
+      funcTmp->SetParLimits(1,0,5);
+      funcTmp->SetParLimits(2,0,1);
+      gEffRndm[j]->Fit(funcTmp,"R0Q");
+      c->cd();
+      funcTmp->SetLineStyle(2);
+      funcTmp->Draw("sames");
+      if(j==0) leg->AddEntry(funcTmp,"Randomization","L");
+      for(int l=0; l<nbins_rndm; l++)
+	{
+	  hSpread[l]->Fill(funcTmp->Eval(xbins_rndm[l]));
+	}
+    }
+
+  TCanvas *cFit = new TCanvas(Form("cEffFit"),Form("cEffFit"),1200,800);
+  cFit->Divide(4,3);
+  for(int t=0; t<3; t++) gLimits[t] = new TGraphErrors(nbins_rndm);
+  for(int l=0; l<nbins_rndm; l++)
+    {
+      cFit->cd(l+1);
+      hSpread[l]->Rebin(2);
+      if(l<2) hSpread[l]->GetXaxis()->SetRangeUser(0.3,1);
+      else if(l<4) hSpread[l]->GetXaxis()->SetRangeUser(0.65,1);
+      else hSpread[l]->GetXaxis()->SetRangeUser(0.75,1);
+      hSpread[l]->SetTitle(";Efficiency;");
+      hSpread[l]->SetMaximum(1.3*hSpread[l]->GetMaximum());
+      hSpread[l]->Draw();
+      TPaveText *t1 = GetTitleText(Form("p_{T} = %1.1f GeV/c\n",xbins_rndm[l]),0.06);
+      t1->Draw();
+      TF1 *funcTmp2 = new TF1(Form("FitFunc2_%s",hSpread[l]->GetName()),"[0]*exp(-pow((x-[1])/sqrt(2)/[2],2))",0.5,1);
+      funcTmp2->SetParameter(0,hSpread[l]->GetMaximum());
+      funcTmp2->SetParameter(1,hSpread[l]->GetMean());
+      funcTmp2->SetParameter(2,hSpread[l]->GetRMS());
+      hSpread[l]->Fit(funcTmp2,"R0Q");
+      funcTmp2->SetLineColor(4);
+      funcTmp2->SetLineStyle(2);
+      funcTmp2->Draw("sames");
+
+      double pt    = xbins_rndm[l];
+      double mean  = hSpread[l]->GetMean();
+      double width = hSpread[l]->GetRMS();
+      double error = hSpread[l]->GetRMSError();
+      gLimits[0]->SetPoint(l,pt,mean);
+      gLimits[0]->SetPointError(l,0,error);
+      gLimits[1]->SetPoint(l,pt,mean-width);
+      gLimits[1]->SetPointError(l,0,error);
+      gLimits[2]->SetPoint(l,pt,mean+width);
+      gLimits[2]->SetPointError(l,0,error);
+
+      TPaveText *t1 = GetPaveText(0.6,0.7,0.7,0.85,0.06);
+      t1->SetTextAlign(11);
+      t1->AddText(Form("RMS=%4.3f",width));
+      t1->AddText(Form("#sigma=%4.3f",TMath::Abs(funcTmp2->GetParameter(2))));
+      t1->Draw();
+    }
+  cFit->cd(12);
+  TPaveText *t1 = GetPaveText(0.3,0.4,0.3,0.6,0.08);
+  t1->AddText(title);
+  t1->Draw();
+  if(savePlot) cFit->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/DataJpsiMuon_DtofEff%1.0f_RndmFit.pdf",run_type,dtof_cut_max*100));
+  c->cd();
+  leg->Draw();
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/DataJpsiMuon_DtofEff%1.0f_RndmCurve.pdf",run_type,dtof_cut_max*100));
+  for(int t=0; t<3; t++)
+    {
+      gLimits[t]->SetMarkerStyle(20);
+      gLimits[t]->SetMarkerColor(2+2*t);
+      gLimits[t]->SetLineColor(2+2*t);
+      gLimits[t]->Draw("samesP");
+
+      funcLimits[t] = new TF1(Form("%s_Sys1_%s",gCountDataEff->GetName(),limit_name[t]),"[0]-exp(-1*[1]*(x-[2]))",1,8);
+      funcLimits[t]->SetParameters(0.95,2,0.2);
+      gLimits[t]->Fit(funcLimits[t],"R0Q");
+      funcLimits[t]->SetLineColor(gLimits[t]->GetMarkerColor());
+      if(t>0) funcLimits[t]->SetLineStyle(2);
+      funcLimits[t]->DrawCopy("sames");
+    }
+  leg->AddEntry(gLimits[0],"Central value","PL");
+  leg->AddEntry(gLimits[1],"Lower limit","PL");
+  leg->AddEntry(gLimits[2],"Upper limit","PL");
+  leg->Draw();
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/DataJpsiMuon_DtofEff%1.0f_RndmLimits.pdf",run_type,dtof_cut_max*100));
+
+  int npoints = gCountDataEff->GetN();
+  TGraphErrors *gSys[2];
+  for(int s=0; s<2; s++)
+    {
+      gSys[s] = new TGraphErrors(npoints);
+      gSys[s]->SetName(Form("%s_S%d",gCountDataEff->GetName(),s));
+      gSys[s]->SetTitle(Form("Systematic uncertainty;p_{T} (GeV/c)"));
+      gSys[s]->SetMarkerStyle(20);
+      gSys[s]->SetMarkerColor(s+1);
+      gSys[s]->SetMarkerSize(1.3);
+      gSys[s]->SetLineColor(s+1);
+    }
+  // source 1
+  for(int ipoint=0; ipoint<npoints; ipoint++)
+    {
+      gCountDataEff->GetPoint(ipoint, x, y);
+      double def   = funcLimits[0]->Eval(x);
+      double lower = funcLimits[1]->Eval(x);
+      double upper = funcLimits[2]->Eval(x);
+      double error = (upper-def) > (def-lower) ? (upper-def) : (def-lower);
+      gSys[0]->SetPoint(ipoint, x, 1);
+      gSys[0]->SetPointError(ipoint, 0, error/def);
+    }
+  // source 2
+  for(int ipoint=0; ipoint<npoints; ipoint++)
+    {
+      gCountDataEff->GetPoint(ipoint, x, y);
+      double def  = funcEff->Eval(x);
+      double diff = funcLimits[0]->Eval(x);
+      double error = fabs(diff/def-1);
+      gSys[1]->SetPoint(ipoint, x, 1);
+      gSys[1]->SetPointError(ipoint, 0, error);
+    }
+  gSys[0]->GetXaxis()->SetRangeUser(1.3,8);
+  gSys[0]->GetYaxis()->SetRangeUser(0.94,1.06);
+  c = drawGraph(gSys[0],"Systematic uncertainty for #Deltatof cut efficiency");
+  gPad->SetGridy();
+  TGraphErrors *gSysShift = (TGraphErrors*)gSys[1]->Clone(Form("%s_shift",gSys[1]->GetName()));
+  offset_x(gSysShift, 0.05);
+  gSysShift->Draw("samesPE");
+  TLegend *leg = new TLegend(0.4,0.15,0.6,0.3);
+  leg->SetBorderSize(0);
+  leg->SetFillColor(0);
+  leg->SetTextSize(0.04);
+  leg->AddEntry(gSys[0], "Source 1", "PE");
+  leg->AddEntry(gSys[1], "Source 2", "PE");  
+  leg->Draw();
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/DataJpsiMuon_DtofEff%1.0f_Sys.pdf",run_type,dtof_cut_max*100));
+
+  // combine the systematic uncertainty
+  const char *sys_name[2] = {"down", "up"};
+  TGraphAsymmErrors *gDataEffSys[2];
+  TF1 *funcEffSys[2];
+  for(int i=0; i<2; i++)
+    {
+      int npoint = gCountDataEff->GetN();
+      gDataEffSys[i] = new TGraphAsymmErrors(npoint);
+      gDataEffSys[i]->SetName(Form("%s_FinalSys%d",gCountDataEff->GetName(),i));
+      for(int ipoint=0; ipoint<npoint; ipoint++)
+	{
+	  gCountDataEff->GetPoint(ipoint,x,y);
+	  double sys_all = 0;
+	  for(int s=0; s<2; s++)
+	    {
+	      double y_sys = gSys[s]->GetErrorYhigh(ipoint);
+	      sys_all += y_sys * y_sys;
+	    }
+	  sys_all = sqrt(sys_all);
+	  double new_y = y*(1+sys_all*(i*2-1));
+	  gDataEffSys[i]->SetPoint(ipoint,x,new_y);
+	  gDataEffSys[i]->SetPointError(ipoint,exl[ipoint],exh[ipoint],eyl[ipoint]/y*new_y,eyh[ipoint]/y*new_y);	 
+	}
+      gDataEffSys[i]->GetYaxis()->SetRangeUser(0.6,1.05);
+      c = drawGraph(gDataEffSys[i]);
+      gPad->SetGridy();
+      funcEffSys[i] = new TF1(Form("%s_FitFunc_Sys%s",gCountDataEff->GetName(),sys_name[i]),"[0]-exp(-1*[1]*(x-[2]))",1.2,7);
+      gDataEffSys[i]->Fit(funcEffSys[i],"R0");
+      funcEffSys[i]->SetLineColor(2);
+      funcEffSys[i]->Draw("sames");
+    }
+
+  cEff->cd();
+  for(int i=0; i<2; i++)
+    {
+      funcEffSys[i]->SetLineStyle(2);
+      funcEffSys[i]->SetLineColor(6);
+      funcEffSys[i]->Draw("sames");
+    }
+  TLegend *leg = new TLegend(0.45,0.2,0.6,0.25);
+  leg->SetBorderSize(0);
+  leg->SetFillColor(0);
+  leg->SetTextSize(0.04);
+  leg->AddEntry(funcEffSys[0], "Systematic uncertainty", "L");
+  leg->Draw();
+  if(savePlot) cEff->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/DataJpsiMuon_DtofEff%1.0f_FitVsCountWithSys.pdf",run_type,dtof_cut_max*100));
+  
 
   //==============================================
   // save histograms
@@ -1063,168 +1708,10 @@ void DeltaTof(const Int_t savePlot = 0, const int saveHisto = 0)
       gFitDataEff->Write("",TObject::kOverwrite);
       gCountDataEff->Write("",TObject::kOverwrite);
       funcEff->Write("",TObject::kOverwrite);
-    }
-}
-
-//================================================
-void getDtofCut(const Int_t savePlot = 0, const Int_t saveHisto = 0)
-{
-  TFile *fin = TFile::Open(Form("Rootfiles/%s.JpsiMuon.root",run_type));
-
-  TGraphAsymmErrors *gDtofCut = (TGraphAsymmErrors*)fin->Get("Data_JpsiMuon_DtofEff46_Fitting"); // get mean pt
-  gDtofCut->SetName("Data_JpsiMuon_DtofCut_Fitting");
-
-  const double goal = 0.95;
-  const int nbins = 6;
-  TF1 *func[nbins];
-  TFitResultPtr *ptr[nbins];
-  double x,y;
-  for(int i=0; i<nbins; i++)
-    {
-      func[i] = (TF1*)fin->Get(Form("Data_JpsiMuon_Dtof_bin%d_Fit",i+1));
-      ptr[i] = (TFitResultPtr*)fin->Get(Form("Data_JpsiMuon_Dtof_bin%d_Fit",i+1));
-      double all = func[i]->Integral(-3,3);
-      double cut = 3;
-      for(int j=0; j<1000; j++)
+      for(int i=0; i<2; i++)
 	{
-	  double val = 3 - j*1e-3*6;
-	  double eff = func[i]->Integral(-3,val)/all;
-	  if(eff<goal)
-	    {
-	      cut = val;
-	      break;
-	    }
+	  funcEffSys[i]->Write("",TObject::kOverwrite);
 	}
-      gDtofCut->GetPoint(i,x,y);
-      gDtofCut->SetPoint(i,x,cut);
-      gDtofCut->SetPointError(i,0,0,0,0);
-    }
-  c = drawGraph(gDtofCut);
-}
-
-//================================================
-void kink(const Int_t save = 0)
-{
-  THnSparseF *hnKink = (THnSparseF*)f->Get(Form("mhMuonKink_%s",trigName[kTrigType]));
-  hnKink->GetAxis(2)->SetRangeUser(1.6,100);
-
-  // check invariant mass
-  const char *name[3] = {"UL","LS","UL-LS"};
-  TH1F *hInvMass[2];
-  TH1F *hDr[2], *hDz[2];
-  for(int i=0; i<2; i++)
-    {
-      hnKink->GetAxis(1)->SetRange(i+1,i+1);
-
-      hnKink->GetAxis(0)->SetRangeUser(low_mass+0.001, high_mass-0.001);
-      hDr[i] = (TH1F*)hnKink->Projection(3);
-      hDr[i]->Sumw2();
-      hDr[i]->SetName(Form("hDr_%s",name[i]));
-      TH1F *htmp = (TH1F*)hnKink->Projection(6);
-      htmp->Sumw2();
-      htmp->SetName(Form("hDr_%s_2",name[i]));
-      hDr[i]->Add(htmp);
-      cout << hDr[i]->GetEntries() << endl;
-
-      hDz[i] = (TH1F*)hnKink->Projection(4);
-      hDz[i]->SetName(Form("hDz_%s",name[i]));
-      hDz[i]->Sumw2();
-      htmp = (TH1F*)hnKink->Projection(7);
-      htmp->SetName(Form("hDz_%s_2",name[i]));
-      htmp->Sumw2();
-      hDz[i]->Add(htmp);
-      hnKink->GetAxis(0)->SetRange(0,-1);
-
-      hInvMass[i] = (TH1F*)hnKink->Projection(0);
-      hInvMass[i]->SetName(Form("hInvMass_%s",name[i]));
-      hInvMass[i]->Rebin(4);
-      hInvMass[i]->SetMarkerStyle(21);
-      hInvMass[i]->SetMarkerColor(color[1-i]);
-      hInvMass[i]->SetLineColor(hInvMass[i]->GetMarkerColor());
-    }
-  hnKink->GetAxis(1)->SetRange(0,-1);
-  TCanvas *c = draw1D(hInvMass[0],"Invariant mass distribution of dimuon pairs;M_{#mu#mu} (GeV/c^{2});Counts");
-  hInvMass[1]->Draw("sames HIST");
-  TLegend *leg = new TLegend(0.15,0.62,0.3,0.85);
-  leg->SetBorderSize(0);
-  leg->SetFillColor(0);
-  leg->SetTextSize(0.04);
-  leg->SetHeader("p_{T,1} > 1.5 GeV/c");
-  leg->AddEntry(hInvMass[0],"Unlike-sign","P");
-  leg->AddEntry(hInvMass[1],"Like-sign","L");
-  leg->Draw();
-  if(save) 
-    {
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/kink_InvMass.png",run_type));
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/kink_InvMass.pdf",run_type));
-    }
-
-  // analyze dr and dz distribution
-  TH1F *hKinkDr[2], *hKinkDz[2];
-  hKinkDr[0] = (TH1F*)hDr[0]->Clone("hKinkDr_US-LS");
-  hKinkDr[0]->Add(hDr[1],-1);
-  hKinkDz[0] = (TH1F*)hDz[0]->Clone("hKinkDz_US-LS");
-  hKinkDz[0]->Add(hDz[1],-1);
-  hnKink->GetAxis(1)->SetRange(1,1);
-  hKinkDr[1] = (TH1F*)hnKink->Projection(3);
-  hKinkDr[1]->Sumw2();
-  hKinkDr[1]->SetName("hKinkDr_LS");
-  TH1F *htmp = (TH1F*)hnKink->Projection(6);
-  htmp->Sumw2();
-  htmp->SetName("hKinkDr_LS_2");
-  hKinkDr[1]->Add(htmp);
-  hKinkDz[1] = (TH1F*)hnKink->Projection(4);
-  hKinkDz[1]->Sumw2();
-  hKinkDz[1]->SetName("hKinkDz_LS");
-  htmp = (TH1F*)hnKink->Projection(7);
-  htmp->Sumw2();
-  htmp->SetName("hKinkDz_LS_2");
-  hKinkDz[1]->Add(htmp);
-  hnKink->GetAxis(1)->SetRange(0,-1);
-  for(int i=0; i<2; i++)
-    {
-      hKinkDr[i]->Rebin(2);
-      hKinkDr[i]->Scale(1./hKinkDr[i]->GetBinContent(hKinkDr[i]->FindFixBin(0)));
-      hKinkDr[i]->SetMarkerStyle(21);
-      hKinkDr[i]->SetMarkerColor(color[1-i]);
-      hKinkDr[i]->SetLineColor(hKinkDr[i]->GetMarkerColor());
-
-      hKinkDz[i]->Scale(1./hKinkDz[i]->GetBinContent(hKinkDz[i]->FindFixBin(0)));
-      hKinkDz[i]->SetMarkerStyle(21);
-      hKinkDz[i]->SetMarkerColor(color[1-i]);
-      hKinkDz[i]->SetLineColor(hKinkDz[i]->GetMarkerColor());
-
-      cout << "Fraction = " << hKinkDz[i]->Integral(hKinkDz[i]->FindFixBin(-0.15),hKinkDz[i]->FindFixBin(0.15))/hKinkDz[i]->Integral() << endl;
-    }
-  c = draw1D(hKinkDr[0],"Distance in transverse plane for muon candidates;#sqrt{(#Deltax)^{2}+(#Deltay)^{2}} (cm)");
-  hKinkDr[1]->Draw("sames HIST");
-  leg = new TLegend(0.6,0.65,0.75,0.85);
-  leg->SetBorderSize(0);
-  leg->SetFillColor(0);
-  leg->SetTextSize(0.04);
-  leg->AddEntry(hKinkDr[0],"J/psi muon","P");
-  leg->AddEntry(hKinkDr[1],"All muon","L");
-  leg->Draw();
-  if(save) 
-    {
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/kink_Dr.png",run_type));
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/kink_Dr.pdf",run_type));
-    }
-
-  hKinkDz[0]->GetXaxis()->SetRangeUser(-2,2);
-  c = draw1D(hKinkDz[0],"Distance in z coordinate for muon candidates;#Deltaz (cm)");
-  hKinkDz[1]->Draw("sames HIST");
-  leg = new TLegend(0.6,0.65,0.75,0.85);
-  leg->SetBorderSize(0);
-  leg->SetFillColor(0);
-  leg->SetTextSize(0.04);
-  leg->AddEntry(hKinkDz[0],"J/psi muon","P");
-  leg->AddEntry(hKinkDz[1],"All muon","L");
-  leg->Draw();
-  if(save) 
-    {
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/kink_Dz.png",run_type));
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/kink_Dz.pdf",run_type));
     }
 }
 

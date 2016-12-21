@@ -1896,6 +1896,8 @@ void xsec(const bool savePlot = 0, const bool saveHisto = 1)
 	  hJpsiRaa[k]->Write();
 	  hJpsiRaaSys[k]->Write();
 	}
+      grAlice0040->Write("ALICE_JpsiRaaVsPt_0040");
+      grAlice0040Sys->Write("ALICE_JpsiRaaVsPt_0040_sys");
 
       ofstream out;
       for(int k=0; k<nCentBins; k++)
