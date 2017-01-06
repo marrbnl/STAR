@@ -46,8 +46,8 @@ void ana_JpsiMuon()
       f = TFile::Open(Form("./output/Pico.Run14.AuAu200.jpsi.%sroot",run_config),"read");
     }
 
-  DeltaTof();
-  //MtdVpdTacDiff();
+  //DeltaTof();
+  MtdVpdTacDiff();
 }
 
 //================================================
@@ -624,147 +624,203 @@ void MtdVpdTacDiff(const Int_t savePlot = 0, const int saveHisto = 0)
     }
 
   // source 3 
-  TFile *fdata_Run15pp = TFile::Open("output/Pico.Run15.pp200.JpsiMuon.root","read");
-  const char *data_name = "Run15_pp200";
-  double Run15pp_mean_pt[nbins];
-  double Run15pp_mean_pt_err[nbins];
-  TH1F *hMuonTacDiffFineBin_Run15pp[nbins];
-  TH1F *hMuonTacDiff_Run15pp[nbins];
-  getMuonTacDiff(savePlot, data_name, nbins, xbins, min_mass, max_mass, fdata_Run15pp, Run15pp_mean_pt, Run15pp_mean_pt_err, hMuonTacDiffFineBin_Run15pp);
-  return;
-
-  //+++++ Fit muon distributions
-  TF1 *funcFitData_Run15pp[nbins][2];
-  TFitResultPtr ptr_Run15pp[nbins][2];
-  c = new TCanvas("Run15pp_Fit_MtdVpdTacDiff","Run15pp_Fit_MtdVpdTacDiff",1100,700);
-  c->Divide(3,2);
-  double min_Run15pp[nLumi][nbins];
-  double max_Run15pp[nLumi][nbins];
-  TLegend *leg = new TLegend(0.15,0.67,0.5,0.88);
+  const int nData = 2;
+  const char *data_name[nData] = {"Run15_pp200", "Run15_pAu200"};
+  TFile *fdata_Run15[nData];
+  fdata_Run15[0] = TFile::Open("output/Pico.Run15.pp200.JpsiMuon.Dz3cm.root","read");
+  fdata_Run15[1] = TFile::Open("output/Pico.Run15.pAu200.JpsiMuon.root","read");
+  double Run15_mean_pt[nData][nbins];
+  double Run15_mean_pt_err[nData][nbins];
+  TH1F *hMuonTacDiffFineBin_Run15[nData][nbins];
+  TH1F *hMuonTacDiff_Run15[nData][nbins];
+  TF1 *funcFitData_Run15[nData][nbins][2];
+  TFitResultPtr ptr_Run15[nData][nbins][2];
+  double Run15_cut_min[nData][nLumi][nbins];
+  double Run15_cut_max[nData][nLumi][nbins];
+  const double Run15_fit_min[nData] = {880, 860};
+  const double Run15_fit_max[nData] = {960, 960};
+  const int Run15_rebin[nData] = {4, 8};
+  const int nDataUsed = 1;
+  // vertex distribution
+  TH1F* hVzDiff[nData];
+  for(int i=0; i<nData; i++)
+    {
+      TH2F* h2 = (TH2F*)fdata_Run15[i]->Get("mhVzDiffVsTpcVz_di_mu");
+      h2->SetName(Form("%s_%s",data_name[i],h2->GetName()));
+      hVzDiff[i] = (TH1F*)h2->ProjectionY(Form("%s_hVzDiff",data_name[i]));
+      hVzDiff[i]->Scale(1./hVzDiff[i]->GetBinContent(hVzDiff[i]->FindFixBin(0)));
+      hVzDiff[i]->SetLineWidth(2);
+      // TF1 *func = new TF1(Form("func_%s",h1->GetName()),"gaus(0)+pol2(3)",-20,20);
+      // func->SetParameter(0,h1->GetMaximum());
+      // func->SetParameter(1,0);
+      // func->SetParameter(2,2);
+      // h1->Fit(func,"IR0");
+      // func->Draw("sames");
+    }
+  draw1D(hVzDiff[1],"distribution of vz difference",false,false);
+  gPad->SetLogy();
+  hVzDiff[0]->SetLineStyle(2);
+  hVzDiff[0]->SetLineColor(2);
+  hVzDiff[0]->Draw("sames");
+  TLegend *leg = new TLegend(0.15,0.65,0.35,0.88);
   leg->SetBorderSize(0);
   leg->SetFillColor(0);
-  leg->SetTextSize(0.045);
-  leg->SetHeader(data_name);
-  TLegend *leg1 = new TLegend(0.15,0.45,0.5,0.65);
-  leg1->SetBorderSize(0);
-  leg1->SetFillColor(0);
-  leg1->SetTextSize(0.045);
-  for(int bin=1; bin<=nbins; bin++)
-    {
-      hMuonTacDiff_Run15pp[bin-1] = (TH1F*)hMuonTacDiffFineBin_Run15pp[bin-1]->Clone(Form("%s_Rebin",hMuonTacDiffFineBin_Run15pp[bin-1]->GetName()));
-      hMuonTacDiff_Run15pp[bin-1]->Rebin(4);
-      if(bin==nbins) continue;
-
-      TH1F *hFit = (TH1F*)hMuonTacDiff_Run15pp[bin-1]->Clone(Form("Fit_%s",hMuonTacDiff_Run15pp[bin-1]->GetName()));
-      // Gaussian function
-      funcFitData_Run15pp[bin-1][0] = new TF1(Form("%s_MtdVpdTacDiffFit0_bin%d",data_name,bin),"gaus",915,960);
-      funcFitData_Run15pp[bin-1][0]->SetParameter(2,5);
-      ptr_Run15pp[bin-1][0] = hFit->Fit(funcFitData_Run15pp[bin-1][0],"IR0S");
-
-      // Crystal-ball function
-      funcFitData_Run15pp[bin-1][1] = new TF1(Form("%s_MtdVpdTacDiffFit1_bin%d",data_name,bin),CrystalBall,880,960,5);
-      funcFitData_Run15pp[bin-1][1]->SetParameters(1, 928, 8, 0.5, funcFitData_Run15pp[bin-1][0]->GetParameter(0));
-      funcFitData_Run15pp[bin-1][1]->SetParLimits(3, 0, 20);
-      //ptr_Run15pp[bin-1][1] = hFit->Fit(funcFitData_Run15pp[bin-1][1],"IR0S");
-
-      c->cd(bin);
-      hFit->SetMaximum(1.5*hFit->GetMaximum());
-      hFit->SetTitle("");
-      hFit->SetMarkerStyle(20);
-      hFit->GetXaxis()->SetRangeUser(880,960);
-      hFit->Draw();
-      funcFitData_Run15pp[bin-1][0]->SetRange(880, 960);
-      funcFitData_Run15pp[bin-1][0]->SetLineColor(4);
-      funcFitData_Run15pp[bin-1][0]->Draw("sames");
-      funcFitData_Run15pp[bin-1][1]->SetLineColor(6);
-      funcFitData_Run15pp[bin-1][1]->Draw("sames");
-      TPaveText *t1 = GetTitleText(Form("J/#psi #mu: %1.1f < p_{T} < %1.1f",xbins[bin-1],xbins[bin]),0.06);
-      t1->Draw();
-
-      if(bin==1)
-	{
-	  leg->AddEntry(hFit,"Data","P");
-	  leg->AddEntry(funcFitData_Run15pp[bin-1][0],"Gaussian fit","L");
-	  leg->AddEntry(funcFitData_Run15pp[bin-1][1],"Crystal-ball fit","L");
-	}
-
-      // determine equivalent cut ranges
-      for(int k=0; k<nLumi; k++)
-	{
-	  min_Run15pp[k][bin-1] = funcFitData_Run15pp[bin-1][0]->GetParameter(1) - (funcFitData[bin-1]->GetParameter(1)-min[k])/funcFitData[bin-1]->GetParameter(2) * funcFitData_Run15pp[bin-1][0]->GetParameter(2);
-	  max_Run15pp[k][bin-1] = funcFitData_Run15pp[bin-1][0]->GetParameter(1) + (max[k]-funcFitData[bin-1]->GetParameter(1))/funcFitData[bin-1]->GetParameter(2) * funcFitData_Run15pp[bin-1][0]->GetParameter(2);
-
-	  TLine *line = GetLine(min_Run15pp[k][bin-1], 0, min_Run15pp[k][bin-1], 0.7*hFit->GetMaximum(), k+1);
-	  line->Draw();
-	  if(bin==2) leg1->AddEntry(line,Form("Cut for %s",name_lumi[k]),"L");
-	}
-    }
-  c->cd(nbins);
+  leg->SetTextSize(0.035);
+  leg->AddEntry(hVzDiff[0],data_name[0],"L");
+  leg->AddEntry(hVzDiff[1],data_name[1],"L");
   leg->Draw();
-  leg1->Draw();
-  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/%s_MuonTacDiffFit.pdf",run_type,data_name));
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/Run15_CompareDz.pdf",run_type));
+
+  return;
+  for(int i=0; i<nDataUsed; i++)
+    {
+      getMuonTacDiff(savePlot, data_name[i], nbins, xbins, min_mass, max_mass, fdata_Run15[i], Run15_mean_pt[i], Run15_mean_pt_err[i], hMuonTacDiffFineBin_Run15[i]);
+
+      //+++++ Fit muon distributions
+      c = new TCanvas(Form("%s_Fit_MtdVpdTacDiff",data_name[i]),Form("%s_Fit_MtdVpdTacDiff",data_name[i]), 1100,700);
+      c->Divide(3,2);
+      TLegend *leg = new TLegend(0.15,0.6,0.5,0.88);
+      leg->SetBorderSize(0);
+      leg->SetFillColor(0);
+      leg->SetTextSize(0.045);
+      leg->SetHeader(data_name[i]);
+      TLegend *leg1 = new TLegend(0.15,0.45,0.5,0.6);
+      leg1->SetBorderSize(0);
+      leg1->SetFillColor(0);
+      leg1->SetTextSize(0.045);
+      for(int bin=1; bin<=nbins; bin++)
+	{
+	  hMuonTacDiff_Run15[i][bin-1] = (TH1F*)hMuonTacDiffFineBin_Run15[i][bin-1]->Clone(Form("%s_Rebin",hMuonTacDiffFineBin_Run15[i][bin-1]->GetName()));
+	  hMuonTacDiff_Run15[i][bin-1]->Rebin(Run15_rebin[i]);
+	  if(bin==nbins) continue;
+
+	  TH1F *hFit = (TH1F*)hMuonTacDiff_Run15[i][bin-1]->Clone(Form("Fit_%s",hMuonTacDiff_Run15[i][bin-1]->GetName()));
+	  // Gaussian function
+	  funcFitData_Run15[i][bin-1][0] = new TF1(Form("%s_MtdVpdTacDiffFit0_bin%d",data_name[i],bin),"gaus",Run15_fit_min[i]+30+(1-i)*5,Run15_fit_max[i]);
+	  funcFitData_Run15[i][bin-1][0]->SetParameter(2,5);
+	  ptr_Run15[i][bin-1][0] = hFit->Fit(funcFitData_Run15[i][bin-1][0],"IR0S");
+
+	  // Crystal-ball function
+	  funcFitData_Run15[i][bin-1][1] = new TF1(Form("%s_MtdVpdTacDiffFit1_bin%d",data_name[i],bin),CrystalBall,Run15_fit_min[i],Run15_fit_max[i],5);
+	  if(i==0) 
+	    {
+	      funcFitData_Run15[i][bin-1][1]->SetParameters(1, 928, 8, 1, funcFitData_Run15[i][bin-1][0]->GetParameter(0));
+	      funcFitData_Run15[i][bin-1][1]->SetParLimits(3, 0, 20);
+	    }
+	  if(i==1) 
+	    {
+	      if(bin==1) funcFitData_Run15[i][bin-1][1]->SetParameters(1, 907, 8, 0.01, funcFitData_Run15[i][bin-1][0]->GetParameter(0));
+	      else       funcFitData_Run15[i][bin-1][1]->SetParameters(1.5, 907, 7, 0.1, funcFitData_Run15[i][bin-1][0]->GetParameter(0));
+	    }
+	  ptr_Run15[i][bin-1][1] = hFit->Fit(funcFitData_Run15[i][bin-1][1],"IR0S");
+
+	  c->cd(bin);
+	  hFit->SetMaximum(1.5*hFit->GetMaximum());
+	  hFit->SetTitle("");
+	  hFit->SetMarkerStyle(20);
+	  hFit->GetXaxis()->SetRangeUser(Run15_fit_min[i],Run15_fit_max[i]);
+	  hFit->Draw();
+	  funcFitData_Run15[i][bin-1][1]->SetLineColor(6);
+	  funcFitData_Run15[i][bin-1][1]->Draw("sames");
+	  TF1 *funcplot = (TF1*)funcFitData_Run15[i][bin-1][0]->Clone(Form("clone_%s",funcFitData_Run15[i][bin-1][0]->GetName()));
+	  funcplot->SetRange(900,960);
+	  funcplot->SetLineColor(4);
+	  funcplot->SetLineStyle(2);
+	  funcplot->Draw("sames");
+	  funcFitData_Run15[i][bin-1][0]->SetLineColor(4);
+	  funcFitData_Run15[i][bin-1][0]->Draw("sames");
+	  TPaveText *t1 = GetTitleText(Form("J/#psi #mu: %1.1f < p_{T} < %1.1f",xbins[bin-1],xbins[bin]),0.06);
+	  t1->Draw();
+
+	  if(bin==1)
+	    {
+	      leg->AddEntry(hFit,"Data","P");
+	      leg->AddEntry(funcFitData_Run15[i][bin-1][0],"Gaussian fit","L");
+	      leg->AddEntry(funcFitData_Run15[i][bin-1][1],"Crystal-ball fit","L");
+	    }
+
+	  // determine equivalent cut ranges
+	  for(int k=0; k<nLumi; k++)
+	    {
+	      Run15_cut_min[i][k][bin-1] = funcFitData_Run15[i][bin-1][0]->GetParameter(1) - (funcFitData[bin-1]->GetParameter(1)-min[k])/funcFitData[bin-1]->GetParameter(2) * funcFitData_Run15[i][bin-1][0]->GetParameter(2);
+	      Run15_cut_max[i][k][bin-1] = funcFitData_Run15[i][bin-1][0]->GetParameter(1) + (max[k]-funcFitData[bin-1]->GetParameter(1))/funcFitData[bin-1]->GetParameter(2) * funcFitData_Run15[i][bin-1][0]->GetParameter(2);
+	      
+	      TLine *line = GetLine(Run15_cut_min[i][k][bin-1], 0, Run15_cut_min[i][k][bin-1], 0.7*hFit->GetMaximum(), k+1);
+	      line->Draw();
+	      if(bin==2) leg1->AddEntry(line,Form("Cut for %s",name_lumi[k]),"L");
+	    }
+	}
+      c->cd(nbins);
+      leg->Draw();
+      leg1->Draw();
+      if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/%s_MuonTacDiffFit.pdf",run_type,data_name[i]));
+    }
 
   //+++++ calculate efficiency
-  c = new TCanvas(Form("%s_MtdTrigEff",data_name),Form("%s_MtdTrigEff",data_name),1100,500);
-  c->Divide(2,1);
-  TGraphAsymmErrors *gDataEff_Run15pp[nLumi][2];
-  TF1 *funcEff_Run15pp[nLumi][2];
-  for(int k=0; k<nLumi; k++)
+  TGraphAsymmErrors *gDataEff_Run15[nData][nLumi][2];
+  TF1 *funcEff_Run15[nData][nLumi][2];
+  for(int i=0; i<nDataUsed; i++)
     {
-      for(int i=0; i<2; i++)
+      c = new TCanvas(Form("%s_MtdTrigEff",data_name[i]),Form("%s_MtdTrigEff",data_name[i]),1100,500);
+      c->Divide(2,1);
+      for(int k=0; k<nLumi; k++)
 	{
-	  TH1F *hBaseTmp  = new TH1F(Form("hBaseTmp_%d_M%d",k,i),"",nbins,xbins);
-	  TH1F *hMatchTmp = new TH1F(Form("hMatchTmp_%d_M%d",k,i),"",nbins,xbins);
-	  for(int bin=1; bin<=nbins-1; bin++)
+	  for(int j=0; j<2; j++)
 	    {
-	      double all = funcFitData_Run15pp[bin-1][i]->Integral(860,980);
-	      double all_err = funcFitData_Run15pp[bin-1][i]->IntegralError(860,980,funcFitData_Run15pp[bin-1][i]->GetParameters(),ptr_Run15pp[bin-1][i]->GetCovarianceMatrix().GetMatrixArray());
-	      hBaseTmp->SetBinContent(bin,all);
-	      hBaseTmp->SetBinError(bin,all_err);
-	      double acc = funcFitData_Run15pp[bin-1][i]->Integral(min_Run15pp[k][bin-1],980);
-	      double acc_err = funcFitData_Run15pp[bin-1][i]->IntegralError(min_Run15pp[k][bin-1],980,funcFitData_Run15pp[bin-1][i]->GetParameters(),ptr_Run15pp[bin-1][i]->GetCovarianceMatrix().GetMatrixArray());
-	      hMatchTmp->SetBinContent(bin,acc);
-	      hMatchTmp->SetBinError(bin,acc_err);
+	      TH1F *hBaseTmp  = new TH1F(Form("hBaseTmp_%d_%d_M%d",i,k,j),"",nbins,xbins);
+	      TH1F *hMatchTmp = new TH1F(Form("hMatchTmp_%d_%d_M%d",i,k,j),"",nbins,xbins);
+	      for(int bin=1; bin<=nbins-1; bin++)
+		{
+		  double all = funcFitData_Run15[i][bin-1][j]->Integral(860,980);
+		  double all_err = funcFitData_Run15[i][bin-1][j]->IntegralError(860,980,funcFitData_Run15[i][bin-1][j]->GetParameters(),ptr_Run15[i][bin-1][j]->GetCovarianceMatrix().GetMatrixArray());
+		  hBaseTmp->SetBinContent(bin,all);
+		  hBaseTmp->SetBinError(bin,all_err);
+		  double acc = funcFitData_Run15[i][bin-1][j]->Integral(Run15_cut_min[i][k][bin-1],980);
+		  double acc_err = funcFitData_Run15[i][bin-1][j]->IntegralError(Run15_cut_min[i][k][bin-1],980,funcFitData_Run15[i][bin-1][j]->GetParameters(),ptr_Run15[i][bin-1][j]->GetCovarianceMatrix().GetMatrixArray());
+		  hMatchTmp->SetBinContent(bin,acc);
+		  hMatchTmp->SetBinError(bin,acc_err);
+		}
+	      gDataEff_Run15[i][k][j] = new TGraphAsymmErrors(hMatchTmp, hBaseTmp,"cl=0.683 b(1,1) mode");
+	      gDataEff_Run15[i][k][j]->SetName(Form("%s_MtdTrigEff_Fit%d_%s",data_name[i],j,name_lumi[k]));
+	      gDataEff_Run15[i][k][j]->SetMarkerStyle(20+j);
+	      gDataEff_Run15[i][k][j]->SetMarkerColor(j+1);
+	      gDataEff_Run15[i][k][j]->SetLineColor(j+1);
+	      for(int ipoint=0; ipoint<nbins-1; ipoint++)
+		{
+		  gDataEff_Run15[i][k][j]->GetPoint(ipoint,x,y);
+		  gDataEff_Run15[i][k][j]->SetPoint(ipoint,Run15_mean_pt[i][ipoint],y);
+		  gDataEff_Run15[i][k][j]->SetPointEXhigh(ipoint,Run15_mean_pt_err[i][ipoint]);
+		  gDataEff_Run15[i][k][j]->SetPointEXlow(ipoint,Run15_mean_pt_err[i][ipoint]);
+		}
+	      funcEff_Run15[i][k][j] = new TF1(Form("%s_FitFunc",gDataEff_Run15[i][k][j]->GetName()),"[0]-exp(-1*[1]*(x-[2]))",1.3,5);
+	      funcEff_Run15[i][k][j]->SetParameters(0.9, 5, 1);
+	      gDataEff_Run15[i][k][j]->Fit(funcEff_Run15[i][k][j],"R0");
 	    }
-	  gDataEff_Run15pp[k][i] = new TGraphAsymmErrors(hMatchTmp, hBaseTmp,"cl=0.683 b(1,1) mode");
-	  gDataEff_Run15pp[k][i]->SetName(Form("%s_MtdTrigEff_Fit%d_%s",data_name,i,name_lumi[k]));
-	  gDataEff_Run15pp[k][i]->SetMarkerStyle(20+i);
-	  gDataEff_Run15pp[k][i]->SetMarkerColor(i+1);
-	  gDataEff_Run15pp[k][i]->SetLineColor(i+1);
-	  for(int ipoint=0; ipoint<nbins-1; ipoint++)
+	  c->cd(k+1);
+	  gDataEff_Run15[i][k][0]->GetYaxis()->SetRangeUser(0.55,1);
+	  gDataEff_Run15[i][k][0]->SetTitle(Form(";p_{T}^{#mu} (GeV/c);"));
+	  gDataEff_Run15[i][k][0]->Draw("AZP");
+	  gDataEff_Run15[i][k][1]->Draw("samesPEZ");
+	  for(int j=0; j<2; j++)
 	    {
-	      gDataEff_Run15pp[k][i]->GetPoint(ipoint,x,y);
-	      gDataEff_Run15pp[k][i]->SetPoint(ipoint,Run15pp_mean_pt[ipoint],y);
-	      gDataEff_Run15pp[k][i]->SetPointEXhigh(ipoint,Run15pp_mean_pt_err[ipoint]);
-	      gDataEff_Run15pp[k][i]->SetPointEXlow(ipoint,Run15pp_mean_pt_err[ipoint]);
+	      funcEff_Run15[i][k][j]->SetLineStyle(2);
+	      funcEff_Run15[i][k][j]->SetLineColor(j+1);
+	      funcEff_Run15[i][k][j]->Draw("sames");
 	    }
-	  funcEff_Run15pp[k][i] = new TF1(Form("%s_FitFunc",gDataEff_Run15pp[k][i]->GetName()),"[0]-exp(-1*[1]*(x-[2]))",1.3,5);
-	  funcEff_Run15pp[k][i]->SetParameters(0.9, 5, 1);
-	  gDataEff_Run15pp[k][i]->Fit(funcEff_Run15pp[k][i],"R0");
+	  TPaveText *t1 = GetTitleText(Form("%s: MTD trigger efficiency for %s cut",data_name[i],name_lumi[k]),0.04);
+	  t1->Draw();
+	  if(k==0)
+	    {
+	      TLegend *leg = new TLegend(0.5,0.2,0.7,0.35);
+	      leg->SetBorderSize(0);
+	      leg->SetFillColor(0);
+	      leg->SetTextSize(0.04);
+	      leg->AddEntry(gDataEff_Run15[i][k][0], "Gaussian fit", "P");
+	      leg->AddEntry(gDataEff_Run15[i][k][1], "Crystal-ball fit", "P");
+	      leg->Draw();
+	    }
 	}
-      c->cd(k+1);
-      gDataEff_Run15pp[k][0]->GetYaxis()->SetRangeUser(0.55,1);
-      gDataEff_Run15pp[k][0]->SetTitle(Form(";p_{T}^{#mu} (GeV/c);"));
-      gDataEff_Run15pp[k][0]->Draw("AZP");
-      gDataEff_Run15pp[k][1]->Draw("samesPEZ");
-      for(int i=0; i<2; i++)
-	{
-	  funcEff_Run15pp[k][i]->SetLineStyle(2);
-	  funcEff_Run15pp[k][i]->SetLineColor(i+1);
-	  funcEff_Run15pp[k][i]->Draw("sames");
-	}
-      TPaveText *t1 = GetTitleText(Form("%s: MTD trigger efficiency for %s cut",data_name,name_lumi[k]),0.04);
-      t1->Draw();
-      if(k==0)
-	{
-	  TLegend *leg = new TLegend(0.5,0.2,0.7,0.35);
-	  leg->SetBorderSize(0);
-	  leg->SetFillColor(0);
-	  leg->SetTextSize(0.04);
-	  leg->AddEntry(gDataEff_Run15pp[k][0], "Gaussian fit", "P");
-	  leg->AddEntry(gDataEff_Run15pp[k][1], "Crystal-ball fit", "P");
-	  leg->Draw();
-	}
+      if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/%s_MtdTrigEff.pdf",run_type,data_name[i]));
     }
   /*
   {     
@@ -1026,12 +1082,13 @@ void getMuonTacDiff(const int savePlot, const char *name, const int nbins, const
       double scale = hScaleFactor->GetBinContent(bin);
       hMuonDis[bin-1] = (TH1F*)hUL[bin-1]->Clone(Form("%s_DataJpsiMuon_MtdVpdTacDiff_bin%d",name,bin));
       hMuonDis[bin-1]->Add(hLS[bin-1],-1.0*scale);
+      //hMuonDis[bin-1]->Add(hLS[bin-1],-1.0);
 
       c->cd(bin);
       hUL[bin-1]->Rebin(4);
       hUL[bin-1]->SetMarkerStyle(20);
       hUL[bin-1]->SetMaximum(1.5*hUL[bin-1]->GetMaximum());
-      hUL[bin-1]->GetXaxis()->SetRangeUser(880,960);
+      hUL[bin-1]->GetXaxis()->SetRangeUser(870,960);
       hUL[bin-1]->SetTitle("");
       hUL[bin-1]->Draw("P");
       hLS[bin-1]->Rebin(4);

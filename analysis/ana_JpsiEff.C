@@ -14,8 +14,8 @@ void ana_JpsiEff()
 
   //trackingEff();
   //trackingRes();
-  JpsiEff();
-  //makeTrigEff();
+  //JpsiEff();
+  makeTrigEff();
 
   //ploEff();
   //plotEmbedEff();
@@ -1394,7 +1394,7 @@ void hadronEmbed()
 
 
 //================================================
-void makeTrigEff(const int savePlot = 1, const int saveHisto = 1)
+void makeTrigEff(const int savePlot = 0, const int saveHisto = 0)
 {
   const char *trgSetupName[4] = {"AuAu_200_production_2014","AuAu_200_production_low_2014","AuAu_200_production_mid_2014","AuAu_200_production_high_2014"};
   TF1 *funcTrigEff[4][nCentBins];
@@ -1403,8 +1403,8 @@ void makeTrigEff(const int savePlot = 1, const int saveHisto = 1)
     {
       for(int k=0; k<nCentBins; k++)
 	{
-	  funcTrigEff[i][k] = new TF1(Form("MuonTrigEff_cent%s%s",cent_Title[k],gTrgSetupName[i+1]),"[0]-exp(-1*[1]*(x-[2]))",0,12);
-	  funcTrigEffCorr[i][k] = new TF1(Form("MuonTrigEffCorr_cent%s%s",cent_Title[k],gTrgSetupName[i+1]),"[0]-exp(-1*[1]*(x-[2]))",0,12);
+	  funcTrigEff[i][k] = new TF1(Form("MuonTrigEff_cent%s%s",cent_Title[k],gTrgSetupName[i+1]),"[0]-exp(-1*[1]*(x-[2]))",1.2,12);
+	  funcTrigEffCorr[i][k] = new TF1(Form("MuonTrigEffCorr_cent%s%s",cent_Title[k],gTrgSetupName[i+1]),"[0]-exp(-1*[1]*(x-[2]))",1.2,12);
 	  if(i==0 || i==1)
 	    {
 	      if(k==0) funcTrigEff[i][k]->SetParameters(0.951456, 2.32223, 6.61693e-14);      
@@ -1483,7 +1483,7 @@ void makeTrigEff(const int savePlot = 1, const int saveHisto = 1)
 	  list->Add(hMuonTrigEff[i][k]);
 	  legName[k] = Form("%s%%",cent_Name[k]);
 	}
-      c = drawHistos(list,Form("MuonTrigEff_CentBins%s",gTrgSetupName[i+1]),Form("Single muon trigger efficiency (%s);p_{T} (GeV/c);Efficiency",trgSetupName[i]),kTRUE,0.5,10,kTRUE,0.5,1.0,kFALSE,kTRUE,legName,kTRUE,"",0.4,0.6,0.3,0.55,kTRUE);
+      c = drawHistos(list,Form("MuonTrigEff_CentBins%s",gTrgSetupName[i+1]),Form("Single muon trigger efficiency (%s);p_{T} (GeV/c);Efficiency",trgSetupName[i]),kTRUE,1.2,10,kTRUE,0.5,1.0,kFALSE,kTRUE,legName,kTRUE,"",0.4,0.6,0.3,0.55,kTRUE);
       if(savePlot)
 	{
 	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/MuonTrigEffCombined_CentBins%s.pdf",run_type,gTrgSetupName[i+1]));
