@@ -20,28 +20,10 @@
 #include <cmath>
 using namespace std;
 
-#define YEAR 2014
+#define YEAR 2016
 
-#if (YEAR==2014)
-// +++ Run14 analysis +++
-const char *run_config = "";
-const char *run_type = "Run14_AuAu200";
-const double pt1_cut = 1.5, pt2_cut = 1.2;
-const double low_mass = 2.9;
-const double high_mass = 3.3;
-const int nCentBins = 4;
-const int centBins_low[nCentBins]  = {5,13,9,5};
-const int centBins_high[nCentBins] = {16,16,12,8};
-const char *cent_Name[nCentBins] = {"0-60","0-20","20-40","40-60"};
-const char *cent_Title[nCentBins] = {"0060","0020","2040","4060"};
-const int nPtBins = 10;
-const double ptBins_low[nPtBins]  = {0,0,1,2,3,4,5,6,8,10};
-const double ptBins_high[nPtBins] = {15,1,2,3,4,5,6,8,10,15};
-const char *pt_Name[nPtBins] = {"0-15","0-1","1-2","2-3","3-4","4-5","5-6","6-8","8-10","10-15"};
-#elif (YEAR==2013)
-// +++ Run13 analysis +++
+#if (YEAR==2013)
 const char *run_config = "VtxCut.";
-//const char *run_config = "";
 char *run_type = "Run13_pp500";
 const double pt1_cut = 1.5, pt2_cut = 1.0;
 const double low_mass = 2.9, high_mass = 3.25;
@@ -54,6 +36,35 @@ const int centBins_low[nCentBins]  = {0};
 const int centBins_high[nCentBins] = {-1};
 const char *cent_Name[nCentBins] = {"0-100"};
 const char *cent_Title[nCentBins] = {"00100"};
+#elif (YEAR==2014)
+const char *run_config = "";
+const char *run_type = "Run14_AuAu200";
+const double pt1_cut = 1.5, pt2_cut = 1.3;
+const double low_mass = 2.9;
+const double high_mass = 3.3;
+const int nCentBins = 4;
+const int centBins_low[nCentBins]  = {5,13,9,5};
+const int centBins_high[nCentBins] = {16,16,12,8};
+const char *cent_Name[nCentBins] = {"0-60","0-20","20-40","40-60"};
+const char *cent_Title[nCentBins] = {"0060","0020","2040","4060"};
+const int nPtBins = 10;
+const double ptBins_low[nPtBins]  = {0,0,1,2,3,4,5,6,8,10};
+const double ptBins_high[nPtBins] = {15,1,2,3,4,5,6,8,10,15};
+const char *pt_Name[nPtBins] = {"0-15","0-1","1-2","2-3","3-4","4-5","5-6","6-8","8-10","10-15"};
+#elif (YEAR==2016)
+const char *run_config = "";
+char *run_type = "Run16_AuAu200";
+const double pt1_cut = 1.5, pt2_cut = 1.3;
+const double low_mass = 2.9, high_mass = 3.3;
+const int nPtBins = 5;
+const double ptBins_low[nPtBins]  = {0,0,2,4,6};
+const double ptBins_high[nPtBins] = {10,2,4,6,10};
+const char *pt_Name[nPtBins] = {"0-10","0-2","2-4","4-6","6-10"};
+const int nCentBins = 1;
+const int centBins_low[nCentBins]  = {0};
+const int centBins_high[nCentBins] = {-1};
+const char *cent_Name[nCentBins] = {"0-80"};
+const char *cent_Title[nCentBins] = {"0080"};
 #endif
 
 const double pi = 3.1415926;
@@ -84,7 +95,6 @@ TH1F *hMtdRespEffCosmic;
 TH1F *hMtdRespEffEmbed;
 
 void tuneResolution(const int icent, const bool savePlot);
-void trigEff();
 void smear(const double mass, const int icent, const int nExpr, const double shift, const double sigma, TH1F *hInputPt, const bool debug, TH2F *hJpsiMassVsPt[gHistos]);
 void tuneSmear(const double masss, const int icent, const int nExpr, const double shift, const double sigma, TH1F *hInputPt, TH2F *hRcJpsiMassVsPt);
 
@@ -118,26 +128,52 @@ void ana_JpsiRes()
 
 
   // tracking efficiency
-  TFile *fEff = TFile::Open(Form("Rootfiles/%s.TrkEff.root",run_type),"read");
-  TFile *fEff1 = 0x0;
-  if(year==2014) fEff1 = TFile::Open(Form("Rootfiles/Run14.AuAu200.TrkEff.root"),"read");
-  if(year==2013) fEff1 = TFile::Open(Form("Rootfiles/Run13.pp500.TrkEff.root"),"read");
-  for(int icent=0; icent<nCentBins; icent++)
+  TFile *fEff = 0x0;
+  if(year==2014 || year==2016) fEff = TFile::Open(Form("Rootfiles/Run14.AuAu200.TrkEff.root"),"read");
+  if(year==2013) fEff = TFile::Open(Form("Rootfiles/Run13.pp500.TrkEff.root"),"read");
+  if(!fEff)
     {
-      for(int i=0; i<2; i++)
+      printf("[e] No efficiency file avaialbe!\n");
+    }
+  else
+    {
+      for(int icent=0; icent<nCentBins; icent++)
 	{
-	  hTpcEff[icent][i] = (TH3F*)fEff1->Get(Form("McTrkPtEtaPhiTpc%s_%s_Eff",charge_name[i+1],cent_Title[icent]));
-	  hMtdEff[icent][0][i] = (TH2F*)fEff1->Get(Form("McTrkPtEtaMtdEff%s_3tray_%s",charge_name[i+1],cent_Title[icent]));
-	  hMtdEff[icent][1][i] = (TH2F*)fEff1->Get(Form("McTrkPtEtaMtdEff%s_5tray_%s",charge_name[i+1],cent_Title[icent]));
+	  for(int i=0; i<2; i++)
+	    {
+	      hTpcEff[icent][i] = (TH3F*)fEff->Get(Form("McTrkPtEtaPhiTpc%s_%s_Eff",charge_name[i+1],cent_Title[icent]));
+	      hMtdEff[icent][0][i] = (TH2F*)fEff->Get(Form("McTrkPtEtaMtdEff%s_3tray_%s",charge_name[i+1],cent_Title[icent]));
+	      hMtdEff[icent][1][i] = (TH2F*)fEff->Get(Form("McTrkPtEtaMtdEff%s_5tray_%s",charge_name[i+1],cent_Title[icent]));
+	    }
 	}
-
-      // track resolution
-      hTrkResVsPt[icent] = (TH2F*)fEff->Get(Form("PrimTrkRes_vs_TruePt_cent%s",cent_Title[icent]));
-      funcTrkRes[icent] = (TF1*)fEff->Get(Form("FuncPrimTrkRes_vs_TruePt_cent%s",cent_Title[icent]));
-      int nHistos = hTrkResVsPt[icent]->GetNbinsX();
-      for(int i=0; i<nHistos; i++)
+    }
+    
+  // track resolution
+  TFile *fRes = 0x0;
+  if(year==2013 || year==2014) fRes = TFile::Open(Form("Rootfiles/%s.TrkEff.root",run_type),"read");
+  else if(year==2016) fRes = TFile::Open("Upsilon1S.ptrk.Embed.root","read");
+  if(!fRes)
+    {
+      printf("[e] No track resolution file avaialbe!\n");
+    }
+  else
+    {
+      for(int icent=0; icent<nCentBins; icent++)
 	{
-	  hTrkResBin[icent][i] = (TH1F*)hTrkResVsPt[icent]->ProjectionY(Form("hTrkRes_Bin%d_cent%s",i+1,cent_Title[icent]),i+1,i+1);
+	  if(year==2013 || year==2014)
+	    {
+	      hTrkResVsPt[icent] = (TH2F*)fEff->Get(Form("PrimTrkRes_vs_TruePt_cent%s",cent_Title[icent]));
+	      funcTrkRes[icent] = (TF1*)fEff->Get(Form("FuncPrimTrkRes_vs_TruePt_cent%s",cent_Title[icent]));
+	    }
+	    else if(year==2016)
+	      {
+		hTrkResVsPt[icent] = (TH2F*)fEff->Get(Form("McTrkPtReco_centcent%s",cent_Title[icent]));
+	      }
+	  int nHistos = hTrkResVsPt[icent]->GetNbinsX();
+	  for(int i=0; i<nHistos; i++)
+	    {
+	      hTrkResBin[icent][i] = (TH1F*)hTrkResVsPt[icent]->ProjectionY(Form("hTrkRes_Bin%d_cent%s",i+1,cent_Title[icent]),i+1,i+1);
+	    }
 	}
     }
 
@@ -151,7 +187,7 @@ void ana_JpsiRes()
 	  funcTrigEffCorr[icent] = (TF1*)fTrig->Get(Form("MuonTrigEffCorr_cent%s_P3",cent_Title[icent]));
 	}
     }
-  if(year==2013)
+  else
     {
       for(int icent=0; icent<nCentBins; icent++)
 	{
@@ -162,104 +198,19 @@ void ana_JpsiRes()
 
   // MTD response efficiency
   TFile *fCosmic =  0x0;
-  if(year==2014) fCosmic = TFile::Open(Form("Rootfiles/Run14.AuAu200.MtdResponseEff.root"),"read");
+  if(year==2014 || year==2016) fCosmic = TFile::Open(Form("Rootfiles/Run14.AuAu200.MtdResponseEff.root"),"read");
   if(year==2013) fCosmic = TFile::Open(Form("Rootfiles/Run13.pp500.MtdResponseEff.root"),"read");
 
   hMtdRespEffCosmic = (TH1F*)fCosmic->Get("MtdResponseEff_cosmic");
   hMtdRespEffEmbed = (TH1F*)fCosmic->Get("MtdResponseEff_embed");
 
-  tuneResolution(0,1);
-  //trigEff();
-}
-
-//================================================
-void trigEff()
-{
-  TFile *fin = 0x0;
-  if(year==2013) fin = TFile::Open("Rootfiles/GlobalFit.Jpsi.pp500.root","read");
-  if(year==2014) fin = TFile::Open("Rootfiles/Published/Jpsi_Raa_200/Publication.Jpsi.200GeV.root","read");
-
-  TF1 *funcMcJpsiPt[nCentBins];
-  TH1F *hMcJpsiPt[nCentBins];
-  TH2F *hRcJpsiMass[nCentBins][gHistos];
-
-  TH1F *hJpsiEff[nCentBins][gHistos-1][2];
-  const char *eff_name[gHistos-1] = {"Tpc","Smear","Match","Resp","Trig"};
-
-  const int nbins = nPtBins -1;
-  double xbins[nbins+1];
-  for(int i=0; i<nbins; i++)
-    xbins[i] = ptBins_low[i+1];
-  xbins[nbins] = ptBins_high[nbins];
-
-  double sigma = 0, shift = 0;
-  if(year==2013) 
-    {
-      sigma = 0.021;
-      shift = -0.01;
-    }
-  if(year==2014) sigma = 0.016;
-
-  for(int icent=0; icent<nCentBins; icent++)
-    {
-      cout << "Cent " << icent << endl;
-      if(year==2014)
-	hMcJpsiPt[icent] = (TH1F*)fin->Get(Form("TBW_Jpsi_Yield_cent%s",cent_Title[icent]));
-
-      if(year==2013)
-	{
-	  TF1 *funcJpsi = (TF1*)fin->Get("ffpt");
-	  funcJpsi->SetNpx(1000);
-	  hMcJpsiPt[icent] = (TH1F*)funcJpsi->GetHistogram();
-	  hMcJpsiPt[icent]->SetName(Form("GlobalFit_Jpsi_Yield_cent%s",cent_Title[icent]));
-	  for(int bin=1; bin<=hMcJpsiPt[icent]->GetNbinsX(); bin++)
-	    {
-	      hMcJpsiPt[icent]->SetBinContent(bin,hMcJpsiPt[icent]->GetBinCenter(bin)*hMcJpsiPt[icent]->GetBinContent(bin));
-	    }
-	}
-
-      for(int i=0; i<gHistos; i++)
-	{
-	  hRcJpsiMass[icent][i] = new TH2F(Form("hRcJpsiMass_%s_%s",det_name[i],cent_Title[icent]),Form("Mass distribution of reconstructed J/#psi (%s%%);mass (GeV/c^{2})",cent_Name[icent]),kNPtBins, kLowPtBound, kHighPtBound, kNMassBins, kLowMassBound, kHighMassBound);
-	  hRcJpsiMass[icent][i]->Sumw2();
-	}
-      smear(jpsiMass, 0, 4e8, shift, sigma, hMcJpsiPt[icent], 0, hRcJpsiMass[icent]);
-
-      for(int i=0; i<gHistos-1; i++)
-	{
-	  hJpsiEff[icent][i][0] = (TH1F*)hRcJpsiMass[icent][i+1]->ProjectionX(Form("Jpsi%sEff_cent%s",eff_name[i],cent_Title[icent]));
-	  hJpsiEff[icent][i][1] = (TH1F*)hJpsiEff[icent][i][0]->Rebin(nbins,Form("%s_rebin",hJpsiEff[icent][i][0]->GetName()),xbins);
-	  TH1F *hAll = (TH1F*)hRcJpsiMass[icent][i]->ProjectionX(Form("JpsiPt_%s_cent%s",det_name[i],cent_Title[icent]));
-	  TH1F *hAllrebin = (TH1F*)hAll->Rebin(nbins,Form("%s_rebin",hAll->GetName()),xbins);
-	  hJpsiEff[icent][i][0]->Divide(hAll);
-	  hJpsiEff[icent][i][1]->Divide(hAllrebin);
-	  TCanvas *c = draw1D(hJpsiEff[icent][i][0]);
-	  hJpsiEff[icent][i][1]->Draw("sames");
-	}
-    }
- 
-  TString outName = "";
-  if(year==2014) outName = Form("Run14.AuAu200.JpsiTrigEff.pt%1.1f.pt%1.1f.root",pt1_cut,pt2_cut);
-  if(year==2013) outName = Form("Run13.pp500.JpsiTrigEff.pt%1.1f.pt%1.1f.root",pt1_cut,pt2_cut);
-  TFile *fEff = TFile::Open(Form("Rootfiles/%s",outName.Data()),"update");
-
-  for(int icent=0; icent<nCentBins; icent++)
-    {
-      for(int i=0; i<gHistos-1; i++)
-	{
-	  for(int j=0; j<2; j++)
-	    {
-	      hJpsiEff[icent][i][j]->Write("",TObject::kOverwrite);
-	    }
-	}
-    }
-  
+  tuneResolution(0,0);
 }
 
 //================================================
 void tuneResolution(const int icent, const bool savePlot)
 {
-  const int anaType = 1; // 0 - scan; 1 - determine smear & shift; 2 - generate final smear
+  const int anaType = 0; // 0 - scan; 1 - determine smear & shift; 2 - generate final smear
   const int nShiftScan = 10;
   const double shiftStep = -0.005;
   const int nSmearScan = 10;

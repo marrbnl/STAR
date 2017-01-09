@@ -51,7 +51,7 @@ void ana_JpsiMuon()
 }
 
 //================================================
-void MtdVpdTacDiff(const Int_t savePlot = 0, const int saveHisto = 0)
+void MtdVpdTacDiff(const Int_t savePlot = 1, const int saveHisto = 1)
 {
   TList *list = new TList;
   TH1F *htmp = 0x0;
@@ -575,13 +575,10 @@ void MtdVpdTacDiff(const Int_t savePlot = 0, const int saveHisto = 0)
       if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/DataJpsiMuon_MtdTrigEff_RndmLimits_%s.pdf",run_type,name_lumi[k]));
     }
 
-  TCanvas *cSys[2];
-  TGraphErrors *gSys[2][3]; // three sources for prod_low/high
-  for(int k=0; k<2; k++)
+  TCanvas *cSys[nLumi];
+  TGraphErrors *gSys[nLumi][3]; // three sources for prod_low/high
+  for(int k=0; k<nLumi; k++)
     {
-      cSys[k] = new TCanvas(Form("gSys_%s",name_lumi[k]),Form("gSys_%s",name_lumi[k]),1000,700);
-      cSys[k]->Divide(2,2);
-
       int npoints = gDataEff[k][defMed]->GetN();
       for(int s=0; s<3; s++)
 	{
@@ -589,6 +586,9 @@ void MtdVpdTacDiff(const Int_t savePlot = 0, const int saveHisto = 0)
 	  gSys[k][s]->SetName(Form("%s_S%d",gDataEff[k][defMed]->GetName(),s));
 	  gSys[k][s]->SetTitle(Form("Systematic uncertainty %d (%s);p_{T} (GeV/c)",s+1,name_lumi[k]));
 	  gSys[k][s]->SetMarkerStyle(20);
+	  gSys[k][s]->SetMarkerSize(1.5);
+	  gSys[k][s]->SetMarkerColor(s+1);
+	  gSys[k][s]->SetLineColor(s+1);
 	}
 
       // source 1
@@ -602,10 +602,6 @@ void MtdVpdTacDiff(const Int_t savePlot = 0, const int saveHisto = 0)
 	  gSys[k][0]->SetPoint(ipoint, x, 1);
 	  gSys[k][0]->SetPointError(ipoint, 0, error/def);
 	}
-      cSys[k]->cd(1);
-      gSys[k][0]->GetXaxis()->SetRangeUser(1.3,8);
-      gSys[k][0]->GetYaxis()->SetRangeUser(0.95,1.05);
-      gSys[k][0]->Draw("APZ");
 
       // source 2
       for(int ipoint=0; ipoint<npoints; ipoint++)
@@ -617,12 +613,172 @@ void MtdVpdTacDiff(const Int_t savePlot = 0, const int saveHisto = 0)
 	  gSys[k][1]->SetPoint(ipoint, x, 1);
 	  gSys[k][1]->SetPointError(ipoint, 0, error);
 	}
-      cSys[k]->cd(2);
-      gSys[k][1]->GetXaxis()->SetRangeUser(1.3,8);
-      gSys[k][1]->GetYaxis()->SetRangeUser(0.95,1.05);
-      gSys[k][1]->Draw("APZ");
+
+      gSys[k][0]->GetXaxis()->SetRangeUser(1.3,8);
+      gSys[k][0]->GetYaxis()->SetRangeUser(0.95,1.05);
+      cSys[k] = drawGraph(gSys[k][0],"Systematic uncertainty for MTD trigger efficiency");
+      gPad->SetGridy();
+      TGraphErrors *gSysShift = (TGraphErrors*)gSys[k][1]->Clone(Form("%s_shift",gSys[k][1]->GetName()));
+      offset_x(gSysShift, 0.05);
+      gSysShift->Draw("samesPE");
+      TLegend *leg = new TLegend(0.4,0.15,0.65,0.35);
+      leg->SetBorderSize(0);
+      leg->SetFillColor(0);
+      leg->SetTextSize(0.04);
+      leg->SetHeader(name_lumi[k]);
+      leg->AddEntry(gSys[k][0], "Source 1", "PE");
+      leg->AddEntry(gSys[k][1], "Source 2", "PE");  
+      leg->Draw();
+      if(savePlot) cSys[k]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/DataJpsiMuon_MtdTrigEffSys_%s.pdf",run_type,name_lumi[k]));
     }
 
+  // combine the systematic uncertainty
+  const char *sys_name[2] = {"down", "up"};
+  TGraphAsymmErrors *gDataEffSys[nLumi][2];
+  TF1 *funcEffSys[nLumi][2];
+  for(int k=0; k<nLumi; k++)
+    {
+      double *exh = gDataEff[k][defMed]->GetEXhigh();
+      double *exl = gDataEff[k][defMed]->GetEXlow();
+      double *eyh = gDataEff[k][defMed]->GetEYhigh();
+      double *eyl = gDataEff[k][defMed]->GetEYlow();
+      for(int i=0; i<2; i++)
+	{
+	  int npoint = gDataEff[k][defMed]->GetN();
+	  gDataEffSys[k][i] = new TGraphAsymmErrors(npoint);
+	  gDataEffSys[k][i]->SetName(Form("%s_FinalSys%d",gDataEff[k][defMed]->GetName(),i));
+	  for(int ipoint=0; ipoint<npoint; ipoint++)
+	    {
+	      gDataEff[k][defMed]->GetPoint(ipoint,x,y);
+	      double sys_all = 0;
+	      for(int s=0; s<2; s++)
+		{
+		  double y_sys = gSys[k][s]->GetErrorYhigh(ipoint);
+		  sys_all += y_sys * y_sys;
+		}
+	      sys_all = sqrt(sys_all);
+	      double new_y = y + sys_all*(i*2-1);
+	      gDataEffSys[k][i]->SetPoint(ipoint,x,new_y);
+	      gDataEffSys[k][i]->SetPointError(ipoint,exl[ipoint],exh[ipoint],eyl[ipoint]/y*new_y,eyh[ipoint]/y*new_y);	 
+	    }
+	  gDataEffSys[k][i]->GetYaxis()->SetRangeUser(0.1,1.05);
+	  c = drawGraph(gDataEffSys[k][i]);
+	  gPad->SetGridy();
+	  funcEffSys[k][i] = new TF1(Form("%s_FitFunc_Sys%s",gDataEff[k][defMed]->GetName(),sys_name[i]),"[0]-exp(-1*[1]*(x-[2]))",1.2,7);
+	  gDataEffSys[k][i]->Fit(funcEffSys[k][i],"R0Q");
+	  funcEffSys[k][i]->SetLineColor(2);
+	  funcEffSys[k][i]->Draw("sames");
+	}
+
+      cTrigEff[k]->cd();
+      for(int i=0; i<2; i++)
+	{
+	  funcEffSys[k][i]->SetLineStyle(2);
+	  funcEffSys[k][i]->SetLineColor(6);
+	  funcEffSys[k][i]->Draw("sames");
+	}
+      TLegend *leg = new TLegend(0.4,0.15,0.6,0.2);
+      leg->SetBorderSize(0);
+      leg->SetFillColor(0);
+      leg->SetTextSize(0.04);
+      leg->AddEntry(funcEffSys[k][0], "Systematic uncertainty", "L");
+      leg->Draw();
+      if(savePlot) cTrigEff[k]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/DataJpsiMuon_MtdTrigEffWithSys_%s.pdf",run_type,name_lumi[k]));
+    }
+
+  // Get the average efficiency
+  // Statistical weight: prod_mid/high (73.4%); prod_/low (26.6%)
+  const double weight[nLumi] = {0.734, 0.266};
+  TF1 *funcEffFinal = new TF1("DataJpsiMuon_MtdTrigEff_BinCount_FitFunc","[0]-exp(-1*[1]*(x-[2]))",1.2,7);
+  TF1 *funcEffSysFinal[2];
+  for(int i=0; i<2; i++) funcEffSysFinal[i] = new TF1(Form("DataJpsiMuon_MtdTrigEff_BinCount_FitFunc_Sys%s",sys_name[i]),"[0]-exp(-1*[1]*(x-[2]))",1.2,7);
+  TCanvas *c = new TCanvas("Avg_Eff","Avg_eff",800,600);
+  c->Divide(2,2);
+  TF1 *hprodlow = 0x0, *hprodhigh = 0x0, *havg = 0x0;
+  for(int i=0; i<3; i++)
+    {
+      if(i==0)
+	{
+	  hprodhigh = funcEff[0];
+	  hprodlow = funcEff[1];
+	  havg = funcEffFinal;
+	}
+      else
+	{
+	  hprodhigh = funcEffSys[0][i-1];
+	  hprodlow = funcEffSys[1][i-1];
+	  havg = funcEffSysFinal[i-1];
+	}
+      TH1F *htmp = new TH1F(Form("htmp_%d",i),"",70,1,8);
+      for(int bin=1; bin<=htmp->GetNbinsX(); bin++)
+	{
+	  double pt = htmp->GetBinCenter(bin);
+	  htmp->SetBinContent(bin, weight[0]*hprodhigh->Eval(pt)+weight[1]*hprodlow->Eval(pt));
+	  htmp->SetBinError(bin, 1e-10);
+	}
+      TF1 *funcTmp = new TF1(Form("funcTmp_%d",i),"[0]-exp(-1*[1]*(x-[2]))",1.3,7);
+      funcTmp->SetParameters(hprodlow->GetParameters());
+      c->cd(i+1);
+      htmp->GetYaxis()->SetRangeUser(0.5,1);
+      htmp->SetMarkerStyle(24);
+      htmp->Fit(funcTmp,"IRQ");
+      havg->SetParameters(funcTmp->GetParameters());
+    }
+  c = new TCanvas("MtdTrigEff_Avg","MtdTrigEff_Avg",800,600);
+  gPad->SetGridy();
+  hplot->DrawCopy();
+  TPaveText *t1 = GetTitleText("Avergae MTD trigger efficiency");
+  t1->Draw();
+  funcEffFinal->Draw("sames");
+  for(int i=0; i<2; i++) 
+    {
+      funcEffSysFinal[i]->SetLineColor(6);
+      funcEffSysFinal[i]->SetLineStyle(2);
+      funcEffSysFinal[i]->Draw("sames");
+    }
+  TLegend *leg = new TLegend(0.4,0.2,0.6,0.4);
+  leg->SetBorderSize(0);
+  leg->SetFillColor(0);
+  leg->SetTextSize(0.04);
+  leg->AddEntry(funcEffFinal, "MTD trigger efficiency", "L");
+  leg->AddEntry(funcEffSysFinal[0], "Systematic uncertainty", "L");
+  leg->Draw();
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/DataJpsiMuon_AvgMtdTrigEffWithSys.pdf",run_type));
+
+  //==============================================
+  // save histograms
+  //==============================================
+  if(saveHisto)
+    {
+      TFile *fout = TFile::Open(Form("Rootfiles/%s.JpsiMuon.root",run_type),"update");
+      for(int bin=1; bin<=nbins; bin++)
+	{
+	  hMuonFineBin[bin-1]->Write("",TObject::kOverwrite);
+	  hMuon[bin-1]->Write("",TObject::kOverwrite);
+	  funcFitData[bin-1]->Write("",TObject::kOverwrite);
+	  ptr[bin-1]->Write("",TObject::kOverwrite);
+	}
+      hFitDataMean->Write("",TObject::kOverwrite);
+      hFitDataSigma->Write("",TObject::kOverwrite);
+
+      for(int k=0; k<2; k++)
+	{
+	  gDataEff[k][0]->Write("",TObject::kOverwrite);
+	  gDataEff[k][1]->Write("",TObject::kOverwrite);
+	  funcEff[k]->Write("",TObject::kOverwrite);
+	  for(int t=0; t<2; t++)
+	    {
+	      funcEffSys[k][t]->Write("",TObject::kOverwrite);
+	    }
+	}
+      funcEffFinal->Write("",TObject::kOverwrite);
+      for(int t=0; t<2; t++)
+	{
+	  funcEffSysFinal[t]->Write("",TObject::kOverwrite);
+	}
+    }
+
+  /*
   // source 3 
   const int nData = 2;
   const char *data_name[nData] = {"Run15_pp200", "Run15_pAu200"};
@@ -671,7 +827,6 @@ void MtdVpdTacDiff(const Int_t savePlot = 0, const int saveHisto = 0)
   leg->Draw();
   if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/Run15_CompareDz.pdf",run_type));
 
-  return;
   for(int i=0; i<nDataUsed; i++)
     {
       getMuonTacDiff(savePlot, data_name[i], nbins, xbins, min_mass, max_mass, fdata_Run15[i], Run15_mean_pt[i], Run15_mean_pt_err[i], hMuonTacDiffFineBin_Run15[i]);
@@ -822,118 +977,8 @@ void MtdVpdTacDiff(const Int_t savePlot = 0, const int saveHisto = 0)
 	}
       if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/%s_MtdTrigEff.pdf",run_type,data_name[i]));
     }
-  /*
-  {     
-    {
-      TGraphAsymmErrors *gtmp = (TGraphAsymmErrors*)gDataEff[k][defMed]->Clone(Form("%s_sys",gDataEff[k][defMed]->GetName()));
-      gtmp->GetXaxis()->SetRangeUser(1.3,8);
-      gtmp->GetYaxis()->SetRangeUser(0.6,1);
-      cSys[k] = drawGraph(gtmp,"MTD trigger efficiency for single muons;p_{T} (GeV/c);efficiency");
-      gPad->SetGrid(0,1);
-      funcEff[k]->Draw("sames");
-      gDataEff[k][0]->Draw("samesPE");
-      for(int t=0; t<2; t++)
-	{
-	  funcLimits[k][t]->SetLineColor(4);
-	  funcLimits[k][t]->SetLineStyle(4);
-	  funcLimits[k][t]->Draw("sames");
-	  cout << k << "  " << funcLimits[k][t]->Eval(1.4) << endl;
-	}
-      TLegend *leg = new TLegend(0.4,0.2,0.6,0.5);
-      leg->SetBorderSize(0);
-      leg->SetFillColor(0);
-      leg->SetTextSize(0.04);
-      leg->SetHeader(Form("Run14_AuAu200, %s",name_lumi[k]));
-      leg->AddEntry(gDataEff[k][0],"J/#Psi muons: fit method","P");
-      leg->AddEntry(gDataEff[k][1],"J/#Psi muons: bin counting","P");
-      leg->AddEntry(funcEff[k],"Fit to bin counting","L");
-      leg->AddEntry(funcLimits[k][0],"Uncertainty","L");
-      leg->Draw();
-      if(savePlot) cSys[k]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/DataJpsiMuon_MtdTrigEffSys_%s.pdf",run_type,name_lumi[k]));
-    }  
-  */
-return;
-  //Method 2 - assume correlated statistical errors
-  TCanvas *cSys2[2];
-  TF1 *funcLimits2[nLumi][2];
-  for(int k=0; k<2; k++)
-    {
-      TGraphAsymmErrors *gtmp = (TGraphAsymmErrors*)gDataEff[k][defMed]->Clone(Form("%s_sys2",gDataEff[k][defMed]->GetName()));
-      gtmp->GetXaxis()->SetRangeUser(1.3,8);
-      gtmp->GetYaxis()->SetRangeUser(0.6,1);
-      cSys2[k] = drawGraph(gtmp,"MTD trigger efficiency for single muons;p_{T} (GeV/c);efficiency");
-      gPad->SetGrid(0,1);
-      funcEff[k]->Draw("sames");
-      gDataEff[k][0]->Draw("samesPE");
+*/
 
-      TGraphAsymmErrors *gBaseEff = gDataEff[k][defMed];
-      int npoint = gBaseEff->GetN();
-      for(int t=0; t<2; t++)
-	{
-	  TGraphAsymmErrors *gSys2 = new TGraphAsymmErrors(npoint);
-	  gSys2->SetName(Form("Fit2_%s_%s_%d",name,name_lumi[k],t));
-	  double *exh = gBaseEff->GetEXhigh();
-	  double *exl = gBaseEff->GetEXlow();
-	  double *eyh = gBaseEff->GetEYhigh();
-	  double *eyl = gBaseEff->GetEYlow();
-	  double nsigma = 1;
-	  for(int ipoint=0; ipoint<nbins; ipoint++)
-	    {
-	      gBaseEff->GetPoint(ipoint,x,y);
-	      if(ipoint==0) nsigma = 1.5;
-	      else          nsigma = 1;
-	      if(t==0) y = y + nsigma*eyh[ipoint];
-	      if(t==1) y = y - nsigma*eyl[ipoint];
-	      gSys2->SetPoint(ipoint,x,y);
-	      gSys2->SetPointError(ipoint,exl[ipoint],exh[ipoint],eyl[ipoint],eyh[ipoint]);	 
-	    }
-	  funcLimits2[k][t] = new TF1(Form("%s_Sys2_%s",gDataEff[k][defMed]->GetName(),limit_name[t]),"[0]-exp(-1*[1]*(x-[2]))",1,8);
-	  funcLimits2[k][t]->SetParameters(0.95,2,0.2);
-	  gSys2->Fit(funcLimits2[k][t],"R0Q");
-	  funcLimits2[k][t]->SetLineColor(kMagenta-4);
-	  funcLimits2[k][t]->SetLineStyle(2);
-	  funcLimits2[k][t]->DrawCopy("sames");
-	}
-      TLegend *leg = new TLegend(0.4,0.2,0.6,0.5);
-      leg->SetBorderSize(0);
-      leg->SetFillColor(0);
-      leg->SetTextSize(0.04);
-      leg->SetHeader(Form("Run14_AuAu200, %s",name_lumi[k]));
-      leg->AddEntry(gDataEff[k][0],"J/#Psi muons: fit method","P");
-      leg->AddEntry(gDataEff[k][1],"J/#Psi muons: bin counting","P");
-      leg->AddEntry(funcEff[k],"Fit to bin counting","L");
-      leg->AddEntry(funcLimits2[k][0],"Uncertainty","L");
-      leg->Draw();
-      if(savePlot) cSys2[k]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/DataJpsiMuon_MtdTrigEffSys2_%s.pdf",run_type,name_lumi[k]));
-    }
- 
-  
-  //==============================================
-  // save histograms
-  //==============================================
-  if(saveHisto)
-    {
-      TFile *fout = TFile::Open(Form("Rootfiles/%s.JpsiMuon.root",run_type),"update");
-      for(int bin=1; bin<=nbins; bin++)
-	{
-	  hMuonFineBin[bin-1]->Write("",TObject::kOverwrite);
-	  hMuon[bin-1]->Write("",TObject::kOverwrite);
-	}
-      hFitDataMean->Write("",TObject::kOverwrite);
-      hFitDataSigma->Write("",TObject::kOverwrite);
-
-      for(int k=0; k<2; k++)
-	{
-	  gDataEff[k][0]->Write("",TObject::kOverwrite);
-	  gDataEff[k][1]->Write("",TObject::kOverwrite);
-	  funcEff[k]->Write("",TObject::kOverwrite);
-	  for(int t=0; t<2; t++)
-	    {
-	      funcLimits[k][t]->Write("",TObject::kOverwrite);
-	      funcLimits2[k][t]->Write("",TObject::kOverwrite);
-	    }
-	}
-    }
 }
 
 
@@ -1718,7 +1763,7 @@ void DeltaTof(const Int_t savePlot = 0, const int saveHisto = 0)
 	      sys_all += y_sys * y_sys;
 	    }
 	  sys_all = sqrt(sys_all);
-	  double new_y = y*(1+sys_all*(i*2-1));
+	  double new_y = y+sys_all*(i*2-1);
 	  gDataEffSys[i]->SetPoint(ipoint,x,new_y);
 	  gDataEffSys[i]->SetPointError(ipoint,exl[ipoint],exh[ipoint],eyl[ipoint]/y*new_y,eyh[ipoint]/y*new_y);	 
 	}
@@ -1726,6 +1771,9 @@ void DeltaTof(const Int_t savePlot = 0, const int saveHisto = 0)
       c = drawGraph(gDataEffSys[i]);
       gPad->SetGridy();
       funcEffSys[i] = new TF1(Form("%s_FitFunc_Sys%s",gCountDataEff->GetName(),sys_name[i]),"[0]-exp(-1*[1]*(x-[2]))",1.2,7);
+      funcEffSys[i]->SetParLimits(0, 0, 1);
+      funcEffSys[i]->SetParameter(1, 3.8);
+      funcEffSys[i]->SetParameter(2, 0.85);
       gDataEffSys[i]->Fit(funcEffSys[i],"R0");
       funcEffSys[i]->SetLineColor(2);
       funcEffSys[i]->Draw("sames");

@@ -41,7 +41,6 @@ const double part_mass[nPart] = {3.097, 9.46, 10.023, 10.355};
 TRandom3 *myRandom;
 void anaSys(const int saveHisto = 0);
 void plotSys(const int savePlot = 0, const int saveHisto = 0);
-void weightMtdTrigSys(const int savePlot = 0, const int saveHisto = 0);
 void makeHisto(TString name, const double mass, const int nExpr = 1e4);
 void toyMC(const double mass, const int nExpr, const int debug = 0);
 
@@ -86,87 +85,22 @@ void sys_ToyMC()
   myRandom->SetSeed(clock->GetTime());
 
   //anaSys(1);
-  //plotSys(1, 1);
-  weightMtdTrigSys(0, 0);
-}
-
-//================================================
-void weightMtdTrigSys(const int savePlot, const int saveHisto)
-{
-  // Statistical weight: prod_mid/high (73.4%); prod_/low (26.6%)
-  const int nLumi = 2;
-  const char* name_lumi[nLumi] = {"prod_high", "prod_low"};
-  TH1F *hEffSysVsPt[nPart][nLumi];
-  TH1F *hEffSysVsCent[nPart][nLumi];  
-  const double weight[nLumi] = {0.734, 0.266};
-  TH1F *hEffSysVsPtFinal[nPart];
-  TH1F *hEffSysVsCentFinal[nPart];
-
-  TFile *fin = 0x0;
-  if(saveHisto) fin = TFile::Open(Form("Rootfiles/%s.JpsiMuon.sys.root",run_type),"update");
-  else          fin = TFile::Open(Form("Rootfiles/%s.JpsiMuon.sys.root",run_type),"read");
-  for(int i=0; i<nPart; i++)
-    {
-      for(int k=0; k<nLumi; k++)
-	{
-	  hEffSysVsPt[i][k]   = (TH1F*)fin->Get(Form("%sEffVsPt_MtdTrigEff_%s_Sys",part_name[i],name_lumi[k]));
-	  hEffSysVsCent[i][k] = (TH1F*)fin->Get(Form("%sEffVsCent_MtdTrigEff_%s_Sys",part_name[i],name_lumi[k]));
-	}
-    }
-
-  TCanvas *c = 0x0;
-  for(int i=0; i<nPart; i++)
-    {
-      hEffSysVsPtFinal[i] = (TH1F*)hEffSysVsPt[i][0]->Clone(Form("%sEffVsPt_MtdTrigEff_Sys",part_name[i]));
-      hEffSysVsPtFinal[i]->Reset();
-      int nbins = hEffSysVsPtFinal[i]->GetNbinsX();
-      for(int bin=1; bin<=nbins; bin++)
-	{
-	  double eh = gEffSysVsPt[i][0][sys_index]->GetErrorYhigh(bin-1) * weight[0] + gEffSysVsPt[i][1][sys_index]->GetErrorYhigh(bin-1) * weight[1];
-	  double el = gEffSysVsPt[i][0][sys_index]->GetErrorYlow(bin-1)  * weight[0] + gEffSysVsPt[i][1][sys_index]->GetErrorYlow(bin-1)  * weight[1];
-	  double err = (eh>el) ? eh : el;
-	  hEffSysVsPtFinal[i]->SetBinContent(bin, 1);
-	  hEffSysVsPtFinal[i]->SetBinError(bin, err);
-	}
-      hEffSysVsPtFinal[i]->GetYaxis()->SetRangeUser(0.85,1.15);
-      c = draw1D(hEffSysVsPtFinal[i],Form("%s: uncertainty due to online trigger (%s);p_{T} (GeV/c)",part_title[i],run_type));
-      if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/%s_MtdTrigEff_FinalSysVsPt.pdf",run_type,part_name[i]));
-
-      hEffSysVsCentFinal[i] = (TH1F*)hEffVsCent[i][0][sys_index][0]->Clone(Form("%sEffVsCent_MtdTrigEff_FinalSys",part_name[i]));
-      hEffSysVsCentFinal[i]->Reset();
-      hEffSysVsCentFinal[i]->GetXaxis()->SetBinLabel(1, "p_{T} > 0 GeV/c");
-      hEffSysVsCentFinal[i]->GetXaxis()->SetBinLabel(2, "p_{T} > 5 GeV/c");
-      hEffSysVsCentFinal[i]->GetXaxis()->SetLabelOffset(0.01);
-      hEffSysVsCentFinal[i]->GetXaxis()->SetLabelSize(0.05);
-      nbins = hEffSysVsCentFinal[i]->GetNbinsX();
-      for(int bin=1; bin<=nbins; bin++)
-	{
-	  double eh = gEffSysVsCent[i][0][sys_index]->GetErrorYhigh(bin-1) * weight[0] + gEffSysVsCent[i][1][sys_index]->GetErrorYhigh(bin-1) * weight[1];
-	  double el = gEffSysVsCent[i][0][sys_index]->GetErrorYlow(bin-1)  * weight[0] + gEffSysVsCent[i][1][sys_index]->GetErrorYlow(bin-1)  * weight[1];
-	  double err = (eh>el) ? eh : el;
-	  hEffSysVsCentFinal[i]->SetBinContent(bin, 1);
-	  hEffSysVsCentFinal[i]->SetBinError(bin, err);
-	}
-      hEffSysVsCentFinal[i]->GetYaxis()->SetRangeUser(0.85,1.15);
-      c = draw1D(hEffSysVsCentFinal[i],Form("%s: uncertainty due to online trigger (%s);;",part_title[i],run_type));
-      if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/%s_MtdTrigEff_FinalSysVsCent.pdf",run_type,part_name[i]));
-    }
+  plotSys(1, 1);
 }
 
 //================================================
 void plotSys(const int savePlot, const int saveHisto)
 {
-  /*
-  const char* name_lumi  = "_prod_high";
-  const char* title_lumi = " (prod_high)";  
+  
+  const char* name_lumi  = "";
+  const char* title_lumi = "";  
   const char* name_eff   = "MtdTrigEff";
-  const char* title_eff  = "MTD trigger efficiency"
-  */
+  const char* title_eff  = "MTD trigger efficiency";
 
-  const char* name_lumi = "";
-  const char* title_lumi = "";
-  const char* name_eff  = "DtofEff75";
-  const char* title_eff = "#Deltatof cut efficiency";
+  // const char* name_lumi = "";
+  // const char* title_lumi = "";
+  // const char* name_eff  = "DtofEff46";
+  // const char* title_eff = "#Deltatof cut efficiency";
 
   const char *sys_name[3] = {"", "_Sysup", "_Sysdown"};
   TH1F *hEffVsPt[nPart][3];
@@ -269,9 +203,13 @@ void anaSys(const int saveHisto)
 
   // single muon efficiency
   TFile *fMuonEff = TFile::Open(Form("Rootfiles/%s.JpsiMuon.root",run_type),"read");
-  hMuonPtEff[0] = (TF1*)fMuonEff->Get("DataJpsiMuon_DtofEff75_BinCount_FitFunc");
-  hMuonPtEff[1] = (TF1*)fMuonEff->Get("DataJpsiMuon_DtofEff75_BinCount_FitFunc_Sysup");
-  hMuonPtEff[2] = (TF1*)fMuonEff->Get("DataJpsiMuon_DtofEff75_BinCount_FitFunc_Sysdown");
+  // hMuonPtEff[0] = (TF1*)fMuonEff->Get("DataJpsiMuon_DtofEff46_BinCount_FitFunc");
+  // hMuonPtEff[1] = (TF1*)fMuonEff->Get("DataJpsiMuon_DtofEff46_BinCount_FitFunc_Sysup");
+  // hMuonPtEff[2] = (TF1*)fMuonEff->Get("DataJpsiMuon_DtofEff46_BinCount_FitFunc_Sysdown");
+
+  hMuonPtEff[0] = (TF1*)fMuonEff->Get("DataJpsiMuon_MtdTrigEff_BinCount_FitFunc");
+  hMuonPtEff[1] = (TF1*)fMuonEff->Get("DataJpsiMuon_MtdTrigEff_BinCount_FitFunc_Sysup");
+  hMuonPtEff[2] = (TF1*)fMuonEff->Get("DataJpsiMuon_MtdTrigEff_BinCount_FitFunc_Sysdown");
 
   // save histogram
   TFile *fout = 0x0;
