@@ -21,18 +21,18 @@
 using namespace std;
 
 #define YEAR 2014
-#if (YEAR==2014)
-const char *run_type = "Run14_AuAu200";
-#elif (YEAR==2013)
+
+#if (YEAR==2013)
 char *run_type = "Run13_pp500";
+#elif (YEAR==2014)
+const char *run_type = "Run14_AuAu200";
 #elif (YEAR==2015)
-char *run_type = "Run15_pp200";
+const char *run_type = "Run15_pp200";
 #endif
 
-const double pt1_cut = 1.5;
-const double pt2_cut = 1.2;
+const char* part_name = "Ups1S";
+const char* part_title = "Y(1S)";
 const double pi = 3.1415926;
-const double jpsiMass = 3.096;
 const double muMass = 0.1057;
 const int year = YEAR;
 const int    gMtdNChannels             = 24;   // Total number of MTD channels per module. One cell has two channels.
@@ -49,6 +49,7 @@ void makeHisto(const int savePlot = 0, const int saveHisto = 0);
 void anaSys(const int savePlot = 0);
 void singleMuon(const int savePlot = 0);
 void toyMC(const double mass, const int nExpr, const int debug,
+	   const double pt1_cut, const double pt2_cut,
 	   const int inputType, TH1F *hJpsiTruth, TH1F *hRespEff[150], 
 	   TH1F *hInputJpsiPt, TH1F *hMtdJpsiPt, TH1F *hAccJpsiPt,
 	   TH1F *hMuonMap = 0x0, TH1F *hMuonMapTriggered = 0x0);
@@ -100,23 +101,104 @@ void ana_MtdRespEff()
 //================================================
 void makeHisto(const int savePlot, const int saveHisto)
 {
-  const int nPtBins = 20;
-  const double minPt = 0;
-  const double maxPt = 10;
+  double pt1_cut = 0, pt2_cut = 0;
+  double jpsiMass = 0;
+  int nPtBins = 0;
+  double xPtBins[10] = {0};
+  TString name = part_name;
+
+  TH1F *hMcJpsiPt;
+  if(name.Contains("Jpsi"))
+    {
+      jpsiMass = 3.096;
+      pt1_cut = 1.5;
+      pt2_cut = 1.3;
+
+      if(year==2013)
+	{
+	  nPtBins = 6;
+	  double xbins_tmp[7] = {0,1,2,3,4,6,8};
+	  std::copy(std::begin(xbins_tmp), std::end(xbins_tmp), std::begin(xPtBins));
+	}
+      if(year==2014)
+	{
+	  nPtBins = 9;
+	  double xbins_tmp[10] = {0,1,2,3,4,5,6,8,10,15};
+	  std::copy(std::begin(xbins_tmp), std::end(xbins_tmp), std::begin(xPtBins));
+	}
+      if(year==2015)
+	{
+	  nPtBins = 8;
+	  double xbins_tmp[9] = {0,1,2,3,4,5,6,8,10};
+	  std::copy(std::begin(xbins_tmp), std::end(xbins_tmp), std::begin(xPtBins));
+	}
+      else if(year==2016)
+	{
+	  nPtBins = 6;
+	  double xbins_tmp[7] = {0,1,2,3,4,6,10};
+	  std::copy(std::begin(xbins_tmp), std::end(xbins_tmp), std::begin(xPtBins));
+	}
+
+      if(year==2013)
+	{
+	  TFile *fWeight = TFile::Open("Rootfiles/GlobalFit.Jpsi.pp500.root","read");
+	  TF1 *funcJpsi = (TF1*)fWeight->Get("ffpt");
+	  funcJpsi->SetNpx(1000);
+	  hMcJpsiPt = (TH1F*)funcJpsi->GetHistogram();
+	  hMcJpsiPt->SetName(Form("GlobalFit_Jpsi_Yield_cent00100"));
+	  for(int bin=1; bin<=hMcJpsiPt->GetNbinsX(); bin++)
+	    {
+	      hMcJpsiPt->SetBinContent(bin,hMcJpsiPt->GetBinCenter(bin)*hMcJpsiPt->GetBinContent(bin));
+	    }
+	}
+      else if(year==2014 || year==2016)
+	{
+	  TFile *fWeight = TFile::Open("Rootfiles/Published/Jpsi_Raa_200/Publication.Jpsi.200GeV.root","read");
+	  hMcJpsiPt = (TH1F*)fWeight->Get(Form("TBW_Jpsi_Yield_cent0060"));
+	}
+      else if(year==2015)
+	{
+	  TFile *fWeight = TFile::Open("Rootfiles/JpsiSpectraShapepp200.root","read");
+	  TF1 *funcJpsi = (TF1*)fWeight->Get("TsallisPowerLawFitJpsipp200");
+	  funcJpsi->SetNpx(1000);
+	  hMcJpsiPt = (TH1F*)funcJpsi->GetHistogram();
+	  hMcJpsiPt->SetName(Form("Jpsi_Yield_cent00100"));
+	  for(int bin=1; bin<=hMcJpsiPt->GetNbinsX(); bin++)
+	    {
+	      hMcJpsiPt->SetBinContent(bin,hMcJpsiPt->GetBinCenter(bin)*hMcJpsiPt->GetBinContent(bin));
+	    }
+	}
+    }
+  else if(name.Contains("Ups"))
+    {
+      jpsiMass = 9.46;
+      pt1_cut = 4;
+      pt2_cut = 1.5;
+      nPtBins = 3;
+      double xbins_tmp[4] = {0,2,4,10};
+      std::copy(std::begin(xbins_tmp), std::end(xbins_tmp), std::begin(xPtBins));
+
+      TF1 *fBol = new TF1("Boltzmann","x/(exp(x/[0]+1))",0,10);
+      fBol->SetParameter(0,1.11);
+      fBol->SetNpx(1000);
+      hMcJpsiPt = (TH1F*)fBol->GetHistogram();
+
+    }
+  hMcJpsiPt->Scale(1./hMcJpsiPt->Integral()); // turn into PDF
 
   // general QA plots
-  hInputJpsiEta = new TH1F(Form("hInputJpsiEta"),"#eta distribution of input J/psi;#eta",100,-1.5,1.5);
-  hInputJpsiPhi = new TH1F(Form("hInputJpsiPhi"),"#varphi distribution of input J/psi;#varphi",100,-1*pi,pi);
-  hInputJpsiY = new TH1F(Form("hInputJpsiY"),"y distribution of input J/psi;y",100,-1.5,1.5);
+  hInputJpsiEta = new TH1F(Form("%s_hInputEta",part_name),Form("#eta distribution of input %s;#eta",part_title),100,-1.5,1.5);
+  hInputJpsiPhi = new TH1F(Form("%s_hInputPhi",part_name),Form("#varphi distribution of input %s;#varphi",part_title),100,-1*pi,pi);
+  hInputJpsiY = new TH1F(Form("%s_hInputY",part_name),Form("y distribution of input %s;y",part_title),100,-1.5,1.5);
   hAccMuonMap = new TH1F(Form("hAccMuonMap"),"Acceptance muon multiplicity;(backleg-1)*5+module",150,0.5,150.5);
   hJpsiPtVsOpenAngle= new TH2F(Form("hJpsiPtVsOpenAngle"),"Opening angle between muon daughters vs J/psi p_{T};p_{T} (GeV/c);#Delta#varphi",20,0,10,100,0,pi);
 
-  const int mode = 0; // 0 - module wise; 1 - module average; 2 - stat. err.; 3 - systematics
+  const int mode = 3; // 0 - module wise; 1 - module average; 2 - stat. err.; 3 - systematics
   const char *mode_name[4] = {"PerMod","AvgMod","StatPerMod","SysPerMod"};
   printf("[i] Process mode %d: %s\n",mode,mode_name[mode]);
-  TH1F *hInputJpsiPt = new TH1F(Form("hInputJpsiPt_%s",mode_name[mode]),"p_{T} distribution of input J/psi;p_{T} (GeV/c)",nPtBins,minPt,maxPt);
-  TH1F *hMtdJpsiPt = new TH1F(Form("hMtdJpsiPt_%s",mode_name[mode]),"p_{T} distribution of J/psi in MTD acceptance;p_{T} (GeV/c)",nPtBins,minPt,maxPt);
-  TH1F *hAccJpsiPt = new TH1F(Form("hAccJpsiPt_%s",mode_name[mode]),"p_{T} distribution of J/psi with MTD responsce;p_{T} (GeV/c)",nPtBins,minPt,maxPt);
+  TH1F *hInputJpsiPt = new TH1F(Form("%s_hInputPt_%s",part_name,mode_name[mode]),Form("p_{T} distribution of input %s;p_{T} (GeV/c)",part_title),nPtBins,xPtBins);
+  TH1F *hMtdJpsiPt = new TH1F(Form("%s_hMtdPt_%s",part_name,mode_name[mode]),Form("p_{T} distribution of %s in MTD acceptance;p_{T} (GeV/c)",part_title),nPtBins,xPtBins);
+  TH1F *hAccJpsiPt = new TH1F(Form("%s_hAccPt_%s",part_name,mode_name[mode]),Form("p_{T} distribution of %s with MTD responsce;p_{T} (GeV/c)",part_title),nPtBins,xPtBins);
   TH1F *hMuonMap = new TH1F(Form("hMuonMap_%s",mode_name[mode]),"Muon multiplicity;(backleg-1)*5+module",150,0.5,150.5);
   TH1F *hMuonMapTriggered = new TH1F(Form("hMuonMapTriggered_%s",mode_name[mode]),"Muon multiplicity (Dimuon trigger);(backleg-1)*5+module",150,0.5,150.5);
   hInputJpsiPt->Sumw2();
@@ -125,27 +207,6 @@ void makeHisto(const int savePlot, const int saveHisto)
   hMuonMap->Sumw2();
   hMuonMapTriggered->Sumw2();
   TH1F *hJpsiEff = 0x0;
-
-  // input spectrum shape
-  TH1F *hMcJpsiPt;
-  if(year==2013)
-    {
-      TFile *fWeight = TFile::Open("Rootfiles/GlobalFit.Jpsi.pp500.root","read");
-      TF1 *funcJpsi = (TF1*)fWeight->Get("ffpt");
-      funcJpsi->SetNpx(1000);
-      hMcJpsiPt = (TH1F*)funcJpsi->GetHistogram();
-      hMcJpsiPt->SetName(Form("GlobalFit_Jpsi_Yield_cent00100"));
-      for(int bin=1; bin<=hMcJpsiPt->GetNbinsX(); bin++)
-	{
-	  hMcJpsiPt->SetBinContent(bin,hMcJpsiPt->GetBinCenter(bin)*hMcJpsiPt->GetBinContent(bin));
-	}
-    }
-  if(year==2014)
-    {
-      TFile *fWeight = TFile::Open("Rootfiles/Published/Jpsi_Raa_200/Publication.Jpsi.200GeV.root","read");
-      hMcJpsiPt = (TH1F*)fWeight->Get(Form("TBW_Jpsi_Yield_cent0060"));
-    } 
-
 
   // module wise response efficiency
   TH1F *hRespEff[150];
@@ -176,7 +237,7 @@ void makeHisto(const int savePlot, const int saveHisto)
   
   if(mode==0)
     {
-      toyMC(jpsiMass, 1e8, 0, 0, hMcJpsiPt, hRespEff, hInputJpsiPt, hMtdJpsiPt, hAccJpsiPt, hMuonMap, hMuonMapTriggered);
+      toyMC(jpsiMass, 1e7, 0, 0, pt1_cut, pt2_cut, hMcJpsiPt, hRespEff, hInputJpsiPt, hMtdJpsiPt, hAccJpsiPt, hMuonMap, hMuonMapTriggered);
       
       hInputJpsiPt->SetMarkerStyle(20);
       TCanvas *c = new TCanvas("Input_Jpsi","Input_Jpsi",1100,700);
@@ -185,17 +246,17 @@ void makeHisto(const int savePlot, const int saveHisto)
       c->cd(2); hInputJpsiEta->Draw();
       c->cd(3); hInputJpsiPhi->SetMinimum(0); hInputJpsiPhi->Draw();
       c->cd(4); hInputJpsiY->Draw();
-      if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/ToyMC_%s_InputJpsi.pdf",run_type,mode_name[mode]));
+      if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/ToyMC_%s_%s_Input.pdf",run_type,mode_name[mode],part_name));
 
       c = draw2D(hJpsiPtVsOpenAngle);
-      if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/ToyMC_%s_OpenAngleVsJpsiPt.pdf",run_type,mode_name[mode]));
+      if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/ToyMC_%s_%s_OpenAngleVsPt.pdf",run_type,mode_name[mode],part_name));
 
-      hJpsiEff = (TH1F*)hAccJpsiPt->Clone(Form("JpsiEffVsPt_%s",mode_name[mode]));
+      hJpsiEff = (TH1F*)hAccJpsiPt->Clone(Form("%sEffVsPt_%s",part_name,mode_name[mode]));
       hJpsiEff->Divide(hMtdJpsiPt);
       hJpsiEff->SetMarkerStyle(21);
       hJpsiEff->GetYaxis()->SetRangeUser(0,1);
-      c = draw1D(hJpsiEff,"MTD response efficiency for J/psi");
-      if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/ToyMC_%s_JpsiEffVsPt.pdf",run_type,mode_name[mode]));
+      c = draw1D(hJpsiEff,Form("MTD response efficiency for %s",part_title));
+      if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/ToyMC_%s_%sEffVsPt.pdf",run_type,mode_name[mode],part_name));
 
       TH1F *hMuonEff = (TH1F*)hMuonMap->Clone("hMuonEff");
       hMuonEff->Sumw2();
@@ -224,10 +285,7 @@ void makeHisto(const int savePlot, const int saveHisto)
 
       if(saveHisto)
 	{
-	  TFile *fout = 0x0;
-	  if(year==2013) fout = TFile::Open("Rootfiles/Run13.pp500.MtdResponseEff.root","update");
-	  if(year==2014) fout = TFile::Open("Rootfiles/Run14.AuAu200.MtdResponseEff.root","update");
-	  if(year==2015) fout = TFile::Open("Rootfiles/Run15.pp200.MtdResponseEff.root","update");
+	  TFile *fout = TFile::Open(Form("Rootfiles/%s.MtdResponseEff.root",run_type),"update");
 	  for(int i=0; i<150; i++)
 	    {
 	      hRespEff[i]->Write("",TObject::kOverwrite);
@@ -239,8 +297,7 @@ void makeHisto(const int savePlot, const int saveHisto)
     }
   else if(mode==1)
     {
-      TFile *fin = 0x0;
-      if(year==2013) fin = TFile::Open("Rootfiles/Run13.pp500.MtdResponseEff.root","read");
+      TFile *fin = TFile::Open(Form("Rootfiles/%s.MtdResponseEff.root",run_type),"read");
 
       TH1F *hWeight = (TH1F*)fin->Get("hMuonMapTriggered_PerMod");
       TH1F *hRespEffAvg[150];
@@ -271,7 +328,7 @@ void makeHisto(const int savePlot, const int saveHisto)
 	      hRespEffAvg[i]->SetBinError(bin,1e-10);
 	    }
 	}
-      toyMC(jpsiMass, 1e6, 0, 0, hMcJpsiPt, hRespEffAvg, hInputJpsiPt, hMtdJpsiPt, hAccJpsiPt, hMuonMap, hMuonMapTriggered);
+      toyMC(jpsiMass, 1e5, 0, 0, pt1_cut, pt2_cut, hMcJpsiPt, hRespEffAvg, hInputJpsiPt, hMtdJpsiPt, hAccJpsiPt, hMuonMap, hMuonMapTriggered);
 
       TCanvas *c = draw1D(hRespEffAvg[0]);
 
@@ -304,7 +361,7 @@ void makeHisto(const int savePlot, const int saveHisto)
       // statistical errors of scale factors
       
       gStyle->SetOptFit(0);
-      TH1F *hSysMtdRespEff = new TH1F(Form("hSysMtdRespEff_1"),"Systematic uncertainty of MTD response efficiency;J/#Psi p_{T} (GeV/c)",nPtBins,minPt,maxPt);
+      TH1F *hSysMtdRespEff = new TH1F(Form("%s_hMtdRespEffSys1",part_name),"Systematic uncertainty of MTD response efficiency;p_{T} (GeV/c)",nPtBins,xPtBins);
 
       // statistical error on efficiency
       TH1F *hSclFacErr = (TH1F*)fRespEff->Get("hSclFacErr");
@@ -319,9 +376,9 @@ void makeHisto(const int savePlot, const int saveHisto)
       TCanvas *c = 0x0;
       for(int ih = 0; ih<nIter; ih++)
 	{
-	  hSysInputJpsi[ih] = new TH1F(Form("hSysInputJpsi_%d",ih),"p_{T} distribution of input J/psi;p_{T} (GeV/c)",nPtBins,minPt,maxPt);
-	  hSysMtdJpsiPt[ih] = new TH1F(Form("hSysMtdJpsiPt_%d",ih),"p_{T} distribution of J/psi in MTD;p_{T} (GeV/c)",nPtBins,minPt,maxPt);
-	  hSysAccJpsiPt[ih] = new TH1F(Form("hSysAccJpsiPt_%d",ih),"p_{T} distribution of triggered J/psi;p_{T} (GeV/c)",nPtBins,minPt,maxPt);
+	  hSysInputJpsi[ih] = new TH1F(Form("%s_hSysInput_%d",part_name,ih),Form("p_{T} distribution of input %s;p_{T} (GeV/c)",part_title),nPtBins,xPtBins);
+	  hSysMtdJpsiPt[ih] = new TH1F(Form("%s_hSysMtdPt_%d",part_name,ih),Form("p_{T} distribution of %s in MTD;p_{T} (GeV/c)",part_title),nPtBins,xPtBins);
+	  hSysAccJpsiPt[ih] = new TH1F(Form("%s_hSysAccPt_%d",part_name,ih),Form("p_{T} distribution of triggered %s;p_{T} (GeV/c)",part_title),nPtBins,xPtBins);
 	  for(int i=0; i<150; i++)
 	    {
 	      hRespEffTmp[i] = 0x0;
@@ -331,18 +388,17 @@ void makeHisto(const int savePlot, const int saveHisto)
 	      hRespEffTmp[i]->Scale(scale);
 	      //printf("BL = %d, Mod = %d, err = %4.4f, scale = %4.4f\n",i/5+1,i%5+1,error,scale);
 	    }
-	  toyMC(jpsiMass, 1e7, 0, 1, hMcJpsiPt, hRespEffTmp, hSysInputJpsi[ih], hSysMtdJpsiPt[ih], hSysAccJpsiPt[ih]);
-	  hSysJpsiPtEff[ih] = (TH1F*)hSysAccJpsiPt[ih]->Clone(Form("hSysJpsiPtEff_%d",ih));
-	  hSysJpsiPtEff[ih]->Sumw2();
+	  toyMC(jpsiMass, 5e6, 0, 1, pt1_cut, pt2_cut, hMcJpsiPt, hRespEffTmp, hSysInputJpsi[ih], hSysMtdJpsiPt[ih], hSysAccJpsiPt[ih]);
+	  hSysJpsiPtEff[ih] = (TH1F*)hSysAccJpsiPt[ih]->Clone(Form("%s_hSysPtEff_%d",part_name,ih));
 	  hSysJpsiPtEff[ih]->Divide(hSysMtdJpsiPt[ih]);
 	  hSysJpsiPtEff[ih]->SetMarkerStyle(20);
 	  hSysJpsiPtEff[ih]->SetMarkerColor(ih+1);
 	  hSysJpsiPtEff[ih]->SetLineColor(ih+1);
 	  hSysJpsiPtEff[ih]->GetYaxis()->SetRangeUser(0,1);
-	  if(ih==0) c = draw1D(hSysJpsiPtEff[ih],"MTD response efficiency for J/psi");
+	  if(ih==0) c = draw1D(hSysJpsiPtEff[ih],Form("MTD response efficiency for %s",part_title));
 	  else hSysJpsiPtEff[ih]->Draw("sames");
 	}
-      if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/ToyMC_JpsiEff_Iterations1.pdf",run_type));
+      if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/ToyMC_%sEff_Iterations1.pdf",run_type,part_name));
 
       TH1F *hJpsiEffPtBin[nPtBins];
       TF1 *funcJpsiEffPtBin[nPtBins];
@@ -373,17 +429,14 @@ void makeHisto(const int savePlot, const int saveHisto)
 	  TPaveText *t1 = GetTitleText(Form("%1.1f < p_{T} < %1.1f GeV/c",i*0.5,i*0.5+0.5),0.07);
 	  t1->Draw();
 	}
-      if(savePlot) cFit->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/ToyMC_FitProfile.pdf",run_type));
+      if(savePlot) cFit->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/ToyMC_%s_FitProfile.pdf",run_type,part_name));
       hSysMtdRespEff->SetMarkerStyle(21);
       c = draw1D(hSysMtdRespEff);
-      if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/SysMtdRespEff1.pdf",run_type));
+      if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/%s_MtdRespEffSys1.pdf",run_type,part_name));
 
       if(saveHisto)
 	{
-	  TFile *fout = 0x0;
-	  if(year==2013) fout = TFile::Open("Rootfiles/Run13.pp500.MtdResponseEff.root","update");
-	  if(year==2014) fout = TFile::Open("Rootfiles/Run14.AuAu200.MtdResponseEff.root","update");
-	  if(year==2015) fout = TFile::Open("Rootfiles/Run15.pp200.MtdResponseEff.root","update");
+	  TFile *fout = TFile::Open(Form("Rootfiles/%s.MtdResponseEff.root",run_type),"update");
 	  hSysMtdRespEff->Write("",TObject::kOverwrite);
 	}
     }
@@ -394,7 +447,7 @@ void makeHisto(const int savePlot, const int saveHisto)
       // 	  printf("[e] this mode does not apply to 2013!\n");
       // 	  return;
       // 	}
-      TH1F *hSysMtdRespEff = new TH1F(Form("hSysMtdRespEff_2"),"Systematic uncertainty of MTD response efficiency;J/#Psi p_{T} (GeV/c)",nPtBins,minPt,maxPt);
+      TH1F *hSysMtdRespEff = new TH1F(Form("%s_hMtdRespEffSys2",part_name),"Systematic uncertainty of MTD response efficiency;p_{T} (GeV/c)",nPtBins,xPtBins);
 
       // average the difference for bottom backleg
       TH1F *hRatio = new TH1F("hRatio","",1000,0,20);
@@ -447,9 +500,9 @@ void makeHisto(const int savePlot, const int saveHisto)
       TH1F *hRespEffTmp[150];
       for(int ih = 0; ih<nIter; ih++)
 	{
-	  hSysInputJpsi[ih] = new TH1F(Form("hSysInputJpsi_%d",ih),"p_{T} distribution of input J/psi;p_{T} (GeV/c)",nPtBins,minPt,maxPt);
-	  hSysMtdJpsiPt[ih] = new TH1F(Form("hSysMtdJpsiPt_%d",ih),"p_{T} distribution of J/psi in MTD;p_{T} (GeV/c)",nPtBins,minPt,maxPt);
-	  hSysAccJpsiPt[ih] = new TH1F(Form("hSysAccJpsiPt_%d",ih),"p_{T} distribution of triggered J/psi;p_{T} (GeV/c)",nPtBins,minPt,maxPt);
+	  hSysInputJpsi[ih] = new TH1F(Form("%s_hSysInput_%d",part_name,ih),Form("p_{T} distribution of input %s;p_{T} (GeV/c)",part_title),nPtBins,xPtBins);
+	  hSysMtdJpsiPt[ih] = new TH1F(Form("%s_hSysMtdPt_%d",part_name,ih),Form("p_{T} distribution of %s in MTD;p_{T} (GeV/c)",part_title),nPtBins,xPtBins);
+	  hSysAccJpsiPt[ih] = new TH1F(Form("%s_hSysAccPt_%d",part_name,ih),Form("p_{T} distribution of triggered %s;p_{T} (GeV/c)",part_title),nPtBins,xPtBins);
 	  
 	  for(int i=0; i<150; i++)
 	    {
@@ -474,8 +527,8 @@ void makeHisto(const int savePlot, const int saveHisto)
 		}
 	      //printf("BL = %d, Mod = %d, err = %4.4f, scale = %4.4f\n",i/5+1,i%5+1,error,scale);
 	    }
-	  toyMC(jpsiMass, 1e9, 0, 1, hMcJpsiPt, hRespEffTmp, hSysInputJpsi[ih], hSysMtdJpsiPt[ih], hSysAccJpsiPt[ih]);
-	  hSysJpsiPtEff[ih] = (TH1F*)hSysAccJpsiPt[ih]->Clone(Form("hSysJpsiPtEff_%d",ih));
+	  toyMC(jpsiMass, 1e7, 0, 1, pt1_cut, pt2_cut, hMcJpsiPt, hRespEffTmp, hSysInputJpsi[ih], hSysMtdJpsiPt[ih], hSysAccJpsiPt[ih]);
+	  hSysJpsiPtEff[ih] = (TH1F*)hSysAccJpsiPt[ih]->Clone(Form("%s_hSysPtEff_%d",part_name,ih));
 	  hSysJpsiPtEff[ih]->Sumw2();
 	  hSysJpsiPtEff[ih]->Divide(hSysMtdJpsiPt[ih]);
 	  hSysJpsiPtEff[ih]->SetMarkerStyle(20);
@@ -483,9 +536,9 @@ void makeHisto(const int savePlot, const int saveHisto)
 	  hSysJpsiPtEff[ih]->SetLineColor(ih+1);
 	  hSysJpsiPtEff[ih]->GetYaxis()->SetRangeUser(0,1);
 	}
-      TCanvas *c = draw1D(hSysJpsiPtEff[0],"MTD response efficiency for J/psi");
+      TCanvas *c = draw1D(hSysJpsiPtEff[0],Form("MTD response efficiency for %s",part_title));
       hSysJpsiPtEff[1]->Draw("sames");
-      if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/ToyMC_JpsiEff_Iterations2.pdf",run_type));
+      if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/ToyMC_%sEff_Iterations2.pdf",run_type,part_name));
 
       TH1F *hCheck = (TH1F*)hSysJpsiPtEff[1]->Clone("hCheck");
       hCheck->Divide(hSysJpsiPtEff[0]);
@@ -493,7 +546,7 @@ void makeHisto(const int savePlot, const int saveHisto)
       c = draw1D(hCheck);
       TF1 *funcCheck = new TF1("funcCheck","pol0",0,10);
       hCheck->Fit(funcCheck,"IR");
-      if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/ToyMC_JpsiEffRatio.pdf",run_type));
+      if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/ToyMC_%sEffRatio.pdf",run_type,part_name));
       
       for(int i=0; i<nPtBins; i++)
 	{
@@ -507,14 +560,11 @@ void makeHisto(const int savePlot, const int saveHisto)
 
       hSysMtdRespEff->SetMarkerStyle(21);
       c = draw1D(hSysMtdRespEff);
-      if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/SysMtdRespEff2.pdf",run_type));
+      if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/%s_MtdRespEffSys2.pdf",run_type,part_name));
 
       if(saveHisto)
 	{
-	  TFile *fout = 0x0;
-	  if(year==2013) fout = TFile::Open("Rootfiles/Run13.pp500.MtdResponseEff.root","update");
-	  if(year==2014) fout = TFile::Open("Rootfiles/Run14.AuAu200.MtdResponseEff.root","update");
-	  if(year==2015) fout = TFile::Open("Rootfiles/Run15.pp200.MtdResponseEff.root","update");
+	  TFile *fout = TFile::Open(Form("Rootfiles/%s.MtdResponseEff.root",run_type),"update");
 	  hSysMtdRespEff->Write("",TObject::kOverwrite);
 	}
     }
@@ -523,16 +573,19 @@ void makeHisto(const int savePlot, const int saveHisto)
 
 
 //================================================
-void toyMC(const double mass, const int nExpr, const int debug, const int inputType, TH1F *hJpsiTruth,  TH1F *hRespEff[150],
+void toyMC(const double mass, const int nExpr, const int debug, const double pt1_cut, const double pt2_cut, 
+	   const int inputType, TH1F *hJpsiTruth,  TH1F *hRespEff[150],
 	   TH1F *hInputJpsiPt, TH1F *hMtdJpsiPt, TH1F *hAccJpsiPt,
 	   TH1F *hMuonMap, TH1F *hMuonMapTriggered)
 {
+  hInputJpsiPt->Sumw2();
+  hMtdJpsiPt->Sumw2();
+  hAccJpsiPt->Sumw2();
   for(int i=0; i<nExpr; i++)
     {
       if(debug) printf("+++ Event %d +++\n",i+1);
-      double mc_pt;
-      if(inputType==0)  mc_pt =  hJpsiTruth->GetRandom();
-      if(inputType==1)  mc_pt = myRandom->Uniform(0,12);
+      double mc_pt = myRandom->Uniform(0,12);
+      double weight = hJpsiTruth->GetBinContent(hJpsiTruth->FindFixBin(mc_pt));
       double mc_phi = myRandom->Uniform(-1*pi, pi);
       double mc_y   = myRandom->Uniform(-0.5, 0.5);
       double mc_px = mc_pt * TMath::Cos(mc_phi);
@@ -540,10 +593,10 @@ void toyMC(const double mass, const int nExpr, const int debug, const int inputT
       double mc_pz = sqrt(mc_pt*mc_pt+mass*mass) * TMath::SinH(mc_y);
       TLorentzVector parent;
       parent.SetXYZM(mc_px,mc_py,mc_pz,mass);
-      hInputJpsiPt->Fill(parent.Pt());
-      hInputJpsiEta->Fill(parent.Eta());
-      hInputJpsiPhi->Fill(parent.Phi());
-      hInputJpsiY->Fill(parent.Rapidity());
+      hInputJpsiPt->Fill(parent.Pt(), weight);
+      hInputJpsiEta->Fill(parent.Eta(), weight);
+      hInputJpsiPhi->Fill(parent.Phi(), weight);
+      hInputJpsiY->Fill(parent.Rapidity(), weight);
       if(debug) printf("parent:     pt = %3.2f eta = %3.2f phi = %3.2f\n",parent.Pt(),parent.Eta(),parent.Phi());
 
       TLorentzVector daughter1 = twoBodyDecay(parent,muMass);
@@ -592,7 +645,7 @@ void toyMC(const double mass, const int nExpr, const int debug, const int inputT
 
       double dphi = rotatePhi(daughter2.Phi()-daughter1.Phi());
       if(dphi>pi) dphi = 2*pi - dphi;
-      hJpsiPtVsOpenAngle->Fill(parent.Pt(), dphi);
+      hJpsiPtVsOpenAngle->Fill(parent.Pt(), dphi, weight);
 
       double leadpt = pt1 > pt2 ? pt1 : pt2;
 
@@ -611,10 +664,10 @@ void toyMC(const double mass, const int nExpr, const int debug, const int inputT
 	}
 
       if(!isMtd1 || !isMtd2) continue;
-      hMtdJpsiPt->Fill(parent.Pt());
+      hMtdJpsiPt->Fill(parent.Pt(), weight);
       
       if(!isAcc1 || !isAcc2) continue;
-      hAccJpsiPt->Fill(parent.Pt());
+      hAccJpsiPt->Fill(parent.Pt(), weight);
 
       if(hMuonMapTriggered)
 	{

@@ -21,13 +21,15 @@
 #include <cmath>
 using namespace std;
 
-#define YEAR 2014
+#define YEAR 2016
 #if (YEAR==2014)
 const char *run_type = "Run14_AuAu200";
 #elif (YEAR==2013)
 char *run_type = "Run13_pp500";
 #elif (YEAR==2015)
 char *run_type = "Run15_pp200";
+#elif (YEAR==2016)
+char *run_type = "Run16_AuAu200";
 #endif
 
 const double pi = 3.1415926;
@@ -193,7 +195,7 @@ void plotSys(const int savePlot, const int saveHisto)
 void anaSys(const int saveHisto)
 {
   // track momentum resolution
-  TFile *fRes = TFile::Open(Form("Rootfiles/%s.TrkEff.root",run_type),"read");
+  TFile *fRes = TFile::Open(Form("Rootfiles/Run14_AuAu200.TrkEff.root"),"read");
   hTpcTrackRes = (TH2F*)fRes->Get("PrimTrkRes_vs_TruePt_cent0080");
   int nHistos = hTpcTrackRes->GetNbinsX();
   for(int i=0; i<nHistos; i++)
@@ -210,6 +212,7 @@ void anaSys(const int saveHisto)
   hMuonPtEff[0] = (TF1*)fMuonEff->Get("DataJpsiMuon_MtdTrigEff_BinCount_FitFunc");
   hMuonPtEff[1] = (TF1*)fMuonEff->Get("DataJpsiMuon_MtdTrigEff_BinCount_FitFunc_Sysup");
   hMuonPtEff[2] = (TF1*)fMuonEff->Get("DataJpsiMuon_MtdTrigEff_BinCount_FitFunc_Sysdown");
+
 
   // save histogram
   TFile *fout = 0x0;
@@ -244,14 +247,23 @@ void makeHisto(TString name, const double mass, const int nExpr)
   if(name.Contains("Jpsi"))
     {
       TFile *fin = 0x0;
-      if(year==2014)
+      if(year==2014 || year==2016)
 	{
 	  fin = TFile::Open("Rootfiles/models.root","read");
 	  hMcJpsiPt = (TH1F*)fin->Get(Form("TBW_JpsiYield_AuAu200_cent0060"));
 	}
-      nbins_tmp = 9;
-      double xbins_tmp_tmp[10] = {0,1,2,3,4,5,6,8,10,15};
-      std::copy(std::begin(xbins_tmp_tmp), std::end(xbins_tmp_tmp), std::begin(xbins_tmp));
+      if(year==2014)
+	{
+	  nbins_tmp = 9;
+	  double xbins_tmp_tmp[10] = {0,1,2,3,4,5,6,8,10,15};
+	  std::copy(std::begin(xbins_tmp_tmp), std::end(xbins_tmp_tmp), std::begin(xbins_tmp));
+	}
+      else if(year==2016)
+	{
+	  nbins_tmp = 6;
+	  double xbins_tmp_tmp[7] = {0,1,2,3,4,6,10};
+	  std::copy(std::begin(xbins_tmp_tmp), std::end(xbins_tmp_tmp), std::begin(xbins_tmp));
+	}
     }
   else
     {

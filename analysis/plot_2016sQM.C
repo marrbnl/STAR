@@ -8,14 +8,14 @@ const double ppInelasticErr = 3.; // mb
 void plot_2016sQM()
 {  
   //rawSignal();
-  xsec();
+  //xsec();
   //ppRef();
-  //nPart();
+  nPart();
   //compareQM2015();
 }
 
 //================================================
-void nPart(const bool savePlot = 0, const bool saveHisto = 1)
+void nPart(const bool savePlot = 1, const bool saveHisto = 0)
 {
   gStyle->SetOptStat(0);
   const double ncoll[6] = {64, 124, 224, 377, 609, 964}; 
@@ -44,7 +44,7 @@ void nPart(const bool savePlot = 0, const bool saveHisto = 1)
   gPubNpartErr->SetLineColor(kGreen-10);
 
   // template
-  TH1F *hRaaVsNpart = new TH1F("hRaaVsNpart",";N_{part};J/#psi R_{AA}",100,-1,370);
+  TH1F *hRaaVsNpart = new TH1F("hRaaVsNpart",";N_{part};J/#psi R_{AA}",100,-100,370);
   ScaleHistoTitle(hRaaVsNpart,28,1,24,28,1,24,63);
   hRaaVsNpart->GetYaxis()->SetRangeUser(0,2);
   hRaaVsNpart->GetYaxis()->CenterTitle();
@@ -139,13 +139,11 @@ void nPart(const bool savePlot = 0, const bool saveHisto = 1)
   //==============================================
   TCanvas *c0 = new TCanvas("Jpsi_raa_vs_npart_dimuon","Jpsi_raa_vs_npart_dimuon",800,600);
   SetPadMargin(gPad,0.13,0.13,0.05,0.02);
+  hRaaVsNpart->GetXaxis()->SetRangeUser(0,370);
   hRaaVsNpart->DrawCopy();
   gPubNpartErr->Draw("e3sames");
-  TLine *line = GetLine(hRaaVsNpart->GetXaxis()->GetXmin(),1,hRaaVsNpart->GetXaxis()->GetXmax(),1,1);
+  TLine *line = GetLine(0,1,370,1,1);
   line->Draw();
-  //pubRaaVsNpart->Draw("samesPEZ");
-  //pubRaaVsNpartSys->Draw("samesE5");
-  //star_pub->Draw("fsame");
   for(int i=0; i<2; i++)
     {
       raaVsNpart[i]->Draw("samesPEZ");
@@ -180,22 +178,97 @@ void nPart(const bool savePlot = 0, const bool saveHisto = 1)
       c0->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/Run14_JpsiRaaNpart_dimuon.eps",run_type,run_cfg_name.Data()));
     }
 
+  // Add RpA data points
+  TGraphErrors *rpaVsNpart[2];
+  TGraphErrors *rpaVsNpartSys[2];
+  double rpa[2] = {0.689, 0.814};
+  double rpa_err[2] = {0.0285, 0.0687};
+  double rpa_sys[2] = {0.0745, 0.0880};
+  double rpa_gsys[2] = {0.1269, 0.1431};
+  double rpa_npart[2] = {5.7, 5.7};
+  double rpa_npart_err[2] = {0.3, 0.3};
+  for(int i=0; i<2; i++)
+    {
+      rpaVsNpart[i] = new TGraphErrors(1);
+      rpaVsNpart[i]->SetPoint(0, rpa_npart[i], rpa[i]);
+      rpaVsNpart[i]->SetPointError(0, rpa_npart_err[i], rpa_err[i]);
+      rpaVsNpartSys[i] = new TGraphErrors(1);
+      rpaVsNpartSys[i]->SetPoint(0, rpa_npart[i], rpa[i]);
+      rpaVsNpartSys[i]->SetPointError(0, 5, rpa_sys[i]);
 
-  /*
-  hRaa[1]->Divide(hRaa[0]);
-  hRaa[1]->GetYaxis()->SetRangeUser(0.8,2);
-  draw1D(hRaa[1]);
-  */
+      rpaVsNpart[i]->SetMarkerStyle(24);
+      rpaVsNpart[i]->SetMarkerColor(npart_color[i+1]);
+      rpaVsNpart[i]->SetMarkerSize(1.5);
+      rpaVsNpart[i]->SetLineColor(npart_color[i+1]);
+      rpaVsNpartSys[i]->SetMarkerColor(npart_color[i+1]);
+      rpaVsNpartSys[i]->SetMarkerSize(0);
+      rpaVsNpartSys[i]->SetLineColor(npart_color[i+1]);
+      rpaVsNpartSys[i]->SetLineWidth(1);
+      rpaVsNpartSys[i]->SetFillStyle(0);
+    }
 
+
+  TCanvas *c00 = new TCanvas("Jpsi_rpaa_vs_npart_dimuon","Jpsi_rpaa_vs_npart_dimuon",800,600);
+  SetPadMargin(gPad,0.13,0.13,0.05,0.02);
+  hRaaVsNpart->GetXaxis()->SetRangeUser(-10,375);
+  hRaaVsNpart->SetYTitle("J/#psi R_{pA,AA}");
+  hRaaVsNpart->DrawCopy();
+  hRaaVsNpart->SetYTitle("J/#psi R_{AA}");
+  gPubNpartErr->Draw("e3sames");
+  TBox *npart_global_sys = new TBox(rpa_npart[0]-5,1-0.054,rpa_npart[0]+5,1+0.054);
+  npart_global_sys->SetLineColor(kGreen-10);
+  npart_global_sys->SetFillColor(kGreen-10);
+  npart_global_sys->SetFillStyle(1001);
+  npart_global_sys->Draw("samef");
+  line = GetLine(-10,1,375,1,1);
+  line->Draw();
+  for(int i=0; i<2; i++)
+    {
+      raaVsNpart[i]->Draw("samesPEZ");
+      raaVsNpartSys[i]->Draw("samesE5");
+      globalSys[i]->Draw("fsame");
+
+      rpaVsNpart[i]->Draw("samesPEZ");
+      rpaVsNpartSys[i]->Draw("samesE5");
+
+      TBox *rpa_global_sys = new TBox(360+i*6.8,1-rpa_gsys[i],365+i*6.8,1+rpa_gsys[i]);
+      rpa_global_sys->SetLineColor(npart_color[i+1]);
+      rpa_global_sys->SetFillColor(npart_color[i+1]);
+      rpa_global_sys->SetLineWidth(2.);
+      rpa_global_sys->SetFillStyle(0);
+      rpa_global_sys->Draw("samef");
+    }
+
+  TLegend *leg00 = new TLegend(0.16,0.7,0.4,0.95);
+  leg00->SetBorderSize(0);
+  leg00->SetFillColor(0);
+  leg00->SetTextFont(62);
+  leg00->SetTextSize(0.04);
+  leg00->SetHeader("STAR J/#psi#rightarrow#mu^{+}#mu^{-}, |y| < 0.5");
+  leg00->AddEntry(raaVsNpart[0],"Au+Au @ 200 GeV, p_{T} > 0 GeV/c","P");
+  leg00->AddEntry(raaVsNpart[1],"Au+Au @ 200 GeV, p_{T} > 5 GeV/c","P");
+  leg00->AddEntry(rpaVsNpart[0],"p+Au @ 200 GeV, p_{T} > 1 GeV/c","P");
+  leg00->AddEntry(rpaVsNpart[1],"p+Au @ 200 GeV, p_{T} > 5 GeV/c","P");
+  leg00->Draw();
+  leg_ncoll->Draw();
+  star->Draw();
+  if(savePlot)
+    {
+      c00->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/Run14_JpsiRaaRpaNpart_dimuon.pdf",run_type,run_cfg_name.Data()));
+      c00->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/Run14_JpsiRaaRpaNpart_dimuon.png",run_type,run_cfg_name.Data()));
+      c00->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/Run14_JpsiRaaRpaNpart_dimuon.jpg",run_type,run_cfg_name.Data()));
+      c00->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/Run14_JpsiRaaRpaNpart_dimuon.eps",run_type,run_cfg_name.Data()));
+    }
 
   //==============================================
   // Raa vs Npart dimuon vs dielectron
   //==============================================
   TCanvas *c1 = new TCanvas("Jpsi_raa_vs_npart","Jpsi_raa_vs_npart",800,600);
   SetPadMargin(gPad,0.13,0.13,0.05,0.02);
+  hRaaVsNpart->GetXaxis()->SetRangeUser(0,370);
   hRaaVsNpart->DrawCopy();
   gPubNpartErr->Draw("e3sames");
-  TLine *line = GetLine(hRaaVsNpart->GetXaxis()->GetXmin(),1,hRaaVsNpart->GetXaxis()->GetXmax(),1,1);
+  TLine *line = GetLine(0,1,370,1,1);
   line->Draw();
   pubRaaVsNpart->Draw("samesPEZ");
   pubRaaVsNpartSys->Draw("samesE5");
@@ -303,7 +376,7 @@ void nPart(const bool savePlot = 0, const bool saveHisto = 1)
   leg_ncoll->Draw();
   star->Draw();
   
-  TPaveText *tmodel = GetPaveText(0.21,0.38,0.64,0.74);
+  TPaveText *tmodel = GetPaveText(0.213,0.35,0.64,0.74);
   tmodel->SetTextFont(62);
   tmodel->SetTextAlign(11);
   tmodel->SetTextSize(0.035);
@@ -396,7 +469,7 @@ void nPart(const bool savePlot = 0, const bool saveHisto = 1)
   hRaaVsNpart->SetMaximum(2.0);
   hRaaVsNpart->DrawCopy();
   gPubNpartErr->Draw("e3sames");
-  TLine *line = GetLine(hRaaVsNpart->GetXaxis()->GetXmin(),1,hRaaVsNpart->GetXaxis()->GetXmax(),1,1);
+  //TLine *line = GetLine(hRaaVsNpart->GetXaxis()->GetXmin(),1,hRaaVsNpart->GetXaxis()->GetXmax(),1,1);
   line->Draw();
 
   grAliceLowPtSys->Draw("samesE5");
@@ -431,15 +504,15 @@ void nPart(const bool savePlot = 0, const bool saveHisto = 1)
   leg_ncoll_2->Draw();
   star->Draw();
 
-  TLegend *leg3 = new TLegend(0.16,0.75,0.4,0.95);
+  TLegend *leg3 = new TLegend(0.16,0.76,0.4,0.96);
   leg3->SetBorderSize(0);
   leg3->SetFillColor(0);
   leg3->SetTextFont(62);
   leg3->SetTextSize(0.035);
   leg3->SetHeader("p_{T,J/#psi} > 0 GeV/c");
-  leg3->AddEntry(grStarLowPt,"STAR: Au+Au, #sqrt{s_{NN}} = 200 GeV |y| < 0.5","P");
-  leg3->AddEntry(grPhenixLowPt,"PHENIX: Au+Au, #sqrt{s_{NN}} = 200 GeV |y| < 0.35","P");
-  leg3->AddEntry(grAliceLowPt,"ALICE: Pb+Pb, #sqrt{s_{NN}} = 2.76 TeV |y| < 0.8","P");
+  leg3->AddEntry(grStarLowPt,"STAR: Au+Au, #sqrt{s_{NN}} = 200 GeV, J/#psi#rightarrow#mu^{+}#mu^{-}, |y| < 0.5","P");
+  leg3->AddEntry(grPhenixLowPt,"PHENIX: Au+Au, #sqrt{s_{NN}} = 200 GeV, J/#psi#rightarrowe^{+}e^{-}, |y| < 0.35","P");
+  leg3->AddEntry(grAliceLowPt,"ALICE: Pb+Pb, #sqrt{s_{NN}} = 2.76 TeV, J/#psi#rightarrowe^{+}e^{-}, |y| < 0.8","P");
   leg3->Draw();
 
   if(savePlot)
@@ -591,7 +664,6 @@ void nPart(const bool savePlot = 0, const bool saveHisto = 1)
       c31->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/Run14_JpsiRaaNpartLowPt_vs_LHC_vs_model.jpg",run_type,run_cfg_name.Data()));
       c31->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/Run14_JpsiRaaNpartLowPt_vs_LHC_vs_model.eps",run_type,run_cfg_name.Data()));
     }
-  return;
 
   //==============================================
   // STAR vs LHC high pT
@@ -631,10 +703,10 @@ void nPart(const bool savePlot = 0, const bool saveHisto = 1)
 
   TCanvas *c4 = new TCanvas("Jpsi_raa_vs_npart_HighPt","Jpsi_raa_vs_npart_HighPt",800,600);
   SetPadMargin(gPad,0.13,0.13,0.05,0.02);
-  hRaaVsNpart->SetMaximum(1.8);
+  hRaaVsNpart->SetMaximum(2);
   hRaaVsNpart->DrawCopy();
   gPubNpartErr->Draw("e3sames");
-  TLine *line = GetLine(hRaaVsNpart->GetXaxis()->GetXmin(),1,hRaaVsNpart->GetXaxis()->GetXmax(),1,1);
+  //TLine *line = GetLine(hRaaVsNpart->GetXaxis()->GetXmin(),1,hRaaVsNpart->GetXaxis()->GetXmax(),1,1);
   line->Draw();
 
   cmsRaaVsNpartSys->Draw("samesE5");
@@ -647,18 +719,20 @@ void nPart(const bool savePlot = 0, const bool saveHisto = 1)
 
   leg_ncoll_2->Draw();
 
-  TLegend *leg4 = new TLegend(0.16,0.85,0.4,0.95);
+  TLegend *leg4 = new TLegend(0.16,0.8,0.4,0.96);
   leg4->SetBorderSize(0);
   leg4->SetFillColor(0);
   leg4->SetTextFont(62);
   leg4->SetTextSize(0.035);
+  leg4->SetHeader("J/#psi#rightarrow#mu^{+}#mu^{-}");
   leg4->AddEntry(grStarHighPt,"STAR: Au+Au, #sqrt{s_{NN}} = 200 GeV, |y| < 0.5, p_{T} > 5 GeV/c","P");
   leg4->AddEntry(cmsRaaVsNpart,"CMS: Pb+Pb, #sqrt{s_{NN}} = 2.76 TeV, |y| < 2.4, p_{T} > 6.5 GeV/c","P");
   leg4->Draw();
-  TPaveText *star_2 = GetPaveText(0.75,0.85,0.68,0.73,26,23);
-  star_2->AddText("STAR preliminary");
-  star_2->SetTextColor(2);
-  star_2->Draw();
+  // TPaveText *star_2 = GetPaveText(0.75,0.85,0.68,0.73,26,23);
+  // star_2->AddText("STAR preliminary");
+  // star_2->SetTextColor(2);
+  // star_2->Draw();
+  star->Draw();
   if(savePlot)
     {
       c4->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/Run14_JpsiRaaNpartHighPt_vs_LHC.pdf",run_type,run_cfg_name.Data()));
@@ -714,9 +788,9 @@ void nPart(const bool savePlot = 0, const bool saveHisto = 1)
   bStarHighPt->Draw("fsame");
 
   leg4->Draw();
-  star_2->Draw();
+  star->Draw();
 
-  TPaveText *tmodel2 = GetPaveText(0.21,0.38,0.73,0.83);
+  TPaveText *tmodel2 = GetPaveText(0.213,0.35,0.68,0.78);
   tmodel2->SetTextFont(62);
   tmodel2->SetTextAlign(11);
   tmodel2->SetTextSize(0.035);
@@ -724,7 +798,7 @@ void nPart(const bool savePlot = 0, const bool saveHisto = 1)
   tmodel2->AddText("TAMU Model");
   tmodel2->Draw();
 
-  TLegend *leg41 = new TLegend(0.42,0.74,0.6,0.84);
+  TLegend *leg41 = new TLegend(0.42,0.69,0.6,0.79);
   leg41->SetBorderSize(0);
   leg41->SetFillColor(0);
   leg41->SetTextFont(62);
@@ -732,7 +806,7 @@ void nPart(const bool savePlot = 0, const bool saveHisto = 1)
   leg41->AddEntry(gTsuRaaVsNpartRHIC[1],"RHIC","L");
   leg41->AddEntry(gTamuRaaVsNpartRHIC[1],"RHIC","L");
   leg41->Draw();
-  TLegend *leg42 = new TLegend(0.55,0.74,0.7,0.84);
+  TLegend *leg42 = new TLegend(0.55,0.69,0.7,0.79);
   leg42->SetBorderSize(0);
   leg42->SetFillColor(0);
   leg42->SetTextFont(62);
@@ -2000,7 +2074,7 @@ void rawSignal(const bool savePlot = 1)
 
       TPaveText *star = GetPaveText(0.18,0.4,0.85,0.92,0.045);
       star->AddText("STAR preliminary");
-      star->SetTextFont(20);
+      star->SetTextFont(32);
       star->SetTextColor(2);
       star->Draw();
 
@@ -2035,7 +2109,7 @@ void rawSignal(const bool savePlot = 1)
       t1->AddText(Form("|y_{J/#psi}|<0.5, p_{T,J/#psi} > %d GeV/c",ptCuts[i]));
       if(i==0) t1->AddText(Form("N_{J/#psi} = %2.0f, S/B = 1:%2.1f",nJpsi, (nAll-nJpsi)/nJpsi));
       if(i==1) t1->AddText(Form("N_{J/#psi} = %2.0f, S/B = 1:%2.1f",nJpsiFit, (nAll-nJpsiFit)/nJpsiFit));
-      t1->AddText(Form("Significance = %2.1f#sigma",nJpsi/error));
+      t1->AddText(Form("Significance = %2.1f",nJpsi/error));
       t1->Draw();
       cout << funcSignal->GetParameter(0)/funcSignal->GetParError(0) << endl;
 

@@ -206,7 +206,7 @@ void MtdVpdTacDiff(const Int_t savePlot = 0, const int saveHisto = 0)
     {
       TH1F *hFit = (TH1F*)hMuon[bin-1]->Clone(Form("Fit_%s",hMuon[bin-1]->GetName()));
       if(year==2014) funcFitData[bin-1] = new TF1(Form("DataJpsiMuon_MtdVpdTacDiffFit_bin%d",bin),"gaus",789,maximum);
-      if(year==2016) funcFitData[bin-1] = new TF1(Form("DataJpsiMuon_MtdVpdTacDiffFit_bin%d",bin),"gaus",952,maximum);
+      if(year==2016) funcFitData[bin-1] = new TF1(Form("DataJpsiMuon_MtdVpdTacDiffFit_bin%d",bin),"gaus",951,maximum);
       funcFitData[bin-1]->SetParameter(2,5);
       ptr[bin-1] = hFit->Fit(funcFitData[bin-1],"IR0QS");
       hFitDataMean->SetBinContent(bin,funcFitData[bin-1]->GetParameter(1));
@@ -679,7 +679,7 @@ void MtdVpdTacDiff(const Int_t savePlot = 0, const int saveHisto = 0)
 		  sys_all += y_sys * y_sys;
 		}
 	      sys_all = sqrt(sys_all);
-	      double new_y = y + sys_all*(i*2-1);
+	      double new_y = funcEff[k]->Eval(x) + sys_all*(i*2-1);
 	      gDataEffSys[k][i]->SetPoint(ipoint,x,new_y);
 	      gDataEffSys[k][i]->SetPointError(ipoint,exl[ipoint],exh[ipoint],eyl[ipoint]/y*new_y,eyh[ipoint]/y*new_y);	 
 	    }
@@ -708,14 +708,14 @@ void MtdVpdTacDiff(const Int_t savePlot = 0, const int saveHisto = 0)
       if(savePlot) cTrigEff[k]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/DataJpsiMuon_MtdTrigEffWithSys_%s.pdf",run_type,name_lumi[k]));
     }
 
+  TF1 *funcEffFinal = new TF1("DataJpsiMuon_MtdTrigEff_BinCount_FitFunc","[0]-exp(-1*[1]*(x-[2]))",1.2,7);
+  TF1 *funcEffSysFinal[2];
+  for(int i=0; i<2; i++) funcEffSysFinal[i] = new TF1(Form("DataJpsiMuon_MtdTrigEff_BinCount_FitFunc_Sys%s",sys_name[i]),"[0]-exp(-1*[1]*(x-[2]))",1.2,7);
   if(year==2014)
     {
       // Get the average efficiency
       // Statistical weight: prod_mid/high (73.4%); prod_/low (26.6%)
       const double weight[nLumi] = {0.734, 0.266};
-      TF1 *funcEffFinal = new TF1("DataJpsiMuon_MtdTrigEff_BinCount_FitFunc","[0]-exp(-1*[1]*(x-[2]))",1.2,7);
-      TF1 *funcEffSysFinal[2];
-      for(int i=0; i<2; i++) funcEffSysFinal[i] = new TF1(Form("DataJpsiMuon_MtdTrigEff_BinCount_FitFunc_Sys%s",sys_name[i]),"[0]-exp(-1*[1]*(x-[2]))",1.2,7);
       TCanvas *c = new TCanvas("Avg_Eff","Avg_eff",800,600);
       c->Divide(2,2);
       TF1 *hprodlow = 0x0, *hprodhigh = 0x0, *havg = 0x0;
@@ -769,6 +769,12 @@ void MtdVpdTacDiff(const Int_t savePlot = 0, const int saveHisto = 0)
       leg->Draw();
       if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/DataJpsiMuon_AvgMtdTrigEffWithSys.pdf",run_type));
     }
+  else if(year==2016)
+    {
+      funcEffFinal->SetParameters(funcEff[0]->GetParameters());
+      funcEffSysFinal[0]->SetParameters(funcEffSys[0][0]->GetParameters());
+      funcEffSysFinal[1]->SetParameters(funcEffSys[0][1]->GetParameters());
+    }
 
   //==============================================
   // save histograms
@@ -796,14 +802,11 @@ void MtdVpdTacDiff(const Int_t savePlot = 0, const int saveHisto = 0)
 	      funcEffSys[k][t]->Write("",TObject::kOverwrite);
 	    }
 	}
-      
-      if(year==2014)
+
+      funcEffFinal->Write("",TObject::kOverwrite);
+      for(int t=0; t<2; t++)
 	{
-	  funcEffFinal->Write("",TObject::kOverwrite);
-	  for(int t=0; t<2; t++)
-	    {
-	      funcEffSysFinal[t]->Write("",TObject::kOverwrite);
-	    }
+	  funcEffSysFinal[t]->Write("",TObject::kOverwrite);
 	}
     }
 
@@ -1402,7 +1405,8 @@ void DeltaTof(const Int_t savePlot = 0, const int saveHisto = 0)
 
       funcFitData[bin-1] = new TF1(Form("DataJpsiMuon_Dtof_bin%d_Fit",bin),CrystalBall,-3,3,5);
       funcFitData[bin-1]->SetParameters(-1.5, -0.05, 0.2, 50, hFit->GetMaximum());
-      //funcFitData[bin-1] = new TF1(Form("func_%d_%d",i,bin),"gaus",-3,3);
+      // funcFitData[bin-1] = new TF1(Form("func_%d_%d",i,bin),"gaus",-3,0.5);
+      // funcFitData[bin-1]->SetParameters(hFit->GetMaximum(),-1,0.2);
       ptr[bin-1] = hFit->Fit(funcFitData[bin-1],"IR0QS");
       ptr[bin-1]->SetName(Form("DataJpsiMuon_Dtof_bin%d_FitResult",bin));
 
@@ -1470,7 +1474,7 @@ void DeltaTof(const Int_t savePlot = 0, const int saveHisto = 0)
   const int nRndm = 1e3;
   for(int bin=1; bin<=nbins; bin++)
     {
-      if(hMatch->GetBinContent(bin)<1) continue;
+      if(hMatch->GetBinContent(bin)<0.98) continue;
       TH1F *hRndmDis = new TH1F(Form("RndmDis_Bin%d",bin),"",50,0.8,1.2);
       double all, all_err, acc, acc_err;
       int all_low_bin = hMuonFineBin[bin-1]->FindFixBin(minimum+1e-4);
@@ -1517,7 +1521,7 @@ void DeltaTof(const Int_t savePlot = 0, const int saveHisto = 0)
       gCountDataEff->SetPoint(ipoint,mean_pt[ipoint],y);
       gCountDataEff->SetPointEXhigh(ipoint,mean_pt_err[ipoint]);
       gCountDataEff->SetPointEXlow(ipoint,mean_pt_err[ipoint]);	 
-      if(hMatch->GetBinContent(ipoint+1)>1)
+      if(hMatch->GetBinContent(ipoint+1)>0.98)
 	{
 	  gCountDataEff->SetPoint(ipoint,mean_pt[ipoint],hMatch->GetBinContent(ipoint+1));
 	  gCountDataEff->SetPointEYhigh(ipoint, hMatch->GetBinError(ipoint+1));
@@ -1552,6 +1556,8 @@ void DeltaTof(const Int_t savePlot = 0, const int saveHisto = 0)
    // trigger efficiency
   TH1F *hplot = new TH1F("hplot","",100,0,10);
   hplot->GetYaxis()->SetRangeUser(0.6,1.05);
+  if(year==2016)
+    hplot->GetYaxis()->SetRangeUser(0.5,1.16);
   hplot->GetXaxis()->SetRangeUser(1.2,7);
   hplot->SetTitle(";p_{T,#mu} (GeV/c);Efficiency");
   TCanvas *cEff = new TCanvas("DtofEff_Comp","DtofEff_Comp",800,600);
@@ -1564,9 +1570,23 @@ void DeltaTof(const Int_t savePlot = 0, const int saveHisto = 0)
   gFitDataEff->Draw("PZsames");
   gCountDataEff->SetMarkerStyle(21);
   gCountDataEff->SetMarkerSize(1.3);
-  gCountDataEff->Draw("PZsames");
+  TGraphAsymmErrors *gplot = (TGraphAsymmErrors*)gCountDataEff->Clone(Form("plot_%s",gCountDataEff->GetName()));
+  gplot->Draw("PZsames");
+  if(year==2016)
+    {
+      // for the lowest pT bin, use the efficiency from fitting method
+      // gFitDataEff->GetPoint(0,x,y);
+      // gCountDataEff->SetPoint(0,x,y);
+      // gCountDataEff->SetPointError(0, gFitDataEff->GetErrorXlow(0), gFitDataEff->GetErrorXhigh(0), 
+      // 				   gFitDataEff->GetErrorYlow(0), gFitDataEff->GetErrorYhigh(0));
+      // gCountDataEff->SetMarkerStyle(25);
+      // gCountDataEff->SetMarkerSize(1.3);
+      // gCountDataEff->Draw("PZsames");
+    }
+
   TGraphAsymmErrors *gfit = (TGraphAsymmErrors*)gCountDataEff->Clone(Form("Fit_%s",gCountDataEff->GetName()));
   TF1 *funcEff = new TF1(Form("%s_FitFunc",gCountDataEff->GetName()),"[0]-exp(-1*[1]*(x-[2]))",1.2,7);
+  if(year==2016) funcEff->SetRange(1.5,7);
   gfit->Fit(funcEff,"R0");
   funcEff->SetLineColor(2);
   funcEff->Draw("sames");
@@ -1579,12 +1599,11 @@ void DeltaTof(const Int_t savePlot = 0, const int saveHisto = 0)
   leg->SetTextSize(0.04);
   leg->SetHeader(run_type);
   leg->AddEntry(gFitDataEff,Form("Data: fitting"),"p");
-  leg->AddEntry(gCountDataEff,Form("Data: bin counting"),"p");
+  leg->AddEntry(gplot,Form("Data: bin counting"),"p");
   leg->AddEntry(funcEff,"Fit to bin counting","L");
   leg->Draw();
   if(savePlot) cEff->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/DataJpsiMuon_DtofEff%1.0f_FitVsCount.pdf",run_type,dtof_cut_max*100));
 
- return;
   //==============================================
   // systematic uncertainty
   //==============================================
@@ -1642,6 +1661,7 @@ void DeltaTof(const Int_t savePlot = 0, const int saveHisto = 0)
   for(int j = 0; j < nexpr; j++)
     {
       TF1 *funcTmp = new TF1(Form("FitFunc_%s",gEffRndm[j]->GetName()),"[0]-exp(-1*[1]*(x-[2]))",1,7);
+      if(year==2016) funcTmp->SetRange(1.5,7);
       funcTmp->SetParLimits(0,0,1);
       funcTmp->SetParLimits(1,0,5);
       funcTmp->SetParLimits(2,0,1);
@@ -1713,6 +1733,7 @@ void DeltaTof(const Int_t savePlot = 0, const int saveHisto = 0)
       gLimits[t]->Draw("samesP");
 
       funcLimits[t] = new TF1(Form("%s_Sys1_%s",gCountDataEff->GetName(),limit_name[t]),"[0]-exp(-1*[1]*(x-[2]))",1,8);
+      if(year==2016) funcLimits[t]->SetRange(1.5,7);
       funcLimits[t]->SetParameters(0.95,2,0.2);
       gLimits[t]->Fit(funcLimits[t],"R0Q");
       funcLimits[t]->SetLineColor(gLimits[t]->GetMarkerColor());
@@ -1793,7 +1814,7 @@ void DeltaTof(const Int_t savePlot = 0, const int saveHisto = 0)
 	      sys_all += y_sys * y_sys;
 	    }
 	  sys_all = sqrt(sys_all);
-	  double new_y = y+sys_all*(i*2-1);
+	  double new_y = funcEff->Eval(x)+sys_all*(i*2-1);
 	  gDataEffSys[i]->SetPoint(ipoint,x,new_y);
 	  gDataEffSys[i]->SetPointError(ipoint,exl[ipoint],exh[ipoint],eyl[ipoint]/y*new_y,eyh[ipoint]/y*new_y);	 
 	}
@@ -1801,6 +1822,7 @@ void DeltaTof(const Int_t savePlot = 0, const int saveHisto = 0)
       c = drawGraph(gDataEffSys[i]);
       gPad->SetGridy();
       funcEffSys[i] = new TF1(Form("%s_FitFunc_Sys%s",gCountDataEff->GetName(),sys_name[i]),"[0]-exp(-1*[1]*(x-[2]))",1.2,7);
+      if(year==2016) funcEffSys[i]->SetRange(1.5,7);
       funcEffSys[i]->SetParLimits(0, 0, 1);
       funcEffSys[i]->SetParameter(1, 3.8);
       funcEffSys[i]->SetParameter(2, 0.85);

@@ -317,6 +317,7 @@ void xsec_Run14(const bool savePlot = 0, const bool saveHisto = 0)
   // =============================================
   //
   //
+  return;
 
   // =============================================
   // MTD acceptance loss

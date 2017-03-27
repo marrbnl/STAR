@@ -40,8 +40,67 @@ void ana_PIDcuts()
 
   //makeData();
   //makeEmbed();
-  dataVsEmbed();
+  //dataVsEmbed();
   //DyDzCut();
+  Run16nSigmaPiEff();
+}
+
+
+//================================================
+void Run16nSigmaPiEff(const bool savePlot = 1, const bool saveHisto = 0)
+{
+  gStyle->SetOptFit(1);
+  gStyle->SetStatY(0.9);                
+  gStyle->SetStatX(0.9);  
+  gStyle->SetStatW(0.2);                
+  gStyle->SetStatH(0.2);
+
+  const int nbins = 6;
+  const double xbins[nbins+1] = {1.3, 1.5, 2.0, 2.5, 3.0, 5, 10};
+  TF1* funcSigma = new TF1("func_MuonSigma","pol0",1.3,10);
+  funcSigma->SetParameter(0, 0.9985);
+  funcSigma->SetParError(0, 0.02662);
+  TF1* funcMean[2];
+  funcMean[0] = new TF1("func_MuonMean","[0]+[1]*exp([2]/x)",1.3,10);
+  funcMean[0]->SetParameters(-4.841, 5.1, 0.07498);
+  double errors[3] = {41.72, 41.65, 0.5859};
+  funcMean[0]->SetParErrors(errors);
+  funcMean[1] = new TF1("func_MuonMean_sys","pol0",1.3,10);
+  funcMean[1]->SetParameter(0, 0.4309);
+  funcMean[1]->SetParError(0, 0.03729);
+  TH1F *hEff[2];
+  TF1 *funcEff[2];
+  for(int i=0; i<1; i++)
+    {
+      hEff[i] = new TH1F(Form("hEff_%d",i),Form("hEff_%d",i),nbins,xbins);
+      for(int bin=1; bin<=nbins; bin++)
+	{
+	  double pt = hEff[i]->GetBinCenter(bin);
+	  TF1* functmp = new TF1(Form("functmp_%d_%d",i,bin),"gaus",-5,5);
+	  functmp->SetParameters(1, funcMean[i]->Eval(pt), funcSigma->Eval(pt));
+	  double eff = functmp->Integral(-1,3)/functmp->Integral(-5,5);
+	  hEff[i]->SetBinContent(bin, eff);
+	  hEff[i]->SetBinError(bin, 3e-3);
+	}
+      funcEff[i] = new TF1(Form("funcEff_%d",i),"[0]+[1]*exp([2]/x)",1.3,10);
+      funcEff[i]->SetParameters(0.4588, 0.4374, 0.1118);
+      hEff[i]->Fit(funcEff[i], "R0Q");
+      hEff[i]->GetYaxis()->SetRangeUser(0.8,1.0);
+      hEff[i]->SetMarkerStyle(21);
+    }
+  TCanvas *c = draw1D(hEff[0],"Run16_AuAu200: efficiency of -1 < n#sigma_{#pi} <3 cut for single muons;p_{T} (GeV/c)");
+  funcEff[0]->SetLineColor(2);
+  funcEff[0]->SetLineStyle(2);
+  funcEff[0]->Draw("sames");
+  TLegend *leg = new TLegend(0.45,0.25,0.7,0.4);
+  leg->SetBorderSize(0);
+  leg->SetFillColor(0);
+  leg->SetTextSize(0.04);
+  leg->AddEntry(hEff[0],"Efficiency via fitting","P");
+  leg->AddEntry(funcEff[0],"Fit to efficiency","L");
+  leg->Draw();
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/Run16_AuAu200/ana_PIDcuts/DataJpsiMuon_nSigmaPiEff.pdf"));
+  
 }
 
 //================================================

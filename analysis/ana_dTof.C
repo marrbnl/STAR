@@ -5,18 +5,14 @@ TFile *f = 0x0;
 void ana_Dtof()
 {
   gStyle->SetOptStat(0);
-
-  if(year==2014)
-    {
-      f = TFile::Open("Output/Pico.Run14.AuAu200.JpsiMuon.root","read");
-    }
   
   scanDtofCut();
 }
 
 //================================================
-void scanDtofCut(const int savePlot = 1)
+void scanDtofCut(const int savePlot = 0)
 {
+  f = TFile::Open("Output/Pico.Run14.AuAu200.JpsiMuon.root","read");
   const int nbins = nPtBins -1;
   double xbins[nbins+1];
   for(int i=0; i<nbins; i++)
