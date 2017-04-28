@@ -4,8 +4,8 @@ void forTeChuan()
   gStyle->SetOptStat(0);
   gStyle->SetOptFit(0);
 
-  //theory();
-  pp500();
+  theory();
+  //pp500();
 }
 
 //================================================
