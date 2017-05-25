@@ -858,8 +858,9 @@ void Lumi2014(const int savePlot = 0, const int saveHisto = 1)
 
 
 //================================================
-void Lumi2015(const int savePlot = 1, const int saveHisto = 0)
+void Lumi2015(const int savePlot = 0, const int saveHisto = 0)
 {
+  const char *run_type = "Run15_pAu200";
   const char *trigName = "VPDMBnovtx";
   f = TFile::Open(Form("./output/%s.MB.root",run_type),"read");
   cout << f->GetName() << endl;

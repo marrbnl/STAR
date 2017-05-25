@@ -15,7 +15,7 @@ void plot_2016sQM()
 }
 
 //================================================
-void nPart(const bool savePlot = 1, const bool saveHisto = 0)
+void nPart(const bool savePlot = 0, const bool saveHisto = 0)
 {
   gStyle->SetOptStat(0);
   const double ncoll[6] = {64, 124, 224, 377, 609, 964}; 
@@ -112,7 +112,7 @@ void nPart(const bool savePlot = 1, const bool saveHisto = 0)
 	  raaVsNpartSys[i]->SetPointError(ipoint,5,raa_sys);
 	  hRaa[i]->SetBinContent(ipoint+1, raa);
 	  hRaa[i]->SetBinError(ipoint+1, raa_err);
-	  cout << auau_yield << "  " << pp_yield << "  " << raa << "  " << raa_sys << endl;
+	  cout << auau_yield << "  " << pp_yield << "  " << raa << "  " << raa_err << "  " << raa_sys << endl;
 	}
 
       raaVsNpart[i]->SetMarkerStyle(29);
@@ -132,6 +132,7 @@ void nPart(const bool savePlot = 1, const bool saveHisto = 0)
       globalSys[i]->SetFillColor(npart_color[i+1]);
       globalSys[i]->SetLineWidth(2.);
       globalSys[i]->SetFillStyle(1001);
+      cout << gSys << endl;
     }
 
   //==============================================
@@ -177,6 +178,7 @@ void nPart(const bool savePlot = 1, const bool saveHisto = 0)
       c0->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/Run14_JpsiRaaNpart_dimuon.jpg",run_type,run_cfg_name.Data()));
       c0->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/Run14_JpsiRaaNpart_dimuon.eps",run_type,run_cfg_name.Data()));
     }
+  return;
 
   // Add RpA data points
   TGraphErrors *rpaVsNpart[2];
