@@ -21,7 +21,7 @@
 #include <cmath>
 using namespace std;
 
-#define YEAR 2016
+#define YEAR 2014
 #if (YEAR==2014)
 const char *run_type = "Run14_AuAu200";
 #elif (YEAR==2013)
@@ -41,8 +41,8 @@ const char *part_title[nPart] = {"Jpsi","Y(1S)","Y(2S)","Y(3S)"};
 const double part_mass[nPart] = {3.097, 9.46, 10.023, 10.355};
 
 TRandom3 *myRandom;
-void anaSys(const int saveHisto = 0);
-void plotSys(const int savePlot = 0, const int saveHisto = 0);
+void anaSys(const char* type, const int saveHisto = 0);
+void plotSys(const char* type, const int savePlot = 0, const int saveHisto = 0);
 void makeHisto(TString name, const double mass, const int nExpr = 1e4);
 void toyMC(const double mass, const int nExpr, const int debug = 0);
 
@@ -86,18 +86,22 @@ void sys_ToyMC()
   TDatime *clock = new TDatime();
   myRandom->SetSeed(clock->GetTime());
 
-  //anaSys(1);
-  plotSys(1, 1);
+  const char* type = "MtdTrigEff";
+  //anaSys(type, 1);
+  plotSys(type, 1, 1);
 }
 
 //================================================
-void plotSys(const int savePlot, const int saveHisto)
+void plotSys(const char* type, const int savePlot, const int saveHisto)
 {
-  
-  const char* name_lumi  = "";
-  const char* title_lumi = "";  
-  const char* name_eff   = "MtdTrigEff";
-  const char* title_eff  = "MTD trigger efficiency";
+  char* name_lumi, *title_lumi, *name_eff, *title_eff;
+  if(type=="MtdTrigEff")
+    {
+      name_lumi  = "";
+      title_lumi = "";  
+      name_eff   = "TacDiffEff";
+      title_eff  = "MTD trigger efficiency";
+    }
 
   // const char* name_lumi = "";
   // const char* title_lumi = "";
@@ -112,16 +116,22 @@ void plotSys(const int savePlot, const int saveHisto)
   TH1F *hEffSysVsCent[nPart];  
 
   TFile *fin = 0x0;
-  if(saveHisto) fin = TFile::Open(Form("Rootfiles/%s.JpsiMuon.sys.root",run_type),"update");
-  else          fin = TFile::Open(Form("Rootfiles/%s.JpsiMuon.sys.root",run_type),"read");
+  if(type=="MtdTrigEff")
+    {
+      if(saveHisto) fin = TFile::Open(Form("Rootfiles/%s.Sys.MtdTrigEff.root",run_type),"update");
+      else          fin = TFile::Open(Form("Rootfiles/%s.Sys.MtdTrigEff.root",run_type),"read");
+    }
   for(int i=0; i<nPart; i++)
     {
       for(int s=0; s<3; s++)
 	{
-	  hEffVsPt[i][s] = (TH1F*)fin->Get(Form("%sEffVsPt_%s_BinCount%s_FitFunc%s",part_name[i],name_eff,name_lumi,sys_name[s]));
+	  if(type=="MtdTrigEff")
+	    {
+	      hEffVsPt[i][s] = (TH1F*)fin->Get(Form("%s_%sEffVsPt_%s%s",run_type,part_name[i],name_eff,sys_name[s]));
+	    }
 	}
       int nBins = hEffVsPt[i][0]->GetNbinsX();
-      hEffSysVsPt[i] = (TH1F*)hEffVsPt[i][0]->Clone(Form("%sEffVsPt_%s%s_Sys",part_name[i],name_eff,name_lumi));
+      hEffSysVsPt[i] = (TH1F*)hEffVsPt[i][0]->Clone(Form("%s_%sEffVsPt_Sys_%s",run_type,part_name[i],name_eff));
       hEffSysVsPt[i]->Reset();
       for(int bin=1; bin<=nBins; bin++)
 	{
@@ -134,10 +144,13 @@ void plotSys(const int savePlot, const int saveHisto)
 
       for(int s=0; s<3; s++)
 	{
-	  hEffVsCent[i][s] = (TH1F*)fin->Get(Form("%sEffVsCent_%s_BinCount%s_FitFunc%s",part_name[i],name_eff,name_lumi,sys_name[s]));
+	  if(type=="MtdTrigEff")
+	    {
+	      hEffVsCent[i][s] = (TH1F*)fin->Get(Form("%s_%sEffVsCent_%s%s",run_type,part_name[i],name_eff,sys_name[s]));
+	    }
 	}
       nBins = hEffVsCent[i][0]->GetNbinsX();
-      hEffSysVsCent[i] = (TH1F*)hEffVsCent[i][0]->Clone(Form("%sEffVsCent_%s%s_Sys",part_name[i],name_eff,name_lumi));
+      hEffSysVsCent[i] = (TH1F*)hEffVsCent[i][0]->Clone(Form("%s_%sEffVsCent_Sys_%s",run_type,part_name[i],name_eff));
       hEffSysVsCent[i]->Reset();
       for(int bin=1; bin<=nBins; bin++)
 	{
@@ -152,7 +165,7 @@ void plotSys(const int savePlot, const int saveHisto)
   TCanvas *c1[nPart]; 
   for(int i=0; i<nPart; i++)
     {
-      c1[i]= new TCanvas(Form("%s_%s_SysVsPt%s",part_name[i],name_eff,name_lumi),Form("%s_%s_SysVsPt%s",part_name[i],name_eff,name_lumi),1100,500);
+      c1[i]= new TCanvas(Form("%s_%s_SysVsPt",part_name[i],name_eff),Form("%s_%s_SysVsPt",part_name[i],name_eff),1100,500);
       c1[i]->Divide(2,1);
 
       c1[i]->cd(1);
@@ -162,7 +175,7 @@ void plotSys(const int savePlot, const int saveHisto)
       hEffSysVsPt[i]->GetYaxis()->SetRangeUser(0.9,1.1);
       hEffSysVsPt[i]->SetMarkerStyle(20);
       hEffSysVsPt[i]->Draw();
-      TPaveText *t1 = GetTitleText(Form("%s: uncertainty for %s%s",part_title[i],title_eff,title_lumi),0.05,42);
+      TPaveText *t1 = GetTitleText(Form("%s: uncertainty for %s",part_title[i],title_eff),0.05,42);
       t1->Draw();
 
       c1[i]->cd(2);
@@ -177,7 +190,7 @@ void plotSys(const int savePlot, const int saveHisto)
       hEffSysVsCent[i]->SetMarkerStyle(20);
       hEffSysVsCent[i]->Draw();
       t1->Draw();
-      if(savePlot) c1[i]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/%s_%s_Sys%s.pdf",run_type,part_name[i],name_eff,name_lumi));
+      if(savePlot) c1[i]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_%s/Sys.%s_%s.pdf",run_type,type,part_name[i],name_eff));
     }
 
   if(saveHisto)
@@ -192,7 +205,7 @@ void plotSys(const int savePlot, const int saveHisto)
 }
 
 //================================================
-void anaSys(const int saveHisto)
+void anaSys(const char* type, const int saveHisto)
 {
   // track momentum resolution
   TFile *fRes = TFile::Open(Form("Rootfiles/Run14_AuAu200.TrkEff.root"),"read");
@@ -204,23 +217,19 @@ void anaSys(const int saveHisto)
     }
 
   // single muon efficiency
-  TFile *fMuonEff = TFile::Open(Form("Rootfiles/%s.JpsiMuon.root",run_type),"read");
+  // TFile *fMuonEff = TFile::Open(Form("Rootfiles/%s.JpsiMuon.root",run_type),"read");
   // hMuonPtEff[0] = (TF1*)fMuonEff->Get("DataJpsiMuon_DtofEff46_BinCount_FitFunc");
   // hMuonPtEff[1] = (TF1*)fMuonEff->Get("DataJpsiMuon_DtofEff46_BinCount_FitFunc_Sysup");
   // hMuonPtEff[2] = (TF1*)fMuonEff->Get("DataJpsiMuon_DtofEff46_BinCount_FitFunc_Sysdown");
 
-  hMuonPtEff[0] = (TF1*)fMuonEff->Get("DataJpsiMuon_MtdTrigEff_BinCount_FitFunc");
-  hMuonPtEff[1] = (TF1*)fMuonEff->Get("DataJpsiMuon_MtdTrigEff_BinCount_FitFunc_Sysup");
-  hMuonPtEff[2] = (TF1*)fMuonEff->Get("DataJpsiMuon_MtdTrigEff_BinCount_FitFunc_Sysdown");
-
-
-  // save histogram
-  TFile *fout = 0x0;
-  if(saveHisto)
+  TFile *fdata = 0x0;
+  if(type=="MtdTrigEff")
     {
-      TString fName = fMuonEff->GetName();
-      fName.ReplaceAll(".root",".sys.root");
-      fout = TFile::Open(fName.Data(),"update");
+      if(saveHisto) fdata = TFile::Open(Form("Rootfiles/%s.Sys.MtdTrigEff.root",run_type),"update");
+      else          fdata = TFile::Open(Form("Rootfiles/%s.Sys.MtdTrigEff.root",run_type),"read");
+      hMuonPtEff[0] = (TF1*)fdata->Get(Form("%s_Muon_TacDiffEff",run_type));
+      hMuonPtEff[1] = (TF1*)fdata->Get(Form("%s_Muon_TacDiffEff_Sysup",run_type));
+      hMuonPtEff[2] = (TF1*)fdata->Get(Form("%s_Muon_TacDiffEff_Sysdown",run_type));
     }
 
   for(int i=0; i<4; i++)
@@ -229,7 +238,7 @@ void anaSys(const int saveHisto)
       
       if(saveHisto)
 	{
-	  fout->cd();
+	  fdata->cd();
 	  for(int e=0; e<3; e++)
 	    {
 	      hOutJpsiPt[e]->Write("",TObject::kOverwrite);
@@ -292,7 +301,7 @@ void makeHisto(TString name, const double mass, const int nExpr)
   for(int i=0; i<3; i++)
     {
       hName =  hMuonPtEff[i]->GetName();
-      hName.ReplaceAll("DataJpsiMuon",Form("%sEffVsPt",name.Data()));
+      hName.ReplaceAll("Muon",Form("%sEffVsPt",name.Data()));
       hOutJpsiPt[i] = new TH1F(hName.Data(), "", nbinsPt, xbinsPt);
       hOutJpsiPt[i]->Sumw2();
 

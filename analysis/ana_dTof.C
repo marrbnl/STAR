@@ -6,13 +6,44 @@ void ana_Dtof()
 {
   gStyle->SetOptStat(0);
   
-  scanDtofCut();
+  //scanDtofCut();
+  DtofCutEff();
+}
+
+//================================================
+void DtofCutEff(const int savePlot = 0)
+{
+  const int nbins = 6;
+  const double xbins[nbins+1] = {1.3,1.5,2.0,2.5,3.0,5.0,10.0};
+  const double dtofCut = 0.75;
+
+  f = TFile::Open("Output/Run14_AuAu200.jpsi.root","read");
+  TH2F *hInvMassVsPt[2];
+  hInvMassVsPt[0] = (TH2F*)f->Get("mhTaP_dtof_di_mu_All");
+  hInvMassVsPt[1] = (TH2F*)f->Get("mhTaP_dtof_di_mu_Acc");
+  TH1F *hInvMass[2][nbins];
+  for(int i=0; i<2; i++)
+    {
+      TCanvas *c = new TCanvas(Form("FitInvMass_%d",i), Form("FitInvMass_%d",i), 1100, 700);
+      c->Divide(3,2);
+      for(int j=0; j<nbins; j++)
+	{
+	  int low_bin = hInvMassVsPt[i]->GetXaxis()->FindFixBin(xbins[j]+1e-4);
+	  int up_bin  = hInvMassVsPt[i]->GetXaxis()->FindFixBin(xbins[j+1]-1e-4);
+	  hInvMass[i][j] = (TH1F*)hInvMassVsPt[i]->ProjectionY(Form("hInvMass_bin%d_%d",j+1,i),low_bin, up_bin);
+	  c->cd(j+1);
+	  hInvMass[i][j]->Sumw2();
+	  hInvMass[i][j]->Rebin(3);
+	  hInvMass[i][j]->SetMarkerStyle(24);
+	  hInvMass[i][j]->Draw();
+	}
+    }
 }
 
 //================================================
 void scanDtofCut(const int savePlot = 0)
 {
-  f = TFile::Open("Output/Pico.Run14.AuAu200.JpsiMuon.root","read");
+  f = TFile::Open("Output/Run14_AuAu200.JpsiMuon.root","read");
   const int nbins = nPtBins -1;
   double xbins[nbins+1];
   for(int i=0; i<nbins; i++)

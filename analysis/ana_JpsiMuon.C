@@ -42,7 +42,7 @@ void ana_JpsiMuon()
 }
 
 //================================================
-void MtdVpdTacDiff(const Int_t savePlot = 0, const int saveHisto = 0)
+void MtdVpdTacDiff(const Int_t savePlot = 1, const int saveHisto = 1)
 {
   TList *list = new TList;
   TH1F *htmp = 0x0;
@@ -58,8 +58,8 @@ void MtdVpdTacDiff(const Int_t savePlot = 0, const int saveHisto = 0)
     {
       const double minimum = 760;
       const double maximum = 840;
-      fdata = TFile::Open("./output/Pico.Run14.AuAu200.jpsi.root","read");
-      //fdata = TFile::Open("./output/Pico.Run14.AuAu200.JpsiMuon.dtof0.4.root","read");
+      //fdata = TFile::Open("output/Pico.Run14.AuAu200.jpsi.root","read");
+      fdata = TFile::Open("./output/Run14.AuAu200.JpsiMuon.root","read");
     }
   else if(year==2016)
     {
@@ -434,6 +434,7 @@ void MtdVpdTacDiff(const Int_t savePlot = 0, const int saveHisto = 0)
       legdata[k]->Draw();
       if(savePlot) cTrigEff[k]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/DataJpsiMuon_MtdTrigEff_%s.pdf",run_type,name_lumi[k]));
     }
+  //return;
 
   //==============================================
   // systematic uncertainty
