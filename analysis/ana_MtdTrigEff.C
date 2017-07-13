@@ -14,12 +14,13 @@ void ana_MtdTrigEff()
 
   //getTrigEff();
   //anaTrigEff();
-  sysTrigEff();
+  //sysTrigEff();
  
   //compareTacDiff();
   //lumiDepend();
-  //trigElecEff();
+  trigElecEff();
   //trigUnitMap();
+  //extrapolation();
 }
 
 //================================================
@@ -1607,11 +1608,11 @@ void lumiDepend(const int savePlot = 0)
 }
 
 //================================================
-void trigElecEff(const int savePlot = 1)
+void trigElecEff(const int savePlot = 1, const int saveHisto = 1)
 {
   if(year==2014)
     {
-      f = TFile::Open("output/Run14.AuAu200.MB.TrigElecEff.root","read");
+      f = TFile::Open("output/Run14_AuAu200.MB.TrigElecEff.root","read");
     }
   else
     {
@@ -1669,6 +1670,11 @@ void trigElecEff(const int savePlot = 1)
  
   // Efficiency vs. centrality
   // use dtof < 1 ns cut
+  const int nCentBins       = nCentBins_pt; 
+  const int* centBins_low   = centBins_low_pt;
+  const int* centBins_high  = centBins_high_pt;
+  const char** cent_Name    = cent_Name_pt;
+  const char** cent_Title   = cent_Title_pt;
   TH1F *hMuonPtCent[nCentBins][3];
   TH1F *hMuonEffCent[nCentBins][3];
   for(int i=0; i<nCentBins; i++)
@@ -1771,6 +1777,131 @@ void trigElecEff(const int savePlot = 1)
   func->SetLineStyle(2);
   func->Draw("sames");
   if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdTrigEff/MtdTrigElecEff_Fit.pdf",run_type));
+  
+  if(saveHisto)
+    {
+      TFile *fout = TFile::Open(Form("Rootfiles/%s.MtdTrigEff.root",run_type),"update");
+      hTrigElecEff->Write("",TObject::kOverwrite);
+      func->Write("",TObject::kOverwrite);
+      fout->Close();
+    }
+}
+
+
+//================================================
+void extrapolation(const int savePlot = 0, const int saveHisto = 0)
+{
+  const char *trgSetupName[4] = {"AuAu_200_production_2014","AuAu_200_production_low_2014","AuAu_200_production_mid_2014","AuAu_200_production_high_2014"};
+  TF1 *funcTrigEff[4][nCentBins];
+  TF1 *funcTrigEffCorr[4][nCentBins];
+  for(int i=0; i<4; i++)
+    {
+      for(int k=0; k<nCentBins; k++)
+	{
+	  funcTrigEff[i][k] = new TF1(Form("MuonTrigEff_cent%s%s",cent_Title[k],gTrgSetupName[i+1]),"[0]-exp(-1*[1]*(x-[2]))",1.2,12);
+	  funcTrigEffCorr[i][k] = new TF1(Form("MuonTrigEffCorr_cent%s%s",cent_Title[k],gTrgSetupName[i+1]),"[0]-exp(-1*[1]*(x-[2]))",1.2,12);
+	  if(i==0 || i==1)
+	    {
+	      if(k==0) funcTrigEff[i][k]->SetParameters(0.951456, 2.32223, 6.61693e-14);      
+	      if(k==1) funcTrigEff[i][k]->SetParameters(0.948947, 2.55808, 0.0659758);
+	      if(k==2) funcTrigEff[i][k]->SetParameters(0.950789, 2.51311, 7.49401e-14);
+	      if(k==3) funcTrigEff[i][k]->SetParameters(0.968246, 2.45772, 8.27116e-15);
+
+	      if(k==0) funcTrigEffCorr[i][k]->SetParameters(0.96023,  10.5511, 0.802917);      
+	      if(k==1) funcTrigEffCorr[i][k]->SetParameters(0.96918,  9.40215, 0.778563);
+	      if(k==2) funcTrigEffCorr[i][k]->SetParameters(0.964368, 3.65518, 0.298387);
+	      if(k==3) funcTrigEffCorr[i][k]->SetParameters(0.966162, 2.77122, 3.6e-15);
+	    }
+	  else
+	    {
+	      if(k==0) funcTrigEff[i][k]->SetParameters(0.908, 2.09256, 1.03406e-14);      
+	      if(k==1) funcTrigEff[i][k]->SetParameters(0.905465, 2.05892, 9.27036e-15);
+	      if(k==2) funcTrigEff[i][k]->SetParameters(0.920748, 1.89851, 1.57097e-14);
+	      if(k==3) funcTrigEff[i][k]->SetParameters(0.883885, 2.1119, 3.33068e-15);
+
+	      if(k==0) funcTrigEffCorr[i][k]->SetParameters(0.936584, 17.1834, 0.893653);      
+	      if(k==1) funcTrigEffCorr[i][k]->SetParameters(0.945798, 11.6541, 0.838267);
+	      if(k==2) funcTrigEffCorr[i][k]->SetParameters(0.935776, 5.75038, 0.499548);
+	      if(k==3) funcTrigEffCorr[i][k]->SetParameters(0.938118, 13.9462, 0.875862);
+	    }
+	}
+    }
+
+  for(int i=0; i<4; i++)
+    {
+      TCanvas *c = new TCanvas(Form("MuonTrigEff%s",gTrgSetupName[i+1]),Form("MuonTrigEff%s",gTrgSetupName[i+1]),1100,700);
+      c->Divide(2,2);
+      for(int k=0; k<nCentBins; k++)
+	{
+	  c->cd(k+1);
+	  SetPadMargin(gPad,0.15,0.15,0.05,0.1);
+	  gPad->SetGrid(1,1);
+	  ScaleHistoTitle(funcTrigEff[i][k]->GetHistogram(),0.06,1,0.05,0.06,0.9,0.05,62);
+	  funcTrigEff[i][k]->SetTitle(Form("%s: %s%%;p_{T} (GeV/c);Trigger efficiency",trgSetupName[i],cent_Name[k]));
+	  funcTrigEff[i][k]->SetMaximum(1.1);
+	  funcTrigEff[i][k]->SetMinimum(0.5);
+	  funcTrigEff[i][k]->SetLineColor(1);
+	  funcTrigEff[i][k]->Draw();
+	  funcTrigEffCorr[i][k]->SetLineColor(4);
+	  funcTrigEffCorr[i][k]->Draw("sames");
+	}
+      c->cd(1);
+      TLegend *leg = new TLegend(0.45,0.25,0.65,0.45);
+      leg->SetBorderSize(0);
+      leg->SetFillColor(0);
+      leg->SetTextSize(0.05);
+      leg->AddEntry(funcTrigEff[i][0],"VPDMB5","L");
+      leg->AddEntry(funcTrigEffCorr[i][0],"NoVtx/VPDMB5","L");
+      leg->Draw();
+  
+      if(savePlot)
+	{
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/MuonTrigEff_CentBins%s.pdf",run_type,gTrgSetupName[i+1]));
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/MuonTrigEff_CentBins%s.png",run_type,gTrgSetupName[i+1]));
+	}
+    }
+
+  TH1F *hMuonTrigEff[4][nCentBins];
+  TString legName[nCentBins];
+  TList *list = new TList;
+  for(int i=0; i<4; i++)
+    {
+      for(int k=0; k<nCentBins; k++)
+	{
+	  hMuonTrigEff[i][k] = new TH1F(Form("CombinedMuonTrigEff_cent%s%s",cent_Title[k],gTrgSetupName[i+1]),"Muon efficiency",1000,0,10);
+	  for(int bin=1; bin<=hMuonTrigEff[i][k]->GetNbinsX(); bin++)
+	    {
+	      double x = hMuonTrigEff[i][k]->GetXaxis()->GetBinCenter(bin);
+	      hMuonTrigEff[i][k]->SetBinContent(bin,funcTrigEff[i][k]->Eval(x)*funcTrigEffCorr[i][k]->Eval(x));
+	      hMuonTrigEff[i][k]->SetBinError(bin,0);
+	    }
+	  list->Add(hMuonTrigEff[i][k]);
+	  legName[k] = Form("%s%%",cent_Name[k]);
+	}
+      c = drawHistos(list,Form("MuonTrigEff_CentBins%s",gTrgSetupName[i+1]),Form("Single muon trigger efficiency (%s);p_{T} (GeV/c);Efficiency",trgSetupName[i]),kTRUE,1.2,10,kTRUE,0.5,1.0,kFALSE,kTRUE,legName,kTRUE,"",0.4,0.6,0.3,0.55,kTRUE);
+      if(savePlot)
+	{
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/MuonTrigEffCombined_CentBins%s.pdf",run_type,gTrgSetupName[i+1]));
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/MuonTrigEffCombined_CentBins%s.png",run_type,gTrgSetupName[i+1]));
+	}
+      list->Clear();
+    }
+  
+  if(saveHisto)
+    {
+      char *outName = "Run14.AuAu200.MuonTrigEff.root";
+      TFile *fout = TFile::Open(Form("Rootfiles/%s",outName),"recreate");
+      for(int i=0; i<4; i++)
+	{
+	  for(int k=0; k<nCentBins; k++)
+	    {
+	      funcTrigEff[i][k]->Write("",TObject::kOverwrite);
+	      funcTrigEffCorr[i][k]->Write("",TObject::kOverwrite);
+	      hMuonTrigEff[i][k]->Write("",TObject::kOverwrite);
+	    }
+	}
+      fout->Close();
+    }
 }
 
 //================================================

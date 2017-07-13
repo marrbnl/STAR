@@ -29,12 +29,65 @@ void ana_JpsiYield()
   printf("acc di-muon events: %4.4e\n",hStat->GetBinContent(10));
   printf("HFT di-muon events: %4.2f%%\n",hStat->GetBinContent(15)/hStat->GetBinContent(10)*100);
 
-  yieldVsPt();
+  //yieldVsPt();
+  //yieldVsNpart();
   //yieldVsLumi();
+  fitYield();
   //pt2scan();
   //HftTracking();
 }
 
+//================================================
+void fitYield(int icent = 0, int savePlot = 1, int saveHisto = 1)
+{
+  const int nCentBins       = nCentBins_pt; 
+  const int* centBins_low   = centBins_low_pt;
+  const int* centBins_high  = centBins_high_pt;
+  const char** cent_Name    = cent_Name_pt;
+  const char** cent_Title   = cent_Title_pt;
+
+  TFile *fdata = 0x0;
+  if(saveHisto) fdata = TFile::Open(Form("Rootfiles/%s.JpsiYield.pt%1.1f.pt%1.1f.root",run_type,pt1_cut,pt2_cut),"update");
+  else          fdata = TFile::Open(Form("Rootfiles/%s.JpsiYield.pt%1.1f.pt%1.1f.root",run_type,pt1_cut,pt2_cut),"read");
+  TH1F *hJpsiYield = (TH1F*)fdata->Get(Form("Jpsi_FitYield_cent%s_weight",cent_Title[icent]));
+  TH1F *hInvJsiYield = (TH1F*)hJpsiYield->Clone("hInvJsiYield");
+  for(int bin=1; bin<=hJpsiYield->GetNbinsX(); bin++)
+    {
+      double scale = hJpsiYield->GetBinWidth(bin);
+      double pt = hJpsiYield->GetBinCenter(bin);
+      hJpsiYield->SetBinContent(bin, hJpsiYield->GetBinContent(bin)/scale);
+      hJpsiYield->SetBinError(bin, hJpsiYield->GetBinError(bin)/scale);
+      hInvJsiYield->SetBinContent(bin, hJpsiYield->GetBinContent(bin)/scale/pt);
+      hInvJsiYield->SetBinError(bin, hJpsiYield->GetBinError(bin)/scale/pt);
+    }
+  TF1 *funcJpsi = new TF1(Form("Fit_%s_tmp",hJpsiYield->GetName()),"exp([0]+[1]*x)",0,15);
+  hInvJsiYield->Fit(funcJpsi,"IR0");
+  hInvJsiYield->SetTitle(Form("%s: raw J/psi yield;p_{T} (GeV/c);dN/p_{T}dp_{T}",run_type));
+  hInvJsiYield->SetMarkerStyle(21);
+  c = draw1D(hInvJsiYield);
+  gPad->SetLogy();
+  funcJpsi->SetLineColor(2);
+  funcJpsi->Draw("sames");
+  if(savePlot)
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiRes/Fit_JpsiFitYield_cent%s.pdf",run_type,cent_Title[icent]));
+    }
+  
+  hJpsiYield->SetTitle(Form("%s: raw J/psi yield;p_{T} (GeV/c);dN/dp_{T}",run_type));
+  hJpsiYield->SetMarkerStyle(21);
+  c = draw1D(hJpsiYield);
+  TF1 *funcInputJpsi = new TF1(Form("Fit_%s",hJpsiYield->GetName()),"exp([0]+[1]*x)*x",0,20);
+  funcInputJpsi->SetParameters(funcJpsi->GetParameters());
+  gPad->SetLogy();
+  funcInputJpsi->SetLineColor(2);
+  funcInputJpsi->Draw("sames");
+
+  if(saveHisto)
+    {
+      fdata->cd();
+      funcInputJpsi->Write("",TObject::kOverwrite);
+    }
+}
 
 //================================================
 void yieldVsPt(int savePlot = 1)
@@ -62,6 +115,23 @@ void yieldVsPt(int savePlot = 1)
     {
       hFitYield[i] = (TH1F*)fin->Get(Form("Jpsi_FitYield_cent%s%s",cent_Title[i],gWeightName[gApplyWeight]));
       hBinCountYield[i] = (TH1F*)fin->Get(Form("Jpsi_BinCountYield_cent%s%s",cent_Title[i],gWeightName[gApplyWeight]));
+      if(i==2 || i==3)
+	{
+	  hFitYield[i]->SetBinContent(nPtBins-1,0);
+	  hFitYield[i]->SetBinError(nPtBins-1,1e-10);
+	  hBinCountYield[i]->SetBinContent(nPtBins-1,0);
+	  hBinCountYield[i]->SetBinError(nPtBins-1,1e-10);
+	}
+      else if(i==4)
+	{
+	  for(int bin=7; bin<=9; bin++)
+	    {
+	      hFitYield[i]->SetBinContent(bin,0);
+	      hFitYield[i]->SetBinError(bin,1e-10);
+	      hBinCountYield[i]->SetBinContent(bin,0);
+	      hBinCountYield[i]->SetBinError(bin,1e-10);
+	    }
+	}
       double count_1, error_1, count_2, error_2;
       count_1 = hFitYield[i]->IntegralAndError(1,nPtBins-1,error_1);
       count_2 = hBinCountYield[i]->IntegralAndError(1,nPtBins-1,error_2);
@@ -93,7 +163,7 @@ void yieldVsPt(int savePlot = 1)
 
   if(savePlot) 
     {
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiYield/%sJpsi_Yield_CentBins.pdf",run_type,run_cfg_name.Data()));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiYield/%sJpsiYieldVsPt.pdf",run_type,run_cfg_name.Data()));
     }
 
   TH1F *hSignif[nCentBins][2];
@@ -122,7 +192,130 @@ void yieldVsPt(int savePlot = 1)
       c = drawHistos(list,Form("%s_Signif",name[j]),Form("%s: J/psi significance;p_{T} (GeV/c);significance",name[j]),kFALSE,0,20,kTRUE,0.1,20,kFALSE,drawLegend,legName,drawLegend,run_type,0.55,0.7,0.6,0.85,kTRUE);
       if(savePlot) 
 	{
-	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiYield/%sJpsi_Significance_%s.pdf",run_type,run_cfg_name.Data(),name[j]));
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiYield/%sJpsiSignifVsPt_%s.pdf",run_type,run_cfg_name.Data(),name[j]));
+	}
+    }
+
+  // compare fit parameters
+  TH1F *hMean[nCentBins];
+  TH1F *hSigma[nCentBins];
+  for(int i=0; i<nCentBins; i++)
+    {
+      hMean[i] = (TH1F*)fin->Get(Form("Jpsi_FitMean_cent%s_weight",cent_Title[i]));
+      hSigma[i] = (TH1F*)fin->Get(Form("Jpsi_FitSigma_cent%s_weight",cent_Title[i]));
+    }
+  list->Clear();
+  for(int i=0; i<nCentBins; i++)
+    {
+      if(i==2 || i==3)
+	{
+	  hMean[i]->SetBinContent(nPtBins-1,0);
+	  hMean[i]->SetBinError(nPtBins-1,1e-10);
+	}
+      else if(i==4)
+	{
+	  for(int bin=7; bin<=9; bin++)
+	    {
+	      hMean[i]->SetBinContent(bin,0);
+	      hMean[i]->SetBinError(bin,1e-10);
+	    }
+	}
+      list->Add(hMean[i]);
+    }
+  c = drawHistos(list,"JpsiMeanVsPt","Mean of J/psi peak;p_{T} (GeV/c);Mean",kFALSE,0,20,kTRUE,3.04,3.2,kFALSE,drawLegend,legName,drawLegend,run_type,0.15,0.35,0.6,0.88,kTRUE);
+  if(savePlot) 
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiYield/%sJpsiMeanVsPt.pdf",run_type,run_cfg_name.Data()));
+    }
+
+  list->Clear();
+  for(int i=0; i<nCentBins; i++)
+    {
+      if(i==2 || i==3)
+	{
+	  hSigma[i]->SetBinContent(nPtBins-1,-1);
+	  hSigma[i]->SetBinError(nPtBins-1,1e-10);
+	}
+      else if(i==4)
+	{
+	  for(int bin=7; bin<=9; bin++)
+	    {
+	      hSigma[i]->SetBinContent(bin,-1);
+	      hSigma[i]->SetBinError(bin,1e-10);
+	    }
+	}
+      list->Add(hSigma[i]);
+    }
+  c = drawHistos(list,"JpsiSigmaVsPt","Width of J/psi peak;p_{T} (GeV/c);#sigma",kFALSE,0,20,kTRUE,0,0.15,kFALSE,drawLegend,legName,drawLegend,run_type,0.15,0.35,0.6,0.88,kTRUE);
+  if(savePlot) 
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiYield/%sJpsiSigmaVsPt.pdf",run_type,run_cfg_name.Data()));
+    }
+}
+
+//================================================
+void yieldVsNpart(int savePlot = 1)
+{
+  const int nPtBins         = nPtBins_npart;
+  const double* ptBins_low  = ptBins_low_npart;
+  const double* ptBins_high = ptBins_high_npart;
+  const char** pt_Name      = pt_Name_npart;
+
+  TFile *fin = TFile::Open(Form("Rootfiles/%s.JpsiYield.pt%1.1f.pt%1.1f.%sroot",run_type,pt1_cut,pt2_cut,run_config),"read");
+  TH1F *hFitYield[nPtBins];
+  TH1F *hBinCountYield[nPtBins];
+  for(int i=0; i<nPtBins; i++)
+    {
+      hFitYield[i] = (TH1F*)fin->Get(Form("Jpsi_FitYield_pt%s%s",pt_Name[i],gWeightName[gApplyWeight]));
+      hBinCountYield[i] = (TH1F*)fin->Get(Form("Jpsi_BinCountYield_pt%s%s",pt_Name[i],gWeightName[gApplyWeight]));
+      
+      hFitYield[i]->SetMarkerStyle(20);
+      hFitYield[i]->SetMarkerColor(i+1);
+      hFitYield[i]->SetLineColor(i+1);
+      hFitYield[i]->SetMarkerSize(1.2);
+      hFitYield[i]->GetXaxis()->SetLabelSize(0.045);
+      hFitYield[i]->GetYaxis()->SetLabelSize(0.035);
+      c = draw1D(hFitYield[i],Form("%s: raw J/psi yield in each centrality bin",run_type));
+      gPad->SetLogy();
+      hBinCountYield[i]->SetMarkerStyle(24);
+      hBinCountYield[i]->SetMarkerColor(i+1);
+      hBinCountYield[i]->SetLineColor(i+1);
+      TGraphErrors *gr = new TGraphErrors(hBinCountYield[i]);
+      offset_x(gr,0.2);
+      gr->Draw("samesPEZ");
+      leg = new TLegend(0.2,0.25,0.4,0.4);
+      leg->SetBorderSize(0);
+      leg->SetFillColor(0);
+      leg->SetHeader(Form("p_{T} > %1.0f GeV/c",ptBins_low[i]));
+      leg->AddEntry(hFitYield[i],"Fitting","P");
+      leg->AddEntry(hBinCountYield[i],"Bin counting","P");
+      leg->Draw();
+      if(savePlot) 
+	{
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiYield/%sJpsiYieldVsCent_pt%s.pdf",run_type,run_cfg_name.Data(),pt_Name[i]));
+	}
+    }
+
+  TH1F *hSignif[nPtBins][2];
+  for(int i=0; i<nPtBins; i++)
+    {
+      for(int j=0; j<2; j++)
+	{
+	  hSignif[i][j] = (TH1F*)hFitYield[i]->Clone(Form("hSignif_%s_%d",pt_Name[i],j));
+	  hSignif[i][j]->Reset();
+	}
+      for(int bin=1; bin<=hSignif[i][0]->GetNbinsX(); bin++)
+	{
+	  hSignif[i][0]->SetBinContent(bin,hFitYield[i]->GetBinContent(bin)/hFitYield[i]->GetBinError(bin));
+	  hSignif[i][1]->SetBinContent(bin,hBinCountYield[i]->GetBinContent(bin)/hBinCountYield[i]->GetBinError(bin));
+	}
+      hSignif[i][0]->GetYaxis()->SetRangeUser(0,20);
+      hSignif[i][0]->SetMarkerColor(i+1);
+      hSignif[i][0]->SetMarkerSize(1.2);
+      c = draw1D(hSignif[i][0],Form("%s: significance of J/psi signal from fitting (p_{T} > %1.0f GeV/c)",run_type,ptBins_low[i]));
+      if(savePlot) 
+	{
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiYield/%sJpsiSignifVsCent_pt%s_Fitting.pdf",run_type,run_cfg_name.Data(),pt_Name[i]));
 	}
     }
 }

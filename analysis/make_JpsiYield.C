@@ -23,35 +23,21 @@ void make_JpsiYield()
       printf("acc di-muon events: %4.4e\n",hStat->GetBinContent(10));
     }
 
-  make_histo("pt");
-  //make_histo("npart");
+  make_histo_pt();
+  //make_histo_npart();
 }
 
 //================================================
-void make_histo(const char *type)
+void make_histo_pt()
 {
-  if(type=="pt")
-    {
-      const int nPtBins        = nPtBins_pt;
-      const double* ptBinsLow  = ptBins_low_pt;
-      const double* ptBinsHigh = ptBins_high_pt;
-      const char** ptName      = pt_Name_pt;
-      const int nCentBins      = nCentBins_pt; 
-      const int* centBinsLow   = centBins_low_pt;
-      const int* centBinsHigh  = centBins_high_pt;
-      const char** centName    = cent_Name_pt;
-    }
-  else if(type=="npart")
-    {
-      const int nPtBins        = nPtBins_npart;
-      const double* ptBinsLow  = ptBins_low_npart;
-      const double* ptBinsHigh = ptBins_high_npart;
-      const char** ptName      = pt_Name_npart;
-      const int nCentBins      = nCentBins_npart; 
-      const int* centBinsLow   = centBins_low_npart;
-      const int* centBinsHigh  = centBins_high_npart;
-      const char** centName    = cent_Name_npart;
-    }
+  const int nPtBins        = nPtBins_pt;
+  const double* ptBinsLow  = ptBins_low_pt;
+  const double* ptBinsHigh = ptBins_high_pt;
+  const char** ptName      = pt_Name_pt;
+  const int nCentBins      = nCentBins_pt; 
+  const int* centBinsLow   = centBins_low_pt;
+  const int* centBinsHigh  = centBins_high_pt;
+  const char** centName    = cent_Name_pt;
 
   const char *hName[3] = {"hJpsiInfo","hBkgLSPos","hBkgLSNeg"};
   THnSparseF *hnInvMass[2][3] = {0x0};
@@ -92,6 +78,7 @@ void make_histo(const char *type)
 	  hnInvMass[w][j]->GetAxis(4)->SetRange(0,-1);
 	}
     }
+  return;
 
   for(int w=0; w<2; w++) 
     {
@@ -149,15 +136,7 @@ void make_histo(const char *type)
         }
     }
 
-  TString fileName;
-  if(type=="pt")
-    {
-      fileName = Form("Rootfiles/%s.Jpsi.pt%1.1f.pt%1.1f.%sroot",run_type,pt1_cut,pt2_cut,run_config);
-    }
-  else if(type=="npart")
-    {
-      fileName = Form("Rootfiles/%s.Npart.pt%1.1f.pt%1.1f.root",run_type,pt1_cut,pt2_cut);
-    }
+  TString fileName = Form("Rootfiles/%s.Jpsi.pt%1.1f.pt%1.1f.%sroot",run_type,pt1_cut,pt2_cut,run_config);
   TFile *fout = TFile::Open(fileName,"recreate");
   const char* pair_name[2] = {"UL","LS"};
   for(int w=0; w<2; w++) 
@@ -173,7 +152,7 @@ void make_histo(const char *type)
 		      for(int j=0; j<2; j++)
 			{
 			  hInvMass[w][t][k][i][j]->SetTitle("");
-			  hInvMass[w][t][k][i][j]->Write(Form("InvMass_%s_pt%s_cent%s%s%s",pair_name[j],ptName[i],centName[k],gWeightName[w],gTrgSetupName[t]));
+			  hInvMass[w][t][k][i][j]->Write(Form("InvMass_%s_pt%s_cent%s%s%s",pair_name[j],ptName[i],centName[k],gWeightName[w],gTrgSetupName[t]),TObject::kOverwrite);
 			}
 		    }
 		}
@@ -191,7 +170,159 @@ void make_histo(const char *type)
 	      for(int j=0; j<2; j++)
 		{
 		  hMixInvMass[k][i][j]->SetTitle("");
-		  hMixInvMass[k][i][j]->Write(Form("Mix_InvMass_%s_pt%s_cent%s",pair_name[j],ptName[i],centName[k]));
+		  hMixInvMass[k][i][j]->Write(Form("Mix_InvMass_%s_pt%s_cent%s",pair_name[j],ptName[i],centName[k]),TObject::kOverwrite);
+		}
+	    }
+	}
+    }
+  fout->Close();
+}
+
+
+//================================================
+void make_histo_npart()
+{
+  const int nPtBins         = nPtBins_npart;
+  const double* ptBinsLow   = ptBins_low_npart;
+  const double* ptBinsHigh  = ptBins_high_npart;
+  const char** ptName       = pt_Name_npart;
+  const int* nCentBins      = nCentBins_npart; 
+  const int* centBinsLow    = centBins_low_npart;
+  const int* centBinsHigh   = centBins_high_npart;
+  const char** centName     = cent_Name_npart;
+  const int kNCent          = nCentBins[0];
+
+  const char *hName[3] = {"hJpsiInfo","hBkgLSPos","hBkgLSNeg"};
+  THnSparseF *hnInvMass[2][3] = {0x0};
+  TH1F *hInvMass[2][5][kNCent][nPtBins][3] = {0x0};
+  
+  // same event
+  char name[512];
+  for(int w=0; w<2; w++) // event weights
+    { 
+      for(Int_t j=0; j<3; j++) // pair type
+	{ 
+	  if(w==0) sprintf(name,"m%s_%s",hName[j],trigName[kTrigType]);
+	  else     sprintf(name,"m%sWeight_%s",hName[j],trigName[kTrigType]);
+	  hnInvMass[w][j] = (THnSparseF*)f->Get(name);
+	  if(!hnInvMass[w][j]) continue; 
+	  hnInvMass[w][j]->GetAxis(2)->SetRangeUser(-1*jpsi_rapidity+0.01, jpsi_rapidity-0.01);
+	  hnInvMass[w][j]->GetAxis(3)->SetRangeUser(pt1_cut+0.01,100);
+	  hnInvMass[w][j]->GetAxis(4)->SetRangeUser(pt2_cut+0.01,100);
+	  for(Int_t i=0; i<nPtBins; i++) // pt bins
+	    {
+	      hnInvMass[w][j]->GetAxis(1)->SetRangeUser(ptBinsLow[i]+0.01,ptBinsHigh[i]-0.01);
+	      for(int k=0; k<nCentBins[i]; k++) // centrality bins
+		{
+		  hnInvMass[w][j]->GetAxis(5)->SetRange(centBinsLow[i*kNCent+k],centBinsHigh[i*kNCent+k]);
+		  for(int t=0; t<gNTrgSetup; t++) // trigger setup
+		    {
+		      if(t>0) hnInvMass[w][j]->GetAxis(6)->SetRange(t,t);
+		      hInvMass[w][t][k][i][j] = (TH1F*)hnInvMass[w][j]->Projection(0);
+		      hInvMass[w][t][k][i][j]->SetName(Form("%d_%s_%s_InvMass_jpsi_PtBin%d_CentBin%d_P%d",w,hName[j],trigName[kTrigType],i,k,t));
+		      hInvMass[w][t][k][i][j]->Sumw2();
+		      hnInvMass[w][j]->GetAxis(6)->SetRange(0,-1);
+		    }
+		  hnInvMass[w][j]->GetAxis(5)->SetRange(0,-1);
+		}
+	      hnInvMass[w][j]->GetAxis(1)->SetRange(0,-1);
+	    }
+	  hnInvMass[w][j]->GetAxis(3)->SetRange(0,-1);
+	  hnInvMass[w][j]->GetAxis(4)->SetRange(0,-1);
+	}
+    }
+
+  for(int w=0; w<2; w++) 
+    {
+      for(int t=0; t<gNTrgSetup; t++)
+	{
+	  for(Int_t i=0; i<nPtBins; i++)
+	    {
+	      for(int k=0; k<nCentBins[i]; k++)
+		{
+		  if(hInvMass[w][t][k][i][1])
+		    hInvMass[w][t][k][i][1]->Add(hInvMass[w][t][k][i][2]);
+		}
+	    }
+	}
+    }
+
+  // mixed event
+  TFile *fmix = 0;
+  if(year==2014) 
+    {
+      char *mixName = Form("%s.Mix.%spt%1.1f.pt%1.1f.root",run_type,run_config,pt1_cut,pt2_cut);
+      fmix = TFile::Open(Form("Output/%s",mixName),"read");
+
+      cout << "Mix file: " << fmix->GetName() << endl;
+      TH1F *hMixInvMass[kNCent][nPtBins][3];
+      printf("INFO: using Shuai's mixed events\n");
+      TH3D *hMixMmumuvsPtCen[3];
+      hMixMmumuvsPtCen[0] = (TH3D*)fmix->Get("hMixULMmumuvsPtCen");
+      hMixMmumuvsPtCen[1] = (TH3D*)fmix->Get("hMixLPosMmumuvsPtCen");
+      hMixMmumuvsPtCen[2] = (TH3D*)fmix->Get("hMixLNegMmumuvsPtCen");
+      for(Int_t j=0; j<3; j++)
+	{
+	  for(int i=0; i<nPtBins; i++)
+	    {
+	      int ybin_min = hMixMmumuvsPtCen[j]->GetYaxis()->FindFixBin(ptBinsLow[i]+1e-4);
+	      int ybin_max = hMixMmumuvsPtCen[j]->GetYaxis()->FindFixBin(ptBinsHigh[i]-1e-4);
+	      for(int k=0; k<nCentBins[i]; k++)
+		{
+		  TH1F *htmp = (TH1F*)hMixMmumuvsPtCen[j]->ProjectionZ(Form("mix_%s_%s_InvMass_jpsi_PtBin%d_CentBin%d_tmp",hName[j],trigName[kTrigType],i,k),centBinsLow[i*kNCent+k],centBinsHigh[i*kNCent+k],ybin_min,ybin_max);
+		  hMixInvMass[k][i][j] = new TH1F(Form("mix_%s_%s_InvMass_jpsi_PtBin%d_CentBin%d",hName[j],trigName[kTrigType],i,k),htmp->GetTitle(),1400,0,14);
+		  for(int bin=1; bin<=htmp->GetNbinsX(); bin++)
+		    {
+		      hMixInvMass[k][i][j]->SetBinContent(bin,htmp->GetBinContent(bin));
+		      hMixInvMass[k][i][j]->SetBinError(bin,htmp->GetBinError(bin));
+		    }
+		}
+	    }
+	}
+      for(Int_t i=0; i<nPtBins; i++)
+	{
+	  for(int k=0; k<nCentBins[i]; k++)
+	    {
+              hMixInvMass[k][i][1]->Add(hMixInvMass[k][i][2]);
+            }
+        }
+    }
+
+  TString fileName = Form("Rootfiles/%s.Jpsi.pt%1.1f.pt%1.1f.%sroot",run_type,pt1_cut,pt2_cut,run_config);
+  TFile *fout = TFile::Open(fileName,"update");
+  const char* pair_name[2] = {"UL","LS"};
+  for(int w=0; w<2; w++) 
+    {
+      for(int t=0; t<gNTrgSetup; t++)
+	{
+	  for(Int_t i=0; i<nPtBins; i++)
+	    {
+	      for(int k=0; k<nCentBins[i]; k++)
+		{
+		  if(hInvMass[w][t][k][i][0])
+		    {
+		      for(int j=0; j<2; j++)
+			{
+			  hInvMass[w][t][k][i][j]->SetTitle("");
+			  hInvMass[w][t][k][i][j]->Write(Form("InvMass_%s_pt%s_cent%s%s%s",pair_name[j],ptName[i],centName[i*kNCent+k],gWeightName[w],gTrgSetupName[t]),TObject::kOverwrite);
+			}
+		    }
+		}
+	    }
+	}
+    }
+  
+  
+  if(fmix)
+    {
+      for(Int_t i=0; i<nPtBins; i++)
+	{
+	  for(int k=0; k<nCentBins[i]; k++)
+	    {
+	      for(int j=0; j<2; j++)
+		{
+		  hMixInvMass[k][i][j]->SetTitle("");
+		  hMixInvMass[k][i][j]->Write(Form("Mix_InvMass_%s_pt%s_cent%s",pair_name[j],ptName[i],centName[i*kNCent+k]),TObject::kOverwrite);
 		}
 	    }
 	}
