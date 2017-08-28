@@ -77,7 +77,7 @@ void pAuCent(const int savePlot = 0)
   leg->Draw();
   if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/VPDMB_VpdEffCorr.pdf",run_type));
 
-  if(1)
+  if(0)
     {
       TFile *fout = TFile::Open("Rootfiles/Run15_pAu200.VpdEff.root","recreate");
       funcEff->Write();

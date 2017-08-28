@@ -98,7 +98,7 @@ TH1F *hTrkResBin[nCentBins][400];
 TF1 *funcTrkRes[nCentBins];
 
 void tuneResolution(const int icent, const bool savePlot);
-void smear(const double mass, const int icent, const int nExpr, const double shift, const double sigma, TF1 *hInputPt, TH2F *hRcJpsiMassVsPt, const bool debug = 0);
+void smear(const double mass, const int icent, const int nExpr, const double shift, const double sigma, TF1 *hInputPt, TH2F *hRcJpsiMassVsPt,  const bool isWeight = 0, const bool debug = 0);
 TLorentzVector myBoost(TLorentzVector parent, TLorentzVector daughter);
 TLorentzVector twoBodyDecay(TLorentzVector parent, Double_t dmass);
 
@@ -157,7 +157,7 @@ void ana_JpsiRes()
 	}
     }
 
-  tuneResolution(0,0);
+  tuneResolution(0,1);
 }
 
 //================================================
@@ -207,7 +207,7 @@ void tuneResolution(const int icent, const bool savePlot)
 	      else if(i%2==1) shift = (i+1)/2*shiftStep;
 	      else            shift = (i+1)/2*shiftStep*(-1);
 	      printf("[i] Scan (%d,%d) = (%5.3f, %5.3f)\n",i,k,shift,sigma);
-	      smear(jpsiMass, icent, 5e6, shift, sigma, funcInputJpsi, hRcJpsiMassScan[i][k], 0);
+	      smear(jpsiMass, icent, 5e6, shift, sigma, funcInputJpsi, hRcJpsiMassScan[i][k], 0, 0);
 	    }
 	}
       TFile *fout = TFile::Open(outName.Data(),"recreate");
@@ -389,8 +389,8 @@ void tuneResolution(const int icent, const bool savePlot)
 		{
 		  double value = hDataMean->GetBinContent(ibin);
 		  double error = hDataMean->GetBinError(ibin);
-		  if(i==1) value -= error;
-		  if(i==2) value += error;
+		  if(i==1) value -= 1.5*error;
+		  if(i==2) value += 1.5*error;
 		  chi2 += TMath::Power((value-hFitShiftMean[j]->Eval(hDataMean->GetBinCenter(ibin)))/error,2);
 		}
 	      hShiftChi2[i]->SetBinContent(bin,chi2);
@@ -500,8 +500,8 @@ void tuneResolution(const int icent, const bool savePlot)
 		{
 		  double value = hDataSigma->GetBinContent(ibin);
 		  double error = hDataSigma->GetBinError(ibin);
-		  if(i==1) value -= error;
-		  if(i==2) value += error;
+		  if(i==1) value -= 1.5*error;
+		  if(i==2) value += 1.5*error;
 		  chi2 += TMath::Power((value-hFitSmearSigma[j]->Eval(hDataSigma->GetBinCenter(ibin)))/error,2);
 		}
 	      hSmearChi2[i]->SetBinContent(bin,chi2);
@@ -546,7 +546,7 @@ void tuneResolution(const int icent, const bool savePlot)
 	  double smearvalue = hFinalSmear->GetBinContent(i+1);
 	  if(year==2014 || year==2015 || year==2016) shiftvalue = 0;
 	  printf("[i] Start final scanning: %s = (%4.4f,%4.4f)\n",sysName_scan[i],shiftvalue,smearvalue);
-	  smear(jpsiMass, icent, 1e7, shiftvalue, smearvalue, funcInputJpsi, hRcJpsiMass[i], 0);
+	  smear(jpsiMass, icent, 1e8, shiftvalue, smearvalue, funcInputJpsi, hRcJpsiMass[i], 1, 0);
 	}
 
       TH1F *hJpsiEff[3][2];
@@ -641,6 +641,7 @@ void tuneResolution(const int icent, const bool savePlot)
       if(year==2014) c->Divide(5,2);
       for(int bin=0; bin<nPtBins-1; bin++)
 	{
+	  // data
 	  TH1F *hSignal = (TH1F*)fdata->Get(Form("Jpsi_Signal_pt%s_cent%s_weight",pt_Name[bin+1],cent_Title[icent]));
 	  TF1 *fitSignal = (TF1*)fdata->Get(Form("Jpsi_FitSig_pt%s_cent%s_weight",pt_Name[bin+1],cent_Title[icent]));
 	  TF1 *funcBkg = new TF1(Form("funcBkg_pt%s",pt_Name[bin+1]),"pol3",2.5,4);
@@ -677,10 +678,41 @@ void tuneResolution(const int icent, const bool savePlot)
 	  hJpsiShape[0][bin]->SetLineColor(2);
 	  hJpsiShape[0][bin]->SetMarkerColor(2);
 	  hJpsiShape[0][bin]->SetMaximum(1.5*hJpsiShape[0][bin]->GetMaximum());
+	  hJpsiShape[0][bin]->GetXaxis()->SetRangeUser(2.7,3.5);
+	  hJpsiShape[0][bin]->SetTitle("");
 	  c->cd(bin+1);
 	  hJpsiShape[0][bin]->Draw();
+	  TPaveText *t1 = GetTitleText(Form("%1.0f < p_{T} < %1.0f GeV/c",ptBins_low[bin+1],ptBins_high[bin+1]),0.07);
+	  t1->Draw();
+
+	  // embedding
+	  hJpsiShape[1][bin] = (TH1F*)hMassVsPtEmbed[0]->ProjectionY(Form("Embed_JpsiShape_Pt%d",bin));
+	  hJpsiShape[1][bin]->Reset();
+	  int low_bin = hMassVsPtEmbed[0]->GetXaxis()->FindFixBin(ptBins_low[bin+1]+1e-4);
+	  int high_bin = hMassVsPtEmbed[0]->GetXaxis()->FindFixBin(ptBins_high[bin+1]-1e-4);
+	  for(int ibin=low_bin; ibin<=high_bin; ibin++)
+	    {
+	      TH1F *htmp = (TH1F*)hMassVsPtEmbed[0]->ProjectionY(Form("Embed_tmp_bin%d",ibin),ibin,ibin);
+	      double pt = hMassVsPtEmbed[0]->GetXaxis()->GetBinCenter(ibin);
+	      hJpsiShape[1][bin]->Add(htmp, funcInputJpsi->Eval(pt));
+	    }
+	  double scale_factor = hJpsiShape[0][bin]->GetBinContent(hJpsiShape[0][bin]->FindFixBin(3.095))/hJpsiShape[1][bin]->GetBinContent(hJpsiShape[1][bin]->FindFixBin(3.095));
+	  hJpsiShape[1][bin]->SetMarkerStyle(25);
+	  hJpsiShape[1][bin]->Scale(scale_factor);
+	  hJpsiShape[1][bin]->Draw("samesHIST");
 	}
+      c->cd(10);
+      leg = new TLegend(0.1,0.5,0.42,0.8);
+      leg->SetBorderSize(0);
+      leg->SetFillColor(0);
+      leg->SetTextSize(0.07);
+      leg->SetHeader(run_type);
+      leg->AddEntry(hJpsiShape[0][0],"Data","PL");
+      leg->AddEntry(hJpsiShape[1][0],"Smeared embedding","L");
+      leg->Draw();
       
+
+      /*
       return;
 
       // pt distribution
@@ -758,6 +790,7 @@ void tuneResolution(const int icent, const bool savePlot)
       leg->Draw();
       if(savePlot)
 	c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiRes/SmearEmbedVsData_JpsiShape_cent%s.pdf",run_type,cent_Title[icent]));
+      */
 
       // smearing efficiency
       TH1F *hJpsiEff[3];
@@ -799,14 +832,13 @@ void tuneResolution(const int icent, const bool savePlot)
 
 //-------------------------------------------------------
 void smear(const double mass, const int icent, const int nExpr, const double shift, const double sigma, 
-	   TF1 *hInputPt, TH2F *hRcJpsiMassVsPt, const bool debug)
+	   TF1 *hInputPt, TH2F *hRcJpsiMassVsPt, const bool isWeight, const bool debug)
 {
   const int nHisto = hTrkResVsPt[icent]->GetNbinsX();
   hRcJpsiMassVsPt->Sumw2();
   for(int i=0; i<nExpr; i++)
     {
       double mc_pt  = myRandom->Uniform(0,20);
-      //double mc_pt = hInputPt->GetRandom();
       double mc_phi = myRandom->Uniform(-1*pi, pi);
       double mc_y   = myRandom->Uniform(-0.5, 0.5);
       double mc_px = mc_pt * TMath::Cos(mc_phi);
@@ -895,9 +927,9 @@ void smear(const double mass, const int icent, const int nExpr, const double shi
 		 rc_daughter2.Px(), rc_daughter2.Py(), rc_daughter2.Pz(), rc_daughter2.Phi(), rc_daughter2.Eta(), rc_daughter2.E());
 	}
 
-      //double weight = hInputPt->Eval(mc_pt);
-      //if(shift==0 && sigma==0) weight = 1;
-      hRcJpsiMassVsPt->Fill(rc_parent.Pt(),rc_parent.M());
+      double weight = 1; 
+      if(isWeight) weight = hInputPt->Eval(mc_pt);
+      hRcJpsiMassVsPt->Fill(rc_parent.Pt(),rc_parent.M(),weight);
     }
 }
 

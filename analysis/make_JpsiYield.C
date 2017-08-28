@@ -23,8 +23,8 @@ void make_JpsiYield()
       printf("acc di-muon events: %4.4e\n",hStat->GetBinContent(10));
     }
 
-  make_histo_pt();
-  //make_histo_npart();
+  //make_histo_pt();
+  make_histo_npart();
 }
 
 //================================================
@@ -53,32 +53,30 @@ void make_histo_pt()
 	  else     sprintf(name,"m%sWeight_%s",hName[j],trigName[kTrigType]);
 	  hnInvMass[w][j] = (THnSparseF*)f->Get(name);
 	  if(!hnInvMass[w][j]) continue; 
-	  hnInvMass[w][j]->GetAxis(2)->SetRangeUser(-1*jpsi_rapidity+0.01, jpsi_rapidity-0.01);
-	  hnInvMass[w][j]->GetAxis(3)->SetRangeUser(pt1_cut+0.01,100);
-	  hnInvMass[w][j]->GetAxis(4)->SetRangeUser(pt2_cut+0.01,100);
+	  hnInvMass[w][j]->GetAxis(2)->SetRangeUser(pt1_cut+0.01,100);
+	  hnInvMass[w][j]->GetAxis(3)->SetRangeUser(pt2_cut+0.01,100);
 	  for(Int_t i=0; i<nPtBins; i++) // pt bins
 	    {
 	      hnInvMass[w][j]->GetAxis(1)->SetRangeUser(ptBinsLow[i]+0.01,ptBinsHigh[i]-0.01);
 	      for(int k=0; k<nCentBins; k++) // centrality bins
 		{
-		  hnInvMass[w][j]->GetAxis(5)->SetRange(centBinsLow[k],centBinsHigh[k]);
+		  hnInvMass[w][j]->GetAxis(4)->SetRange(centBinsLow[k],centBinsHigh[k]);
 		  for(int t=0; t<gNTrgSetup; t++) // trigger setup
 		    {
-		      if(t>0) hnInvMass[w][j]->GetAxis(6)->SetRange(t,t);
+		      if(t>0) hnInvMass[w][j]->GetAxis(5)->SetRange(t,t);
 		      hInvMass[w][t][k][i][j] = (TH1F*)hnInvMass[w][j]->Projection(0);
 		      hInvMass[w][t][k][i][j]->SetName(Form("%d_%s_%s_InvMass_jpsi_PtBin%d_CentBin%d_P%d",w,hName[j],trigName[kTrigType],i,k,t));
 		      hInvMass[w][t][k][i][j]->Sumw2();
-		      hnInvMass[w][j]->GetAxis(6)->SetRange(0,-1);
+		      hnInvMass[w][j]->GetAxis(5)->SetRange(0,-1);
 		    }
-		  hnInvMass[w][j]->GetAxis(5)->SetRange(0,-1);
+		  hnInvMass[w][j]->GetAxis(4)->SetRange(0,-1);
 		}
 	      hnInvMass[w][j]->GetAxis(1)->SetRange(0,-1);
 	    }
+	  hnInvMass[w][j]->GetAxis(2)->SetRange(0,-1);
 	  hnInvMass[w][j]->GetAxis(3)->SetRange(0,-1);
-	  hnInvMass[w][j]->GetAxis(4)->SetRange(0,-1);
 	}
     }
-  return;
 
   for(int w=0; w<2; w++) 
     {
@@ -206,29 +204,28 @@ void make_histo_npart()
 	  else     sprintf(name,"m%sWeight_%s",hName[j],trigName[kTrigType]);
 	  hnInvMass[w][j] = (THnSparseF*)f->Get(name);
 	  if(!hnInvMass[w][j]) continue; 
-	  hnInvMass[w][j]->GetAxis(2)->SetRangeUser(-1*jpsi_rapidity+0.01, jpsi_rapidity-0.01);
-	  hnInvMass[w][j]->GetAxis(3)->SetRangeUser(pt1_cut+0.01,100);
-	  hnInvMass[w][j]->GetAxis(4)->SetRangeUser(pt2_cut+0.01,100);
+	  hnInvMass[w][j]->GetAxis(2)->SetRangeUser(pt1_cut+0.01,100);
+	  hnInvMass[w][j]->GetAxis(3)->SetRangeUser(pt2_cut+0.01,100);
 	  for(Int_t i=0; i<nPtBins; i++) // pt bins
 	    {
 	      hnInvMass[w][j]->GetAxis(1)->SetRangeUser(ptBinsLow[i]+0.01,ptBinsHigh[i]-0.01);
 	      for(int k=0; k<nCentBins[i]; k++) // centrality bins
 		{
-		  hnInvMass[w][j]->GetAxis(5)->SetRange(centBinsLow[i*kNCent+k],centBinsHigh[i*kNCent+k]);
+		  hnInvMass[w][j]->GetAxis(4)->SetRange(centBinsLow[i*kNCent+k],centBinsHigh[i*kNCent+k]);
 		  for(int t=0; t<gNTrgSetup; t++) // trigger setup
 		    {
-		      if(t>0) hnInvMass[w][j]->GetAxis(6)->SetRange(t,t);
+		      if(t>0) hnInvMass[w][j]->GetAxis(5)->SetRange(t,t);
 		      hInvMass[w][t][k][i][j] = (TH1F*)hnInvMass[w][j]->Projection(0);
 		      hInvMass[w][t][k][i][j]->SetName(Form("%d_%s_%s_InvMass_jpsi_PtBin%d_CentBin%d_P%d",w,hName[j],trigName[kTrigType],i,k,t));
 		      hInvMass[w][t][k][i][j]->Sumw2();
-		      hnInvMass[w][j]->GetAxis(6)->SetRange(0,-1);
+		      hnInvMass[w][j]->GetAxis(5)->SetRange(0,-1);
 		    }
-		  hnInvMass[w][j]->GetAxis(5)->SetRange(0,-1);
+		  hnInvMass[w][j]->GetAxis(4)->SetRange(0,-1);
 		}
 	      hnInvMass[w][j]->GetAxis(1)->SetRange(0,-1);
 	    }
+	  hnInvMass[w][j]->GetAxis(2)->SetRange(0,-1);
 	  hnInvMass[w][j]->GetAxis(3)->SetRange(0,-1);
-	  hnInvMass[w][j]->GetAxis(4)->SetRange(0,-1);
 	}
     }
 

@@ -18,7 +18,7 @@ void ana_MtdTrigEff()
  
   //compareTacDiff();
   //lumiDepend();
-  trigElecEff();
+  //trigElecEff();
   //trigUnitMap();
   //extrapolation();
 }

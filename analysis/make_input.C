@@ -6,7 +6,7 @@ void make_input()
 }
 
 //================================================
-void Run14AuAu200(const int savePlot = 1, const int saveHisto = 1)
+void Run14AuAu200(const int savePlot = 0, const int saveHisto = 0)
 {
   TFile *fData = TFile::Open("output/Run14_AuAu200.jpsi.root","read");
   TFile *fEmb = TFile::Open(Form("./output/Run14_AuAu200.Embed.Jpsi.root"),"read");

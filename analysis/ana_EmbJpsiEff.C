@@ -12,8 +12,9 @@ void ana_EmbJpsiEff()
   gStyle->SetStatW(0.2);                
   gStyle->SetStatH(0.2);
 
-  anaJpsiWeight();
-  //JpsiEff();
+  //getJpsiWeight();
+  embJpsiEff();
+
   //makeTrigEff();
 
   //ploEff();
@@ -22,252 +23,25 @@ void ana_EmbJpsiEff()
   //compTrigEff();
 }
 
+
+
 //================================================
-void anaJpsiWeight(const int savePlot = 1, const int saveHisto = 1)
+void embJpsiEff(const int savePlot = 0, const int saveHisto = 0)
 {
-  const int* nCentBins      = nCentBins_npart; 
-  const int* centBins_low   = centBins_low_npart;
-  const int* centBins_high  = centBins_high_npart;
-  const char** cent_Name    = cent_Name_npart;
-  const char** cent_Title   = cent_Title_npart;
-  const int kNCent          = nCentBins[0];
-
-  // check the acceptance effect using mixed event
-  TFile *fmix = TFile::Open(Form("Rootfiles/%s.Jpsi.pt%1.1f.pt%1.1f.root",run_type,pt1_cut,pt2_cut),"read");
-  const char* pName[2] = {"UL","LS"};
-  TH1F *hMixInvMass[2][nCentBins_pt];
-  TH1F *hAcc[nCentBins_pt];
-  TList *list = new TList;
-  TString legName[nCentBins_pt];
-  for(int j=0; j<nCentBins_pt; j++)
-    {
-      for(int i=0; i<2; i++)
-	{
-	  hMixInvMass[i][j] = (TH1F*)fmix->Get(Form("Mix_InvMass_%s_pt0-15_cent%s",pName[i],cent_Name_pt[j]));
-	  if(j==nCentBins_pt-1) hMixInvMass[i][j]->Rebin(5);
-	}
-      hAcc[j] = (TH1F*)hMixInvMass[0][j]->Clone(Form("Mix_InvMass_Acc_pt0-15_cent%s",cent_Name_pt[j]));
-      //hAcc[j]->Scale(1./hAcc[j]->Integral());
-      hAcc[j]->Divide(hMixInvMass[1][j]);
-      legName[j] = Form("%s%%",cent_Name_pt[j]);
-      list->Add(hAcc[j]);
-    }
-  TCanvas *c = drawHistos(list,"Mix_Acceptance",Form("%s: acceptance effect from mixed event;M_{#mu#mu} (GeV/c^{2});UL/LS",run_type),true,1,5,true,0.85,1.2,false,kTRUE,legName,kTRUE,"p_{T} > 0 GeV/c",0.45,0.7,0.65,0.88,kTRUE,0.04);
-  if(savePlot)
-    {
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbJpsiEff/MixEvt_AccEff.pdf",run_type));
-    }
-
-  // Get the # of UL-LS pairs from data
   TFile *fin;
   if(saveHisto)   fin = TFile::Open(Form("Rootfiles/%s.EmbJpsiEff.pt%1.1f.pt%1.1f.root",run_type,pt1_cut,pt2_cut),"update");
   else            fin = TFile::Open(Form("Rootfiles/%s.EmbJpsiEff.pt%1.1f.pt%1.1f.root",run_type,pt1_cut,pt2_cut),"read");
 
-  TH1F *hJpsiInvMass[2][kNCent][gNZdcRate];
-  TH1F *hJpsiCount[gNZdcRate];
-  double min_mass[2] = {2.6, 3.2};
-  double max_mass[2] = {2.9, 3.5};
-  for(int p=0; p<gNZdcRate; p++)
-    {
-     hJpsiCount[p]  = new TH1F(Form("Data_JpsiCount_Zdc%d-%d",p*10,p*10+10),";;Count",kNCent,0,kNCent);
-     if(p==1 || p==4)
-       {
-	 c = new TCanvas(Form("ULvsLS_ZDC%d",p),Form("ULvsLS_ZDC%d-%d",p*10,p*10+10),1100,700);
-	 c->Divide(4,2);
-       }
-      for(int j=0; j<kNCent; j++)
-	{
-	  hJpsiCount[p]->GetXaxis()->SetBinLabel(j+1, Form("%s%%",cent_Name[j]));
-	  hJpsiCount[p]->GetXaxis()->SetLabelSize(0.045);
-
-	  for(int i=0; i<2; i++)
-	    {
-	      hJpsiInvMass[i][j][p] = (TH1F*)fin->Get(Form("Data_InvMass_%s_cent%s_zdc%d-%d",pName[i],cent_Title_npart[j],p*10,p*10+10));
-	      int nbins = hJpsiInvMass[i][j][p]->GetNbinsX();
-	      for(int bin=1; bin<=nbins; bin++)
-		{
-		  hJpsiInvMass[i][j][p]->SetBinError(bin, sqrt(hJpsiInvMass[i][j][p]->GetBinContent(bin)));
-		}
-	    }
-
-	  /* not needed since the correaction factor is close to 1
-	  // apply acceptance correction
-	  int nbins = hJpsiInvMass[1][j][p]->GetNbinsX();
-	  for(int bin=1; bin<=nbins; bin++)
-	    {
-	      double mass = hJpsiInvMass[1][j][p]->GetBinCenter(bin);
-	      double new_bin = hAcc[0]->FindFixBin(mass);
-	      double acc = hAcc[0]->GetBinContent(new_bin);
-	      hJpsiInvMass[1][j][p]->SetBinContent(bin, acc * hJpsiInvMass[1][j][p]->GetBinContent(bin));
-	      hJpsiInvMass[1][j][p]->SetBinError(bin, acc * hJpsiInvMass[1][j][p]->GetBinError(bin));
-	    }
-	  */
-
-	  // normalize in side-band region
-	  double nCount[2] = {0,0};
-	  for(int i=0; i<2; i++)
-	    {
-	      for(int m=0; m<2; m++)
-		{
-		  int low_bin = hJpsiInvMass[i][j][p]->FindFixBin(min_mass[m]);
-		  int high_bin = hJpsiInvMass[i][j][p]->FindFixBin(max_mass[m]);
-		  nCount[i] += hJpsiInvMass[i][j][p]->Integral(low_bin, high_bin);
-		}
-	    }
-	  double scale = nCount[0]/nCount[1];
-	  hJpsiInvMass[1][j][p]->Scale(scale);
-	  low_bin = hJpsiInvMass[0][j][p]->FindFixBin(3.0);
-	  high_bin = hJpsiInvMass[0][j][p]->FindFixBin(3.2);
-	  double nUL, nULerr, nLS, nLSerr;
-	  nUL = hJpsiInvMass[0][j][p]->Integral(low_bin,high_bin);
-	  nLS = hJpsiInvMass[1][j][p]->Integral(low_bin,high_bin);
-	  nULerr = sqrt(nUL);
-	  nLSerr = sqrt(nLS);
-	  if(nUL>0 && nUL >= nLS)
-	    {
-	      hJpsiCount[p]->SetBinContent(j+1, nUL-nLS);
-	      hJpsiCount[p]->SetBinError(j+1, sqrt(nULerr*nULerr+nLSerr*nLSerr));
-	    }
-	  else
-	    {
-	      printf("[w] Missing %s%% ZDC%d-%d\n",cent_Name[j],p*10,p*10+10);
-	    }
-
-	  if(p==1 || p==4)
-	    {
-	      c->cd(j+1);
-	      hJpsiInvMass[0][j][p]->Rebin(5);
-	      hJpsiInvMass[0][j][p]->GetXaxis()->SetRangeUser(2.5,4);
-	      hJpsiInvMass[0][j][p]->SetMarkerStyle(21);
-	      hJpsiInvMass[0][j][p]->SetMaximum(1.3*hJpsiInvMass[0][j][p]->GetMaximum());
-	      hJpsiInvMass[0][j][p]->Draw("P");
-	      hJpsiInvMass[1][j][p]->Rebin(5);
-	      hJpsiInvMass[1][j][p]->SetLineColor(4);
-	      hJpsiInvMass[1][j][p]->Draw("samesHIST");
-	      TPaveText *t1 = GetTitleText(Form("%s%%, %d < ZDC < %d kHz",cent_Name[j],p*10,p*10+10),0.06);
-	      t1->Draw();
-	      if(j==0)
-		{
-		  t1 = GetPaveText(0.2,0.5,0.8,0.85,0.06);
-		  t1->SetTextColor(6);
-		  t1->AddText(run_type);
-		  t1->Draw();
-		}
-	    }
-	}
-      if(p==1 || p==4)
-	{
-	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbJpsiEff/Data_ULvsLS_Zdc%d-%d.pdf",run_type,p*10,p*10+10));
-	}
-    }
-
-
-  // plot nJpsi vs. centrality vs. ZDC
-  double xmin = 0.15, xmax = 0.45, ymin = 0.65, ymax = 0.88;
-  TLegend *leg[2];
-  for(int l=0; l<2; l++)
-    {
-      leg[l] = new TLegend(xmin+0.3*l,ymin,xmax+0.3*l,ymax);
-      leg[l]->SetBorderSize(0);
-      leg[l]->SetFillColor(0);
-      leg[l]->SetTextSize(0.03);
-    }
-  const int color[6] = {1, 2, 3, 4, 6, 7};
-  TH1F *hMcTrkEff[gNZdcRate];
-  for(int p=0; p<gNZdcRate; p++)
-    {
-      hJpsiCount[p]->GetXaxis()->SetLabelSize(0.05);
-      hJpsiCount[p]->SetMarkerStyle(20+p);
-      hJpsiCount[p]->SetMarkerColor(color[p%6]);
-      hJpsiCount[p]->SetLineColor(color[p%6]);
-      hJpsiCount[p]->GetYaxis()->SetRangeUser(1,1e6);
-      leg[p/6]->AddEntry(hJpsiCount[p],Form("%d < ZDC < %d kHz",p*10,p*10+10),"P");
-      if(p==0) 
-	{
-	  c = draw1D(hJpsiCount[p]);
-	  gPad->SetLogy();
-	  TPaveText *t1 = GetTitleText(Form("%s: # of UL-LS counts from data",run_type),0.04);
-	  t1->Draw();
-	}
-      else     hJpsiCount[p]->Draw("sames");
-    }
-  for(int l=0; l<2; l++)
-    {
-      leg[l]->Draw();
-    }
-  if(savePlot)
-    {
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbJpsiEff/Data_NJpsi_US-LS.pdf",run_type));
-    }
-
-  // Apply TPC efficiency
-  TH1F *hMcJpsiEff[gNZdcRate]; 
-  TH1F *hJpsiCorr[gNZdcRate];
-  double nJpsiAll = 0;
-  for(int p=0; p<gNZdcRate; p++)
-    {
-      hMcJpsiEff[p] = (TH1F*)fin->Get(Form("McJpsiTpcEff_Zdc%d-%d",p*10,p*10+10));
-      hJpsiCorr[p] = (TH1F*)hJpsiCount[p]->Clone(Form("Data_JpsiCountWeight_Zdc%d-%d",p*10,p*10+10));
-      int nbins = hMcJpsiEff[p]->GetNbinsX();
-      for(int bin=1; bin<=nbins; bin++)
-	{
-	  double nJpsi = hJpsiCorr[p]->GetBinContent(bin);
-	  double eff = hMcJpsiEff[p]->GetBinContent(bin);
-	  if(eff>0)
-	    {
-	      hJpsiCorr[p]->SetBinContent(bin, nJpsi/eff);
-	      hJpsiCorr[p]->SetBinError(bin, hJpsiCorr[p]->GetBinError(bin)/eff);
-	      nJpsiAll += nJpsi/eff;
-	    }
-	  else
-	    {
-	      hJpsiCorr[p]->SetBinContent(bin, 0);
-	      hJpsiCorr[p]->SetBinError(bin, 0);
-	    }
-	}
-    }
-  printf("[i] Total # of Jpsi: %1.0f\n",nJpsiAll);
-  for(int p=0; p<gNZdcRate; p++)
-    {
-      hJpsiCorr[p]->Scale(1./nJpsiAll);
-      hJpsiCorr[p]->GetYaxis()->SetRangeUser(1e-4,10);
-     if(p==0) 
-	{
-	  c = draw1D(hJpsiCorr[p]);
-	  gPad->SetLogy();
-	  TPaveText *t1 = GetTitleText(Form("%s: corrected (UL-LS) counts as weights",run_type),0.04);
-	  t1->Draw();
-	}
-      else     
-	hJpsiCorr[p]->Draw("sames");
-    }
-  for(int l=0; l<2; l++)
-    {
-      leg[l]->Draw();
-    }
-  if(savePlot)
-    {
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbJpsiEff/Jpsi_Weights.pdf",run_type));
-    }
-
-  if(saveHisto)
-    {
-      printf("+++ Save histograms +++\n");
-      fin->cd();
-      for(int j=0; j<gNZdcRate; j++)
-	{
-	  hJpsiCorr[j]->Write("", TObject::kOverwrite);
-	}
-    }
-}
-
-
-//================================================
-void JpsiEff(const int savePlot = 0, const int saveHisto = 1)
-{
-  TFile *fin;
-  if(saveHisto)   fin = TFile::Open(Form("Rootfiles/%s.JpsiEff.pt%1.1f.pt%1.1f.root",run_type,pt1_cut,pt2_cut),"update");
-  else            fin = TFile::Open(Form("Rootfiles/%s.JpsiEff.pt%1.1f.pt%1.1f.root",run_type,pt1_cut,pt2_cut),"read");
+  // Jpsi efficiency vs. pT
+  const int nPtBins         = nPtBins_pt;
+  const double* ptBins_low  = ptBins_low_pt;
+  const double* ptBins_high = ptBins_high_pt;
+  const char** ptName       = pt_Name_pt;
+  const int nCentBins       = nCentBins_pt; 
+  const int* centBins_low   = centBins_low_pt;
+  const int* centBins_high  = centBins_high_pt;
+  const char** cent_Name    = cent_Name_pt;
+  const char** cent_Title   = cent_Title_pt;
 
   const int nbins = nPtBins -1;
   double xbins[nbins+1];
@@ -281,75 +55,201 @@ void JpsiEff(const int savePlot = 0, const int saveHisto = 1)
     {
       legName_cent[k] = Form("%s%%",cent_Name[k]);
     }
-  TString legName_trg[gNTrgSetup-1];
-  for(int k=0; k<gNTrgSetup-1; k++)
-    {
-      legName_trg[k] = Form("AuAu_200%s",gTrgSetupTitle[k+1]);
-    }
 
   const int nHistos = 6;
-  TH1F *hJpsiPt[nHistos][gNTrgSetup][nCentBins][2];
-  TH1F *hJpsiPtRebin[nHistos][gNTrgSetup][nCentBins][2];
-  TH1F *hJpsiPtEff[nHistos][gNTrgSetup][nCentBins][2];
-  TH1F *hJpsiPtEffRebin[nHistos][gNTrgSetup][nCentBins][2];
-  TH1F *hJpsiPtEffFinal[gNTrgSetup][nCentBins][2];
-  TH1F *hJpsiPtEffFinalRebin[gNTrgSetup][nCentBins][2];
-
+  TH1F *hJpsiPt[nHistos][nCentBins];
+  TH1F *hJpsiPtEff[nHistos][nCentBins];
   for(int i=0; i<nHistos; i++)
     {
-      for(int w=0; w<2; w++)
+      for(int k=0; k<nCentBins; k++)
 	{
-	  for(int j=0; j<gNTrgSetup; j++)
-	    {
-	      for(int k=0; k<nCentBins; k++)
-		{
-		  hJpsiPt[i][j][k][w] = (TH1F*)fin->Get(Form("hJpsiPt_%s_cent%s%s%s",trkEffType[i],cent_Title[k],gTrgSetupTitle[j],weight_name[w]));
-		  hJpsiPtRebin[i][j][k][w] = (TH1F*)hJpsiPt[i][j][k][w]->Rebin(nbins,Form("%s_rebin",hJpsiPt[i][j][k][w]->GetName()),xbins);
-
-		  if(i>0)
-		    {
-		      hJpsiPtEff[i][j][k][w] = DivideTH1ForEff(hJpsiPt[i][j][k][w],hJpsiPt[i-1][j][k][w],Form("hJpsiPtEff_%s_cent%s%s%s",trkEffType[i],cent_Title[k],gTrgSetupName[j],weight_name[w]));
-		      hJpsiPtEffRebin[i][j][k][w] = DivideTH1ForEff(hJpsiPtRebin[i][j][k][w],hJpsiPtRebin[i-1][j][k][w],Form("hJpsiPtEff_%s_cent%s%s%s_rebin",trkEffType[i],cent_Title[k],gTrgSetupName[j],weight_name[w]));
-		    }
-
-		  if(i==nHistos-1)
-		    {
-		      hJpsiPtEffFinal[j][k][w] = DivideTH1ForEff(hJpsiPt[i][j][k][w],hJpsiPt[0][j][k][w],Form("hJpsiPtEff_Final_cent%s%s%s",cent_Title[k],gTrgSetupName[j],weight_name[w]));
-		      hJpsiPtEffFinalRebin[j][k][w] = DivideTH1ForEff(hJpsiPtRebin[i][j][k][w],hJpsiPtRebin[0][j][k][w],Form("JpsiPtEff_Final_cent%s%s%s_rebin",cent_Title[k],gTrgSetupName[j],weight_name[w]));
-		    }
-		}
-	    }
+	  hJpsiPt[i][k] = (TH1F*)fin->Get(Form("hJpsiPt_%s_cent%s",trkEffType[i],cent_Title[k]));
+	  hJpsiPt[i][k]->Rebin(2);
+	  int index = i-1;
+	  if(i==0) index = 0;
+	  hJpsiPtEff[i][k] = DivideTH1ForEff(hJpsiPt[i][k],hJpsiPt[index][k],Form("hJpsiPtEff_%s_cent%s",trkEffType[i],cent_Title[k]));
 	}
     }
 
   // various efficiency
-  const int jsetup = 4, kcent = 1;
-  TH1F *h11 = (TH1F*)hJpsiPtEffFinalRebin[jsetup][kcent][0]->Clone("h1_clone");
-  TH1F *h12 = (TH1F*)hJpsiPtEffFinalRebin[jsetup][kcent][1]->Clone("h1_clone");
-  list->Add(hJpsiPtEffFinal[jsetup][kcent][0]);
-  list->Add(h11);
-  list->Add(h12);
-  TString legName1[3] = {"Unweighted","Unweighted && rebinned","Weighted && rebinned"};
-  c = drawHistos(list,"JpsiEff_Check_Weight_Rebin",Form("Combined efficiency for J/#psi (AuAu_200%s);p_{T} (GeV/c);Efficiency",gTrgSetupTitle[jsetup]),false,2.0,3.8,true,1e-4,0.1,true,kTRUE,legName1,true,Form("%s%%",cent_Name[kcent]),0.5,0.7,0.2,0.45,kTRUE);
+  const int kcent = 0;
+  for(int i=1; i<nHistos; i++)
+    {
+      list->Add(hJpsiPtEff[i][kcent]);
+    }
+  TString legName2[5] = {"TPC tracking + p_{T,#mu} cut","MTD acceptance & response","Muon PID","MTD triggering","Trigger unit"};
+  c = drawHistos(list,"JpsiEff_AllEffs",Form("%s: efficiencies for J/#psi ;p_{T} (GeV/c);Efficiency",run_type),true,0,15,true,1e-5,1.7,false,kTRUE,legName2,true,Form("%s%%",cent_Name[kcent]),0.2,0.4,0.63,0.88,kTRUE,0.04,0.035);
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbJpsiEff/JpsiEff_AllTypes.pdf",run_type));
+  list->Clear();
+  return;
+
+  //==============================================
+  // weight input spectrum shape
+  //==============================================
+
+  // check if the histograms are consistent
+  TH2F *hJpsiPtMcVsRcAll = (TH2F*)fin->Get("Embed_JpsiPtMcVsRc_All");
+  TH1F *hJpsiPtRcCheck[2];
+  hJpsiPtRcCheck[0] = (TH1F*)hJpsiPtMcVsRcAll->ProjectionX("hJpsiPtRc_0");
+  hJpsiPtRcCheck[1] = (TH1F*)hJpsiPt[5][0]->Clone("hJpsiPtRc_1");
+  c = draw1D(hJpsiPtRcCheck[0]);
+  hJpsiPtRcCheck[1]->SetLineColor(2);
+  hJpsiPtRcCheck[1]->Draw("sames");
+
+  // weight with Jpsi spectrum shape
+  const int kNCent = nCentBins_npart[0];
+  TH1F *hInputJpsi[kNCent];
+  TFile *fWeight = TFile::Open("Rootfiles/models.root","read");
+  for(int k=0; k<kNCent; k++)
+    {
+      if(k==0 || k==1) hInputJpsi[k] = (TH1F*)fWeight->Get("TBW_JpsiYield_AuAu200_cent0020");
+      if(k==2 || k==3) hInputJpsi[k] = (TH1F*)fWeight->Get("TBW_JpsiYield_AuAu200_cent2040");
+      if(k>=4)         hInputJpsi[k] = (TH1F*)fWeight->Get("TBW_JpsiYield_AuAu200_cent4060");
+      hInputJpsi[k]->SetName(Form("hInputJpsi_cent%s",cent_Name_npart[k]));
+      hInputJpsi[k]->Scale(1./hInputJpsi[k]->Integral());
+    }
+
+  // weight with relative abundance
+  TH1F *hJpsiCorr[gNTrgSetup][gNZdcRate];
+  for(int t=0; t<gNTrgSetup; t++)
+    {
+      for(int p=0; p<gNZdcRate; p++)
+	{
+	  hJpsiCorr[t][p] = (TH1F*)fin->Get(Form("Data_JpsiCountWeight_Zdc%d-%d%s",p*10,p*10+10,gTrgSetupName[t]));
+	}
+    }
+
+  // matching between MC vs. RC
+  TH2F *hJpsiPtMcVsRc[kNCent][gNZdcRate];
+  TH1F *hJpsiPtMc[kNCent][gNZdcRate];
+  TH1F *hJpsiPtRc[kNCent][gNZdcRate];
+  TH1F *hJpsiEff[kNCent][gNZdcRate];
+  TH1F *hJpsiPtMcWeight[kNCent][gNZdcRate];
+  TH1F *hJpsiPtRcWeight[kNCent][gNZdcRate];
+  TH1F *hJpsiEffWeight[kNCent][gNZdcRate];
+  TH1F *hJpsiPtMcRebin[kNCent][gNZdcRate];
+  TH1F *hJpsiPtRcRebin[kNCent][gNZdcRate];
+  TH1F *hJpsiEffRebin[kNCent][gNZdcRate];
+  for(int k=0; k<kNCent; k++)
+    {
+      for(int p=0; p<gNZdcRate; p++)
+	{
+	  hJpsiPtMc[k][p]     = (TH1F*)fin->Get(Form("Embed_JpsiPtMc_cent%s_zdc%d-%d",cent_Title_npart[k],p*10,p*10+10));
+	  hJpsiPtMcVsRc[k][p] = (TH2F*)fin->Get(Form("Embed_JpsiPtMcVsRc_cent%s_zdc%d-%d",cent_Title_npart[k],p*10,p*10+10));
+	  hJpsiPtRc[k][p]     = (TH1F*)hJpsiPtMcVsRc[k][p]->ProjectionX(Form("Embed_JpsiPtRc_cent%s_zdc%d-%d",cent_Title_npart[k],p*10,p*10+10));
+
+	  // Mc input
+	  hJpsiPtMcWeight[k][p] = (TH1F*)hJpsiPtMc[k][p]->Clone(Form("%s_weight",hJpsiPtMc[k][p]->GetName()));
+	  int nBinsX = hJpsiPtMcWeight[k][p]->GetNbinsX();
+	  for(int xbin = 1; xbin<= nBinsX; xbin++)
+	    {
+	      double low_pt  = hJpsiPtMcWeight[k][p]->GetXaxis()->GetBinLowEdge(xbin);
+	      double high_pt = hJpsiPtMcWeight[k][p]->GetXaxis()->GetBinUpEdge(xbin);
+	      double jpsi_yield = hInputJpsi[k]->Integral(hInputJpsi[k]->FindFixBin(low_pt+1e-5),hInputJpsi[k]->FindFixBin(high_pt-1e-5));
+	      hJpsiPtMcWeight[k][p]->SetBinContent(xbin, hJpsiPtMcWeight[k][p]->GetBinContent(xbin) * jpsi_yield);
+	      hJpsiPtMcWeight[k][p]->SetBinError(xbin, hJpsiPtMcWeight[k][p]->GetBinError(xbin) * jpsi_yield);
+	    }
+	  hJpsiPtMcWeight[k][p]->Scale(hJpsiPtMcVsRc[k][p]->GetYaxis()->GetBinWidth(1)/hJpsiPtMcWeight[k][p]->GetBinWidth(1));
+	  hJpsiPtMcRebin[k][p] = (TH1F*)hJpsiPtMcWeight[k][p]->Rebin(nbins, Form("%s_weight_rebin",hJpsiPtMc[k][p]->GetName()), xbins);
+
+	  // Rc output
+	  TH2F *h2Tmp = (TH2F*)hJpsiPtMcVsRc[k][p]->Clone(Form("%s_tmp",hJpsiPtMcVsRc[k][p]->GetName()));
+	  int nBinsY = h2Tmp->GetNbinsY();
+	  int nBinsX = h2Tmp->GetNbinsX();
+	  for(int ybin = 1; ybin<= nBinsY; ybin++)
+	    {
+	      double low_pt = h2Tmp->GetYaxis()->GetBinLowEdge(ybin);
+	      double high_pt = h2Tmp->GetYaxis()->GetBinUpEdge(ybin);
+	      double jpsi_yield = hInputJpsi[k]->Integral(hInputJpsi[k]->FindFixBin(low_pt+1e-5),hInputJpsi[k]->FindFixBin(high_pt-1e-5));
+	      for(int xbin = 1; xbin <= nBinsX; xbin++)
+		{
+		  h2Tmp->SetBinContent(xbin, ybin, h2Tmp->GetBinContent(xbin, ybin) * jpsi_yield);
+		  h2Tmp->SetBinError(xbin, ybin, h2Tmp->GetBinError(xbin, ybin) * jpsi_yield);
+		}
+	    }
+	  hJpsiPtRcWeight[k][p] = (TH1F*)h2Tmp->ProjectionX(Form("Embed_JpsiPtRc_cent%s_zdc%d-%d_weight",cent_Title_npart[k],p*10,p*10+10));
+	  hJpsiPtRcRebin[k][p] = (TH1F*)hJpsiPtRcWeight[k][p]->Rebin(nbins, Form("%s_rebin",hJpsiPtRcWeight[k][p]->GetName()), xbins);
+
+	  // efficiencies
+	  int rebin = int(hJpsiPtRc[k][p]->GetBinWidth(1)/hJpsiPtMc[k][p]->GetBinWidth(1));
+	  hJpsiPtMc[k][p]->Rebin(rebin);
+	  hJpsiEff[k][p] = (TH1F*)hJpsiPtRc[k][p]->Clone(Form("Embed_JpsiEff_cent%s_zdc%d-%d",cent_Title_npart[k],p*10,p*10+10));
+	  hJpsiEff[k][p]->Divide(hJpsiPtMc[k][p]);
+
+	  hJpsiPtMcWeight[k][p]->Rebin(rebin);
+	  hJpsiEffWeight[k][p] = (TH1F*)hJpsiPtRcWeight[k][p]->Clone(Form("Embed_JpsiEff_cent%s_zdc%d-%d_weight",cent_Title_npart[k],p*10,p*10+10));
+	  hJpsiEffWeight[k][p]->Divide(hJpsiPtMcWeight[k][p]);
+
+	  hJpsiEffRebin[k][p] = (TH1F*)hJpsiPtRcRebin[k][p]->Clone(Form("Embed_JpsiEff_cent%s_zdc%d-%d_weight_rebin",cent_Title_npart[k],p*10,p*10+10));
+	  hJpsiEffRebin[k][p]->Divide(hJpsiPtMcRebin[k][p]);
+	}
+    }
+
+  TH1F *hJpsiEffVsPt[gNTrgSetup][nCentBins];
+  TH1F *hJpsiEffVsPtWeight[gNTrgSetup][nCentBins];
+  TH1F *hJpsiEffVsPtFinal[gNTrgSetup][nCentBins];
+  for(int t=0; t<gNTrgSetup; t++)
+    {
+      for(int k=0; k<nCentBins; k++)
+	{
+	  // reconstructed 
+	  hJpsiEffVsPt[t][k] = (TH1F*)hJpsiEff[0][0]->Clone(Form("JpsiEffVsPt_cent%s%s",cent_Title[k],gTrgSetupTitle[t]));
+	  hJpsiEffVsPt[t][k]->Reset();
+
+	  hJpsiEffVsPtWeight[t][k] = (TH1F*)hJpsiEffWeight[0][0]->Clone(Form("JpsiEffVsPt_cent%s%s_weight",cent_Title[k],gTrgSetupTitle[t]));
+	  hJpsiEffVsPtWeight[t][k]->Reset();
+
+	  hJpsiEffVsPtFinal[t][k] = (TH1F*)hJpsiEffRebin[0][0]->Clone(Form("JpsiEffVsPt_cent%s%s_final",cent_Title[k],gTrgSetupTitle[t]));
+	  hJpsiEffVsPtFinal[t][k]->Reset();
+
+	  int low_CentBin = 8 - centBins_high[k]/2;
+	  int high_CentBin = 8 - (centBins_low[k]+1)/2;
+	  double scaleAll = 0;
+	  for(int p=0; p<gNZdcRate; p++)
+	    {
+	      for(int centBin = low_CentBin; centBin <= high_CentBin; centBin++)
+		{
+		  double scale = hJpsiCorr[t][p]->GetBinContent(centBin+1);
+		  hJpsiEffVsPt[t][k]->Add(hJpsiEff[centBin][p], scale);
+		  hJpsiEffVsPtWeight[t][k]->Add(hJpsiEffWeight[centBin][p], scale);
+		  hJpsiEffVsPtFinal[t][k]->Add(hJpsiEffRebin[centBin][p], scale);
+		  scaleAll+= scale;
+		}
+	    }
+	  hJpsiEffVsPt[t][k]->Scale(1./scaleAll);
+	  hJpsiEffVsPtWeight[t][k]->Scale(1./scaleAll);
+	  hJpsiEffVsPtFinal[t][k]->Scale(1./scaleAll);
+	  printf("[i] Total scale = %4.2f\n",scaleAll);
+	}
+    }
+  
+  // check the effect of weighting & binning
+  TH1F *h11[3];
+  h11[0] = (TH1F*)hJpsiEffVsPt[0][0]->Clone("h11_clone_0");
+  h11[1] = (TH1F*)hJpsiEffVsPtWeight[0][0]->Clone("h11_clone_1");
+  h11[2] = (TH1F*)hJpsiEffVsPtFinal[0][0]->Clone("h11_clone_2");
+  // h11[0] = (TH1F*)hJpsiEff[0][10]->Clone("h11_clone_0");
+  // h11[1] = (TH1F*)hJpsiEffWeight[0][10]->Clone("h11_clone_1");
+  // h11[2] = (TH1F*)hJpsiEffRebin[0][10]->Clone("h11_clone_2");
+  for(int i=0; i<3; i++)
+    {
+      list->Add(h11[i]);
+    }
+  TString legName1[3] = {"Unweighted","Weighted","Weighted && rebinned"};
+  c = drawHistos(list,"JpsiEff_Check_Weight_Rebin",Form("%s: combined efficiency for J/#psi;p_{T} (GeV/c);Efficiency",run_type),true,0,15,true,5e-4,5e-2,true,kTRUE,legName1,true,Form("%s%%",cent_Name[0]),0.5,0.7,0.2,0.45,kTRUE);
   if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/JpsiEffFinal_Check_Weight_Rebin.pdf",run_type));
   list->Clear();
 
-  for(int i=1; i<nHistos; i++)
+  // centrality dependence
+  for(int k=0; k<3; k++)
     {
-      list->Add(hJpsiPtEffRebin[i][jsetup][kcent][1]);
+      list->Add(hJpsiEffVsPtFinal[0][k]);
     }
-  TString legName2[5] = {"TPC tracking + p_{T,#mu} cut","MTD matching","Muon PID","MTD triggering","Trigger unit"};
-  c = drawHistos(list,"JpsiEff_AllEffs",Form("Efficiency for J/#psi (AuAu_200%s);p_{T} (GeV/c);Efficiency",gTrgSetupTitle[jsetup]),false,2.0,3.8,true,1e-5,1.5,false,kTRUE,legName2,true,Form("%s%%",cent_Name[kcent]),0.2,0.4,0.6,0.88,kTRUE);
-  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/JpsiEff_Various.pdf",run_type));
+  c = drawHistos(list,"JpsiEffFinal_vs_cent",Form("%s: combined efficiency for J/#psi;p_{T} (GeV/c);Efficiency",run_type),true,0,15,true,5e-4,5e-2,true,kTRUE,legName_cent,true,"",0.5,0.7,0.2,0.45,kTRUE);
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/JpsiEffFinal_vs_Cent.pdf",run_type));
   list->Clear();
 
-  TH1F *hTrigUnit = (TH1F*)hJpsiPtEffRebin[5][0][0][1]->Clone("hTrigUnit");
-  hTrigUnit->SetMarkerStyle(21);
-  hTrigUnit->SetMarkerColor(1);
-  hTrigUnit->SetLineColor(1);
-  hTrigUnit->GetYaxis()->SetRangeUser(0.8,1.1);
-  c = draw1D(hTrigUnit,"Efficiency loss due to both muon daughters hitting same trigger unit");
-  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/JpsiEff_TrigUnit.pdf",run_type));
+  return;
 
   TLegend *leg1 = new TLegend(0.2,0.15,0.4,0.35);
   leg1->SetBorderSize(0);
@@ -376,7 +276,7 @@ void JpsiEff(const int savePlot = 0, const int saveHisto = 1)
   leg1->Draw();
   leg2->Draw();
   if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/JpsiEffFinal.pdf",run_type));
-
+  return;
 
   TString legName3[4] = {"Run14_AuAu200_production","Run14_AuAu200_production_low","Run14_AuAu200_production_mid","Run14_AuAu200_production_high"};
   for(int j=1; j<gNTrgSetup; j++)
@@ -387,6 +287,12 @@ void JpsiEff(const int savePlot = 0, const int saveHisto = 1)
   c = drawHistos(list,"JpsiEff_CompLumi",Form("Efficiency for J/#psi;p_{T} (GeV/c);Efficiency",gTrgSetupTitle[jsetup]),false,2.0,3.8,true,0,0.025,false,kTRUE,legName3,true,"0-20%",0.15,0.35,0.65,0.88,kTRUE);
   if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/JpsiEff_CompLumi.pdf",run_type));
   list->Clear();
+
+  return;
+
+
+
+
 
   // final average efficiency
   TFile *fYield = TFile::Open(Form("Rootfiles/Pico.Run14.AuAu200.jpsi.%spt%1.1f.pt%1.1f.yield.root",run_config,pt1_cut,pt2_cut),"read");
@@ -490,6 +396,255 @@ void JpsiEff(const int savePlot = 0, const int saveHisto = 1)
 	{
 	  hJpsiPtEffFinalRebin[j][1][1]->Write("",TObject::kOverwrite);
 	  hJpsiPtEffFinal[j][1][1]->Write("",TObject::kOverwrite);
+	}
+    }
+}
+
+//================================================
+void getJpsiWeight(const int savePlot = 1, const int saveHisto = 0)
+{
+  const int* nCentBins      = nCentBins_npart; 
+  const int* centBins_low   = centBins_low_npart;
+  const int* centBins_high  = centBins_high_npart;
+  const char** cent_Name    = cent_Name_npart;
+  const char** cent_Title   = cent_Title_npart;
+  const int kNCent          = nCentBins[0];
+
+  // check the acceptance effect using mixed event
+  TFile *fmix = TFile::Open(Form("Rootfiles/%s.Jpsi.pt%1.1f.pt%1.1f.root",run_type,pt1_cut,pt2_cut),"read");
+  const char* pName[2] = {"UL","LS"};
+  TH1F *hMixInvMass[2][nCentBins_pt];
+  TH1F *hAcc[nCentBins_pt];
+  TList *list = new TList;
+  TString legName[nCentBins_pt];
+  for(int j=0; j<nCentBins_pt; j++)
+    {
+      for(int i=0; i<2; i++)
+	{
+	  hMixInvMass[i][j] = (TH1F*)fmix->Get(Form("Mix_InvMass_%s_pt0-15_cent%s",pName[i],cent_Name_pt[j]));
+	  if(j==nCentBins_pt-1) hMixInvMass[i][j]->Rebin(5);
+	}
+      hAcc[j] = (TH1F*)hMixInvMass[0][j]->Clone(Form("Mix_InvMass_Acc_pt0-15_cent%s",cent_Name_pt[j]));
+      hAcc[j]->Divide(hMixInvMass[1][j]);
+      legName[j] = Form("%s%%",cent_Name_pt[j]);
+      list->Add(hAcc[j]);
+    }
+  TCanvas *c = drawHistos(list,"Mix_Acceptance",Form("%s: acceptance effect from mixed event;M_{#mu#mu} (GeV/c^{2});UL/LS",run_type),true,1,5,true,0.85,1.2,false,kTRUE,legName,kTRUE,"p_{T} > 0 GeV/c",0.45,0.7,0.65,0.88,kTRUE,0.04);
+  if(savePlot)
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbJpsiEff/MixEvt_AccEff.pdf",run_type));
+    }
+
+  // Get the # of UL-LS pairs from data
+  TFile *fin;
+  if(saveHisto)   fin = TFile::Open(Form("Rootfiles/%s.EmbJpsiEff.pt%1.1f.pt%1.1f.root",run_type,pt1_cut,pt2_cut),"update");
+  else            fin = TFile::Open(Form("Rootfiles/%s.EmbJpsiEff.pt%1.1f.pt%1.1f.root",run_type,pt1_cut,pt2_cut),"read");
+
+  TH1F *hJpsiInvMass[2][kNCent][gNTrgSetup][gNZdcRate];
+  TH1F *hJpsiCount[gNTrgSetup][gNZdcRate];
+  double min_mass[2] = {2.6, 3.2};
+  double max_mass[2] = {2.9, 3.5};
+  for(int t=0; t<gNTrgSetup; t++)
+    {
+      for(int p=0; p<gNZdcRate; p++)
+	{
+	  hJpsiCount[t][p]  = new TH1F(Form("Data_JpsiCount_Zdc%d-%d%s",p*10,p*10+10,gTrgSetupName[t]),";;Count",kNCent,0,kNCent);
+	  if(t==0 && (p==1 || p==4) )
+	    {
+	      c = new TCanvas(Form("ULvsLS_ZDC%d",p),Form("ULvsLS_ZDC%d-%d",p*10,p*10+10),1100,700);
+	      c->Divide(4,2);
+	    }
+	  for(int j=0; j<kNCent; j++)
+	    {
+	      hJpsiCount[t][p]->GetXaxis()->SetBinLabel(j+1, Form("%s%%",cent_Name[j]));
+	      hJpsiCount[t][p]->GetXaxis()->SetLabelSize(0.045);
+
+	      for(int i=0; i<2; i++)
+		{
+		  hJpsiInvMass[i][j][t][p] = (TH1F*)fin->Get(Form("Data_InvMass_%s_cent%s_zdc%d-%d%s",pName[i],cent_Title_npart[j],p*10,p*10+10,gTrgSetupName[t]));
+		  int nbins = hJpsiInvMass[i][j][t][p]->GetNbinsX();
+		  for(int bin=1; bin<=nbins; bin++)
+		    {
+		      hJpsiInvMass[i][j][t][p]->SetBinError(bin, sqrt(hJpsiInvMass[i][j][t][p]->GetBinContent(bin)));
+		    }
+		}
+
+	      // normalize in side-band region
+	      double nCount[2] = {0,0};
+	      for(int i=0; i<2; i++)
+		{
+		  for(int m=0; m<2; m++)
+		    {
+		      int low_bin = hJpsiInvMass[i][j][t][p]->FindFixBin(min_mass[m]);
+		      int high_bin = hJpsiInvMass[i][j][t][p]->FindFixBin(max_mass[m]);
+		      nCount[i] += hJpsiInvMass[i][j][t][p]->Integral(low_bin, high_bin);
+		    }
+		}
+	      double scale = nCount[0]/nCount[1];
+	      hJpsiInvMass[1][j][t][p]->Scale(scale);
+	      low_bin = hJpsiInvMass[0][j][t][p]->FindFixBin(3.0);
+	      high_bin = hJpsiInvMass[0][j][t][p]->FindFixBin(3.2);
+	      double nUL, nULerr, nLS, nLSerr;
+	      nUL = hJpsiInvMass[0][j][t][p]->Integral(low_bin,high_bin);
+	      nLS = hJpsiInvMass[1][j][t][p]->Integral(low_bin,high_bin);
+	      nULerr = sqrt(nUL);
+	      nLSerr = sqrt(nLS);
+	      if(nUL>0 && nUL >= nLS)
+		{
+		  hJpsiCount[t][p]->SetBinContent(j+1, nUL-nLS);
+		  hJpsiCount[t][p]->SetBinError(j+1, sqrt(nULerr*nULerr+nLSerr*nLSerr));
+		}
+	      else
+		{
+		  printf("[w] Missing %s%% ZDC%d-%d%s\n",cent_Name[j],p*10,p*10+10,gTrgSetupName[t]);
+		}
+
+	      if(t==0 && (p==1 || p==4))
+		{
+		  c->cd(j+1);
+		  hJpsiInvMass[0][j][t][p]->Rebin(5);
+		  hJpsiInvMass[0][j][t][p]->GetXaxis()->SetRangeUser(2.5,4);
+		  hJpsiInvMass[0][j][t][p]->SetMarkerStyle(21);
+		  hJpsiInvMass[0][j][t][p]->SetMaximum(1.3*hJpsiInvMass[0][j][t][p]->GetMaximum());
+		  hJpsiInvMass[0][j][t][p]->Draw("P");
+		  hJpsiInvMass[1][j][t][p]->Rebin(5);
+		  hJpsiInvMass[1][j][t][p]->SetLineColor(4);
+		  hJpsiInvMass[1][j][t][p]->Draw("samesHIST");
+		  TPaveText *t1 = GetTitleText(Form("%s%%, %d < ZDC < %d kHz",cent_Name[j],p*10,p*10+10),0.06);
+		  t1->Draw();
+		  if(j==0)
+		    {
+		      t1 = GetPaveText(0.2,0.5,0.8,0.85,0.06);
+		      t1->SetTextColor(6);
+		      t1->AddText(run_type);
+		      t1->Draw();
+		    }
+		}
+	    }
+	  if(t==0 && (p==1 || p==4) )
+	    {
+	      if(savePlot)
+		c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbJpsiEff/Data_ULvsLS_Zdc%d-%d.pdf",run_type,p*10,p*10+10));
+	    }
+	}
+    }
+
+
+  // plot nJpsi vs. centrality vs. ZDC
+  double xmin = 0.15, xmax = 0.45, ymin = 0.65, ymax = 0.88;
+  TLegend *leg[2];
+  for(int l=0; l<2; l++)
+    {
+      leg[l] = new TLegend(xmin+0.3*l,ymin,xmax+0.3*l,ymax);
+      leg[l]->SetBorderSize(0);
+      leg[l]->SetFillColor(0);
+      leg[l]->SetTextSize(0.03);
+    }
+  const int color[6] = {1, 2, 3, 4, 6, 7};
+  TH1F *hMcTrkEff[gNTrgSetup][gNZdcRate];
+  for(int t=0; t<gNTrgSetup; t++)
+    {
+      for(int p=0; p<gNZdcRate; p++)
+	{
+	  hJpsiCount[t][p]->GetXaxis()->SetLabelSize(0.05);
+	  hJpsiCount[t][p]->SetMarkerStyle(20+p);
+	  hJpsiCount[t][p]->SetMarkerColor(color[p%6]);
+	  hJpsiCount[t][p]->SetLineColor(color[p%6]);
+	  hJpsiCount[t][p]->GetYaxis()->SetRangeUser(1,1e6);
+	}
+    }
+
+  for(int p=0; p<gNZdcRate; p++)
+    {
+      leg[p/6]->AddEntry(hJpsiCount[0][p],Form("%d < ZDC < %d kHz",p*10,p*10+10),"P");
+      if(p==0)
+	{
+	  c = draw1D(hJpsiCount[0][p]);
+	  gPad->SetLogy();
+	  TPaveText *t1 = GetTitleText(Form("%s: # of UL-LS counts from data",run_type),0.04);
+	  t1->Draw();
+	}
+      else     hJpsiCount[0][p]->Draw("sames");
+    }
+  for(int l=0; l<2; l++)
+    leg[l]->Draw();
+  if(savePlot)
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbJpsiEff/Data_NJpsi_US-LS.pdf",run_type));
+    }
+
+  // Apply TPC efficiency
+  TH1F *hMcJpsiEff[gNZdcRate]; 
+  TH1F *hJpsiCorr[gNTrgSetup][gNZdcRate];
+  double nJpsiAll[gNTrgSetup];
+  for(int t=0; t<gNTrgSetup; t++)
+    {
+      nJpsiAll[t] = 0;
+      for(int p=0; p<gNZdcRate; p++)
+	{
+	  hMcJpsiEff[p] = (TH1F*)fin->Get(Form("McJpsiTpcEff_Zdc%d-%d",p*10,p*10+10));
+	  hJpsiCorr[t][p] = (TH1F*)hJpsiCount[t][p]->Clone(Form("Data_JpsiCountWeight_Zdc%d-%d%s",p*10,p*10+10,gTrgSetupName[t]));
+	  int nbins = hMcJpsiEff[p]->GetNbinsX();
+	  for(int bin=1; bin<=nbins; bin++)
+	    {
+	      double nJpsi = hJpsiCorr[t][p]->GetBinContent(bin);
+	      double eff = hMcJpsiEff[p]->GetBinContent(bin);
+	      if(eff>0)
+		{
+		  hJpsiCorr[t][p]->SetBinContent(bin, nJpsi/eff);
+		  hJpsiCorr[t][p]->SetBinError(bin, hJpsiCorr[t][p]->GetBinError(bin)/eff);
+		}
+	      else
+		{
+		  hJpsiCorr[t][p]->SetBinContent(bin, 0);
+		  hJpsiCorr[t][p]->SetBinError(bin, 0);
+		}
+	      if(p==0)
+		{
+		  hJpsiCorr[t][p]->SetBinContent(bin, 0);
+		  hJpsiCorr[t][p]->SetBinError(bin, 0);
+		}
+	      nJpsiAll[t] += hJpsiCorr[t][p]->GetBinContent(bin);
+	    }
+	}
+      printf("[i] Total # of corrected Jpsi: %1.0f for %s\n",nJpsiAll[t],gTrgSetupName[t]);
+      
+      for(int p=0; p<gNZdcRate; p++)
+	{
+	  hJpsiCorr[t][p]->Scale(1./nJpsiAll[t]);
+	  hJpsiCorr[t][p]->GetYaxis()->SetRangeUser(1e-4,10);
+	}
+    }
+
+  for(int p=0; p<gNZdcRate; p++)
+    {
+      if(p==0) 
+	{
+	  c = draw1D(hJpsiCorr[0][p]);
+	  gPad->SetLogy();
+	  TPaveText *t1 = GetTitleText(Form("%s: corrected (UL-LS) counts as weights",run_type),0.04);
+	  t1->Draw();
+	}
+      else     
+	hJpsiCorr[0][p]->Draw("sames");
+    }
+  for(int l=0; l<2; l++)
+    leg[l]->Draw();
+  if(savePlot)
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbJpsiEff/Data_Jpsi_Weights.pdf",run_type));
+    }
+
+  if(saveHisto)
+    {
+      printf("+++ Save histograms +++\n");
+      fin->cd();
+      for(int t=0; t<gNTrgSetup; t++)
+	{
+	  for(int p=0; p<gNZdcRate; p++)
+	    {
+	      hJpsiCorr[t][p]->Write("", TObject::kOverwrite);
+	    }
 	}
     }
 }

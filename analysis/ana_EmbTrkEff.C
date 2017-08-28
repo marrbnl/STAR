@@ -42,13 +42,177 @@ void ana_EmbTrkEff()
   printf("# of events: %4.4e\n",hStat->GetBinContent(3));
 
   //efficiency(outName);
+  effVsZdc();
   //effVsCent();
-  effVsEta();
+  //effVsEta();
   //TrkEff3D(outName, outPDF);
 }
 
 //================================================
-void effVsCent(const int savePlot = 0)
+void effVsZdc(const int savePlot = 0, const int saveHisto = 0)
+{
+  const int* nCentBins      = nCentBins_npart; 
+  const int* centBins_low   = centBins_low_npart;
+  const int* centBins_high  = centBins_high_npart;
+  const char** cent_Name    = cent_Name_npart;
+  const char** cent_Title   = cent_Title_npart;
+  const int kNCent          = nCentBins[0];
+
+  // Get TPC efficiency vs. centrality vs. ZDCrate
+  const int nTrkPtBins = 13;
+  const double xTrkPtBins[14] = {0,0.2,0.4,0.6,0.8,1.0,1.2,1.5,2.0,2.5,3.0,5.0,10,20};
+  TFile *ftrk = 0;
+  if(saveHisto) ftrk = TFile::Open(Form("Rootfiles/%s.EmbTrkEff.root",run_type),"update");
+  else          ftrk = TFile::Open(Form("Rootfiles/%s.EmbTrkEff.root",run_type),"read");
+  TH1F *hMcTrkPtInZdc[2][gNZdcRate][kNCent];
+  TH1F *hMcTrkPtInZdcAll[2];
+  TH1F *htmp = 0x0;
+  for(int i=0; i<2; i++)
+    {
+      for(int k=0; k<kNCent; k++)
+	{
+	  for(int j=0; j<gNZdcRate; j++)
+	    {
+	      if(i==0) htmp = (TH1F*)ftrk->Get(Form("McTrkPt_MC_cent%s_Zdc%d-%d",cent_Title[k],j*10,j*10+10));
+	      if(i==1) htmp = (TH1F*)ftrk->Get(Form("McTrkPt_Tpc_cent%s_Zdc%d-%d",cent_Title[k],j*10,j*10+10));
+	      htmp->Sumw2();
+	      hMcTrkPtInZdc[i][j][k] = (TH1F*)htmp->Rebin(nTrkPtBins, Form("%s_rebin",htmp->GetName()), xTrkPtBins);
+	      if(k==0 && j==0) hMcTrkPtInZdcAll[i] = (TH1F*)hMcTrkPtInZdc[i][j][k]->Clone(Form("%s_All",htmp->GetName()));
+	      else             hMcTrkPtInZdcAll[i]->Add(hMcTrkPtInZdc[i][j][k]);
+	      if(k==kNCent-1)
+		{
+		  hMcTrkPtInZdc[i][j][k-1]->Add(hMcTrkPtInZdc[i][j][k]);
+		  hMcTrkPtInZdc[i][j][k] = (TH1F*)hMcTrkPtInZdc[i][j][k-1]->Clone(hMcTrkPtInZdc[i][j][k-1]->GetName());
+		}
+	    }
+	}
+    }
+  TH1F *hTrkEffAll = (TH1F*)hMcTrkPtInZdcAll[1]->Clone("TpcTrkEff");
+  hTrkEffAll->Divide(hMcTrkPtInZdcAll[0]);
+  TF1 *funcTrkEffAll = new TF1("func_TpcTrkEff","[0]-exp([1]*(x-[2]))",0.4,20);
+  funcTrkEffAll->SetParameters(0.7,-2,0.2);
+  hTrkEffAll->Fit(funcTrkEffAll,"R0Q");
+  hTrkEffAll->SetMarkerStyle(20);
+  hTrkEffAll->GetYaxis()->SetRangeUser(0.5,0.8);
+  c = draw1D(hTrkEffAll,Form("%s: TPC tracking efficiency for muons;p_{T} (GeV/c);Efficiency",run_type));
+  funcTrkEffAll->SetLineWidth(2);
+  funcTrkEffAll->SetLineStyle(2);
+  funcTrkEffAll->SetLineColor(4);
+  funcTrkEffAll->Draw("sames");
+  TLegend *leg0 = new TLegend(0.4,0.2,0.7,0.4);
+  leg0->SetBorderSize(0);
+  leg0->SetFillColor(0);
+  leg0->SetTextSize(0.04);
+  leg0->AddEntry(hTrkEffAll, "Embedding", "P");
+  leg0->AddEntry(funcTrkEffAll, "Fit function: p0-e^{p1*(x-p2)}", "L");
+  leg0->Draw();
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbJpsiEff/Embed_FitTpcTrkEff_All.pdf",run_type));
+
+  TH1F *hTrkEff[gNZdcRate][kNCent];
+  TF1 *funcTrkEff[gNZdcRate][kNCent];
+  for(int k=0; k<kNCent; k++)
+    {
+      c = new TCanvas(Form("TpcTrkEff_cent%s",cent_Title[k]),Form("TpcTrkEff_cent%s",cent_Title[k]),1100,700);
+      c->Divide(4,3);
+      for(int j=0; j<gNZdcRate; j++)
+	{
+	  hTrkEff[j][k] = (TH1F*)hMcTrkPtInZdc[1][j][k]->Clone(Form("TpcTrkEff_cent%s_Zdc%d-%d",cent_Title[k],j*10,j*10+10));
+	  hTrkEff[j][k]->Divide(hMcTrkPtInZdc[0][j][k]);
+	  funcTrkEff[j][k] = new TF1(Form("func_TpcTrkEff_cent%s_Zdc%d-%d",cent_Title[k],j*10,j*10+10),"[0]-exp([1]*(x-[2]))",0.4,20);
+	  funcTrkEff[j][k]->FixParameter(1, funcTrkEffAll->GetParameter(1));
+	  funcTrkEff[j][k]->FixParameter(2, funcTrkEffAll->GetParameter(2));
+	  hTrkEff[j][k]->Fit(funcTrkEff[j][k], "R0Q");
+	  hTrkEff[j][k]->SetMarkerStyle(20);
+	  hTrkEff[j][k]->GetXaxis()->SetRangeUser(0.2, 10);
+	  if(k<3) hTrkEff[j][k]->GetYaxis()->SetRangeUser(0.4,0.9);
+	  else    hTrkEff[j][k]->GetYaxis()->SetRangeUser(0.3,1.2);
+	  hTrkEff[j][k]->SetTitle(";p_{T} (GeV/c);TPC efficiency");
+	  ScaleHistoTitle(hTrkEff[j][k],0.045,1,0.035,0.045,0.9,0.035);
+	  if(j==0) continue;
+	  c->cd(j+1);
+	  hTrkEff[j][k]->Draw();
+	  funcTrkEff[j][k]->SetLineColor(4);
+	  funcTrkEff[j][k]->SetLineStyle(2);
+	  funcTrkEff[j][k]->SetLineWidth(2);
+	  funcTrkEff[j][k]->Draw("sames");
+	  TPaveText *t1 = GetTitleText(Form("%d < ZDCrate < %d kHz",j*10,10+j*10),0.06);
+	  t1->Draw();
+	  if(j==gNZdcRate-1 && k>=5)
+	    {
+	      funcTrkEff[j][k]->SetParameter(0, funcTrkEff[j][4]->GetParameter(0));
+	      funcTrkEff[j][k]->SetParError(0, funcTrkEff[j][4]->GetParError(0));
+	    }
+	}
+      c->cd(1);
+      TLegend *leg0 = new TLegend(0.2,0.4,0.7,0.8);
+      leg0->SetBorderSize(0);
+      leg0->SetFillColor(0);
+      leg0->SetTextSize(0.06);
+      if(k<=5) leg0->SetHeader(Form("%s: %s%%",run_type,cent_Name[k]));
+      else     leg0->SetHeader(Form("%s: 60-80%%",run_type));
+      leg0->AddEntry(hTrkEff[1][k], "Embedding", "P");
+      leg0->AddEntry(funcTrkEff[1][k], "Fit function: p0-e^{p1*(x-p2)}", "L");
+      leg0->Draw();
+      if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbJpsiEff/Embed_FitTpcTrkEff_cent%s.pdf",run_type,cent_Title[k]));
+    }
+
+  // compare efficiency at high pT
+  double xmin = 0.15, xmax = 0.45, ymin = 0.15, ymax = 0.4;
+  TLegend *leg[2];
+  for(int l=0; l<2; l++)
+    {
+      leg[l] = new TLegend(xmin+0.3*l,ymin,xmax+0.3*l,ymax);
+      leg[l]->SetBorderSize(0);
+      leg[l]->SetFillColor(0);
+      leg[l]->SetTextSize(0.03);
+    }
+  const int color[6] = {1, 2, 3, 4, 6, 7};
+  TH1F *hTpcTrkEffVsCent[gNZdcRate];
+  for(int j=0; j<gNZdcRate; j++)
+    {
+      hTpcTrkEffVsCent[j] = new TH1F(Form("McTrkPtEff_Zdc%d",j),";;Efficiency",kNCent-1,0,kNCent-1);
+      for(int k=0; k<kNCent-1; k++)
+	{
+	  if(k<kNCent-2) hTpcTrkEffVsCent[j]->GetXaxis()->SetBinLabel(k+1, Form("%s%%",cent_Name[k]));
+	  else           hTpcTrkEffVsCent[j]->GetXaxis()->SetBinLabel(k+1, "60-80%");
+
+	  hTpcTrkEffVsCent[j]->SetBinContent(k+1, funcTrkEff[j][k]->GetParameter(0));
+	  hTpcTrkEffVsCent[j]->SetBinError(k+1, funcTrkEff[j][k]->GetParError(0));
+	}
+      hTpcTrkEffVsCent[j]->GetXaxis()->SetLabelSize(0.05);
+      hTpcTrkEffVsCent[j]->SetMarkerStyle(20+j);
+      hTpcTrkEffVsCent[j]->SetMarkerColor(color[j%6]);
+      hTpcTrkEffVsCent[j]->SetLineColor(color[j%6]);
+      leg[j/6]->AddEntry(hTpcTrkEffVsCent[j],Form("%d < ZDC < %d kHz",j*10,j*10+10),"P");
+      if(j==0) 
+	{
+	  c = draw1D(hTpcTrkEffVsCent[j]);
+	  TPaveText *t1 = GetTitleText(Form("%s: TPC tracking efficiency",run_type),0.04);
+	  t1->Draw();
+	}
+      else     hTpcTrkEffVsCent[j]->Draw("sames");
+    }
+  for(int l=0; l<2; l++) leg[l]->Draw();
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbJpsiEff/Embed_TrkTpcEffVsCentVsZdc.pdf",run_type));
+
+  if(saveHisto)
+    {
+      ftrk->cd();
+      hTrkEffAll->Write("", TObject::kOverwrite);
+      funcTrkEffAll->Write("", TObject::kOverwrite);
+      for(int k=0; k<kNCent; k++)
+	{
+	  for(int j=0; j<gNZdcRate; j++)
+	    {
+	      hTrkEff[j][k]->Write("", TObject::kOverwrite);
+	      funcTrkEff[j][k]->Write("", TObject::kOverwrite);
+	    }
+	}
+    }
+}
+
+//================================================
+void effVsCent(const int savePlot = 1)
 {
   const int nCentBins       = nCentBins_pt; 
   const int* centBins_low   = centBins_low_pt;
@@ -115,6 +279,7 @@ void effVsCent(const int savePlot = 0)
 	  htmp->SetLineColor(color[j-1]);
 	  htmp->SetMarkerColor(color[j-1]);
 	  htmp->GetYaxis()->SetRangeUser(0,1);
+	  htmp->GetXaxis()->SetRangeUser(0,18);
 	  htmp->GetYaxis()->SetTitle("Efficiency");
 	  ScaleHistoTitle(htmp,0.06,1,0.05,0.06,0.9,0.05,62);
 	  if(j==1) htmp->Draw();
@@ -271,12 +436,11 @@ void effVsEta(const int savePlot = 1)
 //================================================
 void efficiency(TString inName, const bool savePlot = 1, const bool saveHisto = 1)
 {
-  const int* nCentBins      = nCentBins_npart; 
-  const int* centBins_low   = centBins_low_npart;
-  const int* centBins_high  = centBins_high_npart;
-  const char** cent_Name    = cent_Name_npart;
-  const char** cent_Title   = cent_Title_npart;
-  const int kNCent          = nCentBins[0];
+  const int nCentBins       = nCentBins_pt; 
+  const int* centBins_low   = centBins_low_pt;
+  const int* centBins_high  = centBins_high_pt;
+  const char** cent_Name    = cent_Name_pt;
+  const char** cent_Title   = cent_Title_pt;
 
   TFile *fin = 0;
   if(saveHisto) fin = TFile::Open(Form("Rootfiles/%s",inName.Data()),"update");
@@ -673,7 +837,7 @@ void TrkEff3D(TString inName, TString outPDFName, const bool savePlot = 0, const
   if(year==2013) t1->AddText("in pp 500 GeV from Run13");
   if(year==2014) t1->AddText("in Au+Au 200 GeV from Run14");
   t1->Draw();
-  c1->Print(Form("PDF/%s(",outPDFName.Data()));
+  c1->Print(Form("%s(",outPDFName.Data()));
 
   //----------------------------------------------------------------------------
   // Get TPDF
