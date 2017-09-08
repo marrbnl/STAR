@@ -42,14 +42,14 @@ void ana_EmbTrkEff()
   printf("# of events: %4.4e\n",hStat->GetBinContent(3));
 
   //efficiency(outName);
-  effVsZdc();
-  //effVsCent();
+  //effVsZdc();
+  effVsCent();
   //effVsEta();
   //TrkEff3D(outName, outPDF);
 }
 
 //================================================
-void effVsZdc(const int savePlot = 0, const int saveHisto = 0)
+void effVsZdc(const int savePlot = 1, const int saveHisto = 1)
 {
   const int* nCentBins      = nCentBins_npart; 
   const int* centBins_low   = centBins_low_npart;
@@ -187,7 +187,7 @@ void effVsZdc(const int savePlot = 0, const int saveHisto = 0)
       if(j==0) 
 	{
 	  c = draw1D(hTpcTrkEffVsCent[j]);
-	  TPaveText *t1 = GetTitleText(Form("%s: TPC tracking efficiency",run_type),0.04);
+	  TPaveText *t1 = GetTitleText(Form("%s: TPC tracking efficiency at high p_{T}",run_type),0.04);
 	  t1->Draw();
 	}
       else     hTpcTrkEffVsCent[j]->Draw("sames");
@@ -252,8 +252,8 @@ void effVsCent(const int savePlot = 1)
 	    {
 	      hMcTrkPtVsZdc[i][j][k] = (TH2F*)fin->Get(Form("McTrkPtVsZdc_%s_cent%s%s",trkEffType[i],cent_Title[k],gTrgSetupTitle[j]));
 	      hMcTrkPt[i][j][k] = (TH1F*)fin->Get(Form("McTrkPt_%s_cent%s%s",trkEffType[i],cent_Title[k],gTrgSetupTitle[j]));
-	      if(k<4) hMcTrkPt[i][j][k]->Rebin(5);
-	      else hMcTrkPt[i][j][k]->Rebin(20);
+	      if(k<4) hMcTrkPt[i][j][k]->Rebin(10);
+	      else hMcTrkPt[i][j][k]->Rebin(10);
 	      if(i>0) 
 		{
 		  hMcTrkPtEff[i][j][k] = DivideTH1ForEff(hMcTrkPt[i][j][k], hMcTrkPt[i-1][j][k], Form("hMcTrkPtEff_%s_cent%s%s",trkEffType[i],cent_Title[k],gTrgSetupTitle[j]));
@@ -819,7 +819,7 @@ void efficiency(TString inName, const bool savePlot = 1, const bool saveHisto = 
 
 
 //================================================
-void TrkEff3D(TString inName, TString outPDFName, const bool savePlot = 0, const bool saveHisto = 0)
+void TrkEff3D(TString inName, TString outPDFName, const bool savePlot = 1, const bool saveHisto = 1)
 {
   const int nCentBins       = nCentBins_pt; 
   const int* centBins_low   = centBins_low_pt;

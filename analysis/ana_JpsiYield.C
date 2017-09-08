@@ -29,16 +29,17 @@ void ana_JpsiYield()
   printf("acc di-muon events: %4.4e\n",hStat->GetBinContent(10));
   printf("HFT di-muon events: %4.2f%%\n",hStat->GetBinContent(15)/hStat->GetBinContent(10)*100);
 
-  //yieldVsPt();
+  yieldVsPt();
   //yieldVsNpart();
   //yieldVsLumi();
-  fitYield();
+  //fitYield();
   //pt2scan();
   //HftTracking();
 }
 
+
 //================================================
-void fitYield(int icent = 0, int savePlot = 1, int saveHisto = 1)
+void fitYield(int icent = 0, int savePlot = 0, int saveHisto = 0)
 {
   const int nCentBins       = nCentBins_pt; 
   const int* centBins_low   = centBins_low_pt;
@@ -57,12 +58,12 @@ void fitYield(int icent = 0, int savePlot = 1, int saveHisto = 1)
       double pt = hJpsiYield->GetBinCenter(bin);
       hJpsiYield->SetBinContent(bin, hJpsiYield->GetBinContent(bin)/scale);
       hJpsiYield->SetBinError(bin, hJpsiYield->GetBinError(bin)/scale);
-      hInvJsiYield->SetBinContent(bin, hJpsiYield->GetBinContent(bin)/scale/pt);
-      hInvJsiYield->SetBinError(bin, hJpsiYield->GetBinError(bin)/scale/pt);
+      hInvJsiYield->SetBinContent(bin, hInvJsiYield->GetBinContent(bin)/scale/pt);
+      hInvJsiYield->SetBinError(bin, hInvJsiYield->GetBinError(bin)/scale/pt);
     }
   TF1 *funcJpsi = new TF1(Form("Fit_%s_tmp",hJpsiYield->GetName()),"exp([0]+[1]*x)",0,15);
   hInvJsiYield->Fit(funcJpsi,"IR0");
-  hInvJsiYield->SetTitle(Form("%s: raw J/psi yield;p_{T} (GeV/c);dN/p_{T}dp_{T}",run_type));
+  hInvJsiYield->SetTitle(Form("%s: raw invariant J/psi yield;p_{T} (GeV/c);dN/p_{T}dp_{T}",run_type));
   hInvJsiYield->SetMarkerStyle(21);
   c = draw1D(hInvJsiYield);
   gPad->SetLogy();
@@ -90,7 +91,7 @@ void fitYield(int icent = 0, int savePlot = 1, int saveHisto = 1)
 }
 
 //================================================
-void yieldVsPt(int savePlot = 1)
+void yieldVsPt(int savePlot = 0)
 {
   const int nPtBins         = nPtBins_pt;
   const double* ptBins_low  = ptBins_low_pt;

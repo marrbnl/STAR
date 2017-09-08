@@ -500,8 +500,8 @@ void tuneResolution(const int icent, const bool savePlot)
 		{
 		  double value = hDataSigma->GetBinContent(ibin);
 		  double error = hDataSigma->GetBinError(ibin);
-		  if(i==1) value -= 1.5*error;
-		  if(i==2) value += 1.5*error;
+		  if(i==1) value -= 1.0*error;
+		  if(i==2) value += 1.0*error;
 		  chi2 += TMath::Power((value-hFitSmearSigma[j]->Eval(hDataSigma->GetBinCenter(ibin)))/error,2);
 		}
 	      hSmearChi2[i]->SetBinContent(bin,chi2);
@@ -710,87 +710,6 @@ void tuneResolution(const int icent, const bool savePlot)
       leg->AddEntry(hJpsiShape[0][0],"Data","PL");
       leg->AddEntry(hJpsiShape[1][0],"Smeared embedding","L");
       leg->Draw();
-      
-
-      /*
-      return;
-
-      // pt distribution
-      TH1F *hRawCounts = (TH1F*)fdata->Get(Form("Jpsi_BinCountYield_cent%s",cent_Title[icent]));
-      hRawCounts->Scale(1./hRawCounts->Integral("width"));
-      hRawCounts->SetMarkerStyle(21);
-      hRawCounts->SetMarkerColor(2);
-      hRawCounts->SetLineColor(2);
-      hRawCounts->SetTitle("Raw p_{T} distribution of J/#Psi");
-      hRawCounts->SetMaximum(20*hRawCounts->GetMaximum());
-      c = draw1D(hRawCounts);
-      gPad->SetLogy();
-      cout << hRawCounts->GetMean() << endl;
-      TH1F *hCountsEmb = (TH1F*)hMassVsPtEmbed[0]->ProjectionX("hCountsEmb");
-      hCountsEmb->Rebin(2);
-      hCountsEmb->Scale(1./hCountsEmb->Integral("width"));
-      hCountsEmb->SetMarkerStyle(25);
-      hCountsEmb->Draw("sames");
-      leg->Draw();
-      cout << hCountsEmb->GetMean() << endl;
-      if(savePlot)
-	c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiRes/SmearEmbedVsData_JpsiYield_cent%s.pdf",run_type,cent_Title[icent]));
-      
-
-      // signal shape
-      TH1F *hSignal = (TH1F*)fdata->Get(Form("Jpsi_Signal_pt%s_cent%s",pt_Name[0],cent_Title[icent]));
-      TF1 *fitSignal = (TF1*)fdata->Get(Form("Jpsi_FitSig_pt%s_cent%s",pt_Name[0],cent_Title[icent]));
-      TF1 *funcBkg = new TF1("funcBkg","pol3",2.5,4);
-      TF1 *funcSignal = new TF1("funcSignal", "gaus", 2.7, 3.5);
-      for(int i=0; i<4; i++)
-	funcBkg->SetParameter(i, fitSignal->GetParameter(i+3));
-      for(int i=0; i<3; i++)
-	funcSignal->SetParameter(i, fitSignal->GetParameter(i));
-
-      if(year==2015)
-	{
-	  funcBkg    = (TF1*)fdata->Get("mfBkgCent0_Pt0");
-	  funcSignal = (TF1*)fdata->Get("mfSigCent0_Pt0");
-	}
-
-      if(year==2016)
-	{
-	  TList *list = (TList*)hSignal->GetListOfFunctions();
-	  fitSignal = (TF1*)list->At(0);
-	  for(int i=0; i<4; i++)
-	    funcBkg->SetParameter(i, fitSignal->GetParameter(i+4));
-	  funcSignal = (TF1*)fdata->Get("fSig");
-	}
-
-      TAxis *axis = hSignal->GetXaxis();
-      TH1F *hSignalSub = new TH1F("hSignalSub","Compare J/#psi signal shape;M_{#mu#mu} (GeV/c^{2})",axis->GetNbins(),axis->GetXmin(), axis->GetXmax());
-      for(int ibin=1; ibin<=hSignalSub->GetNbinsX(); ibin++)
-	{
-	  double value = hSignal->GetBinContent(ibin);
-	  double error = hSignal->GetBinError(ibin);
-	  double bkg = funcBkg->Integral(hSignal->GetXaxis()->GetBinLowEdge(ibin),hSignal->GetXaxis()->GetBinUpEdge(ibin))/hSignal->GetBinWidth(ibin);
-	  hSignalSub->SetBinContent(ibin, value - bkg);
-	  hSignalSub->SetBinError(ibin, sqrt(error*error+fabs(bkg)));
-	}
-      hSignalSub->SetMarkerStyle(21);
-      hSignalSub->GetXaxis()->SetRangeUser(2.5,4);
-      if(year==2016) hSignalSub->GetXaxis()->SetRangeUser(2.7,3.5);
-      double datascale = hSignalSub->Integral(hSignalSub->FindFixBin(2.9+1e-4),hSignalSub->FindFixBin(3.3-1e-4),"width");
-      hSignalSub->Scale(1./datascale);
-      hSignalSub->SetLineColor(2);
-      hSignalSub->SetMarkerColor(2);
-      hSignalSub->SetMaximum(1.5*hSignalSub->GetMaximum());
-      c = draw1D(hSignalSub);
-      funcSignal->SetParameter(0, funcSignal->GetParameter(0)/datascale);
-      //funcSignal->Draw("sames");
-      TH1F *hSignalEmb = (TH1F*)hMassVsPtEmbed[0]->ProjectionY("hSignalEmb");
-      hSignalEmb->SetMarkerStyle(25);
-      hSignalEmb->Scale(funcSignal->Eval(3.095)/hSignalEmb->GetBinContent(hSignalEmb->FindFixBin(3.095)));
-      hSignalEmb->Draw("sames");
-      leg->Draw();
-      if(savePlot)
-	c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiRes/SmearEmbedVsData_JpsiShape_cent%s.pdf",run_type,cent_Title[icent]));
-      */
 
       // smearing efficiency
       TH1F *hJpsiEff[3];

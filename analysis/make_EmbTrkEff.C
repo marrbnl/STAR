@@ -221,7 +221,7 @@ void makeHistos(const int saveHistos = 1)
 	      hMcTrkPtInZdc[i][j][k]->SetTitle("");
 	      hnMcTrkPt[i]->GetAxis(2)->SetRange(0,-1);
 	    }
-	  hnMcTrkPt[i]->GetAxis(4)->SetRange(0,-1);
+	  hnMcTrkPt[i]->GetAxis(3)->SetRange(0,-1);
 	}
     }
 

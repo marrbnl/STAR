@@ -28,13 +28,20 @@ void Run14AuAu200(const int savePlot = 0, const int saveHisto = 0)
   c = drawHistos(list,"Compare_TpcVz","Z distribution of TPC vertex",kFALSE,0,800,kFALSE,0,0,kFALSE,kTRUE,legName,kTRUE,"",0.65,0.8,0.7,0.85,kFALSE);
   if(savePlot)
     {
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbJpsiEff/EmbedVsData_TpcVz.pdf",run_type));
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbJpsiEff/EmbedVsData_TpcVz.png",run_type));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbJpsiEff/TpcVz_EmbedVsData.pdf",run_type));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbJpsiEff/TpcVz_EmbedVsData.png",run_type));
     }
-  TH1F *hRatio = (TH1F*) hVertex[0]->Clone(Form("VtxWeight"));
-  hRatio->Divide(hVertex[1]);
+  TH1F *hRatio = (TH1F*) hVertex[1]->Clone(Form("VtxWeight"));
+  hRatio->Divide(hVertex[0]);
+  hRatio->SetTitle(";vz (cm);Ratio=Data/Embed");
+  hRatio->SetMarkerStyle(21);
+  hRatio->GetXaxis()->SetRangeUser(-100,100);
   c = draw1D(hRatio);
-
+  if(savePlot)
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbJpsiEff/TpcVz_EmbedOverData.pdf",run_type));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbJpsiEff/TpcVz_EmbedOverData.png",run_type));
+    }
 
   // TPC acceptance loss
   const int nHistos = 2;
@@ -161,11 +168,19 @@ void Run14AuAu200(const int savePlot = 0, const int saveHisto = 0)
 	}
     }
   TH1F *hplot = new TH1F("hplot",Form("%s: MTD response efficiency from embedding;p_{T} (GeV/c);Eff",run_type),100,0,10);
-  c = draw1D(hplot);
+  hplot->GetYaxis()->SetRangeUser(0,1);
+  TCanvas *cRespEff[6];
+  for(int i=0; i<6; i++)
+    {
+      cRespEff[i] = new TCanvas(Form("cRespEff_BL%d-%d",i*5+1, i*5+5), Form("cRespEff_BL%d-%d",i*5+1, i*5+5), 1100, 700);
+      cRespEff[i]->Divide(5,5);
+    }
   for(int i=0; i<30; i++)
     {
       for(int j=0; j<5; j++)
 	{
+	  cRespEff[i/5]->cd(i%5*5+j+1);
+	  hplot->DrawCopy();
 	  funcRespEffEmb[i][j]->SetLineColor(1);
 	  funcRespEffEmb[i][j]->Draw("sames");
 	  funcRespEffCos[i][j]->SetLineColor(2);
@@ -174,27 +189,27 @@ void Run14AuAu200(const int savePlot = 0, const int saveHisto = 0)
     }
 
   // trigger efficiency
-  TFile *fTrig =  TFile::Open(Form("Rootfiles/%s.MtdTrigEff.root",run_type));
-  TF1 *hMuonTrigEff[2];
-  hMuonTrigEff[0] = (TF1*)fTrig->Get("Run14_AuAu200_gTacDiffEffFinalFit_BinCount_prod_low_Run15_pp200");
-  hMuonTrigEff[0]->SetName("MtdTrigEff_prod_low");
-  hMuonTrigEff[1] = (TF1*)fTrig->Get("Run14_AuAu200_gTacDiffEffFinalFit_BinCount_prod_high_Run15_pp200");
-  hMuonTrigEff[1]->SetName("MtdTrigEff_prod_high");
+  TFile *fTrig =  TFile::Open(Form("Rootfiles/%s.Sys.MtdTrigEff.root",run_type));
+  TF1 *hMuonTrigEff = (TF1*)fTrig->Get("Run14_AuAu200_Muon_TacDiffEff");
+
+  // trigger electronics efficiency
+  TFile *fTrigElec =  TFile::Open(Form("Rootfiles/%s.MtdTrigEff.root",run_type));
+  TF1 *funcTrigElecEff = (TF1*)fTrigElec->Get("Run14_AuAu200_TrigElecEff_FitFunc");
+
+
   TCanvas *c = new TCanvas("MtdTrigEff","MtdTrigEff",800,600);
   hplot->GetYaxis()->SetRangeUser(0.5,1);
   hplot->DrawCopy();
-  for(int i=0; i<2; i++)
-    {
-      hMuonTrigEff[i]->SetLineColor(i+1);
-      hMuonTrigEff[i]->Draw("sames");
-    }
-
-  // trigger electronics efficiency
-  TF1 *funcTrigElecEff = (TF1*)fTrig->Get("Run14_AuAu200_TrigElecEff_FitFunc");
-  TCanvas *c = new TCanvas("MtdTrigElecEff","MtdTrigElecEff",800,600);
-  hplot->GetYaxis()->SetRangeUser(0.5,1);
-  hplot->DrawCopy();
+  hMuonTrigEff->Draw("sames");
+  funcTrigElecEff->SetLineColor(4);
   funcTrigElecEff->Draw("sames");
+  TLegend *leg = new TLegend(0.4,0.2,0.6,0.4);
+  leg->SetBorderSize(0);
+  leg->SetFillColor(0);
+  leg->SetTextSize(0.04);
+  leg->AddEntry(hMuonTrigEff,"Trigger efficiency","L");
+  leg->AddEntry(funcTrigElecEff, "Trigger electronics eff.", "L");
+  leg->Draw();
 
   
   // save
@@ -206,10 +221,7 @@ void Run14AuAu200(const int savePlot = 0, const int saveHisto = 0)
 	{
 	  hInPutJpsiPt[i]->Write();
 	}
-      for(int i=0; i<2; i++)
-	{
-	  hMuonTrigEff[i]->Write();
-	}
+      hMuonTrigEff->Write("MtdTrigEff_FitFunc");
       funcTrigElecEff->Write("TrigElecEff_FitFunc");
       for(int i=0; i<30; i++)
 	{

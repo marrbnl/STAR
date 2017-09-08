@@ -3,7 +3,7 @@ const int year = YEAR;
 TFile *f;
 
 //================================================
-void ana_MtdTrigEff()
+void make_MtdTrigEff()
 {
   gStyle->SetOptStat(0);
   gStyle->SetOptFit(1);
@@ -12,19 +12,57 @@ void ana_MtdTrigEff()
   gStyle->SetStatW(0.2);                
   gStyle->SetStatH(0.2);
 
+  makeHistos();
   //make_ppAu();
-  //make_AuAu();
+
 }
 
 
 
 //================================================
-void make_AuAu(const int savePlot = 0, const int saveHisto = 1)
+void makeHistos(const int savePlot = 0, const int saveHisto = 0)
 {
-  const int year = 2014;
-  const char* config = "";
-  const char *data_name = "Run14_AuAu200";
-  const char *data_title  = "Run14 Au+Au @ 200 GeV";
+  const int year = 20152;
+
+  if(year==2014)
+    {
+      const char* config = "";
+      const char *data_name = "Run14_AuAu200";
+      const char *data_title  = "Run14 Au+Au @ 200 GeV";
+      const int nBinsTacDiff = 26;
+      const double xBinsTacDiff[nBinsTacDiff+1] = {760,765,770,775,780,782,784,786,788,789,790,791,792,793,795,797,801,805,809,813,817,821,825,829,833,837,841};
+      const double fit_min = 789;
+      const double fit_max = 810;
+    }
+  else if(year==2015)
+    {
+      const char* config = "";
+      const char *data_name = "Run15_pAu200";
+      const char *data_title  = "Run15 p+Au @ 200 GeV";
+      const int nBinsTacDiff = 18;
+      const double xBinsTacDiff[nBinsTacDiff+1] = {873,875,880,885,890,895,900,905,910,915,920,925,930,935,940,945,950,955,960};
+      const double fit_min = 895;
+      const double fit_max = 930;
+    }
+  else if(year==20152)
+    {
+      const char* config = "";
+      const char *data_name = "Run15_pp200";
+      const char *data_title  = "Run15 p+p @ 200 GeV";
+      const int nBinsTacDiff = 28;
+      const double xBinsTacDiff[nBinsTacDiff+1] = {860,865,870,875,880,885,890,895,900,905,910,915,920,925,930,935,940,945,950,955,960,965,970,975,980,985,990,995,1000};
+      const double fit_min = 915;
+      const double fit_max = 950;
+    }
+  else if(year==2016)
+    {
+      const char* config = "";
+      const char *data_name = "Run16_AuAu200";
+      const char *data_title  = "Run16 Au+Au @ 200 GeV";
+      const int nBinsTacDiff = 19;
+      const double xBinsTacDiff[nBinsTacDiff+1] = {920,930,935,940,945,950,951,955,960,965,970,975,980,985,990,995,1000,1005,1010,1015};
+    }
+
   const char* type_name[3] = {"Muon","UL", "LS"};
   const int nTrigUnit = 28;
   const int nbins = 7;
@@ -32,18 +70,8 @@ void make_AuAu(const int savePlot = 0, const int saveHisto = 1)
   const double upbins[nbins]  = {10,  1.5, 2.0, 2.5, 3.0, 5.0, 10.0};
   const int nPtBins = nbins -1;
   const double xPtBins[nPtBins+1] = {1.3, 1.5, 2.0, 2.5, 3.0, 5.0, 10.0}; 
-  if(year==2014)
-    {
-      const int nBinsTacDiff = 26;
-      const double xBinsTacDiff[nBinsTacDiff+1] = {760,765,770,775,780,782,784,786,788,789,790,791,792,793,795,797,801,805,809,813,817,821,825,829,833,837,841};
-    }
-  else if(year==2016)
-    {
-      const int nBinsTacDiff = 19;
-      const double xBinsTacDiff[nBinsTacDiff+1] = {920,930,935,940,945,950,951,955,960,965,970,975,980,985,990,995,1000,1005,1010,1015};
-    }
 
-  TFile *fdata = TFile::Open(Form("output/Run14.AuAu200.JpsiMuon.%sroot",config),"read");
+  TFile *fdata = TFile::Open(Form("output/%s.JpsiMuon.%sroot",data_name,config),"read");
 
   //==============================================
   // compare invariant mass
@@ -118,7 +146,7 @@ void make_AuAu(const int savePlot = 0, const int saveHisto = 1)
   c->cd(6);
   leg->Draw();
   if(savePlot)
-    c->SaveAs(Form("~/Work/STAR/analysis/Plots/Run14_AuAu200/ana_MtdTrigEff/%s%s_TacDiff_InvMassLSvsUL.pdf",config,data_name));
+    c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdTrigEff/%sTacDiff_InvMassLSvsUL.pdf",data_name,config));
 
   //==============================================
   // scale factor
@@ -161,25 +189,52 @@ void make_AuAu(const int savePlot = 0, const int saveHisto = 1)
   TPaveText *t1 = GetPaveText(0.15,0.2,0.2,0.23,0.03);
   t1->AddText(Form("%1.1f < p_{T} < %1.1f",lowbins[0],upbins[0]));
   t1->Draw();
-  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/Run14_AuAu200/ana_MtdTrigEff/%s%s_TacDiff_ScaleFactor.pdf",config,data_name));
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdTrigEff/%sTacDiff_ScaleFactor.pdf",data_name,config));
   double *scales = gScaleFactor->GetY();
 
   //==============================================
-  // MtdVpdTacDiff study
+  // Obtain MtdVpdTacDiff distribution
   //==============================================
   THnSparseF *hn = (THnSparseF*)fdata->Get("mhJpsiMuonTrigEff_di_mu");
   TH2F *hTacDiffVsTrigUnit[3][nbins];
-  hn->GetAxis(0)->SetRangeUser(min_mass[0]+1e-4,max_mass[0]-1e-4);
   for(int bin=0; bin<nbins; bin++)
     {
       hn->GetAxis(2)->SetRangeUser(lowbins[bin]+1e-4, upbins[bin]-1e-4);
-      for(int i=0; i<2; i++)
+      
+      if(year==2014 || year==2016)
 	{
-	  hn->GetAxis(5)->SetRange(i+1,i+1);
-	  hTacDiffVsTrigUnit[i+1][bin] = (TH2F*)hn->Projection(1,3);
-	  hTacDiffVsTrigUnit[i+1][bin]->SetName(Form("%s_hTacDiffVsTrigUnit_%s_PtBin%d",data_name,type_name[i+1],bin));
-	  hTacDiffVsTrigUnit[i+1][bin]->Sumw2();
+	  hn->GetAxis(0)->SetRangeUser(min_mass[0]+1e-4,max_mass[0]-1e-4);
+	  for(int i=0; i<2; i++)
+	    {
+	      hn->GetAxis(5)->SetRange(i+1,i+1);
+	      hTacDiffVsTrigUnit[i+1][bin] = (TH2F*)hn->Projection(1,3);
+	      hTacDiffVsTrigUnit[i+1][bin]->SetName(Form("%s_hTacDiffVsTrigUnit_%s_PtBin%d",data_name,type_name[i+1],bin));
+	      hTacDiffVsTrigUnit[i+1][bin]->Sumw2();
+	      hn->GetAxis(5)->SetRange(0,-1);
+	    }
+	  hn->GetAxis(0)->SetRange(0,-1);
+	}
+      else if(year==2015 || year==20152)
+	{
+	  // unlike-sign signal
+	  hn->GetAxis(5)->SetRange(1,1);
+	  hn->GetAxis(0)->SetRangeUser(min_mass[0]+1e-4,max_mass[0]-1e-4);
+	  hTacDiffVsTrigUnit[1][bin] = (TH2F*)hn->Projection(1,3);
+	  hTacDiffVsTrigUnit[1][bin]->SetName(Form("%s_hTacDiffVsTrigUnit_%s_PtBin%d",data_name,type_name[1],bin));
+	  hTacDiffVsTrigUnit[1][bin]->Sumw2();
 	  hn->GetAxis(5)->SetRange(0,-1);
+	  hn->GetAxis(0)->SetRange(0,-1);
+
+	  // like-sign background
+	  hn->GetAxis(5)->SetRange(2,2);
+	  hn->GetAxis(0)->SetRangeUser(min_mass[1]+1e-4,max_mass[2]-1e-4);
+	  hTacDiffVsTrigUnit[2][bin] = (TH2F*)hn->Projection(1,3);
+	  hTacDiffVsTrigUnit[2][bin]->SetName(Form("%s_hTacDiffVsTrigUnit_%s_PtBin%d",data_name,type_name[2],bin));
+	  hTacDiffVsTrigUnit[2][bin]->Sumw2();
+	  hn->GetAxis(5)->SetRange(0,-1);
+	  hn->GetAxis(0)->SetRange(0,-1);
+	  double factor = (max_mass[2]-min_mass[1])/(max_mass[0]-min_mass[0]);
+	  hTacDiffVsTrigUnit[2][bin]->Scale(1./factor);
 	}
       hn->GetAxis(2)->SetRange(0,-1);
 
@@ -188,21 +243,70 @@ void make_AuAu(const int savePlot = 0, const int saveHisto = 1)
       hTacDiffVsTrigUnit[0][bin]->Add(hTacDiffVsTrigUnit[2][bin], -1*scales[bin]);
 
       for(int k=0; k<3; k++)
-	hTacDiffVsTrigUnit[k][bin]->GetYaxis()->SetRangeUser(760, 860);
+	{
+	  hTacDiffVsTrigUnit[k][bin]->SetTitle(";TrigUnit;#DeltaTacSum");
+	  hTacDiffVsTrigUnit[k][bin]->GetYaxis()->SetTitleOffset(1.2);
+	  if(year==2014) hTacDiffVsTrigUnit[k][bin]->GetYaxis()->SetRangeUser(760, 860);
+	  if(year==2015 || year==20152) hTacDiffVsTrigUnit[k][bin]->GetYaxis()->SetRangeUser(820, 1000);
+	}
     }
   hn->GetAxis(0)->SetRange(0,-1);
   c = draw2D(hTacDiffVsTrigUnit[0][0],Form("%s: J/#psi #mu %1.1f < p_{T} < %1.1f GeV/c",data_name,lowbins[0],upbins[0]));
-  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/Run14_AuAu200/ana_MtdTrigEff/%s%s_TacDiffVsTrigUnit.pdf",config,data_name));
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdTrigEff/%sTacDiffVsTrigUnit.pdf",data_name,config));
 
-  // re-calculate background in larger mass window
+
+  //==============================================
+  // compare unlike-sign vs. like-sign
+  //==============================================
+  c = new TCanvas(Form("%s_TacDiff_UL_vs_LS",data_name),Form("%s_TacDiff_UL_vs_LS",data_name),1100,700);
+  c->Divide(3,2);
+  TLegend *leg = new TLegend(0.15,0.65,0.3,0.88);
+  leg->SetBorderSize(0);
+  leg->SetFillColor(0);
+  leg->SetTextSize(0.045);
+  leg->SetHeader(data_name);
+  for(int bin=1; bin<nbins; bin++)
+    {
+      c->cd(bin);
+      gPad->SetLogy();
+      int index = 0;
+      for(int k=0; k<3; k++)
+	{
+	  if(k==0) index = 1;
+	  if(k==1) index = 2;
+	  if(k==2) index = 0;
+	  TH1F *htmp = (TH1F*)hTacDiffVsTrigUnit[index][bin]->ProjectionY(Form("hTacDiff_%s_bin%d_%d",data_name,bin,index));
+	  if(k<2) htmp->SetMarkerStyle(20+k*4);
+	  else    htmp->SetMarkerStyle(21);
+	  htmp->SetMarkerColor(TMath::Power(2,k));
+	  htmp->SetLineColor(TMath::Power(2,k));
+	  htmp->Rebin(4);
+	  if(year==2014) htmp->GetXaxis()->SetRangeUser(760,860);
+	  if(year==2015 || year==20152) htmp->GetXaxis()->SetRangeUser(860,980);
+	  htmp->SetMaximum(10*htmp->GetMaximum());
+	  htmp->SetTitle(";#DeltaTacSum;Counts");
+	  if(k==0) htmp->Draw();
+	  else     htmp->Draw("sames");
+	  if(bin==1)
+	    leg->AddEntry(htmp,type_name[index],"P");
+	}
+      TPaveText *t1 = GetTitleText(Form("%1.1f < p_{T}^{#mu} < %1.1f GeV/c",lowbins[bin],upbins[bin]),0.06);
+      t1->Draw();
+      c->cd(2);
+      leg->Draw();
+    }
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdTrigEff/%sTacDiff_ULvsLS_InPtBins.pdf",data_name,config));
+
+
+  //==============================================
+  // re-calculate background in larger mass window[2,4]
+  //==============================================
   TH1F *hMeanPt[2];
   TH2F *hTacDiffVsTrigUnitBkg[2][nbins];
   for(int i=0; i<2; i++)
     {
       hMeanPt[i] = new TH1F(Form("%s_hMeanPt_%s",data_name,type_name[i+1]),"",nPtBins, xPtBins);
     }
-
-  hn->GetAxis(0)->SetRangeUser(min_mass[1]+1e-4,max_mass[2]-1e-4);
   for(int bin=0; bin<nbins; bin++)
     {
       hn->GetAxis(2)->SetRangeUser(lowbins[bin]+1e-4, upbins[bin]-1e-4);
@@ -216,23 +320,21 @@ void make_AuAu(const int savePlot = 0, const int saveHisto = 1)
 	  htmp->SetName(Form("%s_htmp_%s_PtBin%d",data_name,type_name[i+1],bin));
 	  hMeanPt[i]->SetBinContent(bin, htmp->GetMean());
 	  hMeanPt[i]->SetBinError(bin, htmp->GetMeanError());
+	  hn->GetAxis(5)->SetRange(0,-1);
 	}
       hn->GetAxis(2)->SetRange(0,-1);
     }
   hn->GetAxis(0)->SetRange(0,-1);
-  hn->GetAxis(5)->SetRange(0,-1);
 
   //==============================================
   // Fit TacDiff distribution in each trigger unit
+  //==============================================
   TH1F *hTacDiffTrigUnit[3][nbins][nTrigUnit];
   TH1F *hTacDiffTrigUnitRebin[3][nbins][nTrigUnit];
   TH1F *hTacDiffMeanVsTrigUnit[3][nbins]; 
   TH1F *hTacDiffWidthVsTrigUnit[3][nbins]; 
   TH1F *hTacDiffMeanVsPt[3][nTrigUnit];
   TF1  *funcTacDiffTrigUnit[3][nbins][nTrigUnit];
-  double fit_min = 789;
-  double fit_max = 810;
-
   for(int i=0; i<3; i++)
     {
       for(int j=0; j<nTrigUnit; j++)
@@ -261,14 +363,14 @@ void make_AuAu(const int savePlot = 0, const int saveHisto = 1)
 	    {
 	      if(i==0) hTacDiffTrigUnit[i][bin][j] = (TH1F*)hTacDiffVsTrigUnit[i][bin]->ProjectionY(Form("%s_hTacDiff_%s_TrigUnit%d_PtBin%d",data_name,type_name[i],j+1,bin),j+2,j+2);
 	      else     hTacDiffTrigUnit[i][bin][j] = (TH1F*)hTacDiffVsTrigUnitBkg[i-1][bin]->ProjectionY(Form("%s_hTacDiff_%s_TrigUnit%d_PtBin%d",data_name,type_name[i],j+1,bin),j+2,j+2);
-	      hTacDiffTrigUnit[i][bin][j]->SetMarkerStyle(20);
-	      hTacDiffTrigUnit[i][bin][j]->SetMarkerSize(0.8);
+	      hTacDiffTrigUnit[i][bin][j]->SetMarkerStyle(24);
+	      hTacDiffTrigUnit[i][bin][j]->SetMarkerSize(1.0);
 	      hTacDiffTrigUnitRebin[i][bin][j] = (TH1F*)hTacDiffTrigUnit[i][bin][j]->Rebin(nBinsTacDiff, Form("%s_hTacDiff_%s_TrigUnit%d_PtBin%d_Rebin",data_name,type_name[i],j+1,bin), xBinsTacDiff);
 	      c->cd(j+2);
 	      SetPadMargin(gPad,0.15,0.05,0.05,0.1);
 	      TH1F *hFit = (TH1F*)hTacDiffTrigUnitRebin[i][bin][j]->Clone(Form("Fit_%s",hTacDiffTrigUnitRebin[i][bin][j]->GetName()));
 	      scaleHisto(hFit, 1, 1, true, false, false);
-	      hFit->Fit(funcTacDiffTrigUnit[i][bin][j],"IR0QL");
+	      hFit->Fit(funcTacDiffTrigUnit[i][bin][j],"IR0Q");
 	      hTacDiffMeanVsTrigUnit[i][bin]->SetBinContent(j+1, funcTacDiffTrigUnit[i][bin][j]->GetParameter(1));
 	      hTacDiffMeanVsTrigUnit[i][bin]->SetBinError(j+1, funcTacDiffTrigUnit[i][bin][j]->GetParError(1));
 	      hTacDiffWidthVsTrigUnit[i][bin]->SetBinContent(j+1, funcTacDiffTrigUnit[i][bin][j]->GetParameter(2));
@@ -294,11 +396,13 @@ void make_AuAu(const int savePlot = 0, const int saveHisto = 1)
 	  leg->AddEntry(funcTacDiffTrigUnit[i][bin][0],"Fit","L");
 	  leg->Draw();
 	  if(savePlot) 
-	    c->SaveAs(Form("~/Work/STAR/analysis/Plots/Run14_AuAu200/ana_MtdTrigEff/%s%s_TacDiffFit_%s_PtBin%d.pdf",config,data_name,type_name[i],bin));
+	    c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdTrigEff/%sTacDiffFit_%s_PtBin%d.pdf",data_name,config,type_name[i],bin));
 	}
     }
 
-  // compare <TacDiff> vs. TrigUnit
+  //==============================================
+  //  compare <TacDiff> vs. TrigUnit
+  //==============================================
   c = new TCanvas(Form("TacDiffMeanVsTrigUnit_BkgULvsLS"),Form("TacDiffMeanVsTrigUnit_BkgULvsLS"),1200,600);
   c->Divide(4,2);
   for(int bin=0; bin<nbins; bin++)
@@ -311,7 +415,9 @@ void make_AuAu(const int savePlot = 0, const int saveHisto = 1)
 	  hTacDiffMeanVsTrigUnit[i][bin]->SetMarkerColor(TMath::Power(2,i-1));
 	  hTacDiffMeanVsTrigUnit[i][bin]->SetLineColor(TMath::Power(2,i-1));
 	  TH1F *htmp = (TH1F*)hTacDiffMeanVsTrigUnit[i][bin]->Clone(Form("%s_tmp",hTacDiffMeanVsTrigUnit[i][bin]->GetName()));
-	  htmp->GetYaxis()->SetRangeUser(790,805);
+	  if(year==2014) htmp->GetYaxis()->SetRangeUser(790,805);
+	  if(year==2015) htmp->GetYaxis()->SetRangeUser(900, 920);
+	  if(year==20152) htmp->GetYaxis()->SetRangeUser(915, 935);
 	  htmp->SetTitle(";TrigUnit;<#DeltaTacSum>");
 	  ScaleHistoTitle(htmp, 0.05, 0.9, 0.045, 0.05, 1.2, 0.04);
 	  if(i==1) htmp->Draw();
@@ -329,18 +435,22 @@ void make_AuAu(const int savePlot = 0, const int saveHisto = 1)
   for(int i=1; i<3; i++) leg->AddEntry(hTacDiffMeanVsTrigUnit[i][0], type_name[i], "P");
   leg->Draw();
   if(savePlot)
-    c->SaveAs(Form("~/Work/STAR/analysis/Plots/Run14_AuAu200/ana_MtdTrigEff/%s%s_TacDiffMeanVsTrigUnit_BkgULvsUL.pdf",config,data_name));
+    c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdTrigEff/%sTacDiffMeanVsTrigUnit_BkgULvsLS.pdf",data_name,config));
 
   if(saveHisto)
     {
-      TFile *fout = TFile::Open("Rootfiles/Run14_AuAu200.MtdTrigEff.root","recreate");
+      TFile *fout = TFile::Open(Form("Rootfiles/%s.MtdTrigEff.root",data_name),"recreate");
       for(int i=0; i<3; i++)
 	{
 	  for(int bin=0; bin<nbins; bin++)
 	    {
+	      hTacDiffVsTrigUnit[i][bin]->SetTitle("");
 	      hTacDiffVsTrigUnit[i][bin]->Write("",TObject::kOverwrite);
 	      if(i>0)
-		hTacDiffVsTrigUnitBkg[i-1][bin]->Write("",TObject::kOverwrite);
+		{
+		  hTacDiffVsTrigUnitBkg[i-1][bin]->SetTitle("");
+		  hTacDiffVsTrigUnitBkg[i-1][bin]->Write("",TObject::kOverwrite);
+		}
 	      hTacDiffMeanVsTrigUnit[i][bin]->Write("",TObject::kOverwrite);
 	      hTacDiffWidthVsTrigUnit[i][bin]->Write("",TObject::kOverwrite);
 	    }
@@ -520,6 +630,10 @@ void make_ppAu(const int savePlot = 0, const int saveHisto = 0)
 	  hTacDiffVsTrigUnitBkg[i][1][bin] = (TH2F*)hn[i]->Projection(1,3);
 	  hTacDiffVsTrigUnitBkg[i][1][bin]->SetName(Form("%s_hTacDiffVsTrigUnit_BkgUL_PtBin%d",data_name[i],bin));
 	  hTacDiffVsTrigUnitBkg[i][1][bin]->Sumw2();
+	  if(i==0)
+	    {
+	      printf("[i] UL entry = %4.2f, pt %d\n",hTacDiffVsTrigUnitBkg[i][1][bin]->GetEntries(), bin);
+	    }
 
 	  hn[i]->GetAxis(5)->SetRange(2,2);
 	  hTacDiffVsTrigUnitBkg[i][2][bin] = (TH2F*)hn[i]->Projection(1,3);
@@ -736,6 +850,7 @@ void make_ppAu(const int savePlot = 0, const int saveHisto = 0)
       if(savePlot)
 	c->SaveAs(Form("~/Work/STAR/analysis/Plots/Run14_AuAu200/ana_MtdTrigEff/%s%s_TacDiffMeanVsTrigUnit_MuonVsBkg.pdf",config,data_name[i]));
     }
+  return;
 
   // Take the difference between signal and background
   TH1F *hTacDiffMeanVsTrigUnitBkgDiff[nData][2][nbins];
@@ -1156,9 +1271,12 @@ void make_ppAu(const int savePlot = 0, const int saveHisto = 0)
   
   if(saveHisto)
     {
-      TFile *fout = TFile::Open("Rootfiles/Run15.ppAu200.MtdTrigEff.root","recreate");
+      TFile *fout[2];
+      fout[0] = TFile::Open("Rootfiles/Run15.pp200.MtdTrigEff.root","recreate");
+      fout[1] = TFile::Open("Rootfiles/Run15_pAu200.MtdTrigEff.root","recreate");
       for(int i=0; i<nData; i++)
 	{
+	  fout[i]->cd();
 	  for(int bin=0; bin<nbins; bin++)
 	    {
 	      hTacDiffVsTrigUnit[i][0][bin]->Write("",TObject::kOverwrite);

@@ -48,6 +48,9 @@ const int centBins_high_pt[nCentBins_pt] = {16,16,12,8,4};
 const char *cent_Name_pt[nCentBins_pt] = {"0-80","0-20","20-40","40-60","60-80"};
 const char *cent_Title_pt[nCentBins_pt] = {"0080","0020","2040","4060","6080"};
 const int nPtBins_npart = 2;
+const double ptBins_low_npart[nPtBins_npart]  = {0,5};
+const double ptBins_high_npart[nPtBins_npart] = {15,15};
+const char *pt_Name_npart[nPtBins_npart] = {"0-15","5-15"};
 const int nCentBins_npart[nPtBins_npart] = {8,7};
 const int centBins_low_npart[16]  = { 15,13,11,9,7,5,3,1, 15,13,11,9,7,5,1,3 };
 const int centBins_high_npart[16] = { 16,14,12,10,8,6,4,2, 16,14,12,10,8,6,4,4 };
@@ -84,9 +87,9 @@ void make_EmbJpsiEff()
   TH1F *hStat = (TH1F*)f->Get("hEventStat");
   printf("[i] # of events: %4.4e\n",hStat->GetBinContent(3));
 
-  makeJpsi(1);
+  //makeJpsi(1);
   //makeDataJpsiWeight(1);
-  //makeJpsiTpcEffVsZdc(0, 0);
+  makeJpsiTpcEffVsZdc(1, 1);
 }
 
 //================================================
@@ -99,8 +102,60 @@ void makeJpsiTpcEffVsZdc(const int savePlot, const int saveHisto)
   const char** cent_Title   = cent_Title_npart;
   const int kNCent          = nCentBins[0];
 
-  // Get TPC efficiency vs. centrality vs. ZDCrate
+  const int nbins = nPtBins_pt -1;
+  double xbins[nbins+1];
+  for(int i=0; i<nbins; i++)
+    xbins[i] = ptBins_low_pt[i+1];
+  xbins[nbins] = ptBins_high_pt[nbins];
+
+  myRandom = new TRandom3();
+  myRandom->SetSeed(0);
+  const int nExpr = 1e6;
+  const double mass = 3.096;
   TFile *ftrk = TFile::Open(Form("Rootfiles/%s.EmbTrkEff.root",run_type),"read");
+  TFile *fWeight = TFile::Open("Rootfiles/models.root","read");
+
+  // calculate Jpsi efficiency due to inclusive TPC tracking
+  TF1 *funcTrkEffAll = (TF1*)ftrk->Get("func_TpcTrkEff");
+  TH1F *hMcJpsiPtAll = new TH1F(Form("JpsiPtMc_All"),";p_{T} (GeV/c)",15, 0, 15);
+  TH1F *hRcJpsiPtAll = new TH1F(Form("JpsiPtRc_All"),";p_{T} (GeV/c)",15, 0, 15);
+  TH1F *hTpcJpsiEffAll;
+  TH1F *hMcJpsiPtRebinAll;
+  TH1F *hRcJpsiPtRebinAll;
+  TH1F *hTpcJpsiEffRebinAll;
+
+  TH1F *hInputJpsiAll = (TH1F*)fWeight->Get("TBW_JpsiYield_AuAu200_cent0060");
+  getJpsiEff(mass, nExpr, hInputJpsiAll, funcTrkEffAll, hMcJpsiPtAll, hRcJpsiPtAll, 0);
+  hTpcJpsiEffAll = (TH1F*)hRcJpsiPtAll->Clone(Form("JpsiTpcEff_All"));
+  hTpcJpsiEffAll->Divide(hMcJpsiPtAll);
+
+  hMcJpsiPtRebinAll = (TH1F*)hMcJpsiPtAll->Rebin(nbins, Form("%s_rebin",hMcJpsiPtAll->GetName()), xbins);
+  hRcJpsiPtRebinAll = (TH1F*)hRcJpsiPtAll->Rebin(nbins, Form("%s_rebin",hRcJpsiPtAll->GetName()), xbins);
+  hTpcJpsiEffRebinAll = (TH1F*)hRcJpsiPtRebinAll->Clone(Form("%s_rebin",hTpcJpsiEffAll->GetName()));
+  hTpcJpsiEffRebinAll->Divide(hMcJpsiPtRebinAll);
+
+  TH1F *hTpcJpisEffVsCentAll[nPtBins_npart];
+  for(int i=0; i<nPtBins_npart; i++)
+    {
+      hTpcJpisEffVsCentAll[i] = new TH1F(Form("JpsiTpcEffVsCent_Pt%1.0f_All",ptBins_low_npart[i]),"",1,0,1);
+      int low_bin = hMcJpsiPtAll->FindFixBin(ptBins_low_npart[i]+1e-4);
+      int up_bin = hMcJpsiPtAll->FindFixBin(ptBins_high_npart[i]-1e-4);
+      double nMcJpsi = hMcJpsiPtAll->Integral(low_bin, up_bin);
+      double nRcJpsi = hRcJpsiPtAll->Integral(low_bin, up_bin);
+      hTpcJpisEffVsCentAll[i]->SetBinContent(1, nRcJpsi/nMcJpsi);
+      hTpcJpisEffVsCentAll[i]->SetBinError(1, 1e-5);
+    }
+
+
+  // calculate Jpsi efficiency due to TPC tracking vs. centrality vs. ZDCrate
+  TH1F *hInputJpsi[kNCent];
+  for(int k=0; k<kNCent; k++)
+    {
+      if(k==0 || k==1) hInputJpsi[k] = (TH1F*)fWeight->Get("TBW_JpsiYield_AuAu200_cent0020");
+      if(k==2 || k==3) hInputJpsi[k] = (TH1F*)fWeight->Get("TBW_JpsiYield_AuAu200_cent2040");
+      if(k>=4)         hInputJpsi[k] = (TH1F*)fWeight->Get("TBW_JpsiYield_AuAu200_cent4060");
+      hInputJpsi[k]->SetName(Form("hInputJpsi_cent%s",cent_Name[k]));
+    }
   TF1 *funcTrkEff[gNZdcRate][kNCent];
   for(int k=0; k<kNCent; k++)
     {
@@ -109,41 +164,34 @@ void makeJpsiTpcEffVsZdc(const int savePlot, const int saveHisto)
 	  funcTrkEff[j][k] = (TF1*)ftrk->Get(Form("func_TpcTrkEff_cent%s_Zdc%d-%d",cent_Title[k],j*10,j*10+10));
 	}
     }
-
-  // calculate Jpsi efficiency due to TPC tracking
-  TH1F *hJpsiTpcEffVsCent[gNZdcRate];
+  TH1F *hJpsiTpcEffVsCent[nPtBins_npart][gNZdcRate][3];
   TH1F *hMcJpsiPt[gNZdcRate][kNCent][3];
   TH1F *hRcJpsiPt[gNZdcRate][kNCent][3];
   TH1F *hTpcJpsiEff[gNZdcRate][kNCent][3];
+  TH1F *hMcJpsiPtRebin[gNZdcRate][kNCent][3];
+  TH1F *hRcJpsiPtRebin[gNZdcRate][kNCent][3];
+  TH1F *hTpcJpsiEffRebin[gNZdcRate][kNCent][3];
   const char *type_name[3] = {"","_up","_down"};
   for(int j=0; j<gNZdcRate; j++)
     {
-      hJpsiTpcEffVsCent[j] = new TH1F(Form("McJpsiTpcEff_Zdc%d-%d",j*10,j*10+10),"",kNCent,0,kNCent);
-      for(int k=0; k<kNCent; k++)
+      for(int i=0; i<nPtBins_npart; i++)
 	{
-	  hJpsiTpcEffVsCent[j]->GetXaxis()->SetBinLabel(k+1, Form("%s%%",cent_Name[k]));
 	  for(int t=0; t<3; t++)
 	    {
-	      hMcJpsiPt[j][k][t] = new TH1F(Form("JpsiPtMc_cent%s_Zdc%d-%d%s",cent_Title[k],j*10,j*10+10,type_name[t]),";p_{T} (GeV/c)",20, 0, 20);
+	      hJpsiTpcEffVsCent[i][j][t] = new TH1F(Form("JpsiTpcEffVsCent_Pt%1.0f_Zdc%d-%d%s",ptBins_low_npart[i],j*10,j*10+10,type_name[t]),"",nCentBins[i],0,nCentBins[i]);
+	    }
+	}
+
+      for(int k=0; k<kNCent; k++)
+	{
+	  for(int t=0; t<3; t++)
+	    {
+	      hMcJpsiPt[j][k][t] = new TH1F(Form("JpsiPtMc_cent%s_Zdc%d-%d%s",cent_Title[k],j*10,j*10+10,type_name[t]),";p_{T} (GeV/c)",15, 0, 15);
 	      hMcJpsiPt[j][k][t]->Sumw2();
-	      hRcJpsiPt[j][k][t] = new TH1F(Form("JpsiPtRc_cent%s_Zdc%d-%d%s",cent_Title[k],j*10,j*10+10,type_name[t]),";p_{T} (GeV/c)",20, 0, 20);
+	      hRcJpsiPt[j][k][t] = new TH1F(Form("JpsiPtRc_cent%s_Zdc%d-%d%s",cent_Title[k],j*10,j*10+10,type_name[t]),";p_{T} (GeV/c)",15, 0, 15);
 	      hRcJpsiPt[j][k][t]->Sumw2();
 	    }
 	}
-    }
-
-  myRandom = new TRandom3();
-  myRandom->SetSeed(0);
-  const int nExpr = 1e6;
-  const double mass = 3.096;
-  TH1F *hInputJpsi[kNCent];
-  TFile *fWeight = TFile::Open("Rootfiles/models.root","read");
-  for(int k=0; k<kNCent; k++)
-    {
-      if(k==0 || k==1) hInputJpsi[k] = (TH1F*)fWeight->Get("TBW_JpsiYield_AuAu200_cent0020");
-      if(k==2 || k==3) hInputJpsi[k] = (TH1F*)fWeight->Get("TBW_JpsiYield_AuAu200_cent2040");
-      if(k>=4)         hInputJpsi[k] = (TH1F*)fWeight->Get("TBW_JpsiYield_AuAu200_cent4060");
-      hInputJpsi[k]->SetName(Form("hInputJpsi_cent%s",cent_Name[k]));
     }
 
   for(int j=0; j<gNZdcRate; j++)
@@ -160,11 +208,35 @@ void makeJpsiTpcEffVsZdc(const int savePlot, const int saveHisto)
 	      getJpsiEff(mass, nExpr, hInputJpsi[k], trkEff, hMcJpsiPt[j][k][t], hRcJpsiPt[j][k][t], 0);
 	      hTpcJpsiEff[j][k][t] = (TH1F*)hRcJpsiPt[j][k][t]->Clone(Form("JpsiTpcEff_cent%s_Zdc%d-%d%s",cent_Title[k],j*10,j*10+10,type_name[t]));
 	      hTpcJpsiEff[j][k][t]->Divide(hMcJpsiPt[j][k][t]);
-	      if(t==0)
+
+	      hMcJpsiPtRebin[j][k][t] = (TH1F*)hMcJpsiPt[j][k][t]->Rebin(nbins, Form("%s_rebin",hMcJpsiPt[j][k][t]->GetName()), xbins);
+	      hRcJpsiPtRebin[j][k][t] = (TH1F*)hRcJpsiPt[j][k][t]->Rebin(nbins, Form("%s_rebin",hRcJpsiPt[j][k][t]->GetName()), xbins);
+	      hTpcJpsiEffRebin[j][k][t] = (TH1F*)hRcJpsiPtRebin[j][k][t]->Clone(Form("%s_rebin",hTpcJpsiEff[j][k][t]->GetName()));
+	      hTpcJpsiEffRebin[j][k][t]->Divide(hMcJpsiPtRebin[j][k][t]);
+	    }
+	}
+    }
+
+  for(int i=0; i<nPtBins_npart; i++)
+    {
+      for(int j=0; j<gNZdcRate; j++)
+	{
+	  for(int t=0; t<3; t++)
+	    {
+	      for(int k=0; k<nCentBins[i]; k++)
 		{
-		  double eff = hRcJpsiPt[j][k][t]->Integral()/hMcJpsiPt[j][k][t]->Integral();
-		  hJpsiTpcEffVsCent[j]->SetBinContent(k+1, eff);
-		  hJpsiTpcEffVsCent[j]->SetBinError(k+1, 1e-5);
+		  int low_bin = hMcJpsiPt[j][k][t]->FindFixBin(ptBins_low_npart[i]+1e-4);
+		  int up_bin = hMcJpsiPt[j][k][t]->FindFixBin(ptBins_high_npart[i]-1e-4);
+		  double nMcJpsi = hMcJpsiPt[j][k][t]->Integral(low_bin, up_bin);
+		  double nRcJpsi = hRcJpsiPt[j][k][t]->Integral(low_bin, up_bin);
+		  if(i==1 && k==nCentBins[i]-1)
+		    {
+		      nMcJpsi += hMcJpsiPt[j][k+1][t]->Integral(low_bin, up_bin);
+		      nRcJpsi += hRcJpsiPt[j][k+1][t]->Integral(low_bin, up_bin);
+		    }
+		  double eff = nRcJpsi/nMcJpsi;
+		  hJpsiTpcEffVsCent[i][j][t]->SetBinContent(k+1, eff);
+		  hJpsiTpcEffVsCent[i][j][t]->SetBinError(k+1, 1e-5);
 		}
 	    }
 	}
@@ -203,19 +275,23 @@ void makeJpsiTpcEffVsZdc(const int savePlot, const int saveHisto)
   TH1F *hTpcTrkEffVsCent[gNZdcRate];
   for(int j=0; j<gNZdcRate; j++)
     {
-      hJpsiTpcEffVsCent[j]->GetYaxis()->SetRangeUser(0,0.1);
-      hJpsiTpcEffVsCent[j]->GetXaxis()->SetLabelSize(0.05);
-      hJpsiTpcEffVsCent[j]->SetMarkerStyle(20+j);
-      hJpsiTpcEffVsCent[j]->SetMarkerColor(color[j%6]);
-      hJpsiTpcEffVsCent[j]->SetLineColor(color[j%6]);
-      leg[j/6]->AddEntry(hJpsiTpcEffVsCent[j],Form("%d < ZDC < %d kHz",j*10,j*10+10),"P");
+      hJpsiTpcEffVsCent[0][j][0]->GetYaxis()->SetRangeUser(0,0.1);
+      hJpsiTpcEffVsCent[0][j][0]->GetXaxis()->SetLabelSize(0.05);
+      hJpsiTpcEffVsCent[0][j][0]->SetMarkerStyle(20+j);
+      hJpsiTpcEffVsCent[0][j][0]->SetMarkerColor(color[j%6]);
+      hJpsiTpcEffVsCent[0][j][0]->SetLineColor(color[j%6]);
+      leg[j/6]->AddEntry(hJpsiTpcEffVsCent[0][j][0],Form("%d < ZDC < %d kHz",j*10,j*10+10),"P");
       if(j==0) 
 	{
-	  c = draw1D(hJpsiTpcEffVsCent[j]);
+	  for(int k=0; k<nCentBins[0]; k++)
+	    {
+	      hJpsiTpcEffVsCent[0][j][0]->GetXaxis()->SetBinLabel(k+1, Form("%s%%",cent_Name_npart[k]));
+	    }
+	  c = draw1D(hJpsiTpcEffVsCent[0][j][0]);
 	  TPaveText *t1 = GetTitleText(Form("%s: TPC tracking efficiency for J/psi",run_type),0.04);
 	  t1->Draw();
 	}
-      else     hJpsiTpcEffVsCent[j]->Draw("sames");
+      else     hJpsiTpcEffVsCent[0][j][0]->Draw("sames");
     }
   for(int l=0; l<2; l++) leg[l]->Draw();
   if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbJpsiEff/Embed_JpsiTpcEffVsCentVsZdc.pdf",run_type));
@@ -224,9 +300,16 @@ void makeJpsiTpcEffVsZdc(const int savePlot, const int saveHisto)
     {
       printf("+++ Save histograms +++\n");
       TFile *fout = TFile::Open(Form("Rootfiles/%s.EmbJpsiEff.pt%1.1f.pt%1.1f.root",run_type,pt1_cut,pt2_cut),"update");
-      for(int j=0; j<gNZdcRate; j++)
+      for(int i=0; i<nPtBins_npart; i++)
 	{
-	  hJpsiTpcEffVsCent[j]->Write("", TObject::kOverwrite);
+	  hTpcJpisEffVsCentAll[i]->Write("", TObject::kOverwrite);
+	  for(int j=0; j<gNZdcRate; j++)
+	    {
+	      for(int t=0; t<3; t++)
+		{
+		  hJpsiTpcEffVsCent[i][j][t]->Write("", TObject::kOverwrite);
+		}
+	    }
 	}
 
       for(int j=0; j<gNZdcRate; j++)
@@ -236,9 +319,12 @@ void makeJpsiTpcEffVsZdc(const int savePlot, const int saveHisto)
 	      for(int t=0; t<3; t++)
 		{
 		  hTpcJpsiEff[j][k][t]->Write("", TObject::kOverwrite);
+		  hTpcJpsiEffRebin[j][k][t]->Write("", TObject::kOverwrite);
 		}
 	    }
 	}
+      hTpcJpsiEffAll->Write("", TObject::kOverwrite);
+      hTpcJpsiEffRebinAll->Write("", TObject::kOverwrite);
     }
 }
 
@@ -330,7 +416,7 @@ void makeJpsi(const bool saveHisto)
       for(int w=0; w<1; w++)
 	{
 	  hnJpsiInfo[i][w] = (THnSparseF*)f->Get(Form("hJpsiInfo_%s_di_mu%s",trkEffType[i],weight_name[w]));
-	  hnJpsiInfo[i][w]->GetAxis(0)->SetRangeUser(2.7, 3.5); // cut on jpsi mass
+	  hnJpsiInfo[i][w]->GetAxis(0)->SetRangeUser(2.8, 3.4); // cut on jpsi mass
 	  hnJpsiInfo[i][w]->GetAxis(2)->SetRangeUser(-1*jpsi_rapidity+0.01, jpsi_rapidity-0.01); // cut on jpsi rapidity
 	  if(i>0)
 	    {
@@ -390,9 +476,12 @@ void makeJpsi(const bool saveHisto)
 	}
       hnJpsiMatch->GetAxis(3)->SetRange(0,-1);
     }
-  TH1F *hJpsiPtMc[kNCent][gNZdcRate];
   hnJpsiInfo[0][0]->GetAxis(0)->SetRangeUser(2.8, 3.4); // cut on jpsi mass
   hnJpsiInfo[0][0]->GetAxis(2)->SetRangeUser(-1*jpsi_rapidity+0.01, jpsi_rapidity-0.01); // cut on jpsi rapidity
+  TH1F *hJpsiPtMcAll = (TH1F*)hnJpsiInfo[0][0]->Projection(1);
+  hJpsiPtMcAll->SetName(Form("Embed_JpsiPtMc_All"));
+
+  TH1F *hJpsiPtMc[kNCent][gNZdcRate];
   for(int j=0; j<kNCent; j++)
     {
       hnJpsiInfo[0][0]->GetAxis(5)->SetRange(centBins_low_npart[j],centBins_high_npart[j]);
@@ -426,6 +515,8 @@ void makeJpsi(const bool saveHisto)
 	    }
 	}
 
+      hJpsiPtMcAll->SetTitle("");
+      hJpsiPtMcAll->Write("", TObject::kOverwrite);
       hJpsiPtMcVsRcAll->SetTitle("");
       hJpsiPtMcVsRcAll->Write("", TObject::kOverwrite);
       for(int j=0; j<kNCent; j++)

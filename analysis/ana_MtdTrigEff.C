@@ -1,4 +1,4 @@
-const int year = YEAR;
+const int year = 2014;
 
 TFile *f;
 
@@ -12,7 +12,7 @@ void ana_MtdTrigEff()
   gStyle->SetStatW(0.2);                
   gStyle->SetStatH(0.2);
 
-  //getTrigEff();
+  getTrigEff();
   //anaTrigEff();
   //sysTrigEff();
  
@@ -31,26 +31,35 @@ void anaTrigEff(const int savePlot = 0, const int saveHisto = 0)
   gStyle->SetStatW(0.18);                
   gStyle->SetStatH(0.18);
 
-  if(run_type=="Run14_AuAu200")
+  if(year==2014)
     {
+      const char* run_type ="Run14_AuAu200";
       const int nLumi = 2;
       const char *lumi_name[nLumi] = {"prod_high","prod_low"};
+    }
+  if(year==2015)
+    {
+      const char* run_type ="Run15_pAu200";
+      const int nLumi = 1;
+      const char *lumi_name[nLumi] = {"prod"};
     }
 
   TFile *fin = 0x0;
   if(saveHisto) fin = TFile::Open(Form("Rootfiles/%s.MtdTrigEff.root",run_type),"update");
   else          fin = TFile::Open(Form("Rootfiles/%s.MtdTrigEff.root",run_type),"read");
   
-  TGraphAsymmErrors *gTacEff[2];
-  TF1 *funcTacEff[2];
+  TGraphAsymmErrors *gTacEff[nLumi];
+  TF1 *funcTacEff[nLumi];
   TH1F *hplot = new TH1F("hplot",";p_{T}^{#mu} [GeV/c];Efficiency",100,1,7);
   for(int l=0; l<nLumi; l++)
     {
       gTacEff[l] = (TGraphAsymmErrors*)fin->Get(Form("%s_gTacDiffEffFinal_BinCount_%s_Run15_pp200",run_type,lumi_name[l]));
       funcTacEff[l] = new TF1(Form("%s_gTacDiffEffFinalFit_BinCount_%s_Run15_pp200",run_type,lumi_name[l]),"[0]-exp(-1*[1]*(x-[2]))",1.3,7);
+      if(run_type=="Run15_pAu200") funcTacEff[l]->FixParameter(0, 1);
       gTacEff[l]->Fit(funcTacEff[l],"IR0");
       TCanvas *c = new TCanvas(Form("%s_TacDiffEff_%s",run_type,lumi_name[l]),Form("%s_TacDiffEff_%s",run_type,lumi_name[l]),800,600);
-      hplot->GetYaxis()->SetRangeUser(0.6,1.1);
+      if(run_type=="Run14_AuAu200") hplot->GetYaxis()->SetRangeUser(0.6,1.1);
+      if(run_type=="Run15_pAu200")  hplot->GetYaxis()->SetRangeUser(0.95,1.02);
       hplot->GetYaxis()->SetNdivisions(505);
       hplot->Draw();
       gTacEff[l]->SetMarkerStyle(21);
@@ -86,12 +95,21 @@ void anaTrigEff(const int savePlot = 0, const int saveHisto = 0)
 //================================================
 void sysTrigEff(const int savePlot = 0, const int saveHisto = 0)
 {
-  if(run_type=="Run14_AuAu200")
+  if(year==2014)
     {
+      const char* run_type ="Run14_AuAu200";
       const int nLumi = 2;
       const char *lumi_name[nLumi] = {"prod_high","prod_low"};
       const double min_TacDiffCut[nLumi] = {789,786};
       const double max_TacDiffCut[nLumi] = {837,837};
+    }
+  if(year==2015)
+    {
+      const char* run_type ="Run15_pAu200";
+      const int nLumi = 1;
+      const char *lumi_name[nLumi] = {"prod"};
+      const double min_TacDiffCut[nLumi] = {873};
+      const double max_TacDiffCut[nLumi] = {962};
     }
 
   TFile *fin = 0x0;
@@ -108,15 +126,23 @@ void sysTrigEff(const int savePlot = 0, const int saveHisto = 0)
 
   const int nbins = 6;
   TH1F *hplot = new TH1F("hplot",";p_{T} (GeV/c);Efficiency",100,0,10);
-  hplot->GetYaxis()->SetRangeUser(0.5,1);
   hplot->GetXaxis()->SetRangeUser(1.3,7);
+  if(run_type=="Run14_AuAu200") hplot->GetYaxis()->SetRangeUser(0.5,1);
+  if(run_type=="Run15_pAu200")  hplot->GetYaxis()->SetRangeUser(0.95,1.02);
 
   // part I: systematic uncertainty
   TF1 *funcSysSys[nLumi][2];
   const int nSys = 7;
-  const char* sys_name[nSys] = {"Deafult","AuAu reso. up","AuAu reso. down","pp reso. up","pp reso. down","AuAu TacDiff mean","Expected AuAu reso."};
+  if(run_type=="Run14_AuAu200")
+    {
+      const char* sys_name[nSys] = {"Deafult","AuAu reso. up","AuAu reso. down","pp reso. up","pp reso. down","AuAu TacDiff mean","Expected AuAu reso."};
+    }
+  if(run_type=="Run15_pAu200")
+    {
+      const char* sys_name[nSys] = {"Deafult","pAu reso. up","pAu reso. down","pp reso. up","pp reso. down","pAu TacDiff mean","Expected pAu reso."};
+    }
   const int color[nSys] = {1, 2, 3, 4, 9, 6, kGreen+2};
-  const char* data_name[2] = {"Run14_AuAu200","Run15_pp200"};
+  const char* data_name[2] = {run_type,"Run15_pp200"};
   TH1F *hMuonTacDiffMean[2];
   TH1F *hMuonTacDiffSigma[2];
   TF1  *funcMuonTacDiffSigma[2];
@@ -131,8 +157,8 @@ void sysTrigEff(const int savePlot = 0, const int saveHisto = 0)
   TF1  *hppTacDiffFit[nbins];
   for(int bin=0; bin<nbins; bin++)
     {
-      hppTacDiff[bin]   = (TH1F*)fin->Get(Form("Run15_pp200_hppAuTacDiffCombined_PtBin%d",bin+1));
-      hppTacDiffFit[bin] = (TF1*)fin->Get(Form("Run15_pp200_funcppAuTacDiffCombined_PtBin%d",bin+1));
+      hppTacDiff[bin]   = (TH1F*)fin->Get(Form("Run15_pp200_hMuonTacDiffCombined_PtBin%d",bin+1));
+      hppTacDiffFit[bin] = (TF1*)fin->Get(Form("Run15_pp200_funcMuonTacDiffCombined_PtBin%d",bin+1));
     }
  
   TGraphAsymmErrors* gTacDiffEff[nLumi][nSys];
@@ -169,12 +195,19 @@ void sysTrigEff(const int savePlot = 0, const int saveHisto = 0)
 	      
 	      if(s==1 || s==2)
 		{
-		  if(bin==0) 
+		  if(run_type=="Run14_AuAu200")
 		    {
-		      if(s==1) AA_res = ppTacDiffSigmaCL->GetBinContent(bin+1) + ppTacDiffSigmaCL->GetBinError(bin+1);
-		      if(s==2) AA_res = funcMuonTacDiffSigma[0]->Eval(5);
+		      if(bin==0) 
+			{
+			  if(s==1) AA_res = ppTacDiffSigmaCL->GetBinContent(bin+1) + ppTacDiffSigmaCL->GetBinError(bin+1);
+			  if(s==2) AA_res = funcMuonTacDiffSigma[0]->Eval(5);
+			}
+		      else       AA_res = funcMuonTacDiffSigma[0]->Eval(pt) + (3-2*s)*funcMuonTacDiffSigma[0]->GetParError(0);
 		    }
-		  else       AA_res = funcMuonTacDiffSigma[0]->Eval(pt) + (3-2*s)*funcMuonTacDiffSigma[0]->GetParError(0);
+		  if(run_type=="Run15_pAu200")
+		    {
+		      AA_res = funcMuonTacDiffSigma[0]->Eval(pt) + (3-2*s)*funcMuonTacDiffSigma[0]->GetParError(0);
+		    }
 		}
 	      if(s==3 || s==4)
 		{
@@ -182,7 +215,8 @@ void sysTrigEff(const int savePlot = 0, const int saveHisto = 0)
 		}
 	      if(s==6)
 		{
-		  AA_res = sqrt(pp_res*pp_res-9+4);
+		  if(run_type=="Run14_AuAu200") AA_res = sqrt(pp_res*pp_res-8.27+3.33);
+		  if(run_type=="Run15_pAu200") AA_res = sqrt(pp_res*pp_res-8.27+6.89);
 		}
 	      
 	      double scale = pp_res/AA_res;
@@ -279,7 +313,7 @@ void sysTrigEff(const int savePlot = 0, const int saveHisto = 0)
      if(savePlot)
 	cEff[l]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdTrigEff/Sys.%s_TacDiffEffSysSys_%s.pdf",run_type,run_type,lumi_name[l]));
     }
-  
+
   // part II: statisitcal error
   TF1 *funcSysStat[nLumi][3];
   gStyle->SetOptFit(0);
@@ -338,6 +372,7 @@ void sysTrigEff(const int savePlot = 0, const int saveHisto = 0)
       for(int j = 0; j < nexpr; j++)
 	{
 	  TF1 *funcTmp = new TF1(Form("FitFunc_%s",gEffRndm[l][j]->GetName()),"[0]-exp(-1*[1]*(x-[2]))",1.2,7);
+	  funcTmp->SetParameter(0,1);
 	  funcTmp->SetParLimits(0,0,1);
 	  funcTmp->SetParLimits(1,0,5);
 	  funcTmp->SetParLimits(2,0,1);
@@ -456,6 +491,7 @@ void sysTrigEff(const int savePlot = 0, const int saveHisto = 0)
 	  cFit->cd(l*2+i+1);
 	  gPad->SetGridy();
 	  funcSysAll[l][i] = new TF1(Form("%s_gTacDiffEffFinal_%s_Sys%s",run_type,lumi_name[l],sys_type[i]),"[0]-exp(-1*[1]*(x-[2]))",1.2,7);
+	  if(run_type=="Run15_pAu200")funcSysAll[l][i]->SetParameters(1,4.5,0.4);
 	  gTacEffSysAll[l][i]->Fit(funcSysAll[l][i],"R0Q");
 	  hplot->DrawCopy();
 	  gTacEffSysAll[l][i]->SetMarkerStyle(25);
@@ -496,6 +532,11 @@ void sysTrigEff(const int savePlot = 0, const int saveHisto = 0)
   TF1 *funcEffFinal = new TF1(Form("%s_gTacDiffEffFinal_prod",run_type),"[0]-exp(-1*[1]*(x-[2]))",1.2,10);
   TF1 *funcEffSysFinal[2];
   for(int i=0; i<2; i++) funcEffSysFinal[i] = new TF1(Form("%s_Muon_TacDiffEff_Sys%s",run_type,sys_type[i]),"[0]-exp(-1*[1]*(x-[2]))",1.2,10);
+  if(run_type=="Run15_pAu200")
+    {
+      funcEffFinal->SetParameters(funcTacEff[0]->GetParameters());
+      for(int i=0; i<2; i++) funcEffSysFinal[i]->SetParameters(funcSysAll[0][i]->GetParameters());
+    }
   if(run_type=="Run14_AuAu200")
     {
       // Get the average efficiency
@@ -575,77 +616,97 @@ void sysTrigEff(const int savePlot = 0, const int saveHisto = 0)
 //================================================
 void getTrigEff(const int savePlot = 0, const int saveHisto = 0)
 {
-  const int year = 2014;
+  // The MTD trigger efficiency is calculated using Run15 pp 200 GeV data
+  // as the baseline
+
   if(year==2014)
     {
       const int nLumi = 2;
       const char *lumi_name[nLumi] = {"prod_high","prod_low"};
-      const double min_TacDiffCut[nLumi] = {789,786};
+      const double min_TacDiffCut[nLumi] = {788+1,785+1};
       const double max_TacDiffCut[nLumi] = {837,837};
+      const char* config = "";
+      const TString data_name = Form("Run%d_AuAu200",year-2000);
+      const char *data_title  = Form("Run%d Au+Au @ 200 GeV",year-2000);
+      const double min_fit = 760;
+      const double max_fit = 830;
+      const int nBinsTacDiff = 22;
+      const double xBinsTacDiff[nBinsTacDiff+1] = {760,765,770,775,780,782,784,786,788,789,793,797,801,805,809,813,817,821,825,829,833,837,841};
+    }
+  else if(year==2015)
+    {
+      const int nLumi = 1;
+      const char *lumi_name[nLumi] = {"prod"};
+      const double min_TacDiffCut[nLumi] = {872+1};
+      const double max_TacDiffCut[nLumi] = {962};
+      const char* config = "";
+      const TString data_name = Form("Run%d_pAu200",year-2000);
+      const char *data_title  = Form("Run%d p+Au @ 200 GeV",year-2000);
+      const double min_fit = 860;
+      const double max_fit = 960;
+      const int nBinsTacDiff = 23;
+      const double xBinsTacDiff[nBinsTacDiff+1] = {860,865,870,871,872,873,875,880,885,890,895,900,905,910,915,920,925,930,935,940,945,950,955,960};
     }
   else if(year==2016)
     {
       const int nLumi = 1;
       const char *lumi_name[nLumi] = {"prod"};
-      const double min_TacDiffCut[nLumi] = {951};
+      const double min_TacDiffCut[nLumi] = {950+1};
       const double max_TacDiffCut[nLumi] = {1005};
+      const char* config = "";
+      const TString data_name = Form("Run%d_AuAu200",year-2000);
+      const char *data_title  = Form("Run%d Au+Au @ 200 GeV",year-2000);
     }
-  const char* config = "";
-  TString data_name = Form("Run%d_AuAu200",year-2000);
-  const char *data_title  = Form("Run%d Au+Au @ 200 GeV",year-2000);
+
   const int nTrigUnit = 28;
   const int nbins = 7;
   const double lowbins[nbins] = {1.3, 1.3, 1.5, 2.0, 2.5, 3.0, 5.0};
   const double upbins[nbins]  = {10,  1.5, 2.0, 2.5, 3.0, 5.0, 10.0};
   const int nPtBins = nbins -1;
   const double xPtBins[nPtBins+1] = {1.3, 1.5, 2.0, 2.5, 3.0, 5.0, 10.0}; 
-  cout << data_name << endl;
 
-  const int nData = 2; // 0 - pp; 1 - pAu
-  const char *data_names[nData] = {"Run15_pp200", "Run15_pAu200"};
-  const int nRatio = 1; 
-  const char* legName[3] = {"Run15_pp200", "Run15_pAu200", "Run14_AuAu200"};
+  // distributions from pp and pAuAu events
+  // 0 - pp; 1 - pAu/AuAu
+  const char* ref_data_name = "Run15_pp200";
+  const int nData = 2;
+  const char* legName[nData] = {ref_data_name, data_name.Data()};
+  TH2F *hMuonTacDiffVsTrigUnit[nData][nbins];
+  TH1F *hMuonTacDiffInTrigUnit[nData][nbins][nTrigUnit];
+  TH1F *hMuonTacDiffMeanVsTrigUnit[nData][nbins];
 
-  // distributions from pp and pAu
-  TH2F *hppAuTacDiffVsTrigUnit[nData][nbins];
-  TH1F *hppAuTacDiffInTrigUnit[nData][nbins][nTrigUnit];
-  TH1F *hppAuTacDiffMeanVsTrigUnit[nData][nbins];
-  TH1F *hppAuTacDiffSigmaVsTrigUnit[nData][nbins];
-  TH1F *hppAuTacDiffMeanVsTrigUnitLS[nData][nbins];
-  TFile *fppAu = TFile::Open("Rootfiles/Run15.ppAu200.MtdTrigEff.root","read");
+  TH2F *hLSBkgTacDiffVsTrigUnit[nData][nbins];
+  TH1F *hLSBkgTacDiffMeanVsTrigUnit[nData][nbins];
+
+  TH1F *hMeanPt[2];
+  
+  TFile *fdata[nData];
   for(int i=0; i<nData; i++)
     {
+      if(i==0) fdata[i] = TFile::Open(Form("Rootfiles/%s.MtdTrigEff.root",legName[i]),"read");
+      if(i==1)
+	{
+	  if(saveHisto) fdata[i] = TFile::Open(Form("Rootfiles/%s.MtdTrigEff.root",legName[i]),"update");
+	  else          fdata[i] = TFile::Open(Form("Rootfiles/%s.MtdTrigEff.root",legName[i]),"read");
+	}
       for(int bin=0; bin<nbins; bin++)
 	{
-	  hppAuTacDiffVsTrigUnit[i][bin] = (TH2F*)fppAu->Get(Form("%s_hTacDiffVsTrigUnit_Muon_PtBin%d",data_names[i],bin));
-	  hppAuTacDiffMeanVsTrigUnit[i][bin] = (TH1F*)fppAu->Get(Form("%s_hTacDiffMeanVsTrigUnit_PtBin%d",data_names[i],bin));
-	  hppAuTacDiffSigmaVsTrigUnit[i][bin] = (TH1F*)fppAu->Get(Form("%s_hTacDiffWidthVsTrigUnit_PtBin%d",data_names[i],bin));
+	  hMuonTacDiffVsTrigUnit[i][bin] = (TH2F*)fdata[i]->Get(Form("%s_hTacDiffVsTrigUnit_Muon_PtBin%d",legName[i],bin));
+	  hMuonTacDiffMeanVsTrigUnit[i][bin] = (TH1F*)fdata[i]->Get(Form("%s_hTacDiffMeanVsTrigUnit_Muon_PtBin%d",legName[i],bin));
 	  for(int k=0; k<nTrigUnit; k++)
 	    {
-	      hppAuTacDiffInTrigUnit[i][bin][k] = (TH1F*)hppAuTacDiffVsTrigUnit[i][bin]->ProjectionY(Form("%s_hTacDiffVsTrigUnit_Muon_TrigUnit%d_PtBin%d",data_names[i],k+1,bin),k+2,k+2);
-	      if(hppAuTacDiffInTrigUnit[i][bin][k]->Integral()>=1)
-		hppAuTacDiffInTrigUnit[i][bin][k]->Scale(1./hppAuTacDiffInTrigUnit[i][bin][k]->Integral());
+	      hMuonTacDiffInTrigUnit[i][bin][k] = (TH1F*)hMuonTacDiffVsTrigUnit[i][bin]->ProjectionY(Form("%s_hTacDiffVsTrigUnit_Muon_TrigUnit%d_PtBin%d",legName[i],k+1,bin),k+2,k+2);
+	      if(hMuonTacDiffInTrigUnit[i][bin][k]->Integral()>=1)
+		hMuonTacDiffInTrigUnit[i][bin][k]->Scale(1./hMuonTacDiffInTrigUnit[i][bin][k]->Integral());
 	    }
-	  hppAuTacDiffMeanVsTrigUnitLS[i][bin] = (TH1F*)fppAu->Get(Form("%s_hTacDiffMeanVsTrigUnit_BkgLS_PtBin%d",data_names[i],bin));
-	}
-    }
-  
-  // background distributions from AuAu
-  TH2F *hAuAuTacDiffVsTrigUnit[nbins];
-  TH1F *hAuAuTacDiffMeanVsTrigUnit[nbins];
-  TFile *fAuAu = 0x0;
-  if(saveHisto) fAuAu = TFile::Open(Form("Rootfiles/%s.MtdTrigEff.root",run_type),"update");
-  else          fAuAu = TFile::Open(Form("Rootfiles/%s.MtdTrigEff.root",run_type),"read");
-  for(int bin=0; bin<nbins; bin++)
-    {
-      hAuAuTacDiffVsTrigUnit[bin] = (TH2F*)fAuAu->Get(Form("%s_hTacDiffVsTrigUnit_LS_PtBin%d",data_name.Data(),bin));
-      hAuAuTacDiffMeanVsTrigUnit[bin] = (TH1F*)fAuAu->Get(Form("%s_hTacDiffMeanVsTrigUnit_LS_PtBin%d",data_name.Data(),bin));
 
+	  hLSBkgTacDiffVsTrigUnit[i][bin] = (TH2F*)fdata[i]->Get(Form("%s_hTacDiffVsTrigUnit_LS_PtBin%d",legName[i],bin));
+	  hLSBkgTacDiffMeanVsTrigUnit[i][bin] = (TH1F*)fdata[i]->Get(Form("%s_hTacDiffMeanVsTrigUnit_LS_PtBin%d",legName[i],bin));
+	}
+      hMeanPt[i] = (TH1F*)fdata[i]->Get(Form("%s_hMeanPt_LS",legName[i]));
     }
-  TH1F *hMeanPt = (TH1F*)fAuAu->Get(Form("%s_hMeanPt_LS",data_name.Data()));
 
   // compare multiplicity distribution per trigger unit
-  TH1F *hMultWeight[3][nbins];
+  TH1F *hMultWeight[nData][nbins];
   c = new TCanvas("Multiplicity_vs_TrigUnit","Multiplicity_vs_TrigUnit",1000,600);
   c->Divide(4,2);
   TLegend *leg = new TLegend(0.2,0.3,0.5,0.7);
@@ -656,54 +717,44 @@ void getTrigEff(const int savePlot = 0, const int saveHisto = 0)
     {
       c->cd(bin+2);
       SetPadMargin(gPad,0.13,0.13,0.02,0.1);
-      for(int i=0; i<3; i++)
+      for(int i=0; i<nData; i++)
 	{
-	  TH2F *h2tmp = 0x0;
-	  if(i<nData) h2tmp = hppAuTacDiffVsTrigUnit[i][bin];
-	  else        h2tmp = hAuAuTacDiffVsTrigUnit[bin];
-	  hMultWeight[i][bin] = (TH1F*)h2tmp->ProjectionX(Form("Data%d_Multiplicity_PtBin%d",i,bin));
+	  hMultWeight[i][bin] = (TH1F*)hLSBkgTacDiffVsTrigUnit[i][bin]->ProjectionX(Form("Data%d_Multiplicity_PtBin%d",i,bin));
 	  hMultWeight[i][bin]->Scale(1./hMultWeight[i][bin]->Integral());
 	  hMultWeight[i][bin]->SetMarkerSize(1.2);
-	  hMultWeight[i][bin]->SetMarkerStyle(20+i*2);
-	  hMultWeight[i][bin]->SetMarkerColor(TMath::Power(2,i));
-	  hMultWeight[i][bin]->SetLineColor(TMath::Power(2,i));
+	  hMultWeight[i][bin]->SetMarkerStyle(20+i*4);
+	  hMultWeight[i][bin]->SetMarkerColor(2-i);
+	  hMultWeight[i][bin]->SetLineColor(2-i);
 	  hMultWeight[i][bin]->SetMaximum(1.5*hMultWeight[i][bin]->GetMaximum());
 	  hMultWeight[i][bin]->SetTitle(";TrigUnit;Multiplicity");
 	  ScaleHistoTitle(hMultWeight[i][bin], 0.05, 0.9, 0.045, 0.05, 1.2, 0.04);
 	  if(i==0) hMultWeight[i][bin]->Draw();
 	  else     hMultWeight[i][bin]->Draw("sames");
-	  if(bin==0)
-	    {
-	      if(i<nData) leg->AddEntry(hMultWeight[i][bin], Form("%s: muon",data_names[i]),"P");
-	      else        leg->AddEntry(hMultWeight[i][bin], Form("%s: LS",data_name.Data()), "P");
-	    }
+	  if(bin==0) if(i<nData) leg->AddEntry(hMultWeight[i][bin], Form("%s: LS",legName[i]),"P");
 	}
       TPaveText *t1 = GetTitleText(Form("%2.1f < p_{T} < %2.1f GeV/c",lowbins[bin],upbins[bin]),0.07);
       t1->Draw();
     }
   c->cd(1);
   leg->Draw();
-  if(savePlot) 
-    c->SaveAs(Form("~/Work/STAR/analysis/Plots/Run14_AuAu200/ana_MtdTrigEff/%s%s_CompMult.pdf",config,data_name.Data()));
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdTrigEff/%s_Comp_MultVsTrigUnit.pdf",data_name.Data(),config));
 
   // compare line-up
-  for(int i=0; i<3; i++)
+  for(int i=0; i<nData; i++)
     {
       c = new TCanvas(Form("%s_TacDiffMeanVsTrigUnit",legName[i]),Form("%s_TacDiffMeanVsTrigUnit",legName[i]),1100,700);
       c->Divide(3,2);
       for(int bin=1; bin<nbins; bin++)
 	{
-	  TH1F *h1tmp = 0x0;
-	  if(i<nData) h1tmp = (TH1F*)hppAuTacDiffMeanVsTrigUnitLS[i][bin]->Clone(Form("hMean_%d_%d",i,bin));
-	  else        h1tmp = (TH1F*)hAuAuTacDiffMeanVsTrigUnit[bin]->Clone(Form("hMean_%d_%d",i,bin));
+	  TH1F *h1tmp = (TH1F*)hLSBkgTacDiffMeanVsTrigUnit[i][bin]->Clone(Form("hMean_%d_%d",i,bin));
 	  h1tmp->SetMarkerStyle(20);
 	  h1tmp->SetMarkerColor(1);
 	  h1tmp->SetLineColor(1);
 	  h1tmp->SetTitle(";TrigUnit;<#DeltaTacSum>");
 	  ScaleHistoTitle(h1tmp, 0.05, 0.9, 0.04, 0.05, 1.2, 0.04);
-	  h1tmp->SetMaximum(10+h1tmp->GetMaximum());
-	  h1tmp->SetMinimum(h1tmp->GetMinimum()-10);
-
+	  if(legName[i]=="Run15_pp200")   h1tmp->GetYaxis()->SetRangeUser(915, 935);	  
+	  if(i==1 && data_name=="Run14_AuAu200") h1tmp->GetYaxis()->SetRangeUser(785, 810);
+	  if(i==1 && data_name=="Run15_pAu200") h1tmp->GetYaxis()->SetRangeUser(900, 920);
 	  c->cd(bin);
 	  SetPadMargin(gPad,0.13,0.13,0.02,0.1);
 	  h1tmp->Draw();
@@ -716,254 +767,108 @@ void getTrigEff(const int savePlot = 0, const int saveHisto = 0)
       t1->SetTextColor(2);
       t1->Draw();
       if(savePlot)
-	c->SaveAs(Form("~/Work/STAR/analysis/Plots/Run14_AuAu200/ana_MtdTrigEff/%s%s_TacDiffMeanVsTrigUnit_LS.pdf",config,legName[i]));
+	c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdTrigEff/%s%s_LSBkg_TacDiffMeanVsTrigUnit.pdf",data_name.Data(),config,legName[i]));
     }
 
-  // determine cuts for each trigger unit
-  double new_cut_min[nLumi][nData][nbins][nTrigUnit];
-  double new_cut_max[nLumi][nData][nbins][nTrigUnit];
-  for(int l=0; l<nLumi; l++)
+  if(data_name=="Run15_pAu200")
     {
-      for(int i=0; i<nData; i++)
-        {
-          for(int bin=0; bin<nbins; bin++)
-            {
-              for(int j=0; j<nTrigUnit; j++)
-                {
-                  int index = bin;
-                  if(index == nbins-1) index = nbins-2;
-                  double bkg_mean_AuAu = hAuAuTacDiffMeanVsTrigUnit[index]->GetBinContent(j+1);
-                  double bkg_mean_ref  = hppAuTacDiffMeanVsTrigUnitLS[i][index]->GetBinContent(j+1);
-
-                  if(i<2)
-                    {
-                      new_cut_min[l][i][bin][j] = bkg_mean_ref - (bkg_mean_AuAu - min_TacDiffCut[l]);
-                      new_cut_max[l][i][bin][j] = bkg_mean_ref + (max_TacDiffCut[l] - bkg_mean_AuAu);
-                    }
-                }
-            }
-        }
-    }
-
-  // calculate efficiency for each trigger unit
-  TH1F *hEffVsTrigUnit[nLumi][nData][nbins];
-  for(int l=0; l<nLumi; l++)
-    {
-      for(int i=0; i<nData; i++)
-        {
-	  for(int bin=0; bin<nbins; bin++)
-	    {
-	      hEffVsTrigUnit[l][i][bin] = new TH1F(Form("%s_hEffVsTrigUnit_%s_Data%d_PtBin%d",data_name.Data(),lumi_name[l],i,bin), "", nTrigUnit,1,nTrigUnit+1);
-	      double all = 0, all_err = 0, acc = 0, acc_err = 0;
-	      for(int j=0; j<nTrigUnit; j++)
-		{
-		  TH1F *hMuonTmp = hppAuTacDiffInTrigUnit[i][bin][j];
-		  int xbins = hMuonTmp->GetNbinsX();
-		  all = hMuonTmp->IntegralAndError(1, xbins, all_err);
-		  
-		  int index = bin;
-		  if(index == nbins-1) index = nbins-2;
-		  
-		  int new_bin_min =  hMuonTmp->FindFixBin(new_cut_min[l][i][bin][j]);
-		  int new_bin_max =  hMuonTmp->FindFixBin(new_cut_max[l][i][bin][j]);
-		  acc = hMuonTmp->IntegralAndError(new_bin_min, new_bin_max, acc_err);
-                  double eff = (all==0) ? 0 : acc/all;
-                  hEffVsTrigUnit[l][i][bin]->SetBinContent(j+1, eff);
-                  hEffVsTrigUnit[l][i][bin]->SetBinError(j+1, 1e-5);
-		}
-	    }
-	}
-    }
-
-  // Compare TacSum in each trigger unit: pp vs. pAu
-  TH1F *hppAuTacDiffInTrigUnitShift[nData][nbins][nTrigUnit];
-  for(int bin=0; bin<nbins; bin++)
-    {
-      c = new TCanvas(Form("ppVspAu_TacDiff_PtBin%d",bin),Form("ppVspAu_TacDiff_PtBin%d",bin),1100,650);
-      c->Divide(6,5);
-      for(int j=0; j<nTrigUnit; j++)
-        {
-	  c->cd(j+1);
-	  SetPadMargin(gPad,0.15,0.05,0.05,0.1);
-	  for(int i=0; i<nData; i++)
-	    {
-	      hppAuTacDiffInTrigUnitShift[i][bin][j] = new TH1F(Form("%s_hTacDiffInTrigUnitShift_TrigUnit%d_PtBin%d",data_names[i],j+1,bin),"",100,-50,50);
-	      int nxbins = hppAuTacDiffInTrigUnitShift[i][bin][j]->GetNbinsX();
-	      double shift = hppAuTacDiffMeanVsTrigUnit[i][bin]->GetBinContent(j+1);
-	      for(int ibin=1; ibin<=nxbins; ibin++)
-		{
-		  int jbin = hppAuTacDiffInTrigUnit[i][bin][j]->FindFixBin(hppAuTacDiffInTrigUnitShift[i][bin][j]->GetBinCenter(ibin) + shift);
-		  hppAuTacDiffInTrigUnitShift[i][bin][j]->SetBinContent(ibin, hppAuTacDiffInTrigUnit[i][bin][j]->GetBinContent(jbin));
-		  hppAuTacDiffInTrigUnitShift[i][bin][j]->SetBinError(ibin, hppAuTacDiffInTrigUnit[i][bin][j]->GetBinError(jbin));
-		}
-	
-	      TH1F *htmp = (TH1F*)hppAuTacDiffInTrigUnitShift[i][bin][j]->Clone(Form("Plot_%s",hppAuTacDiffInTrigUnitShift[i][bin][j]->GetName()));
-	      htmp->Rebin(5);
-	      htmp->SetTitle(";#DeltaTacSum;");
-	      ScaleHistoTitle(htmp, 0.08, 0.85, 0.06, 0.08, 1, 0.06);
-	      htmp->SetMaximum(2*htmp->GetMaximum());
-	      htmp->SetMarkerStyle(20+i*4);
-	      int color = i + 1;
-	      htmp->SetMarkerColor(color);
-	      htmp->SetLineColor(color);
-	      if(i==0) htmp->Draw();
-	      else     htmp->Draw("samesPE");
-	    }
-	  TPaveText *t1 = GetTitleText(Form("TrigUnit = %d",j+1),0.09);
-	  t1->Draw();
-	}
-      for(int l=0; l<nLumi; l++)
+      //==============================================
+      // Compare TacSum in each trigger unit: pp vs. pAu
+      TH1F *hMuonTacDiffShift[nData][nbins][nTrigUnit];
+      for(int bin=0; bin<nbins; bin++)
 	{
-	  c->cd(29+l);
-	  for(int i=0; i<nData; i++)
+	  c = new TCanvas(Form("ppVspAu_TacDiff_PtBin%d",bin),Form("ppVspAu_TacDiff_PtBin%d",bin),1100,650);
+	  c->Divide(6,5);
+	  TLegend *leg = new TLegend(0.15,0.3,0.5,0.88);
+	  leg->SetBorderSize(0);
+	  leg->SetFillColor(0);
+	  leg->SetHeader(Form("%1.1f < p_{T} < %1.1f GeV/c",lowbins[bin],upbins[bin]));
+	  leg->SetTextSize(0.09);
+	  for(int j=0; j<nTrigUnit; j++)
 	    {
-	      hEffVsTrigUnit[l][i][bin]->GetYaxis()->SetRangeUser(0,1.5);
-	      hEffVsTrigUnit[l][i][bin]->SetMarkerSize(0.8);
-	      hEffVsTrigUnit[l][i][bin]->SetMarkerStyle(20+i*4);
-	      hEffVsTrigUnit[l][i][bin]->SetMarkerColor(i+1);
-	      hEffVsTrigUnit[l][i][bin]->SetLineColor(i+1);
-	      if(i==0) hEffVsTrigUnit[l][i][bin]->Draw();
-	      else     hEffVsTrigUnit[l][i][bin]->Draw("sames");
+	      c->cd(j+1);
+	      SetPadMargin(gPad,0.15,0.05,0.05,0.1);
+	      for(int i=0; i<nData; i++)
+		{
+		  hMuonTacDiffShift[i][bin][j] = new TH1F(Form("%s_MuonTacDiffShift_TrigUnit%d_PtBin%d",legName[i],j+1,bin),"",100,-50,50);
+		  int nxbins = hMuonTacDiffShift[i][bin][j]->GetNbinsX();
+		  double shift = hMuonTacDiffMeanVsTrigUnit[i][bin]->GetBinContent(j+1);
+		  for(int ibin=1; ibin<=nxbins; ibin++)
+		    {
+		      int jbin = hMuonTacDiffInTrigUnit[i][bin][j]->FindFixBin(hMuonTacDiffShift[i][bin][j]->GetBinCenter(ibin) + shift);
+		      hMuonTacDiffShift[i][bin][j]->SetBinContent(ibin, hMuonTacDiffInTrigUnit[i][bin][j]->GetBinContent(jbin));
+		      hMuonTacDiffShift[i][bin][j]->SetBinError(ibin, hMuonTacDiffInTrigUnit[i][bin][j]->GetBinError(jbin));
+		    }
+	
+		  TH1F *htmp = (TH1F*)hMuonTacDiffShift[i][bin][j]->Clone(Form("Plot_%s",hMuonTacDiffShift[i][bin][j]->GetName()));
+		  htmp->Rebin(5);
+		  htmp->SetTitle(";#DeltaTacSum;");
+		  ScaleHistoTitle(htmp, 0.08, 0.85, 0.06, 0.08, 1, 0.06);
+		  htmp->SetMaximum(2*htmp->GetMaximum());
+		  htmp->SetMarkerStyle(20+i*4);
+		  int color = i + 1;
+		  htmp->SetMarkerColor(color);
+		  htmp->SetLineColor(color);
+		  if(i==0) htmp->Draw();
+		  else     htmp->Draw("samesPE");
+		  if(j==0)
+		    leg->AddEntry(htmp, legName[i], "P");
+		}
+	      TPaveText *t1 = GetTitleText(Form("TrigUnit = %d",j+1),0.09);
+	      t1->Draw();
 	    }
-	  TPaveText *t1 = GetTitleText(Form("%s cut",lumi_name[l]),0.09);
-	  t1->Draw();
+	  c->cd(29);
+	  leg->Draw();
+	  if(savePlot) 
+	    c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdTrigEff/%s_CompTacDiff_PtBin%d.pdf",data_name.Data(),config,bin));
 	}
-      if(savePlot) 
-	c->SaveAs(Form("~/Work/STAR/analysis/Plots/Run14_AuAu200/ana_MtdTrigEff/%s%s_CompTacDiffEff_PtBin%d.pdf",config,data_name.Data(),bin));
     }
 
   //==============================================
   // Calculate efficiency
-  // 1) align the trigger units according to Run14 alignment
+  // 1) align the trigger units in pp according to pAu/AuAu alignment
   // 2) combine all the trigger units
   // 3) fit the distribution and determine the efficiency
 
-  TH1F *hppAuTacDiffCombined[nData][nbins];
-  TF1  *hppAuTacDiffCombinedFit[nData][nbins];
-  TFitResultPtr hFitPtr[nData][nbins];
-  int iFuncType = 1; // 0 - gaussian; 1 - crystal ball
-  if(savePlot || saveHisto) iFuncType = 1;
-  for(int i=0; i<nData; i++)
+  TH1F *hMuonTacDiffCombined[nbins];
+  for(int bin=0; bin<nbins; bin++)
     {
-      c = new TCanvas(Form("%s_TacDiff_Combined",data_names[i]),Form("%s_TacDiff_Combined",data_names[i]),1100,650);
-      c->Divide(4,2);
-      for(int bin=0; bin<nbins; bin++)
+      hMuonTacDiffCombined[bin] = new TH1F(Form("%s_hMuonTacDiffCombined_PtBin%d",legName[0],bin),"",300,700,1000);
+      for(int j=0; j<nTrigUnit; j++)
 	{
-	  hppAuTacDiffCombined[i][bin] = new TH1F(Form("%s_hppAuTacDiffCombined_PtBin%d",data_names[i],bin),"",150,740,890);
-	  for(int j=0; j<nTrigUnit; j++)
-	    {
-	      int index = bin;
-	      if(index == nbins-1) index = nbins-2;
-	      double bkg_mean_AuAu = hAuAuTacDiffMeanVsTrigUnit[index]->GetBinContent(j+1);
-	      double bkg_mean_ref  = hppAuTacDiffMeanVsTrigUnitLS[i][index]->GetBinContent(j+1);
-	      double shift = bkg_mean_ref - bkg_mean_AuAu;
+	  int index = bin;
+	  if(index == nbins-1) index = nbins-2; 
+	  double bkg_mean_AuAu = hLSBkgTacDiffMeanVsTrigUnit[1][index]->GetBinContent(j+1);
+	  double bkg_mean_ref  = hLSBkgTacDiffMeanVsTrigUnit[0][index]->GetBinContent(j+1);
+	  double shift = bkg_mean_ref - bkg_mean_AuAu;
 
-	      TH1F *htmp = (TH1F*)hppAuTacDiffCombined[i][bin]->Clone(Form("%s_clone%d",hppAuTacDiffCombined[i][bin]->GetName(),j));
-	      htmp->Reset();
-	      int nxbins = htmp->GetNbinsX();
-	      for(int ibin=1; ibin<=nxbins; ibin++)
-		{
-		  int jbin = hppAuTacDiffInTrigUnit[i][bin][j]->FindFixBin(htmp->GetBinCenter(ibin) + shift);
-		  htmp->SetBinContent(ibin, hppAuTacDiffInTrigUnit[i][bin][j]->GetBinContent(jbin));
-		  htmp->SetBinError(ibin, hppAuTacDiffInTrigUnit[i][bin][j]->GetBinError(jbin));
-		}
-	      double weight = hMultWeight[2][bin]->GetBinContent(j+2);
-	      hppAuTacDiffCombined[i][bin]->Add(htmp, weight);
-	    }
-	  TH1F *hfit = (TH1F*)hppAuTacDiffCombined[i][bin]->Clone(Form("%s_fit",hppAuTacDiffCombined[i][bin]->GetName()));
-	  hfit->Rebin(5);
-	  hfit->SetTitle(";#DeltaTacSum;");
-	  if(iFuncType==0)
+	  TH1F *htmp = (TH1F*)hMuonTacDiffCombined[bin]->Clone(Form("%s_clone%d",hMuonTacDiffCombined[bin]->GetName(),j));
+	  htmp->Reset();
+	  int nxbins = htmp->GetNbinsX();
+	  for(int ibin=1; ibin<=nxbins; ibin++)
 	    {
-	      hppAuTacDiffCombinedFit[i][bin] = new TF1(Form("%s_funcppAuTacDiffCombined_PtBin%d",data_names[i],bin),"gaus",760,830);
-	      hppAuTacDiffCombinedFit[i][bin]->SetParameters(0.2,790,5);
+	      int jbin = hMuonTacDiffInTrigUnit[0][bin][j]->FindFixBin(htmp->GetBinCenter(ibin) + shift);
+	      htmp->SetBinContent(ibin, hMuonTacDiffInTrigUnit[0][bin][j]->GetBinContent(jbin));
+	      htmp->SetBinError(ibin, hMuonTacDiffInTrigUnit[0][bin][j]->GetBinError(jbin));
 	    }
-	  else if(iFuncType==1)
-	    {
-	      hppAuTacDiffCombinedFit[i][bin] = new TF1(Form("%s_funcppAuTacDiffCombined_PtBin%d",data_names[i],bin),CrystalBall,760,830,5);
-	      hppAuTacDiffCombinedFit[i][bin]->SetParameters(1,795,8,5,0.2);
-	    }
-	  hFitPtr[i][bin] = hfit->Fit(hppAuTacDiffCombinedFit[i][bin],"I0RS");
-	
-	  c->cd(bin+1);
-	  SetPadMargin(gPad,0.13,0.1,0.01,0.1);
-	  ScaleHistoTitle(hfit, 0.05, 1, 0.04, 0.05, 1, 0.04);
-	  hfit->SetMaximum(1.5*hfit->GetMaximum());
-	  hfit->SetMarkerStyle(20);
-	  hfit->Draw();
-	  TPaveText *t1 = GetTitleText(Form("%2.1f < p_{T} < %2.1f GeV/c",lowbins[bin],upbins[bin]),0.055);
-	  t1->Draw();
-	  hppAuTacDiffCombinedFit[i][bin]->SetLineColor(2);
-	  hppAuTacDiffCombinedFit[i][bin]->Draw("sames");
-	}   
-      if(savePlot) 
-	c->SaveAs(Form("~/Work/STAR/analysis/Plots/Run14_AuAu200/ana_MtdTrigEff/%s%s_TacDiffCombFit_%s.pdf",config,data_name.Data(),data_names[i]));
-    }
-
-  TGraphAsymmErrors* gTacDiffEffComb[nLumi][nData][2]; // 0 - bin counting; 1 - fitting;
-  double pt_arr[nbins-1], all_arr[nbins-1], all_err_arr[nbins-1], acc_arr[nbins-1], acc_err_arr[nbins-1];
-  for(int l=0; l<nLumi; l++)
-    {
-      for(int i=0; i<nData; i++)
-	{
-	  // bin counting
-	  for(int bin=1; bin<nbins; bin++)
-	    {
-	      int xbins = hppAuTacDiffCombined[i][bin]->GetNbinsX(); 
-	      pt_arr[bin-1] = (upbins[bin]+lowbins[bin])/2;
-	      all_arr[bin-1] = hppAuTacDiffCombined[i][bin]->IntegralAndError(1, xbins, all_err_arr[bin-1]);
-	      acc_arr[bin-1] = hppAuTacDiffCombined[i][bin]->IntegralAndError(hppAuTacDiffCombined[i][bin]->FindFixBin(min_TacDiffCut[l]+0.1),
-								   hppAuTacDiffCombined[i][bin]->FindFixBin(max_TacDiffCut[l]-0.1),
-								   acc_err_arr[bin-1]);
-	    }
-	  gTacDiffEffComb[l][i][0] = GetEfficiencyCurve(nbins-1, pt_arr, all_arr, all_err_arr, acc_arr, acc_err_arr);
-	  gTacDiffEffComb[l][i][0]->SetName(Form("%s_gTacDiffEffComb_%s_%s_BinCount",data_name.Data(),lumi_name[l],data_names[i]));
-
-	  // fitting
-	  for(int bin=1; bin<nbins; bin++)
-	    {
-	      pt_arr[bin-1]      = (upbins[bin]+lowbins[bin])/2;
-	      all_arr[bin-1]     = hppAuTacDiffCombinedFit[i][bin]->Integral(760,830);
-	      all_err_arr[bin-1] = hppAuTacDiffCombinedFit[i][bin]->IntegralError(760,830,
-										 hppAuTacDiffCombinedFit[i][bin]->GetParameters(),
-										 hFitPtr[i][bin]->GetCovarianceMatrix().GetMatrixArray());
-	      acc_arr[bin-1]     = hppAuTacDiffCombinedFit[i][bin]->Integral(min_TacDiffCut[l],max_TacDiffCut[l]);
-	      acc_err_arr[bin-1] = hppAuTacDiffCombinedFit[i][bin]->IntegralError(min_TacDiffCut[l],max_TacDiffCut[l],
-										 hppAuTacDiffCombinedFit[i][bin]->GetParameters(),
-										 hFitPtr[i][bin]->GetCovarianceMatrix().GetMatrixArray());
-	    }
-	  gTacDiffEffComb[l][i][1] = GetEfficiencyCurve(nbins-1, pt_arr, all_arr, all_err_arr, acc_arr, acc_err_arr);
-	  gTacDiffEffComb[l][i][1]->SetName(Form("%s_gTacDiffEffComb_%s_%s_Fitting",data_name.Data(),lumi_name[l],data_names[i]));
-
-	  for(int m=0; m<2; m++)
-	    {
-	      int npoints = gTacDiffEffComb[l][i][m]->GetN();
-	      double x, y;
-	      for(int ipoint=0; ipoint<npoints; ipoint++)
-		{
-		  gTacDiffEffComb[l][i][m]->GetPoint(ipoint,x,y);
-		  gTacDiffEffComb[l][i][m]->SetPoint(ipoint,hMeanPt->GetBinContent(ipoint+1),y);
-		  gTacDiffEffComb[l][i][m]->SetPointEXhigh(ipoint,hMeanPt->GetBinError(ipoint+1));
-		  gTacDiffEffComb[l][i][m]->SetPointEXlow(ipoint,hMeanPt->GetBinError(ipoint+1));
-		}
-	    }
+	  double weight = hMultWeight[1][bin]->GetBinContent(j+2);
+	  hMuonTacDiffCombined[bin]->Add(htmp, weight);
 	}
     }
 
-  //==============================================
   // Compare TacDiff distributions
-  const int nBinsTacDiff = 22;
-  const double xBinsTacDiff[nBinsTacDiff+1] = {760,765,770,775,780,782,784,786,788,789,793,797,801,805,809,813,817,821,825,829,833,837,841};
-  TFile *fRun14 = TFile::Open("Rootfiles/Run14_AuAu200.JpsiMuon.root","read");
-  TH1F *hMuonTacDiffRebin[3][nbins-1];
+  TH1F *hMuonTacDiffRebin[nData][nbins-1];
+  TH1F *h1tmp = 0x0;
   for(int bin=1; bin<nbins; bin++)
     {
       for(int i=0; i<nData; i++)
 	{
-	  hMuonTacDiffRebin[i][bin-1] = (TH1F*)hppAuTacDiffCombined[i][bin]->Rebin(nBinsTacDiff,Form("%s_MtdVpdTacDiff_bin%d_Rebin",data_names[i],bin),xBinsTacDiff);
+	  if(i==0) h1tmp = hMuonTacDiffCombined[bin];
+	  if(i==1) h1tmp = (TH1F*)hMuonTacDiffVsTrigUnit[i][bin]->ProjectionY(Form("DataJpsiMuon_MtdVpdTacDiff_bin%d",bin));
+	  hMuonTacDiffRebin[i][bin-1] = (TH1F*)h1tmp->Rebin(nBinsTacDiff,Form("%s_MtdVpdTacDiff_bin%d_Rebin",legName[i],bin),xBinsTacDiff);
+	  scaleHisto(hMuonTacDiffRebin[i][bin-1], 1, 1, true, false, false);
+	  hMuonTacDiffRebin[i][bin-1]->SetXTitle("#DeltaTacSum");
 	}
-      hMuonTacDiffRebin[2][bin-1] = (TH1F*)fRun14->Get(Form("DataJpsiMuon_MtdVpdTacDiff_bin%d_Rebin",bin));
-      hMuonTacDiffRebin[2][bin-1]->SetName(Form("Run14_AuAu200_MtdVpdTacDiff_bin%d_Rebin",bin));
     }
   c = new TCanvas("CompTacDiff_PtBins","CompTacDiff_PtBins",1100,650);
   c->Divide(3,2);
@@ -971,43 +876,39 @@ void getTrigEff(const int savePlot = 0, const int saveHisto = 0)
   leg->SetBorderSize(0);
   leg->SetFillColor(0);
   leg->SetTextSize(0.045);
+  double scale_bin = 799;
+  if(data_name=="Run15_pAu200") scale_bin = 910;
   for(int bin=1; bin<nbins; bin++)
     {
       c->cd(bin);
-      for(int i=0; i<3; i++)
+      for(int i=0; i<nData; i++)
 	{
-	  scaleHisto(hMuonTacDiffRebin[i][bin-1], 1, 1, true, false, false);
-	  hMuonTacDiffRebin[i][bin-1]->Scale(1./hMuonTacDiffRebin[i][bin-1]->GetBinContent(hMuonTacDiffRebin[i][bin-1]->FindFixBin(799)));
-	  hMuonTacDiffRebin[i][bin-1]->SetMaximum(1.6);
-	  if(i<2) 
-	    {
-	      hMuonTacDiffRebin[i][bin-1]->SetMarkerStyle(20+i);
-	    }
-	  else
-	    {
-	      hMuonTacDiffRebin[i][bin-1]->SetMarkerStyle(29);
-	      hMuonTacDiffRebin[i][bin-1]->SetMarkerSize(1.5);
-	    }
-	  hMuonTacDiffRebin[i][bin-1]->SetMarkerColor(TMath::Power(2,i));
-	  hMuonTacDiffRebin[i][bin-1]->SetLineColor(TMath::Power(2,i));
+	  hMuonTacDiffRebin[i][bin-1]->Scale(1./hMuonTacDiffRebin[i][bin-1]->GetBinContent(hMuonTacDiffRebin[i][bin-1]->FindFixBin(scale_bin)));
+	  if(bin<nbins-1) hMuonTacDiffRebin[i][bin-1]->SetMaximum(1.6);
+	  else  hMuonTacDiffRebin[i][bin-1]->SetMaximum(5.6);
+	  hMuonTacDiffRebin[i][bin-1]->SetMarkerStyle(20+i*4);
+	  hMuonTacDiffRebin[i][bin-1]->SetMarkerColor(2-i);
+	  hMuonTacDiffRebin[i][bin-1]->SetLineColor(2-i);
 	  if(i==0) hMuonTacDiffRebin[i][bin-1]->Draw();
-	  else     hMuonTacDiffRebin[i][bin-1]->Draw("sames");
-
-	  if(bin==1) leg->AddEntry(hMuonTacDiffRebin[i][bin-1],legName[i],"P");
+	  else     hMuonTacDiffRebin[i][bin-1]->Draw("samesPE");
+	  if(bin==1) 
+	    {
+	      if(i==0) leg->AddEntry(hMuonTacDiffRebin[i][bin-1],Form("%s (shifted)",legName[i]),"P");
+	      else     leg->AddEntry(hMuonTacDiffRebin[i][bin-1],Form("%s",legName[i]),"P");
+	    }
 	}
       TPaveText *t1 = GetTitleText(Form("%2.1f < p_{T}^{#mu} < %2.1f GeV/c",lowbins[bin],upbins[bin]),0.055);
       t1->Draw();
     }
   c->cd(2);
   leg->Draw();
-  if(savePlot) 
-    c->SaveAs(Form("~/Work/STAR/analysis/Plots/Run14_AuAu200/ana_MtdTrigEff/%s%s_CompTacDiff.pdf",config,data_name.Data()));
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdTrigEff/%sCompTacDiffCombined.pdf",data_name.Data(),config));
 
   // Fit the TacSum distributions
-  TF1 *funcMuonTacDiffRebin[3][nbins-1];
-  TH1F *hMuonTacDiffMean[3];
-  TH1F *hMuonTacDiffSigma[3];
-  for(int i=0; i<3; i++)
+  TF1 *funcMuonTacDiffRebin[nData][nbins-1];
+  TH1F *hMuonTacDiffMean[nData];
+  TH1F *hMuonTacDiffSigma[nData];
+  for(int i=0; i<nData; i++)
     {
       hMuonTacDiffMean[i]  = new TH1F(Form("%s_hMuonTacDiffMeanVsPt",legName[i]),"Mean of #DeltaTac distribution as a function of p_{T};p_{T} (GeV/c);<#DeltaTac>", nPtBins, xPtBins);
       hMuonTacDiffSigma[i] = new TH1F(Form("%s_hMuonTacDiffSigmaVsPt",legName[i]),"Width of #DeltaTac distribution as a function of p_{T};p_{T} (GeV/c);#sigma_{#DeltaTac}", nPtBins, xPtBins);
@@ -1024,7 +925,17 @@ void getTrigEff(const int savePlot = 0, const int saveHisto = 0)
 	  hFit->SetMaximum(1.4*hFit->GetMaximum());
 	  hFit->SetTitle(";#DeltaTac;");
 	  funcMuonTacDiffRebin[i][bin-1] = new TF1(Form("%s_funcMuonTacDiff_PtBin%d",legName[i],bin),"gaus",789,815);
-	  funcMuonTacDiffRebin[i][bin-1]->SetParameters(1, 800, 10);
+	  if(data_name=="Run14_AuAu200")
+	    {
+	      funcMuonTacDiffRebin[i][bin-1]->SetRange(789, 815);
+	      funcMuonTacDiffRebin[i][bin-1]->SetParameters(1, 800, 10);
+	    }
+	  if(data_name=="Run15_pAu200")
+	    {
+	      funcMuonTacDiffRebin[i][bin-1]->SetRange(895, 930);
+	      if(i==1 && bin==3) funcMuonTacDiffRebin[i][bin-1]->SetRange(900, 940);
+	      funcMuonTacDiffRebin[i][bin-1]->SetParameters(1, 910, 10);
+	    }
 	  hFit->Fit(funcMuonTacDiffRebin[i][bin-1],"IR0Q");
 	  c->cd(bin);
 	  hFit->Draw();
@@ -1042,55 +953,55 @@ void getTrigEff(const int savePlot = 0, const int saveHisto = 0)
       t1->AddText(legName[i]);
       t1->Draw();
       if(savePlot) 
-	c->SaveAs(Form("~/Work/STAR/analysis/Plots/Run14_AuAu200/ana_MtdTrigEff/%s%s_FitTacDiff.pdf",config,legName[i]));
+	c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdTrigEff/%sFitTacDiff_%s.pdf",data_name.Data(),config,legName[i]));
     }
 
-  TF1 *funcMuonTacDiffSigma[3];
-  TH1F *hCLfuncMuonTacDiffSigma[3];
-  c = new TCanvas("Comp_TacDiffWidth", "Comp_TacDiffWidth", 1100,650);
-  c->Divide(2,2);
-  for(int i=0; i<3; i++)
+  TF1 *funcMuonTacDiffSigma[nData];
+  TH1F *hCLfuncMuonTacDiffSigma[nData];
+  c = new TCanvas("Comp_TacDiffWidth", "Comp_TacDiffWidth", 1100,450);
+  c->Divide(2,1);
+  for(int i=0; i<nData; i++)
     {
       funcMuonTacDiffSigma[i] = new TF1(Form("%s_fitMuonTacDiffSigmaVsPt",legName[i]),"[0]+[1]*exp([2]/x)", 1.3, 5);
       funcMuonTacDiffSigma[i]->SetParameters(7, 1e-5, 15);
       TH1F *hFit = (TH1F*)hMuonTacDiffSigma[i]->Clone(Form("Fit_%s",hMuonTacDiffSigma[i]->GetName()));
-      hFit->SetMarkerStyle(21);
-      hFit->GetYaxis()->SetRangeUser(5,10);
+      hFit->SetMarkerStyle(20+i*4);
+      hFit->SetMarkerSize(1.5);
+      hFit->SetMarkerColor(2-i);
+      hFit->SetLineColor(2-i);
+      hFit->GetYaxis()->SetRangeUser(5,12);
       hFit->GetXaxis()->SetRangeUser(1.3,4);
       hFit->Fit(funcMuonTacDiffSigma[i],"IR0Q");
       hFit->SetTitle("");
       ScaleHistoTitle(hFit, 0.05, 0.9, 0.045, 0.055, 0.8, 0.04, 62);
       c->cd(i+1);
       hFit->Draw();
-      funcMuonTacDiffSigma[i]->SetLineColor(2);
+      funcMuonTacDiffSigma[i]->SetLineColor(4);
+      funcMuonTacDiffSigma[i]->SetLineStyle(2);
       funcMuonTacDiffSigma[i]->Draw("sames");
-      TPaveText *t1 = GetTitleText(legName[i],0.06);
+      TPaveText *t1 = GetTitleText(legName[i],0.05);
       t1->Draw();
       hCLfuncMuonTacDiffSigma[i] = new TH1F(Form("%s_fitMuonTacDiffSigmaVsPtCL",legName[i]),"",nPtBins,xPtBins);
       (TVirtualFitter::GetFitter())->GetConfidenceIntervals(hCLfuncMuonTacDiffSigma[i], 0.68);
     }
-  if(savePlot) 
-    c->SaveAs(Form("~/Work/STAR/analysis/Plots/Run14_AuAu200/ana_MtdTrigEff/%sCompTacDiffSigma.pdf",config));
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdTrigEff/%sCompTacDiffSigma.pdf",data_name.Data(),config));
 
   c = new TCanvas("Comp_TacDiffMean", "Comp_TacDiffMean", 800, 600);
   TLegend *leg = new TLegend(0.5,0.25,0.7,0.45);
   leg->SetBorderSize(0);
   leg->SetFillColor(0);
   leg->SetTextSize(0.04);
-  for(int i=0; i<3; i++)
+  for(int i=0; i<nData; i++)
     {
       TH1F *hplot = (TH1F*)hMuonTacDiffMean[i]->Clone(Form("plot_%s",hMuonTacDiffMean[i]->GetName()));
-      if(i<2) hplot->SetMarkerStyle(20+i);
-      else
-	{
-	  hplot->SetMarkerStyle(29);
-	  hplot->SetMarkerSize(1.5);
-	}
-      hplot->SetMarkerColor(TMath::Power(2,i));
-      hplot->SetLineColor(TMath::Power(2,i));
+      hplot->SetMarkerStyle(20+i*4);
+      hplot->SetMarkerSize(1.5);
+      hplot->SetMarkerColor(2-i);
+      hplot->SetLineColor(2-i);
       hplot->SetTitle("");
       hplot->GetXaxis()->SetRangeUser(1.3,4);
-      hplot->GetYaxis()->SetRangeUser(785, 805);
+      if(data_name=="Run14_AuAu200") hplot->GetYaxis()->SetRangeUser(785, 805);
+      if(data_name=="Run15_pAu200") hplot->GetYaxis()->SetRangeUser(900, 915);
       if(i==0) hplot->Draw();
       else     hplot->Draw("sames");
       leg->AddEntry(hplot, legName[i], "P");
@@ -1099,73 +1010,160 @@ void getTrigEff(const int savePlot = 0, const int saveHisto = 0)
   TPaveText *t1 = GetTitleText("Mean of #DeltaTac distribution as a function of p_{T}",0.04);
   t1->Draw();
   if(savePlot) 
-    c->SaveAs(Form("~/Work/STAR/analysis/Plots/Run14_AuAu200/ana_MtdTrigEff/%sCompTacDiffMean.pdf",config));
+    c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdTrigEff/%sCompTacDiffMean.pdf",data_name.Data(),config));
 
-  // Recalculate the cut values according to the resolution difference
-  TGraphAsymmErrors* gTacDiffEffFinal[nLumi][nData][2]; // 0 - bin counting; 1 - fitting;
-  double min_TacDiffCut_new[nLumi][nData][nPtBins];
+  // Fit the shifted distribution from pp collisions
+  TF1  *hMuonTacDiffCombinedFit[nbins];
+  TFitResultPtr hFitPtr[nbins];
+  int iFuncType = 1; // 0 - gaussian; 1 - crystal ball
+  if(savePlot || saveHisto) iFuncType = 1;
+  TCanvas *c = new TCanvas(Form("%s_TacDiff_Combined",legName[0]),Form("%s_TacDiff_Combined",legName[0]),1100,650);
+  c->Divide(4,2);
+  for(int bin=0; bin<nbins; bin++)
+    {
+      TH1F *hfit = (TH1F*)hMuonTacDiffCombined[bin]->Clone(Form("%s_fit",hMuonTacDiffCombined[bin]->GetName()));
+      hfit->Rebin(5);
+      hfit->SetTitle(";#DeltaTacSum;");
+      if(iFuncType==0)
+	{
+	  hMuonTacDiffCombinedFit[bin] = new TF1(Form("%s_funcMuonTacDiffCombined_PtBin%d",legName[0],bin),"gaus",min_fit,max_fit);
+	  hMuonTacDiffCombinedFit[bin]->SetParameters(0.2,min_TacDiffCut[0]+10,5);
+	}
+      else if(iFuncType==1)
+	{
+	  hMuonTacDiffCombinedFit[bin] = new TF1(Form("%s_funcMuonTacDiffCombined_PtBin%d",legName[0],bin),CrystalBall,min_fit,max_fit,5);
+	  hMuonTacDiffCombinedFit[bin]->SetParameters(1,min_TacDiffCut[0]+10,8,5,0.2);
+	}
+      hFitPtr[bin] = hfit->Fit(hMuonTacDiffCombinedFit[bin],"I0RS");
+      c->cd(bin+1);
+      SetPadMargin(gPad,0.13,0.1,0.01,0.1);
+      ScaleHistoTitle(hfit, 0.05, 1, 0.04, 0.05, 1, 0.04);
+      hfit->SetMaximum(1.5*hfit->GetMaximum());
+      hfit->SetMarkerStyle(20);
+      if(data_name=="Run14_AuAu200") hfit->GetXaxis()->SetRangeUser(730, 880);
+      if(data_name=="Run15_pAu200") hfit->GetXaxis()->SetRangeUser(840, 980);
+      hfit->Draw();
+      TPaveText *t1 = GetTitleText(Form("%2.1f < p_{T} < %2.1f GeV/c",lowbins[bin],upbins[bin]),0.06);
+      t1->Draw();
+      hMuonTacDiffCombinedFit[bin]->SetLineColor(2);
+      hMuonTacDiffCombinedFit[bin]->Draw("sames");
+    }   
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdTrigEff/%sFitTacDiffComb_%s.pdf",data_name.Data(),config,legName[0]));
+
+  TGraphAsymmErrors* gTacDiffEffComb[nLumi][2]; // 0 - bin counting; 1 - fitting;
+  double pt_arr[nbins-1], all_arr[nbins-1], all_err_arr[nbins-1], acc_arr[nbins-1], acc_err_arr[nbins-1];
   for(int l=0; l<nLumi; l++)
     {
-      for(int i=0; i<nData; i++)
+      // bin counting
+      for(int bin=1; bin<nbins; bin++)
 	{
-	  // calculate new cut values
-	  for(int bin=1; bin<nbins; bin++)
-	    {
-	      double pt = hMuonTacDiffMean[i]->GetBinCenter(bin);
-	      double scale = funcMuonTacDiffSigma[i]->Eval(pt)/funcMuonTacDiffSigma[2]->Eval(pt);
-	      double mean = hMuonTacDiffMean[i]->GetBinContent(bin);
-	      min_TacDiffCut_new[l][i][bin-1] = mean - (mean - min_TacDiffCut[l])*scale;
-	      if(bin==nbins-1) min_TacDiffCut_new[l][i][bin-1] = min_TacDiffCut_new[l][i][bin-2];
-	      cout << pt << "  " << scale << ":  " << min_TacDiffCut[l] << " -> " << min_TacDiffCut_new[l][i][bin-1] << endl;
-	    }
+	  int xbins = hMuonTacDiffCombined[bin]->GetNbinsX(); 
+	  pt_arr[bin-1] = (upbins[bin]+lowbins[bin])/2;
+	  all_arr[bin-1] = hMuonTacDiffCombined[bin]->IntegralAndError(1, xbins, all_err_arr[bin-1]);
+	  acc_arr[bin-1] = hMuonTacDiffCombined[bin]->IntegralAndError(hMuonTacDiffCombined[bin]->FindFixBin(min_TacDiffCut[l]+0.1),
+								       hMuonTacDiffCombined[bin]->FindFixBin(max_TacDiffCut[l]-0.1),
+								       acc_err_arr[bin-1]);
+	  if(acc_arr[bin-1]>all_arr[bin-1]) acc_arr[bin-1] = all_arr[bin-1];
+	}
+      gTacDiffEffComb[l][0] = GetEfficiencyCurve(nbins-1, pt_arr, all_arr, all_err_arr, acc_arr, acc_err_arr);
+      gTacDiffEffComb[l][0]->SetName(Form("%s_gTacDiffEffComb_%s_%s_BinCount",data_name.Data(),lumi_name[l],legName[0]));
 
-	  // bin counting
-	  for(int bin=1; bin<nbins; bin++)
+      // fitting
+      for(int bin=1; bin<nbins; bin++)
+	{
+	  pt_arr[bin-1]      = (upbins[bin]+lowbins[bin])/2;
+	  all_arr[bin-1]     = hMuonTacDiffCombinedFit[bin]->Integral(700,max_TacDiffCut[l]);
+	  all_err_arr[bin-1] = hMuonTacDiffCombinedFit[bin]->IntegralError(700,max_TacDiffCut[l],
+									   hMuonTacDiffCombinedFit[bin]->GetParameters(),
+									   hFitPtr[bin]->GetCovarianceMatrix().GetMatrixArray());
+	  acc_arr[bin-1]     = hMuonTacDiffCombinedFit[bin]->Integral(min_TacDiffCut[l],max_TacDiffCut[l]);
+	  acc_err_arr[bin-1] = hMuonTacDiffCombinedFit[bin]->IntegralError(min_TacDiffCut[l],max_TacDiffCut[l],
+									   hMuonTacDiffCombinedFit[bin]->GetParameters(),
+									   hFitPtr[bin]->GetCovarianceMatrix().GetMatrixArray());
+	}
+      gTacDiffEffComb[l][1] = GetEfficiencyCurve(nbins-1, pt_arr, all_arr, all_err_arr, acc_arr, acc_err_arr);
+      gTacDiffEffComb[l][1]->SetName(Form("%s_gTacDiffEffComb_%s_%s_Fitting",data_name.Data(),lumi_name[l],legName[0]));
+	  
+      for(int m=0; m<2; m++)
+	{
+	  int npoints = gTacDiffEffComb[l][m]->GetN();
+	  double x, y;
+	  for(int ipoint=0; ipoint<npoints; ipoint++)
 	    {
-	      TH1F *hppAuTac = hppAuTacDiffCombined[i][bin];
-	      int xbins = hppAuTac->GetNbinsX(); 
-	      pt_arr[bin-1] = (upbins[bin]+lowbins[bin])/2;
-	      all_arr[bin-1] = hppAuTac->IntegralAndError(1, xbins, all_err_arr[bin-1]);
-	      int low_bin =    hppAuTac->FindFixBin(min_TacDiffCut_new[l][i][bin-1]);
-	      acc_arr[bin-1] = hppAuTac->IntegralAndError(low_bin+1,
-							  hppAuTac->FindFixBin(max_TacDiffCut[l]-0.1),
-							  acc_err_arr[bin-1]);
-	      double fraction = (hppAuTac->GetXaxis()->GetBinUpEdge(low_bin)-min_TacDiffCut_new[l][i][bin-1])/hppAuTac->GetBinWidth(low_bin);
-	      acc_arr[bin-1] += hppAuTac->GetBinContent(low_bin)*fraction;
-	      acc_err_arr[bin-1] = sqrt(pow(acc_err_arr[bin-1],2)+pow(hppAuTac->GetBinError(low_bin)*fraction,2));
-	      if(acc_arr[bin-1]>all_arr[bin-1]) acc_arr[bin-1] = all_arr[bin-1];
+	      gTacDiffEffComb[l][m]->GetPoint(ipoint,x,y);
+	      gTacDiffEffComb[l][m]->SetPoint(ipoint,hMeanPt[1]->GetBinContent(ipoint+1),y);
+	      gTacDiffEffComb[l][m]->SetPointEXhigh(ipoint,hMeanPt[1]->GetBinError(ipoint+1));
+	      gTacDiffEffComb[l][m]->SetPointEXlow(ipoint,hMeanPt[1]->GetBinError(ipoint+1));
+	      if(data_name=="Run15_pAu200" && m==1) 
+		gTacDiffEffComb[l][m]->SetPointEYlow(ipoint,0);
 	    }
-	  gTacDiffEffFinal[l][i][0] = GetEfficiencyCurve(nbins-1, pt_arr, all_arr, all_err_arr, acc_arr, acc_err_arr);
-	  gTacDiffEffFinal[l][i][0]->SetName(Form("%s_gTacDiffEffFinal_BinCount_%s_%s",data_name.Data(),lumi_name[l],data_names[i]));
+	}
+    }
 
-	  // fitting
-	  for(int bin=1; bin<nbins; bin++)
-	    {
-	      TF1 *funcppAuTac = hppAuTacDiffCombinedFit[i][bin];
-	      pt_arr[bin-1]      = (upbins[bin]+lowbins[bin])/2;
-	      all_arr[bin-1]     = funcppAuTac->Integral(760,830);
-	      all_err_arr[bin-1] = funcppAuTac->IntegralError(760,830,
-							      funcppAuTac->GetParameters(),
-							      hFitPtr[i][bin]->GetCovarianceMatrix().GetMatrixArray());
-	      acc_arr[bin-1]     = funcppAuTac->Integral(min_TacDiffCut_new[l][i][bin-1],max_TacDiffCut[l]);
-	      acc_err_arr[bin-1] = funcppAuTac->IntegralError(min_TacDiffCut_new[l][i][bin-1],max_TacDiffCut[l],
-							      funcppAuTac->GetParameters(),
-							      hFitPtr[i][bin]->GetCovarianceMatrix().GetMatrixArray());
-	    }
-	  gTacDiffEffFinal[l][i][1] = GetEfficiencyCurve(nbins-1, pt_arr, all_arr, all_err_arr, acc_arr, acc_err_arr);
-	  gTacDiffEffFinal[l][i][1]->SetName(Form("%s_gTacDiffEffFinal_Fitting_%s_%s",data_name.Data(),lumi_name[l],data_names[i]));
+  // Recalculate the cut values according to the resolution difference
+  TGraphAsymmErrors* gTacDiffEffFinal[nLumi][2]; // 0 - bin counting; 1 - fitting;
+  double min_TacDiffCut_new[nLumi][nPtBins];
+  for(int l=0; l<nLumi; l++)
+    {
+      // calculate new cut values
+      for(int bin=1; bin<nbins; bin++)
+	{
+	  double pt = hMuonTacDiffMean[0]->GetBinCenter(bin);
+	  double scale = funcMuonTacDiffSigma[0]->Eval(pt)/funcMuonTacDiffSigma[1]->Eval(pt);
+	  double mean = hMuonTacDiffMean[0]->GetBinContent(bin);
+	  min_TacDiffCut_new[l][bin-1] = mean - (mean - min_TacDiffCut[l])*scale;
+	  if(bin==nbins-1) min_TacDiffCut_new[l][bin-1] = min_TacDiffCut_new[l][bin-2];
+	  cout << pt << "  " << scale << ":  " << min_TacDiffCut[l] << " -> " << min_TacDiffCut_new[l][bin-1] << endl;
+	}
 
-	  for(int m=0; m<2; m++)
+      // bin counting
+      for(int bin=1; bin<nbins; bin++)
+	{
+	  TH1F *hppTac = hMuonTacDiffCombined[bin];
+	  int xbins = hppTac->GetNbinsX(); 
+	  pt_arr[bin-1] = (upbins[bin]+lowbins[bin])/2;
+	  all_arr[bin-1] = hppTac->IntegralAndError(1, xbins, all_err_arr[bin-1]);
+	  int low_bin =    hppTac->FindFixBin(min_TacDiffCut_new[l][bin-1]);
+	  acc_arr[bin-1] = hppTac->IntegralAndError(low_bin+1,
+						    hppTac->FindFixBin(max_TacDiffCut[l]-0.1),
+						    acc_err_arr[bin-1]);
+	  double fraction = (hppTac->GetXaxis()->GetBinUpEdge(low_bin)-min_TacDiffCut_new[l][bin-1])/hppTac->GetBinWidth(low_bin);
+	  acc_arr[bin-1] += hppTac->GetBinContent(low_bin)*fraction;
+	  acc_err_arr[bin-1] = sqrt(pow(acc_err_arr[bin-1],2)+pow(hppTac->GetBinError(low_bin)*fraction,2));
+	  if(acc_arr[bin-1]>all_arr[bin-1]) acc_arr[bin-1] = all_arr[bin-1];
+	}
+      gTacDiffEffFinal[l][0] = GetEfficiencyCurve(nbins-1, pt_arr, all_arr, all_err_arr, acc_arr, acc_err_arr);
+      gTacDiffEffFinal[l][0]->SetName(Form("%s_gTacDiffEffFinal_BinCount_%s_%s",data_name.Data(),lumi_name[l],legName[0]));
+
+      // fitting
+      for(int bin=1; bin<nbins; bin++)
+	{
+	  TF1 *funcppTac = hMuonTacDiffCombinedFit[bin];
+	  pt_arr[bin-1]      = (upbins[bin]+lowbins[bin])/2;
+	  all_arr[bin-1]     = funcppTac->Integral(700,max_TacDiffCut[l]);
+	  all_err_arr[bin-1] = funcppTac->IntegralError(700,max_TacDiffCut[l],
+							funcppTac->GetParameters(),
+							hFitPtr[bin]->GetCovarianceMatrix().GetMatrixArray());
+	  acc_arr[bin-1]     = funcppTac->Integral(min_TacDiffCut_new[l][bin-1],max_TacDiffCut[l]);
+	  acc_err_arr[bin-1] = funcppTac->IntegralError(min_TacDiffCut_new[l][bin-1],max_TacDiffCut[l],
+							funcppTac->GetParameters(),
+							hFitPtr[bin]->GetCovarianceMatrix().GetMatrixArray());
+	}
+      gTacDiffEffFinal[l][1] = GetEfficiencyCurve(nbins-1, pt_arr, all_arr, all_err_arr, acc_arr, acc_err_arr);
+      gTacDiffEffFinal[l][1]->SetName(Form("%s_gTacDiffEffFinal_Fitting_%s_%s",data_name.Data(),lumi_name[l],legName[0]));
+
+      for(int m=0; m<2; m++)
+	{
+	  int npoints = gTacDiffEffFinal[l][m]->GetN();
+	  double x, y;
+	  for(int ipoint=0; ipoint<npoints; ipoint++)
 	    {
-	      int npoints = gTacDiffEffFinal[l][i][m]->GetN();
-	      double x, y;
-	      for(int ipoint=0; ipoint<npoints; ipoint++)
-		{
-		  gTacDiffEffFinal[l][i][m]->GetPoint(ipoint,x,y);
-		  gTacDiffEffFinal[l][i][m]->SetPoint(ipoint,hMeanPt->GetBinContent(ipoint+1),y);
-		  gTacDiffEffFinal[l][i][m]->SetPointEXhigh(ipoint,hMeanPt->GetBinError(ipoint+1));
-		  gTacDiffEffFinal[l][i][m]->SetPointEXlow(ipoint,hMeanPt->GetBinError(ipoint+1));
-		}
+	      gTacDiffEffFinal[l][m]->GetPoint(ipoint,x,y);
+	      gTacDiffEffFinal[l][m]->SetPoint(ipoint,hMeanPt[1]->GetBinContent(ipoint+1),y);
+	      gTacDiffEffFinal[l][m]->SetPointEXhigh(ipoint,hMeanPt[1]->GetBinError(ipoint+1));
+	      gTacDiffEffFinal[l][m]->SetPointEXlow(ipoint,hMeanPt[1]->GetBinError(ipoint+1));
+	      if(data_name=="Run15_pAu200" && m==1) 
+		gTacDiffEffFinal[l][m]->SetPointEYlow(ipoint,0);
 	    }
 	}
     }
@@ -1173,10 +1171,11 @@ void getTrigEff(const int savePlot = 0, const int saveHisto = 0)
   // compare the effects of new cuts
   const char *method_name[2] = {"Bin counting","Fitting"};
   TH1F *hplot = new TH1F("hplot",";p_{T} (GeV/c);eff",100,1,7);
-  hplot->GetYaxis()->SetRangeUser(0.5,1);
+  if(data_name=="Run14_AuAu200") hplot->GetYaxis()->SetRangeUser(0.5,1);
+  if(data_name=="Run15_pAu200") hplot->GetYaxis()->SetRangeUser(0.95,1.02);
   for(int l=0; l<nLumi; l++)
     {
-      TCanvas *c = new TCanvas(Form("%s_TacDiffEff_AuAuReso_%s",data_names[0],lumi_name[l]),Form("%s_TacDiffEff_AuAuReso_%s",data_names[0],lumi_name[l]),800,600);
+      TCanvas *c = new TCanvas(Form("%s_TacDiffEff_AuAuReso_%s",legName[0],lumi_name[l]),Form("%s_TacDiffEff_AuAuReso_%s",legName[0],lumi_name[l]),800,600);
       hplot->DrawCopy();
       TPaveText *t1 = GetTitleText(Form("%s: MTD online trigger efficiency",data_name.Data()));
       t1->Draw();
@@ -1187,7 +1186,7 @@ void getTrigEff(const int savePlot = 0, const int saveHisto = 0)
       leg->SetHeader(Form("%s",lumi_name[l]));
       for(int m=0; m<2; m++)
 	{
-	  TGraphAsymmErrors *gtmp = (TGraphAsymmErrors*)gTacDiffEffComb[l][0][m]->Clone(Form("%s_clone",gTacDiffEffComb[l][0][m]->GetName()));
+	  TGraphAsymmErrors *gtmp = (TGraphAsymmErrors*)gTacDiffEffComb[l][m]->Clone(Form("%s_clone",gTacDiffEffComb[l][m]->GetName()));
 	  gtmp->SetMarkerStyle(20+m*4);
 	  gtmp->SetMarkerSize(1.2);
 	  gtmp->SetMarkerColor(1);
@@ -1198,34 +1197,27 @@ void getTrigEff(const int savePlot = 0, const int saveHisto = 0)
 
       for(int m=0; m<2; m++)
 	{
-	  TGraphAsymmErrors *gtmp = (TGraphAsymmErrors*)gTacDiffEffFinal[l][0][m]->Clone(Form("%s_clone",gTacDiffEffFinal[l][0][m]->GetName()));
+	  TGraphAsymmErrors *gtmp = (TGraphAsymmErrors*)gTacDiffEffFinal[l][m]->Clone(Form("%s_clone",gTacDiffEffFinal[l][m]->GetName()));
 	  gtmp->SetMarkerStyle(21+m*4);
 	  gtmp->SetMarkerSize(1.2);
 	  gtmp->SetMarkerColor(2);
 	  gtmp->SetLineColor(2);
 	  gtmp->Draw("samesPEZ");
-	  leg->AddEntry(gtmp, Form("AuAu resolution: %s",method_name[m]), "PL");
+	  if(data_name=="Run14_AuAu200") leg->AddEntry(gtmp, Form("AuAu resolution: %s",method_name[m]), "PL");
+	  if(data_name=="Run15_pAu200") leg->AddEntry(gtmp, Form("pAu resolution: %s",method_name[m]), "PL");
 	}
       leg->Draw();
       if(savePlot) 
-	c->SaveAs(Form("~/Work/STAR/analysis/Plots/Run14_AuAu200/ana_MtdTrigEff/%s%s_TacDiffEffAuAuReso_%s.pdf",config,data_names[0],lumi_name[l]));
+	c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdTrigEff/%sTacDiffEffAuAuReso_%s.pdf",data_name.Data(),config,lumi_name[l]));
     }
   
   // final efficiency
-  TGraphAsymmErrors* gEffRun14[nLumi][2];
-  for(int l=0; l<nLumi; l++)
-    {
-      //cout << lumi_name[i]<< endl;
-      gEffRun14[l][0] = (TGraphAsymmErrors*)fRun14->Get(Form("DataJpsiMuon_MtdTrigEff_BinCount_%s",lumi_name[l]));
-      gEffRun14[l][1] = (TGraphAsymmErrors*)fRun14->Get(Form("DataJpsiMuon_MtdTrigEff_Fitting_%s",lumi_name[l]));
-    }
-
-  const char *method_name[2] = {"Bin counting","Fitting"};
   for(int l=0; l<nLumi; l++)
     {
       TCanvas *c = new TCanvas(Form("%s_TacDiffEff_%s",data_name.Data(),lumi_name[l]),Form("%s_TacDiffEff_%s",data_name.Data(),lumi_name[l]),800,600);
       TH1F *htmp = new TH1F(Form("htmp_%s",lumi_name[l]),";p_{T} (GeV/c);eff",100,1,7);
-      htmp->GetYaxis()->SetRangeUser(0.5,1);
+      if(data_name=="Run14_AuAu200") htmp->GetYaxis()->SetRangeUser(0.5,1);
+      if(data_name=="Run15_pAu200") htmp->GetYaxis()->SetRangeUser(0.95,1.02);
       htmp->Draw();
       TPaveText *t1 = GetTitleText(Form("%s: MTD online trigger efficiency",data_name.Data()));
       t1->Draw();
@@ -1234,46 +1226,31 @@ void getTrigEff(const int savePlot = 0, const int saveHisto = 0)
       leg->SetFillColor(0);
       leg->SetTextSize(0.03);
       leg->SetHeader(Form("%s",lumi_name[l]));
-      for(int i=0; i<1; i++)
-	{
-	  for(int m=0; m<2; m++)
-	    {
-	      gTacDiffEffFinal[l][i][m]->SetMarkerStyle(20+i+4*m);
-	      gTacDiffEffFinal[l][i][m]->SetMarkerSize(1.2);
-	      gTacDiffEffFinal[l][i][m]->SetMarkerColor(i+1);
-	      gTacDiffEffFinal[l][i][m]->SetLineColor(i+1);
-	      gTacDiffEffFinal[l][i][m]->Draw("samesPEZ");
-	      leg->AddEntry(gTacDiffEffFinal[l][i][m], Form("%s: %s",data_names[i],method_name[m]), "PL");
-	    }
-	}
-
       for(int m=0; m<2; m++)
 	{
-	  gEffRun14[l][m]->SetMarkerStyle(29+m);
-	  gEffRun14[l][m]->SetMarkerColor(4);
-	  gEffRun14[l][m]->SetMarkerSize(1.8);
-	  gEffRun14[l][m]->SetLineColor(4);
-	  gEffRun14[l][m]->Draw("samesPEZ");
-	  leg->AddEntry(gEffRun14[l][m], Form("Run14_AuAu200: %s",method_name[m]), "PL");
+	  gTacDiffEffFinal[l][m]->SetMarkerStyle(20+4*m);
+	  gTacDiffEffFinal[l][m]->SetMarkerSize(1.2);
+	  gTacDiffEffFinal[l][m]->SetMarkerColor(m+1);
+	  gTacDiffEffFinal[l][m]->SetLineColor(m+1);
+	  gTacDiffEffFinal[l][m]->Draw("samesPEZ");
+	  leg->AddEntry(gTacDiffEffFinal[l][m], Form("%s: %s",legName[0],method_name[m]), "PL");
 	}
       leg->Draw();
       if(savePlot) 
-	c->SaveAs(Form("~/Work/STAR/analysis/Plots/Run14_AuAu200/ana_MtdTrigEff/%s%s_CompTacDiffEff_%s.pdf",config,data_name.Data(),lumi_name[l]));
+	c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdTrigEff/%sTacDiffEffFinal_BinCountVsFit_%s.pdf",data_name.Data(),config,lumi_name[l]));
     }
 
   // save histograms
   if(saveHisto) 
     {
-      fAuAu->cd();
-      for(int i=0; i<nData; i++)
+      fdata[1]->cd();
+      for(int bin=0; bin<nbins; bin++)
 	{
-	  for(int bin=0; bin<nbins; bin++)
-	    {
-	      hppAuTacDiffCombined[i][bin]->Write("",TObject::kOverwrite);
-	      hppAuTacDiffCombinedFit[i][bin]->Write("",TObject::kOverwrite);
-	    }
+	  hMuonTacDiffCombined[bin]->Write("",TObject::kOverwrite);
+	  hMuonTacDiffCombinedFit[bin]->Write("",TObject::kOverwrite);
 	}
-      for(int i=0; i<3; i++)
+    
+      for(int i=0; i<nData; i++)
 	{
 	  for(int bin=1; bin<nbins; bin++)
 	    {
@@ -1286,12 +1263,9 @@ void getTrigEff(const int savePlot = 0, const int saveHisto = 0)
 	}
       for(int l=0; l<nLumi; l++)
 	{
-	  for(int i=0; i<nData; i++)
+	  for(int j=0; j<2; j++)
 	    {
-	      for(int j=0; j<2; j++)
-		{
-		  gTacDiffEffFinal[l][i][j]->Write("",TObject::kOverwrite);
-		}
+	      gTacDiffEffFinal[l][j]->Write("",TObject::kOverwrite);
 	    }
 	}
     }

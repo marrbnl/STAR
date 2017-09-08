@@ -21,13 +21,13 @@
 #include <cmath>
 using namespace std;
 
-#define YEAR 2014
+#define YEAR 2015
 #if (YEAR==2014)
 const char *run_type = "Run14_AuAu200";
 #elif (YEAR==2013)
 char *run_type = "Run13_pp500";
 #elif (YEAR==2015)
-char *run_type = "Run15_pp200";
+char *run_type = "Run15_pAu200";
 #elif (YEAR==2016)
 char *run_type = "Run16_AuAu200";
 #endif
@@ -172,7 +172,8 @@ void plotSys(const char* type, const int savePlot, const int saveHisto)
       SetPadMargin(gPad, 0.13, 0.13);
       ScaleHistoTitle(hEffSysVsPt[i],0.05,1,0.04,0.05,1.2,0.04,42);
       hEffSysVsPt[i]->SetTitle(";p_{T} (GeV/c);Sys. Uncert.");
-      hEffSysVsPt[i]->GetYaxis()->SetRangeUser(0.9,1.1);
+      if(year==2014) hEffSysVsPt[i]->GetYaxis()->SetRangeUser(0.9,1.1);
+      if(year==2015) hEffSysVsPt[i]->GetYaxis()->SetRangeUser(0.98,1.02);
       hEffSysVsPt[i]->SetMarkerStyle(20);
       hEffSysVsPt[i]->Draw();
       TPaveText *t1 = GetTitleText(Form("%s: uncertainty for %s",part_title[i],title_eff),0.05,42);
@@ -261,12 +262,31 @@ void makeHisto(TString name, const double mass, const int nExpr)
 	  fin = TFile::Open("Rootfiles/models.root","read");
 	  hMcJpsiPt = (TH1F*)fin->Get(Form("TBW_JpsiYield_AuAu200_cent0060"));
 	}
+      else if(year==2015)
+        {
+          fin = TFile::Open("Rootfiles/JpsiSpectraShapepp200.root","read");
+          TF1 *funcJpsi = (TF1*)fin->Get("TsallisPowerLawFitJpsipp200");
+          funcJpsi->SetNpx(1000);
+          hMcJpsiPt = (TH1F*)funcJpsi->GetHistogram();
+          hMcJpsiPt->SetName(Form("Jpsi_Yield_cent00100"));
+          for(int bin=1; bin<=hMcJpsiPt->GetNbinsX(); bin++)
+            {
+              hMcJpsiPt->SetBinContent(bin,hMcJpsiPt->GetBinCenter(bin)*hMcJpsiPt->GetBinContent(bin));
+            }
+        }
+
       if(year==2014)
 	{
 	  nbins_tmp = 9;
 	  double xbins_tmp_tmp[10] = {0,1,2,3,4,5,6,8,10,15};
 	  std::copy(std::begin(xbins_tmp_tmp), std::end(xbins_tmp_tmp), std::begin(xbins_tmp));
 	}
+      else if(year==2015)
+        {
+          nbins_tmp = 8;
+          double xbins_tmp_tmp[9] = {0,1,2,3,4,5,6,8,10};
+          std::copy(std::begin(xbins_tmp_tmp), std::end(xbins_tmp_tmp), std::begin(xbins_tmp));
+        }
       else if(year==2016)
 	{
 	  nbins_tmp = 6;

@@ -15,8 +15,8 @@ void ana_Lumi()
   //makeHistoData();
 
   //Lumi2013();
-  //Lumi2014();
-  Lumi2015();
+  Lumi2014();
+  //Lumi2015();
   //pAuCent();
   //Nevents();
 }
@@ -347,15 +347,15 @@ void Lumi2013(const int savePlot = 0, const int saveHisto = 0)
 }
 
 //================================================
-void Lumi2014(const int savePlot = 0, const int saveHisto = 1)
+void Lumi2014(const int savePlot = 1, const int saveHisto = 1)
 {
   TList *list = new TList;
   TString legName[3] = {"|vr_{TPC}| < 2 cm", "+|vz_{TPC}| < 100 cm", "+ |vz_{TPC}-vz_{VPD}| < 3 cm"};
   const char *trgSetupName[4] = {"production","production_low","production_mid","production_high"};
   const char *setupName[4] = {"prod","prod_low","prod_mid","prod_high"};
-  const int nCentBins = 14;
-  const char *cent_Name[nCentBins] = {"0-60","0-20","20-40","40-60","0-10","10-30","30-60","10-20","20-30","30-40","40-50","50-60","0-80","60-80"};
-  const char *cent_Title[nCentBins] = {"0060","0020","2040","4060","0010","1030","3060","1020","2030","3040","4050","5060","0080","6080"};
+  const int nCentBins = 16;
+  const char *cent_Name[nCentBins] = {"0-80","0-20","20-40","40-60","60-80","0-60","0-10","10-30","30-60","10-20","20-30","30-40","40-50","50-60","60-70","70-80"};
+  const char *cent_Title[nCentBins] = {"0080","0020","2040","4060","6080","0060","0010","1030","3060","1020","2030","3040","4050","5060","6070","7080"};
 
   TString legName2[4];
   for(int i=0; i<4; i++)
@@ -363,14 +363,14 @@ void Lumi2014(const int savePlot = 0, const int saveHisto = 1)
       legName2[i] = Form("AuAu_200_%s_2014",trgSetupName[i]);
     }
   TString legName3[2] = {"w/o weights","w/ weights"};
-  TString legName4[4];
-  for(int i=0; i<4; i++) legName4[i] = Form("%s%%",cent_Name[i]);
+  TString legName4[5];
+  for(int i=0; i<5; i++) legName4[i] = Form("%s%%",cent_Name[i]);
   const int max_vz = 100;
   const int max_dz = 3;
   const int max_vr = 2;
 
   // MTD triggers
-  TFile *fMtd = TFile::Open(Form("./output/Pico.Run14.AuAu200.jpsi.root"),"read");
+  TFile *fMtd = TFile::Open(Form("./output/Run14_AuAu200.jpsi.root"),"read");
   TH2F *hCentWeight = (TH2F*)fMtd->Get("mhCentWeight_di_mu");
   c = draw2D(hCentWeight,"Event weights vs. multiplicity");
   if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/EventWeight.pdf",run_type));
@@ -440,11 +440,11 @@ void Lumi2014(const int savePlot = 0, const int saveHisto = 1)
   TH1F *hTpcVz[4];
   for(int i=0; i<4; i++)
     {
-      hTpcVz[i] = (TH1F*)fMB->Get(Form("TpcVz_cent0060_%s",setupName[i]));
+      hTpcVz[i] = (TH1F*)fMB->Get(Form("TpcVz_cent0080_%s",setupName[i]));
       hTpcVz[i]->Scale(1./hTpcVz[i]->Integral());
       list->Add(hTpcVz[i]);
     }
-  c = drawHistos(list,"TpcVz","VPD-ZDC-novtx-mon: TPC vz distribution (0-60%);vz_{TPC} (cm)",false,0,30,true,0,0.02,kFALSE,kTRUE,legName2,kTRUE,"0-60%",0.18,0.38,0.68,0.88,false);
+  c = drawHistos(list,"TpcVz","VPD-ZDC-novtx-mon: TPC vz distribution (0-80%);vz_{TPC} (cm)",false,0,30,true,0,0.02,kFALSE,kTRUE,legName2,kTRUE,"0-80%",0.18,0.38,0.68,0.88,false);
   TLine *line = GetLine(-1*max_vz,0,-1*max_vz,0.8*hTpcVz[3]->GetMaximum());
   line->Draw();
   line = GetLine(max_vz,0,max_vz,0.8*hTpcVz[3]->GetMaximum());
@@ -455,11 +455,11 @@ void Lumi2014(const int savePlot = 0, const int saveHisto = 1)
   TH1F *hTpcVr[4];
   for(int i=0; i<4; i++)
     {
-      hTpcVr[i] = (TH1F*)fMB->Get(Form("TpcVr_cent0060_%s",setupName[i]));
+      hTpcVr[i] = (TH1F*)fMB->Get(Form("TpcVr_cent0080_%s",setupName[i]));
       hTpcVr[i]->Scale(1./hTpcVr[i]->Integral());
       list->Add(hTpcVr[i]);
     }
-  c = drawHistos(list,"TpcVr","VPD-ZDC-novtx-mon: TPC vr distribution (0-60%);vr_{TPC} (cm)",false,0,30,true,0.00001,1000,true,kTRUE,legName2,kTRUE,"0-60%",0.18,0.38,0.68,0.88,false);
+  c = drawHistos(list,"TpcVr","VPD-ZDC-novtx-mon: TPC vr distribution (0-80%);vr_{TPC} (cm)",false,0,30,true,0.00001,1000,true,kTRUE,legName2,kTRUE,"0-80%",0.18,0.38,0.68,0.88,false);
   line = GetLine(max_vr,0,max_vr,0.8*hTpcVr[3]->GetMaximum());
   line->Draw();
   if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/VpdZdcNoVtx_TpcVr.pdf",run_type));
@@ -468,11 +468,11 @@ void Lumi2014(const int savePlot = 0, const int saveHisto = 1)
   TH1F *hTpcVpdDz[4];
   for(int i=0; i<4; i++)
     {
-      hTpcVpdDz[i] = (TH1F*)fMB->Get(Form("TpcVpdDz_cent0060_%s",setupName[i]));
+      hTpcVpdDz[i] = (TH1F*)fMB->Get(Form("TpcVpdDz_cent0080_%s",setupName[i]));
       hTpcVpdDz[i]->Scale(1./hTpcVpdDz[i]->Integral());
       list->Add(hTpcVpdDz[i]);
     }
-  c = drawHistos(list,"TpcVpdDz","VPD-ZDC-novtx-mon:#Deltaz distribution for vertices (0-60%);vz_{TPC}-vz_{VPD} (cm)",true,-10,10,true,1e-6,1e3,true,kTRUE,legName2,kTRUE,"0-60%",0.18,0.38,0.68,0.88,false);
+  c = drawHistos(list,"TpcVpdDz","VPD-ZDC-novtx-mon:#Deltaz distribution for vertices (0-80%);vz_{TPC}-vz_{VPD} (cm)",true,-10,10,true,1e-6,1e3,true,kTRUE,legName2,kTRUE,"0-80%",0.18,0.38,0.68,0.88,false);
   line = GetLine(-1*max_dz,0,-1*max_dz,0.8*hTpcVpdDz[3]->GetMaximum());
   line->Draw();
   line = GetLine(max_dz,0,max_dz,0.8*hTpcVpdDz[3]->GetMaximum());
@@ -521,8 +521,8 @@ void Lumi2014(const int savePlot = 0, const int saveHisto = 1)
     }
 
   TCanvas *c = new TCanvas("MB_VtxCutEff","MB_VtxCutEff",1100,650);
-  c->Divide(2,2);
-  for(int i=0; i<4; i++)
+  c->Divide(3,2);
+  for(int i=0; i<5; i++)
     {
       c->cd(i+1);
       for(int j=0; j<3; j++)
@@ -611,7 +611,7 @@ void Lumi2014(const int savePlot = 0, const int saveHisto = 1)
   if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/VpdZdcNoVtx_VtxCutEffLumi.pdf",run_type));
 
   // rejection factor during production
-  TFile *frf = TFile::Open("./output/Run14.AuAu200.RejectFactor.root","read");
+  TFile *frf = TFile::Open("./output/Run14_AuAu200.RejectFactor.root","read");
   TH1F *hEvtAll = (TH1F*)frf->Get("hEvtAll");
   TH1F *hEvtAcc = (TH1F*)frf->Get("hEvtAcc");
   TH1F *hRF = (TH1F*)hEvtAcc->Clone("hRejectFactor_dimuon");
@@ -770,12 +770,12 @@ void Lumi2014(const int savePlot = 0, const int saveHisto = 1)
     }
 
   c = new TCanvas("Fit_MB_VtxEff","Fit_MB_VtxEff",1200,700);
-  c->Divide(4,4);
+  c->Divide(5,4);
   for(int i=0; i<4; i++)
     {
-      for(int j=0; j<4; j++)
+      for(int j=0; j<5; j++)
 	{
-	  c->cd(i*4+j+1);
+	  c->cd(i*5+j+1);
 	  hNevtRatio[j][i]->SetMarkerStyle(29);
 	  hNevtRatio[j][i]->GetYaxis()->SetRangeUser(0,1);
 	  hNevtRatio[j][i]->Draw();
@@ -783,10 +783,13 @@ void Lumi2014(const int savePlot = 0, const int saveHisto = 1)
 	  t1->Draw();
 	  funcMbVtxEff[j][i]->SetLineColor(2);
 	  funcMbVtxEff[j][i]->Draw("sames");
+	  TPaveText *t1 = GetPaveText(0.5,0.7,0.4,0.6,0.08);
+	  t1->AddText(Form("p0 = %4.2f",funcMbVtxEff[j][i]->GetParameter(0)));
+	  t1->Draw();
 	}
     }
   if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/MB_EvtFractionWithVtxCutCent.pdf",run_type));
-  
+
   // check vertex efficiency
   printf("+++ check vertex efficiency +++\n");
   int nVE = 0;
@@ -836,7 +839,7 @@ void Lumi2014(const int savePlot = 0, const int saveHisto = 1)
   printf("+++ %d runs (%4.2fM) are missing +++\n\n",nVE,nVEevts/1e6);
 
   list->Clear();
-  for(int i=0; i<4; i++)
+  for(int i=0; i<5; i++)
     {
       list->Add(hEqMbEvtVtxCutWeight[i]);
     }
@@ -1213,7 +1216,7 @@ void makeHistoLumi(const int savePlot = 0, const int saveHisto = 0)
 }
 
 //================================================
-void makeHistoData(const int savePlot = 0, const int saveHisto = 1)
+void makeHistoData(const int savePlot = 1, const int saveHisto = 1)
 {
   if(year!=2014)
     {
@@ -1228,11 +1231,11 @@ void makeHistoData(const int savePlot = 0, const int saveHisto = 1)
   const char *wName[2] = {"","_w"};
   const char *setupName[5] = {"all","prod","prod_low","prod_mid","prod_high"};
   const char *trgSetupName[4] = {"production","production_low","production_mid","production_high"};
-  const int nCentBins = 14;
-  const int centBins_low[nCentBins]  = {5,  13, 9,  5, 15, 11, 5,  13, 11, 9,  7, 5, 1,  1};
-  const int centBins_high[nCentBins] = {16, 16, 12, 8, 16, 14, 10, 14, 12, 10, 8, 6, 16, 4};
-  const char *cent_Name[nCentBins] = {"0-60","0-20","20-40","40-60","0-10","10-30","30-60","10-20","20-30","30-40","40-50","50-60","0-80","60-80"};
-  const char *cent_Title[nCentBins] = {"0060","0020","2040","4060","0010","1030","3060","1020","2030","3040","4050","5060","0080","6080"};
+  const int nCentBins = 16;
+  const int centBins_low[nCentBins]  = {5,  13, 9,  5, 15, 11, 5,  13, 11, 9,  7, 5, 1,  1, 3, 1};
+  const int centBins_high[nCentBins] = {16, 16, 12, 8, 16, 14, 10, 14, 12, 10, 8, 6, 16, 4, 4, 2};
+  const char *cent_Name[nCentBins] = {"0-60","0-20","20-40","40-60","0-10","10-30","30-60","10-20","20-30","30-40","40-50","50-60","0-80","60-80","60-70","70-80"};
+  const char *cent_Title[nCentBins] = {"0060","0020","2040","4060","0010","1030","3060","1020","2030","3040","4050","5060","0080","6080","6070","7080"};
   TH1F *hNEvents[5][2];
   TH1F *hTpcVz[5][nCentBins];
   TH1F *hDiffVz[5][nCentBins];

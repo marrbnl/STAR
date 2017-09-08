@@ -17,7 +17,7 @@ void sys_JpsiYield()
 }
 
 //================================================
-void YieldVsPt(int savePlot = 1, int saveHisto = 1)
+void YieldVsPt(int savePlot = 0, int saveHisto = 0)
 {
  // re-assign global constants
   const int nPtBins         = nPtBins_pt;
@@ -46,9 +46,9 @@ void YieldVsPt(int savePlot = 1, int saveHisto = 1)
       hMax[i][1] = new TH1F(Form("Sys_min_%s",cent_Title[i]),"",nbins,xbins);
     }
 
-  const int nSys = 11;
-  const char *sys_name[nSys]  = {"","_LargeScale","_SmallScale","_ScaleFit","_Binning","_BkgFunc1","_BkgFunc2","_LargeFit","_SmallFit","_SigFunc","_FixSig"};
-  const char *sys_leg[nSys] = {"Default","Larger bkg norm range","Smaller bkg norm range","Fit ME/SE w/ pol0","Binning","Res. bkg pol0","Res. bkg pol2","Larger sig fit range","Smaller sig fit range","Crystal-ball","Fix sig. mean&sigma"};
+  const int nSys = 12;
+  const char *sys_name[nSys]  = {"","_LargeScale","_SmallScale","_ScaleFit","_Binning","_BkgFunc1","_BkgFunc2","_LargeFit","_SmallFit","_SigFunc","_FixSig","_FixSigUp"};
+  const char *sys_leg[nSys] = {"Default","Larger bkg norm range","Smaller bkg norm range","Fit ME/SE w/ pol0","Binning","Res. bkg pol0","Res. bkg pol2","Larger sig fit range","Smaller sig fit range","Crystal-ball","Fix sig. mean&sigma","Fix sig. up"};
 
   TString outName    = Form("Rootfiles/%s.JpsiYield.pt%1.1f.pt%1.1f.%sroot",run_type,pt1_cut,pt2_cut,run_config);
   TString outNameSys = Form("Rootfiles/%s.Sys.JpsiYield.root",run_type);
@@ -73,7 +73,7 @@ void YieldVsPt(int savePlot = 1, int saveHisto = 1)
 
   const char* method = "Fit";
   const int color_sys[nSys+1] = {1, 2, 3, 4, 6, 7, 8, 1, 2, 4, 6, 7 };
-  const int nSys_used = 10;
+  const int nSys_used = 12;
   for(int i=0; i<nCentBins; i++)
     {
       for(int j=0; j<nSys_used; j++)
