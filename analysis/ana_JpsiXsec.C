@@ -266,7 +266,7 @@ void trgSetup(const bool savePlot = 0)
 }
 
 //================================================
-void xsec_Run14(const bool savePlot = 1, const bool saveHisto = 1)
+void xsec_Run14(const bool savePlot = 0, const bool saveHisto = 0)
 {
 
   //==============================================
@@ -694,25 +694,25 @@ void xsec_Run14(const bool savePlot = 1, const bool saveHisto = 1)
   
   // =============================================
   // cross-section vs. centrality
-  TH1F *hJpsiCounts[nPtBins_npart];
-  TH1F *hJpsiEff[nPtBins_npart];
-  TH1F *hJpsiInvYield[nPtBins_npart];
+  TH1F *hJpsiCounts_npart[nPtBins_npart];
+  TH1F *hJpsiEff_npart[nPtBins_npart];
+  TH1F *hJpsiInvYield_npart[nPtBins_npart];
   for(int i=0; i<nPtBins_npart; i++)
     {
       int numCentBins = nCentBins_npart[i];
-      hJpsiEff[i] = (TH1F*)fEff->Get(Form("JpsiEffVsCent_Pt%1.0f_final",ptBins_low_npart[i]));
-      hJpsiCounts[i] = (TH1F*)fYield->Get(Form("Jpsi_FitYield_pt%s_weight",pt_Name_npart[i]));
-      TH1F *htmpYield = (TH1F*)hJpsiCounts[i]->Clone(Form("%s_clone",hJpsiCounts[i]->GetName()));
-      htmpYield->Divide(hJpsiEff[i]);
+      hJpsiEff_npart[i] = (TH1F*)fEff->Get(Form("JpsiEffVsCent_Pt%1.0f_final",ptBins_low_npart[i]));
+      hJpsiCounts_npart[i] = (TH1F*)fYield->Get(Form("Jpsi_FitYield_pt%s_weight",pt_Name_npart[i]));
+      TH1F *htmpYield = (TH1F*)hJpsiCounts_npart[i]->Clone(Form("%s_clone",hJpsiCounts_npart[i]->GetName()));
+      htmpYield->Divide(hJpsiEff_npart[i]);
       htmpYield->Scale(1./mtd_acc[i]);
       htmpYield->Scale(1./(2*pi)); // 2pi
 
-      hJpsiInvYield[i] = new TH1F(Form("Jpsi_InvYieldVsCent_pt%s",pt_Name_npart[i]),"",numCentBins,0,numCentBins);
+      hJpsiInvYield_npart[i] = new TH1F(Form("Jpsi_InvYieldVsCent_pt%s",pt_Name_npart[i]),"",numCentBins,0,numCentBins);
       for(int bin=1; bin<=numCentBins; bin++)
 	{
-	  hJpsiInvYield[i]->SetBinContent(bin, htmpYield->GetBinContent(numCentBins-bin+1)/mb_events_npart[i][numCentBins-bin]);
-	  hJpsiInvYield[i]->SetBinError(bin, htmpYield->GetBinError(numCentBins-bin+1)/mb_events_npart[i][numCentBins-bin]);
-	  hJpsiInvYield[i]->GetXaxis()->SetBinLabel(bin, Form("%s%%",cent_Name_npart[i*kNCent+numCentBins-bin]));
+	  hJpsiInvYield_npart[i]->SetBinContent(bin, htmpYield->GetBinContent(numCentBins-bin+1)/mb_events_npart[i][numCentBins-bin]);
+	  hJpsiInvYield_npart[i]->SetBinError(bin, htmpYield->GetBinError(numCentBins-bin+1)/mb_events_npart[i][numCentBins-bin]);
+	  hJpsiInvYield_npart[i]->GetXaxis()->SetBinLabel(bin, Form("%s%%",cent_Name_npart[i*kNCent+numCentBins-bin]));
 	}
       c = draw1D( hJpsiInvYield[i]);
     }
@@ -742,12 +742,12 @@ void xsec_Run14(const bool savePlot = 1, const bool saveHisto = 1)
       hJpsiRaaVsCent_sQM[i]->SetLineColor(kGreen+2);
       hJpsiRaaVsCent_sQM[i]->SetMarkerSize(2);
 
-      hJpsiRaaVsCent[i] = (TH1F*)hJpsiInvYield[i]->Clone(Form("Jpsi_RaaVsCent_pt%s",pt_Name_npart[i]));
+      hJpsiRaaVsCent[i] = (TH1F*)hJpsiInvYield_npart[i]->Clone(Form("Jpsi_RaaVsCent_pt%s",pt_Name_npart[i]));
       double pp_yield = hppNpart->GetBinContent(i+1);
       for(int bin=1; bin<=numCentBins; bin++)
 	{
-	  double auau_yield = hJpsiInvYield[i]->GetBinContent(bin) * 2*pi;
-	  double auau_err = hJpsiInvYield[i]->GetBinError(bin) * 2*pi;
+	  double auau_yield = hJpsiInvYield_npart[i]->GetBinContent(bin) * 2*pi;
+	  double auau_err = hJpsiInvYield_npart[i]->GetBinError(bin) * 2*pi;
 	  double raa = ppInelastic/ncoll_part[i][numCentBins-bin] * 1e6 * auau_yield/pp_yield;
 	  double raa_err = auau_err/auau_yield * raa;
 	  hJpsiRaaVsCent[i]->SetBinContent(bin, raa);
@@ -762,8 +762,8 @@ void xsec_Run14(const bool savePlot = 1, const bool saveHisto = 1)
       TCanvas *c = draw1D(hJpsiRaaVsCent[i],Form("%s: J/#Psi R_{AA} vs. centrality for p_{T} > %1.0f GeV/c;;R_{AA}",run_type,ptBins_low_npart[i]));
       if(savePlot)
 	{
-	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiXsec/%sJpsiRaaVsCent.pdf",run_type,run_config));
-	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiXsec/%sJpsiRaaVsCent.png",run_type,run_config));
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiXsec/%sJpsiRaaVsCent_Pt%1.0f.pdf",run_type,run_config,ptBins_low_npart[i]));
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiXsec/%sJpsiRaaVsCent_Pt%1.0f.png",run_type,run_config,ptBins_low_npart[i]));
 	}
 
       hJpsiRaaVsCent_sQM[i]->Draw("samesP");
@@ -777,8 +777,8 @@ void xsec_Run14(const bool savePlot = 1, const bool saveHisto = 1)
       leg->Draw();
       if(savePlot)
 	{
-	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiXsec/%sJpsiRaaVsCent_CompSQM2016.pdf",run_type,run_config));
-	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiXsec/%sJpsiRaaVsCent_CompSQM2016.png",run_type,run_config));
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiXsec/%sJpsiRaaVsCent_CompSQM2016_Pt%1.0f.pdf",run_type,run_config,ptBins_low_npart[i]));
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiXsec/%sJpsiRaaVsCent_CompSQM2016_Pt%1.0f.png",run_type,run_config,ptBins_low_npart[i]));
 	}
 	  
     }
@@ -794,7 +794,7 @@ void xsec_Run14(const bool savePlot = 1, const bool saveHisto = 1)
 	}
       for(int i=0; i<nPtBins_npart; i++)
 	{
-	  hJpsiInvYield[i]->Write();
+	  hJpsiInvYield_npart[i]->Write();
 	  hJpsiRaaVsCent[i]->Write();
 	}
     }

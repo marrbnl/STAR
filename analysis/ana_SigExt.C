@@ -28,8 +28,8 @@ void ana_SigExt()
   //prod_pt();
   //Run14_signal();
   //prod_npart();
-  Run14_npart();
-  //getJpsiWidthEmbed();
+  //Run14_npart();
+  getJpsiWidthEmbed();
 }
 
 
@@ -53,20 +53,27 @@ void getJpsiWidthEmbed(int icent = 0, int savePlot = 1, int saveHisto = 1)
     xbins[i] = ptBins_low[i+1];
   xbins[nbins] = ptBins_high[nbins];
 
-  TFile *fdata = TFile::Open(Form("Rootfiles/%s.JpsiYield.pt%1.1f.pt%1.1f.root",run_type,pt1_cut,pt2_cut),"read");
+  TFile *fdata = TFile::Open(Form("Rootfiles/%s.TrkResScan.input.root",run_type),"read");
   TF1 *funcInputJpsi = (TF1*)fdata->Get(Form("Fit_Jpsi_FitYield_cent%s_weight",cent_Title[icent]));
 
-  TFile *fscan = TFile::Open(Form("Rootfiles/%s.TrkResScan.root",run_type),"update");
-  const char *sysName_scan[3] = {"def","min","max"};
-  TH2F *hMassVsPtEmbed[3];
+  const int nHistos = 4;
+  TFile *fembed = TFile::Open(Form("Rootfiles/%s.EmbJpsiEff.pt%1.1f.pt%1.1f.root",run_type,pt1_cut,pt2_cut),"read");
+  TFile *fscan  = TFile::Open(Form("Rootfiles/%s.TrkResScan.root",run_type),"update");
+  const char *sysName_scan[nHistos] = {"def","min","max","embed_def"};
+  TH2F *hMassVsPtEmbed[nHistos];
 
-  TH1F *hInvMass[3][nbins];
-  for(int i=0; i<3; i++)
+  TH1F *hInvMass[nHistos][nbins];
+  for(int i=0; i<nHistos; i++)
     {
-      hMassVsPtEmbed[i] = (TH2F*)fscan->Get(Form("hRcJpsiMass_%s_final_%s",cent_Title[icent],sysName_scan[i]));
+      if(i<3) 
+	{
+	  hMassVsPtEmbed[i] = (TH2F*)fscan->Get(Form("hRcJpsiMass_%s_final_%s",cent_Title[icent],sysName_scan[i]));
+	  //hMassVsPtEmbed[i]->RebinY(2);
+	}
+      else    hMassVsPtEmbed[i] = (TH2F*)fembed->Get(Form("hJpsiMassVsPt_Tpc_cent%s",cent_Title[icent]));
       for(int j=0; j<nbins; j++)
 	{
-	  hInvMass[i][j] = (TH1F*)hMassVsPtEmbed[i]->ProjectionY(Form("InvMass_Pt%d_%s",j,sysName_scan[i]));
+	  hInvMass[i][j] = (TH1F*)hMassVsPtEmbed[i]->ProjectionY(Form("SmearEmb_JpsiInvMass_Pt%s_%s",pt_Name_pt[j+1],sysName_scan[i]));
 	  hInvMass[i][j]->Reset("AC");
 	  int low_bin = hMassVsPtEmbed[i]->GetXaxis()->FindFixBin(xbins[j]+1e-4);
 	  int up_bin = hMassVsPtEmbed[i]->GetXaxis()->FindFixBin(xbins[j+1]-1e-4);
@@ -80,11 +87,11 @@ void getJpsiWidthEmbed(int icent = 0, int savePlot = 1, int saveHisto = 1)
 	}
     }
 
-  TCanvas *cFit[3];
-  TF1 *funcInvMass[3][nbins];
-  TH1F *hInvMassMean[3];
-  TH1F *hInvMassSigma[3];
-  for(int i=0; i<3; i++)
+  TCanvas *cFit[nHistos];
+  TF1 *funcInvMass[nHistos][nbins];
+  TH1F *hInvMassMean[nHistos];
+  TH1F *hInvMassSigma[nHistos];
+  for(int i=0; i<nHistos; i++)
     {
       cFit[i] = new TCanvas(Form("FitInvMass_%s",sysName_scan[i]), Form("FitInvMass_%s",sysName_scan[i]), 1100, 700);
       cFit[i]->Divide(3,3);
@@ -92,7 +99,7 @@ void getJpsiWidthEmbed(int icent = 0, int savePlot = 1, int saveHisto = 1)
       hInvMassSigma[i] = new TH1F(Form("SmearEmb_JpsiWidth_%s",sysName_scan[i]), "Width of J/psi peak;p_{T} (GeV/c)", nbins, xbins);     
       for(int j=0; j<nbins; j++)
 	{
-	  funcInvMass[i][j] = new TF1(Form("func_%s",hInvMass[i][j]->GetName()), "gaus", 2.9, 3.3);
+	  funcInvMass[i][j] = new TF1(Form("func_%s",hInvMass[i][j]->GetName()), "gaus", 3, 3.2);
 	  hInvMass[i][j]->Fit(funcInvMass[i][j], "R0Q");
 	  cFit[i]->cd(j+1);
 	  hInvMass[i][j]->GetXaxis()->SetRangeUser(2.8,3.4);
@@ -109,11 +116,12 @@ void getJpsiWidthEmbed(int icent = 0, int savePlot = 1, int saveHisto = 1)
     }
 
   TList *list = new TList;
-  TString legName[3] = {"Default","Lower limit", "Upper limit"};
-  list->Add(hInvMassSigma[0]);
-  list->Add(hInvMassSigma[1]);
-  list->Add(hInvMassSigma[2]);
-  TCanvas *c = drawHistos(list,"Emb_JpsiWidth","Jpsi width extracted from smeared embedding",kFALSE,0,30,kTRUE,0,0.14,kFALSE,kTRUE,legName,kTRUE,"Embedding",0.5,0.7,0.68,0.85,kTRUE);
+  TString legName[4] = {"Default","Lower limit", "Upper limit", "Embedding"};
+  for(int i=0; i<nHistos; i++)
+    {
+      list->Add(hInvMassSigma[i]);
+    }
+  TCanvas *c = drawHistos(list,"Emb_JpsiWidth","Jpsi width extracted from simulation",kFALSE,0,30,kTRUE,0,0.14,kFALSE,kTRUE,legName,kTRUE,"Toy MC",0.5,0.7,0.68,0.85,kTRUE);
   if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_SigExt/Emb_JpsiWidthVsPt.pdf",run_type));
 
   // Jpsi width vs. npart
@@ -121,14 +129,16 @@ void getJpsiWidthEmbed(int icent = 0, int savePlot = 1, int saveHisto = 1)
   cFitIntegr->Divide(3,2);
   TH1F* hInvMassIntegr[3][nPtBins_npart];
   TH1F *hSigmaIntegr[3];
+  TH1F *hMeanIntegr[3];
   TF1 *funcInvMassIntegr[3][nPtBins_npart];
   for(int i=0; i<3; i++)
     {
       hSigmaIntegr[i] = new TH1F(Form("SmearEmb_JpsiWidthIntegr_%s",sysName_scan[i]), "Width of J/psi peak", nPtBins_npart, 0, nPtBins_npart);
+      hMeanIntegr[i] = new TH1F(Form("SmearEmb_JpsiMeanIntegr_%s",sysName_scan[i]), "Mean of J/psi peak", nPtBins_npart, 0, nPtBins_npart);
        for(int j=0; j<nPtBins_npart; j++)
 	{
 	  hSigmaIntegr[i]->GetXaxis()->SetBinLabel(j+1, Form("p_{T} > %1.0f GeV/c",ptBins_low_npart[j]));
-	  hInvMassIntegr[i][j] = (TH1F*)hMassVsPtEmbed[i]->ProjectionY(Form("InvMass_Pt%s_%s",pt_Name_npart[j],sysName_scan[i]));
+	  hInvMassIntegr[i][j] = (TH1F*)hMassVsPtEmbed[i]->ProjectionY(Form("SmearEmb_JpsiInvMass_Pt%s_%s",pt_Name_npart[j],sysName_scan[i]));
 	  hInvMassIntegr[i][j]->Reset("AC");
 	  int low_bin = hMassVsPtEmbed[i]->GetXaxis()->FindFixBin(ptBins_low_npart[j]+1e-4);
 	  int up_bin = hMassVsPtEmbed[i]->GetXaxis()->FindFixBin(ptBins_high_npart[j]-1e-4);
@@ -144,6 +154,8 @@ void getJpsiWidthEmbed(int icent = 0, int savePlot = 1, int saveHisto = 1)
 	  hInvMassIntegr[i][j]->Fit(funcInvMassIntegr[i][j], "R0Q");
 	  hSigmaIntegr[i]->SetBinContent(j+1, funcInvMassIntegr[i][j]->GetParameter(2));
 	  hSigmaIntegr[i]->SetBinError(j+1, funcInvMassIntegr[i][j]->GetParError(2));
+	  hMeanIntegr[i]->SetBinContent(j+1, funcInvMassIntegr[i][j]->GetParameter(1));
+	  hMeanIntegr[i]->SetBinError(j+1, funcInvMassIntegr[i][j]->GetParError(1));
 	  cFitIntegr->cd(j*3+i+1);
 	  hInvMassIntegr[i][j]->SetMarkerStyle(24);
 	  hInvMassIntegr[i][j]->GetXaxis()->SetRangeUser(2.8, 3.4);
@@ -160,7 +172,7 @@ void getJpsiWidthEmbed(int icent = 0, int savePlot = 1, int saveHisto = 1)
   list->Add(hSigmaIntegr[0]);
   list->Add(hSigmaIntegr[1]);
   list->Add(hSigmaIntegr[2]);
-  TCanvas *c = drawHistos(list,"Emb_JpsiWidthVsNpart","Jpsi width extracted from smeared embedding",kFALSE,0,30,kTRUE,0,0.14,kFALSE,kTRUE,legName,kTRUE,"Embedding",0.5,0.7,0.68,0.85,kTRUE);
+  TCanvas *c = drawHistos(list,"Emb_JpsiWidthVsNpart","Jpsi width extracted from simulation",kFALSE,0,30,kTRUE,0,0.14,kFALSE,kTRUE,legName,kTRUE,"Toy MC",0.5,0.7,0.68,0.85,kTRUE);
   if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_SigExt/Emb_JpsiWidthVsCent.pdf",run_type));
 
 
@@ -171,7 +183,16 @@ void getJpsiWidthEmbed(int icent = 0, int savePlot = 1, int saveHisto = 1)
 	{
 	  hInvMassMean[i]->Write("",TObject::kOverwrite);
 	  hInvMassSigma[i]->Write("",TObject::kOverwrite);
+	  hMeanIntegr[i]->Write("",TObject::kOverwrite);
 	  hSigmaIntegr[i]->Write("",TObject::kOverwrite);
+	  for(int j=0; j<nbins; j++)
+	    {
+	      hInvMass[i][j]->Write("",TObject::kOverwrite);
+	    }
+	  for(int j=0; j<nPtBins_npart; j++)
+	    {
+	      hInvMassIntegr[i][j]->Write("",TObject::kOverwrite);
+	    }
 	}
     }	  
 }
@@ -193,7 +214,7 @@ void prod_pt()
 }
 
 //===============================================
-void Run14_signal(const int isetup = 0, const int icent = 0, const int isys = 11, int savePlot = 0, int saveHisto = 0)
+void Run14_signal(const int isetup = 0, const int icent = 0, const int isys = 0, int savePlot = 0, int saveHisto = 0, int saveHistoResScan = 0)
 {
   // re-assign global constants
   const int nPtBins         = nPtBins_pt;
@@ -225,6 +246,7 @@ void Run14_signal(const int isetup = 0, const int icent = 0, const int isys = 11
   hEmbJpsiWidth[0] = (TH1F*)fscan->Get("SmearEmb_JpsiWidth_def");
   hEmbJpsiWidth[1] = (TH1F*)fscan->Get("SmearEmb_JpsiWidth_min");
   hEmbJpsiWidth[2] = (TH1F*)fscan->Get("SmearEmb_JpsiWidth_max");
+  TH1F *hEmbJpsiMean = (TH1F*)fscan->Get("SmearEmb_JpsiMean_def");
 
   printf("\n===== Running configuration =====\n");
   printf("Input filename: %s\n",fileName.Data());
@@ -601,6 +623,11 @@ void Run14_signal(const int isetup = 0, const int icent = 0, const int isys = 11
 	{
 	  if(i>0) funcSignal[i]->FixParameter(2,hEmbJpsiWidth[2]->GetBinContent(i));
 	}
+      // if(useEmbWidth) 
+      // 	{
+      // 	  if(i>0) funcSignal[i]->FixParameter(1,hEmbJpsiMean->GetBinContent(i)); 
+      // 	}
+
       funcSignal[i]->SetLineColor(2);
       TFitResultPtr ptr = hSignal[i]->Fit(funcSignal[i],"IRS0Q");
       double *matrix = ptr->GetCovarianceMatrix().GetMatrixArray();
@@ -794,19 +821,34 @@ void Run14_signal(const int isetup = 0, const int icent = 0, const int isys = 11
 	}
       fout->Close();
     }
+
+  if(saveHistoResScan)
+    {
+      TFile *fout = TFile::Open(Form("Rootfiles/%s.TrkResScan.input.root",run_type), "recreate");
+      hFitYield->Write("",TObject::kOverwrite);
+      hBinCountYield->Write("",TObject::kOverwrite);
+      hMean->Write("",TObject::kOverwrite);
+      hSigma->Write("",TObject::kOverwrite);
+      for(int i=0; i<nPtBins; i++)
+	{
+	  hSignalSave[i]->Write("",TObject::kOverwrite);
+	  funcSignal[i]->Write("",TObject::kOverwrite);
+	  funcBkg[i]->Write("",TObject::kOverwrite);
+	}
+    }
 }
 
 //================================================
 void prod_npart()
 {
-  for(int i=0; i<11; i++)
+  for(int i=0; i<12; i++)
     {
       Run14_npart(i,1,1);
     }
 }
 
 //===============================================
-void Run14_npart(const int isys = 0, int savePlot = 0, int saveHisto = 0)
+void Run14_npart(const int isys = 0, int savePlot = 0, int saveHisto = 1)
 {
   // re-assign global constants
   const int nPtBins         = nPtBins_npart;
@@ -821,9 +863,9 @@ void Run14_npart(const int isys = 0, int savePlot = 0, int saveHisto = 0)
   const int kNCent          = nCentBins[0];
 
   // prepare name and title
-  const int nSys = 11;
-  const char *sys_name[nSys]  = {"","_LargeScale","_SmallScale","_ScaleFit","_Binning","_BkgFunc1","_BkgFunc2","_LargeFit","_SmallFit","_SigFunc","_FixSig"};
-  const char *sys_title[nSys] = {"","Sys.LargeScale.","Sys.SmallScale.","Sys.ScaleFit.","Sys.Rebin.","Sys.BkgFunc1.","Sys.BkgFunc2.","Sys.LargeFit.","Sys.SmallFit.","Sys.SigFunc.","Sys.FixSig."};
+  const int nSys = 12;
+  const char *sys_name[nSys]  = {"","_LargeScale","_SmallScale","_ScaleFit","_Binning","_BkgFunc1","_BkgFunc2","_LargeFit","_SmallFit","_SigFunc","_FixSig","_FixSigUp"};
+  const char *sys_title[nSys] = {"","Sys.LargeScale.","Sys.SmallScale.","Sys.ScaleFit.","Sys.Rebin.","Sys.BkgFunc1.","Sys.BkgFunc2.","Sys.LargeFit.","Sys.SmallFit.","Sys.SigFunc.","Sys.FixSig.","Sys.FixSigUp."};
   const TString suffix = Form("%s%s",gWeightName[gApplyWeight],sys_name[isys]);
 
   // open input and output files
@@ -831,6 +873,16 @@ void Run14_npart(const int isys = 0, int savePlot = 0, int saveHisto = 0)
   TString outName    = Form("Rootfiles/%s.JpsiYield.pt%1.1f.pt%1.1f.%sroot",run_type,pt1_cut,pt2_cut,run_config);
   TString outNameSys = Form("Rootfiles/%s.Sys.JpsiYield.root",run_type);
   TFile *fin = TFile::Open(fileName,"read");
+
+  // get the Jpsi width from embedding
+  TFile *fscan = TFile::Open(Form("Rootfiles/%s.TrkResScan.root",run_type),"read");
+  TH1F *hEmbJpsiWidth[3];
+  hEmbJpsiWidth[0] = (TH1F*)fscan->Get("SmearEmb_JpsiWidthIntegr_def");
+  hEmbJpsiWidth[1] = (TH1F*)fscan->Get("SmearEmb_JpsiWidthIntegr_min");
+  hEmbJpsiWidth[2] = (TH1F*)fscan->Get("SmearEmb_JpsiWidthIntegr_max");
+  TH1F *hEmbJpsiMean = (TH1F*)fscan->Get("SmearEmb_JpsiMeanIntegr_def");
+
+
   printf("\n===== Running configuration =====\n");
   printf("Input filename: %s\n",fileName.Data());
   printf("Histogram name: %s\n",suffix.Data());
@@ -840,7 +892,7 @@ void Run14_npart(const int isys = 0, int savePlot = 0, int saveHisto = 0)
   double  g_mix_scale_low = 2.7;
   double  g_mix_scale_high = 3.8;
   TString g_mix_func = "pol1";
-  double  g_bin_width = 0.04;
+  double  g_bin_width = 0.05;
   TString g_func1 = "pol3";
   int     g_func1_npar = 4;
   TString g_func2 = "pol1";
@@ -1177,16 +1229,38 @@ void Run14_npart(const int isys = 0, int savePlot = 0, int saveHisto = 0)
 		  funcSignal[i][k][t]->SetParameter(3,0.1);
 		  funcSignal[i][k][t]->SetParameter(4,0.2);
 		}
+	      if(useEmbWidth)
+		{
+		  funcSignal[i][k][t]->FixParameter(2,hEmbJpsiWidth[0]->GetBinContent(i+1));
+		}
+
 	      if(isys==10)
 		{
-		  funcSignal[i][k][t]->FixParameter(1,fix_mean[i]);
-		  funcSignal[i][k][t]->FixParameter(2,fix_sigma[i]);
+		  if(useEmbWidth)
+		    {
+		      funcSignal[i][k][t]->FixParameter(2,hEmbJpsiWidth[1]->GetBinContent(i+1));
+		    }
+		  else
+		    {
+		      funcSignal[i][k][t]->FixParameter(1,fix_mean[i]);
+		      funcSignal[i][k][t]->FixParameter(2,fix_sigma[i]);
+		    }
 		}
+	      if(isys==11)
+		{
+		  funcSignal[i][k][t]->FixParameter(2,hEmbJpsiWidth[2]->GetBinContent(i+1));
+		}
+
 	      if(t>0)
 		{
 		  funcSignal[i][k][t]->FixParameter(1,funcSignal[i][k][0]->GetParameter(1));
 		  funcSignal[i][k][t]->FixParameter(2,funcSignal[i][k][0]->GetParameter(2));
 		}
+
+	      // if(useEmbWidth) 
+	      // 	{
+	      // 	  funcSignal[i][k][t]->FixParameter(1,hEmbJpsiMean->GetBinContent(i+1)); 
+	      // 	}
 
 	      funcSignal[i][k][t]->SetLineColor(2);
 	      TFitResultPtr ptr = hSignal[i][k][t]->Fit(funcSignal[i][k][t],"IRS0Q");

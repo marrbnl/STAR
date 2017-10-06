@@ -29,8 +29,8 @@ void ana_JpsiYield()
   printf("acc di-muon events: %4.4e\n",hStat->GetBinContent(10));
   printf("HFT di-muon events: %4.2f%%\n",hStat->GetBinContent(15)/hStat->GetBinContent(10)*100);
 
-  yieldVsPt();
-  //yieldVsNpart();
+  //yieldVsPt();
+  yieldVsNpart();
   //yieldVsLumi();
   //fitYield();
   //pt2scan();
@@ -39,7 +39,7 @@ void ana_JpsiYield()
 
 
 //================================================
-void fitYield(int icent = 0, int savePlot = 0, int saveHisto = 0)
+void fitYield(int icent = 0, int savePlot = 1, int saveHisto = 1)
 {
   const int nCentBins       = nCentBins_pt; 
   const int* centBins_low   = centBins_low_pt;
@@ -48,8 +48,8 @@ void fitYield(int icent = 0, int savePlot = 0, int saveHisto = 0)
   const char** cent_Title   = cent_Title_pt;
 
   TFile *fdata = 0x0;
-  if(saveHisto) fdata = TFile::Open(Form("Rootfiles/%s.JpsiYield.pt%1.1f.pt%1.1f.root",run_type,pt1_cut,pt2_cut),"update");
-  else          fdata = TFile::Open(Form("Rootfiles/%s.JpsiYield.pt%1.1f.pt%1.1f.root",run_type,pt1_cut,pt2_cut),"read");
+  if(saveHisto) fdata = TFile::Open(Form("Rootfiles/%s.TrkResScan.input.root",run_type),"update");
+  else          fdata = TFile::Open(Form("Rootfiles/%s.TrkResScan.input.root",run_type),"read");
   TH1F *hJpsiYield = (TH1F*)fdata->Get(Form("Jpsi_FitYield_cent%s_weight",cent_Title[icent]));
   TH1F *hInvJsiYield = (TH1F*)hJpsiYield->Clone("hInvJsiYield");
   for(int bin=1; bin<=hJpsiYield->GetNbinsX(); bin++)
@@ -255,7 +255,7 @@ void yieldVsPt(int savePlot = 0)
 }
 
 //================================================
-void yieldVsNpart(int savePlot = 1)
+void yieldVsNpart(int savePlot = 0)
 {
   const int nPtBins         = nPtBins_npart;
   const double* ptBins_low  = ptBins_low_npart;

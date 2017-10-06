@@ -86,7 +86,8 @@ void sys_ToyMC()
   TDatime *clock = new TDatime();
   myRandom->SetSeed(clock->GetTime());
 
-  const char* type = "MtdTrigEff";
+  //const char* type = "MtdTrigEff";
+  const char* type = "Dtof";
   //anaSys(type, 1);
   plotSys(type, 1, 1);
 }
@@ -101,6 +102,15 @@ void plotSys(const char* type, const int savePlot, const int saveHisto)
       title_lumi = "";  
       name_eff   = "TacDiffEff";
       title_eff  = "MTD trigger efficiency";
+    }
+
+  if(type=="Dtof")
+    {
+      name_lumi  = "";
+      title_lumi = "";  
+      if(year==2014) name_eff   = "Dtof0.75Eff";
+      if(year==2015) name_eff   = "Dtof1.00Eff";
+      title_eff  = "#Deltatof cut efficiency";
     }
 
   // const char* name_lumi = "";
@@ -121,6 +131,12 @@ void plotSys(const char* type, const int savePlot, const int saveHisto)
       if(saveHisto) fin = TFile::Open(Form("Rootfiles/%s.Sys.MtdTrigEff.root",run_type),"update");
       else          fin = TFile::Open(Form("Rootfiles/%s.Sys.MtdTrigEff.root",run_type),"read");
     }
+  if(type=="Dtof")
+    {
+      if(saveHisto) fin = TFile::Open(Form("Rootfiles/%s.DtofEff.root",run_type),"update");
+      else          fin = TFile::Open(Form("Rootfiles/%s.DtofEff.root",run_type),"read");
+    }
+
   for(int i=0; i<nPart; i++)
     {
       for(int s=0; s<3; s++)
@@ -128,6 +144,16 @@ void plotSys(const char* type, const int savePlot, const int saveHisto)
 	  if(type=="MtdTrigEff")
 	    {
 	      hEffVsPt[i][s] = (TH1F*)fin->Get(Form("%s_%sEffVsPt_%s%s",run_type,part_name[i],name_eff,sys_name[s]));
+	    }
+	  if(type=="Dtof")
+	    {
+	      char *tmp_name = Form("%s",sys_name[s]);
+	      if(s==0) 
+		{
+		  if(year==2014) tmp_name = "_FitFunc";
+		  if(year==2015) tmp_name = "_Syscenter";
+		}
+	      hEffVsPt[i][s] = (TH1F*)fin->Get(Form("TagAndProbe_%sEffVsPt_%s%s",part_name[i],name_eff,tmp_name));
 	    }
 	}
       int nBins = hEffVsPt[i][0]->GetNbinsX();
@@ -147,6 +173,16 @@ void plotSys(const char* type, const int savePlot, const int saveHisto)
 	  if(type=="MtdTrigEff")
 	    {
 	      hEffVsCent[i][s] = (TH1F*)fin->Get(Form("%s_%sEffVsCent_%s%s",run_type,part_name[i],name_eff,sys_name[s]));
+	    }
+	  if(type=="Dtof")
+	    {
+	      char *tmp_name = Form("%s",sys_name[s]);
+	      if(s==0) 
+		{
+		  if(year==2014) tmp_name = "_FitFunc";
+		  if(year==2015) tmp_name = "_Syscenter";
+		}
+	      hEffVsCent[i][s] = (TH1F*)fin->Get(Form("TagAndProbe_%sEffVsCent_%s%s",part_name[i],name_eff,tmp_name));
 	    }
 	}
       nBins = hEffVsCent[i][0]->GetNbinsX();
@@ -173,7 +209,7 @@ void plotSys(const char* type, const int savePlot, const int saveHisto)
       ScaleHistoTitle(hEffSysVsPt[i],0.05,1,0.04,0.05,1.2,0.04,42);
       hEffSysVsPt[i]->SetTitle(";p_{T} (GeV/c);Sys. Uncert.");
       if(year==2014) hEffSysVsPt[i]->GetYaxis()->SetRangeUser(0.9,1.1);
-      if(year==2015) hEffSysVsPt[i]->GetYaxis()->SetRangeUser(0.98,1.02);
+      if(year==2015) hEffSysVsPt[i]->GetYaxis()->SetRangeUser(0.95,1.05);
       hEffSysVsPt[i]->SetMarkerStyle(20);
       hEffSysVsPt[i]->Draw();
       TPaveText *t1 = GetTitleText(Form("%s: uncertainty for %s",part_title[i],title_eff),0.05,42);
@@ -231,6 +267,20 @@ void anaSys(const char* type, const int saveHisto)
       hMuonPtEff[0] = (TF1*)fdata->Get(Form("%s_Muon_TacDiffEff",run_type));
       hMuonPtEff[1] = (TF1*)fdata->Get(Form("%s_Muon_TacDiffEff_Sysup",run_type));
       hMuonPtEff[2] = (TF1*)fdata->Get(Form("%s_Muon_TacDiffEff_Sysdown",run_type));
+    }
+  if(type=="Dtof")
+    {
+      double dtofCut = 0.75;
+      if(year==2015)
+	{
+	  dtofCut = 1.0;
+	}
+      if(saveHisto) fdata = TFile::Open(Form("Rootfiles/%s.DtofEff.root",run_type),"update");
+      else          fdata = TFile::Open(Form("Rootfiles/%s.DtofEff.root",run_type),"read");
+      if(year==2014) hMuonPtEff[0] = (TF1*)fdata->Get(Form("TagAndProbe_Muon_Dtof%2.2fEff_FitFunc",dtofCut));
+      if(year==2015) hMuonPtEff[0] = (TF1*)fdata->Get(Form("TagAndProbe_Muon_Dtof%2.2fEff_Syscenter",dtofCut));
+      hMuonPtEff[1] = (TF1*)fdata->Get(Form("TagAndProbe_Muon_Dtof%2.2fEff_Sysup",dtofCut));
+      hMuonPtEff[2] = (TF1*)fdata->Get(Form("TagAndProbe_Muon_Dtof%2.2fEff_Sysdown",dtofCut));
     }
 
   for(int i=0; i<4; i++)

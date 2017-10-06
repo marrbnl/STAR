@@ -6,7 +6,7 @@ void make_input()
 }
 
 //================================================
-void Run14AuAu200(const int savePlot = 0, const int saveHisto = 0)
+void Run14AuAu200(const int savePlot = 1, const int saveHisto = 1)
 {
   TFile *fData = TFile::Open("output/Run14_AuAu200.jpsi.root","read");
   TFile *fEmb = TFile::Open(Form("./output/Run14_AuAu200.Embed.Jpsi.root"),"read");
@@ -196,6 +196,11 @@ void Run14AuAu200(const int savePlot = 0, const int saveHisto = 0)
   TFile *fTrigElec =  TFile::Open(Form("Rootfiles/%s.MtdTrigEff.root",run_type));
   TF1 *funcTrigElecEff = (TF1*)fTrigElec->Get("Run14_AuAu200_TrigElecEff_FitFunc");
 
+  // dTOF efficiency
+  TFile *fdtof = TFile::Open(Form("Rootfiles/%s.DtofEff.root",run_type));
+  TF1 *funcDtofCut = (TF1*)fdtof->Get("TagAndProbe_Muon_Dtof0.75Eff_FitFunc");
+  funcDtofCut->SetRange(1.3,20);
+
 
   TCanvas *c = new TCanvas("MtdTrigEff","MtdTrigEff",800,600);
   hplot->GetYaxis()->SetRangeUser(0.5,1);
@@ -203,13 +208,17 @@ void Run14AuAu200(const int savePlot = 0, const int saveHisto = 0)
   hMuonTrigEff->Draw("sames");
   funcTrigElecEff->SetLineColor(4);
   funcTrigElecEff->Draw("sames");
+  funcDtofCut->SetLineColor(6);
+  funcDtofCut->Draw("sames");
   TLegend *leg = new TLegend(0.4,0.2,0.6,0.4);
   leg->SetBorderSize(0);
   leg->SetFillColor(0);
   leg->SetTextSize(0.04);
   leg->AddEntry(hMuonTrigEff,"Trigger efficiency","L");
   leg->AddEntry(funcTrigElecEff, "Trigger electronics eff.", "L");
+  leg->AddEntry(funcDtofCut, "#Deltatof cut eff.", "L");
   leg->Draw();
+
 
   
   // save
@@ -223,6 +232,7 @@ void Run14AuAu200(const int savePlot = 0, const int saveHisto = 0)
 	}
       hMuonTrigEff->Write("MtdTrigEff_FitFunc");
       funcTrigElecEff->Write("TrigElecEff_FitFunc");
+      funcDtofCut->Write("DtofEff0.75_FitFunc");
       for(int i=0; i<30; i++)
 	{
 	  for(int j=0; j<5; j++)

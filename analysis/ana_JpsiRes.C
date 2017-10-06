@@ -185,7 +185,7 @@ void tuneResolution(const int icent, const bool savePlot)
 
   // input spectrum shape from data
   TF1 *funcInputJpsi = 0x0;
-  TFile *fdata = TFile::Open(Form("Rootfiles/%s.JpsiYield.pt%1.1f.pt%1.1f.root",run_type,pt1_cut,pt2_cut),"read");
+  TFile *fdata = TFile::Open(Form("Rootfiles/%s.TrkResScan.input.root",run_type),"read");
   if(year==2014)
     {
       funcInputJpsi = (TF1*)fdata->Get("Fit_Jpsi_FitYield_cent0080_weight");
@@ -546,7 +546,7 @@ void tuneResolution(const int icent, const bool savePlot)
 	  double smearvalue = hFinalSmear->GetBinContent(i+1);
 	  if(year==2014 || year==2015 || year==2016) shiftvalue = 0;
 	  printf("[i] Start final scanning: %s = (%4.4f,%4.4f)\n",sysName_scan[i],shiftvalue,smearvalue);
-	  smear(jpsiMass, icent, 1e8, shiftvalue, smearvalue, funcInputJpsi, hRcJpsiMass[i], 1, 0);
+	  smear(jpsiMass, icent, 1e7, shiftvalue, smearvalue, funcInputJpsi, hRcJpsiMass[i], 1, 0);
 	}
 
       TH1F *hJpsiEff[3][2];
@@ -797,8 +797,8 @@ void smear(const double mass, const int icent, const int nExpr, const double shi
       double rc_pt1 = 0, rc_pt2 = 0;
       if(year==2013 || year ==2014 || year==2015)
 	{
-	  rc_pt1 = emb_pt1 * myRandom->Gaus(1+shift/sqrt(emb_pt1),sqrt(emb_pt1)*sigma);
-	  rc_pt2 = emb_pt2 * myRandom->Gaus(1+shift/sqrt(emb_pt2),sqrt(emb_pt2)*sigma);
+	  rc_pt1 = emb_pt1 * myRandom->Gaus(1+shift/sqrt(emb_pt1),TMath::Power(emb_pt1, 0.95)*sigma);
+	  rc_pt2 = emb_pt2 * myRandom->Gaus(1+shift/sqrt(emb_pt2),TMath::Power(emb_pt2, 0.95)*sigma);
 	}
       else if(year==2016)
 	{

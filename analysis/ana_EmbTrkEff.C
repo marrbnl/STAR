@@ -42,8 +42,9 @@ void ana_EmbTrkEff()
   printf("# of events: %4.4e\n",hStat->GetBinContent(3));
 
   //efficiency(outName);
+  resolution(outName);
   //effVsZdc();
-  effVsCent();
+  //effVsCent();
   //effVsEta();
   //TrkEff3D(outName, outPDF);
 }
@@ -212,13 +213,74 @@ void effVsZdc(const int savePlot = 1, const int saveHisto = 1)
 }
 
 //================================================
-void effVsCent(const int savePlot = 1)
+void effVsCent(const int savePlot = 0)
 {
   const int nCentBins       = nCentBins_pt; 
   const int* centBins_low   = centBins_low_pt;
   const int* centBins_high  = centBins_high_pt;
   const char** cent_Name    = cent_Name_pt;
   const char** cent_Title   = cent_Title_pt;
+
+  // TofMult vs. gRefMult
+  const char *hName[4] = {"TofMultVsgRefMult", "TofMultVsgRefMultCorr", "NgTrkVsCent", "ZdcRateVsCent"};
+  const char *trgSetupName[4] = {"prod","prod_low","prod_mid","prod_high"};
+  TFile *fdata = TFile::Open("output/Run14_AuAu200.jpsi.root", "read");
+  TH2F *h2Corr[4][4];
+  for(int i=0; i<4; i++)
+    {
+      TCanvas *c = new TCanvas(hName[i], hName[i], 1100, 700);
+      c->Divide(2,2);
+      for(int j=0; j<4; j++)
+	{
+	  h2Corr[i][j] = (TH2F*)fdata->Get(Form("mh%s_di_mu_%s",hName[i], trgSetupName[j]));
+	  c->cd(j+1);
+	  gPad->SetLogz();
+	  if(i==0 || i==1)
+	    {
+	      if(i==0) 
+		{
+		  h2Corr[i][j]->SetTitle(";gRefMult;TofMult");
+		}
+	      if(i==1)
+		{
+		  h2Corr[i][j]->SetTitle(";gRefMultCorr;TofMult");
+		}
+	      h2Corr[i][j]->GetXaxis()->SetRangeUser(0, 700);
+	      h2Corr[i][j]->GetYaxis()->SetRangeUser(0, 3000);
+	      h2Corr[i][j]->GetYaxis()->SetTitleOffset(1.2);
+	      h2Corr[i][j]->Draw("colz");
+	    }
+	  else if(i==2 || i==3)
+	    {
+	      if(i==2)
+		{
+		  h2Corr[i][j]->SetTitle(";;NGlobTrks");
+		  h2Corr[i][j]->GetYaxis()->SetRangeUser(0, 4000);
+		}
+	      if(i==3)
+		{
+		  h2Corr[i][j]->SetTitle(";;ZDCx (kHz)");
+		  h2Corr[i][j]->GetYaxis()->SetRangeUser(0, 120);
+		}
+	      for(int bin=1; bin<=h2Corr[i][j]->GetNbinsX(); bin++)
+		{
+		  h2Corr[i][j]->GetXaxis()->SetBinLabel(bin, Form("%d-%d%%",80-bin*5,85-bin*5));
+		}
+	      h2Corr[i][j]->GetXaxis()->SetLabelSize(0.055);
+	      h2Corr[i][j]->GetXaxis()->SetRangeUser(6, 16);
+	      h2Corr[i][j]->GetYaxis()->SetTitleOffset(1.2);
+	      h2Corr[i][j]->Draw("colz");
+	      TProfile *pro = (TProfile*)h2Corr[i][j]->ProfileX(Form("%s_pro",h2Corr[i][j]->GetName()));
+	      pro->SetMarkerStyle(21);
+	      pro->Draw("sames");
+	    }
+      TPaveText *t1 = GetTitleText(Form("%s_%s",run_type,trgSetupName[j]),0.055);
+      t1->Draw();
+	}
+    }
+
+      
+  return;
 
   TFile *fin  = TFile::Open(Form("Rootfiles/%s.EmbTrkEff.root",run_type),"read");
   TList *list = new TList;
@@ -434,7 +496,7 @@ void effVsEta(const int savePlot = 1)
 }
 
 //================================================
-void efficiency(TString inName, const bool savePlot = 1, const bool saveHisto = 1)
+void efficiency(TString inName, const bool savePlot = 0, const bool saveHisto = 0)
 {
   const int nCentBins       = nCentBins_pt; 
   const int* centBins_low   = centBins_low_pt;
@@ -703,6 +765,21 @@ void efficiency(TString inName, const bool savePlot = 1, const bool saveHisto = 
       c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbTrkEff/%sMcTrkPtEff_CentBins.pdf",run_type,run_cfg_name.Data()));
       c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbTrkEff/%sMcTrkPtEff_CentBins.png",run_type,run_cfg_name.Data()));
     }
+}
+
+//================================================
+void resolution(TString inName, const bool savePlot = 1, const bool saveHisto = 1)
+{
+  const int nCentBins       = nCentBins_pt; 
+  const int* centBins_low   = centBins_low_pt;
+  const int* centBins_high  = centBins_high_pt;
+  const char** cent_Name    = cent_Name_pt;
+  const char** cent_Title   = cent_Title_pt;
+
+  TFile *fin = 0;
+  if(saveHisto) fin = TFile::Open(Form("Rootfiles/%s",inName.Data()),"update");
+  else fin = TFile::Open(Form("Rootfiles/%s",inName.Data()),"read");
+  TList *list = new TList;
 
   // track momentum resolution
   TH2F *hResVsTruePt[nCentBins];
@@ -713,24 +790,26 @@ void efficiency(TString inName, const bool savePlot = 1, const bool saveHisto = 
   for(int k=0; k<nCentBins; k++)
     {
       hResVsTruePt[k] = (TH2F*) fin->Get(Form("pTrkRes_vs_TruePt_%s",cent_Title[k]));
-      hResVsTruePt[k]->GetXaxis()->SetRangeUser(0,10);
-      if(k<4) hResVsTruePt[k]->RebinX(5);
-      else    hResVsTruePt[k]->RebinX(10);
-      hTrkPtRes[k] = (TH1F*)hResVsTruePt[k]->ProjectionX(Form("pTrkRes_%s",cent_Title[k]));
+      TH2F *h2tmp = (TH2F*)hResVsTruePt[k]->Clone(Form("%s_clone",hResVsTruePt[k]->GetName()));
+      if(k<4) h2tmp->RebinX(5);
+      else    h2tmp->RebinX(10);
+      if(k==0) c = draw2D(h2tmp);
+      hTrkPtRes[k] = (TH1F*)h2tmp->ProjectionX(Form("pTrkRes_%s",cent_Title[k]));
       hTrkPtRes[k]->Reset();
-      hTrkPtShift[k] = (TH1F*)hResVsTruePt[k]->ProjectionX(Form("pTrkShift_%s",cent_Title[k]));
+      hTrkPtShift[k] = (TH1F*)h2tmp->ProjectionX(Form("pTrkShift_%s",cent_Title[k]));
       hTrkPtShift[k]->Reset();
 
       TCanvas *c = new TCanvas(Form("FitTrkRes_cent%d",k),Form("TrkRes_cent%d",k),1200,800);
       c->Divide(5,8);
       for(int ibin=1; ibin<=hTrkPtRes[k]->GetNbinsX(); ibin++)
 	{
-	  TH1F *htmp = (TH1F*)hResVsTruePt[k]->ProjectionY(Form("TrkPt_bin%d_cent%d",ibin,k),ibin,ibin);
-	  htmp->GetXaxis()->SetRangeUser(-0.2,0.2);
+	  TH1F *htmp = (TH1F*)h2tmp->ProjectionY(Form("TrkPt_bin%d_cent%d",ibin,k),ibin,ibin);
+	  htmp->GetXaxis()->SetRangeUser(-1,1);
 	  htmp->SetMarkerStyle(20);
-	  TF1 *func = new TF1(Form("func_bin%d",ibin),"gaus",-0.15,0.15);
+	  TF1 *func = new TF1(Form("func_bin%d",ibin),"gaus",-0.4,0.4);
 	  htmp->Fit(func,"IR0Q");
 	  c->cd(ibin);
+	  gPad->SetLogy();
 	  htmp->Draw("HIST");
 	  func->SetLineColor(2);
 	  func->Draw("same");
@@ -738,7 +817,11 @@ void efficiency(TString inName, const bool savePlot = 1, const bool saveHisto = 
 	  hTrkPtRes[k]->SetBinError(ibin,func->GetParError(2));
 	  hTrkPtShift[k]->SetBinContent(ibin,func->GetParameter(1));
 	  hTrkPtShift[k]->SetBinError(ibin,func->GetParError(1));
+	  TPaveText *t1 = GetTitleText(Form("%1.1f < p_{T} < %1.1f GeV/c",h2tmp->GetXaxis()->GetBinLowEdge(ibin),h2tmp->GetXaxis()->GetBinUpEdge(ibin)),0.08);
+	  t1->Draw();
 	}
+      if(savePlot)
+	c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbTrkEff/%sFitTrkPtRes_PtBins.pdf",run_type,run_cfg_name.Data()));
     }
 
   TCanvas *c = new TCanvas("FitTrkPtRes","FitTrkPtRes",1100,700);
@@ -746,7 +829,7 @@ void efficiency(TString inName, const bool savePlot = 1, const bool saveHisto = 
   TH1F *hFit = 0x0;
   for(int k=0; k<nCentBins; k++)
     {
-      funcRes[k] = new TF1(Form("pTrkResFit_%s",cent_Title[k]),"sqrt([0]^2*x^2+[1]^2)",0.8,20);
+      funcRes[k] = new TF1(Form("pTrkResFit_%s",cent_Title[k]),"sqrt([0]^2*x^2+[1]^2)",0.1,20);
       funcRes[k]->SetParNames("a","b");
       funcRes[k]->SetParameter(0.005,0.0);
       hFit = (TH1F*)hTrkPtRes[k]->Clone(Form("Fit_%s",hTrkPtRes[k]->GetName()));
@@ -772,23 +855,23 @@ void efficiency(TString inName, const bool savePlot = 1, const bool saveHisto = 
   leg->Draw();
   if(savePlot)
     {
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbTrkEff/%sFitTrkPtRes_CentBins.pdf",run_type,run_cfg_name.Data()));
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbTrkEff/%sFitTrkPtRes_CentBins.png",run_type,run_cfg_name.Data()));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbTrkEff/%sFitTrkPtResVsPt_CentBins.pdf",run_type,run_cfg_name.Data()));
     }
 
+  TString legName_cent[nCentBins-1];
   bool drawLegend = true;
   if(year==2013) drawLegend = false;
   list->Clear();
   for(int k=0; k<nCentBins-1; k++)
     {
       TH1F *htmp = (TH1F*)hTrkPtRes[k+1]->Clone(Form("%s_clone",hTrkPtRes[k+1]->GetName()));
+      legName_cent[k] = Form("%s%%",cent_Name[k+1]);
       list->Add(htmp);
     }
   c = drawHistos(list,Form("TrkPtRes"),Form("p_{T} resolution of primary muon tracks;p_{T,true} (GeV/c);#sigma(p_{T})/p_{T}"),kTRUE,0,20,kTRUE,0,0.1,kFALSE,drawLegend,legName_cent,drawLegend,"",0.3,0.5,0.6,0.85,kTRUE);
   if(savePlot)
     {
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbTrkEff/%sMcTrkPtRes_CentBins.pdf",run_type,run_cfg_name.Data()));
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbTrkEff/%sMcTrkPtRes_CentBins.png",run_type,run_cfg_name.Data()));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbTrkEff/%sMcTrkPtResVsPt_CentBins.pdf",run_type,run_cfg_name.Data()));
     }
 
   list->Clear();
@@ -801,8 +884,41 @@ void efficiency(TString inName, const bool savePlot = 1, const bool saveHisto = 
   c = drawHistos(list,Form("TrkPtShift"),Form("p_{T} shift of primary muon tracks;p_{T,true} (GeV/c);<#Deltap_{T}/p_{T}> (%%)"),kTRUE,0,11,kTRUE,-0.5,0.5,kFALSE,drawLegend,legName_cent,drawLegend,"",0.25,0.45,0.15,0.4,kTRUE);
   if(savePlot)
     {
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbTrkEff/%sMcTrkPtShift_CentBins.pdf",run_type,run_cfg_name.Data()));
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbTrkEff/%sMcTrkPtShift_CentBins.png",run_type,run_cfg_name.Data()));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbTrkEff/%sMcTrkPtShiftVsPt_CentBins.pdf",run_type,run_cfg_name.Data()));
+    }
+
+  // projection dpT/pT for 0-80%
+  TH1F *hTrkDpt = (TH1F*)hResVsTruePt[0]->ProjectionY(Form("hdpTOverPt_%s",cent_Title[0]));
+  hTrkDpt->Reset();
+  int nPtBins = hResVsTruePt[0]->GetNbinsX();
+  for(int bin=1; bin<=nPtBins; bin++)
+  //for(int bin=100; bin<=200; bin++)
+    {						
+      TH1F *htmp = (TH1F*)hResVsTruePt[0]->ProjectionY(Form("%s_proj_bin%d",hResVsTruePt[0]->GetName(),bin),bin,bin);
+      double pt = hResVsTruePt[0]->GetXaxis()->GetBinCenter(bin);
+      double res = funcRes[0]->Eval(pt);
+      //double scale = 0.01/res;
+      double scale = 1;
+      for(int jbin=1; jbin<=htmp->GetNbinsX(); jbin++)
+	{
+	  hTrkDpt->Fill(htmp->GetBinCenter(jbin)*scale, htmp->GetBinContent(jbin));
+	}
+    }
+  hTrkDpt->SetMarkerStyle(20);
+  // Tf1 *funcTrkDpt = new TF1(Form("Fit_dpTOverPt_%s",cent_Title[0]),CrystalBall,-0.8,0.8,5);
+  // funcTrkDpt->SetParameters(1, 0, 0.001, 1, hTrkDpt->GetMaximum());
+  TF1 *funcTrkDpt = new TF1(Form("Fit_dpTOverPt_%s",cent_Title[0]),DoubleCrystalBall,-0.6,0.3,7);
+  funcTrkDpt->SetParameters(hTrkDpt->GetMaximum(), 3, 0, 0.001, 10, 3, 10);
+  // funcTrkDpt->FixParameter(1, 1.27);
+  // funcTrkDpt->FixParameter(4, 3.786);
+  // hTrkDpt->Fit(funcTrkDpt, "IR0Q");
+  c = draw1D(hTrkDpt,Form("%s: distribution of (p_{T,true}-p_{T,reco})/p_{T,true} for sampling (%s%%)",run_type,cent_Name[0]),true);
+  // funcTrkDpt->SetLineColor(2);
+  // funcTrkDpt->SetLineStyle(2);
+  // funcTrkDpt->Draw("sames");
+  if(savePlot)
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbTrkEff/%sDeltaTrkPt_cent%s.pdf",run_type,run_cfg_name.Data(),cent_Title[0]));
     }
 
   if(saveHisto)
@@ -814,6 +930,8 @@ void efficiency(TString inName, const bool savePlot = 1, const bool saveHisto = 
 	  hTrkPtShift[k]->Write("",TObject::kOverwrite);
 	  funcRes[k]->Write("",TObject::kOverwrite);
 	}
+      hTrkDpt->Write("",TObject::kOverwrite);
+      funcTrkDpt->Write("",TObject::kOverwrite);
     }
 }
 

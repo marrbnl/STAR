@@ -24,7 +24,7 @@ void ana_EmbJpsiEff()
 
 
 //================================================
-void embJpsiEff(const int savePlot = 1, const int saveHisto = 0)
+void embJpsiEff(const int savePlot = 1, const int saveHisto = 1)
 {
   TFile *fin;
   if(saveHisto)   fin = TFile::Open(Form("Rootfiles/%s.EmbJpsiEff.pt%1.1f.pt%1.1f.root",run_type,pt1_cut,pt2_cut),"update");
