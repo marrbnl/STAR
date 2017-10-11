@@ -768,13 +768,11 @@ void efficiency(TString inName, const bool savePlot = 0, const bool saveHisto = 
 }
 
 //================================================
-void resolution(TString inName, const bool savePlot = 1, const bool saveHisto = 1)
+void resolution(TString inName, const bool savePlot = 0, const bool saveHisto = 0)
 {
-  const int nCentBins       = nCentBins_pt; 
-  const int* centBins_low   = centBins_low_pt;
-  const int* centBins_high  = centBins_high_pt;
-  const char** cent_Name    = cent_Name_pt;
-  const char** cent_Title   = cent_Title_pt;
+  const int nCentBins       = 11; 
+  const char* cent_Name[nCentBins]    = {"0-80","0-10","10-20","20-30","30-40","40-50","50-60","60-80","0-20","20-40","40-60"};
+  const char* cent_Title[nCentBins]   = {"0080","0010","1020","2030","3040","4050","5060","6080","0020","2040","4060"};
 
   TFile *fin = 0;
   if(saveHisto) fin = TFile::Open(Form("Rootfiles/%s",inName.Data()),"update");
@@ -791,15 +789,15 @@ void resolution(TString inName, const bool savePlot = 1, const bool saveHisto = 
     {
       hResVsTruePt[k] = (TH2F*) fin->Get(Form("pTrkRes_vs_TruePt_%s",cent_Title[k]));
       TH2F *h2tmp = (TH2F*)hResVsTruePt[k]->Clone(Form("%s_clone",hResVsTruePt[k]->GetName()));
-      if(k<4) h2tmp->RebinX(5);
-      else    h2tmp->RebinX(10);
+      if(k==7) h2tmp->RebinX(10);
+      else    h2tmp->RebinX(5);
       if(k==0) c = draw2D(h2tmp);
       hTrkPtRes[k] = (TH1F*)h2tmp->ProjectionX(Form("pTrkRes_%s",cent_Title[k]));
       hTrkPtRes[k]->Reset();
       hTrkPtShift[k] = (TH1F*)h2tmp->ProjectionX(Form("pTrkShift_%s",cent_Title[k]));
       hTrkPtShift[k]->Reset();
 
-      TCanvas *c = new TCanvas(Form("FitTrkRes_cent%d",k),Form("TrkRes_cent%d",k),1200,800);
+      TCanvas *c = new TCanvas(Form("FitTrkRes_cent%s",cent_Title[k]),Form("FitTrkRes_cent%s",cent_Title[k]),1200,800);
       c->Divide(5,8);
       for(int ibin=1; ibin<=hTrkPtRes[k]->GetNbinsX(); ibin++)
 	{
@@ -817,15 +815,23 @@ void resolution(TString inName, const bool savePlot = 1, const bool saveHisto = 
 	  hTrkPtRes[k]->SetBinError(ibin,func->GetParError(2));
 	  hTrkPtShift[k]->SetBinContent(ibin,func->GetParameter(1));
 	  hTrkPtShift[k]->SetBinError(ibin,func->GetParError(1));
-	  TPaveText *t1 = GetTitleText(Form("%1.1f < p_{T} < %1.1f GeV/c",h2tmp->GetXaxis()->GetBinLowEdge(ibin),h2tmp->GetXaxis()->GetBinUpEdge(ibin)),0.08);
+	  TPaveText *t1 = GetPaveText(0.15,0.4,0.7,0.85,0.1,62);
+	  t1->AddText(Form("[%1.1f, %1.1f] GeV/c",h2tmp->GetXaxis()->GetBinLowEdge(ibin),h2tmp->GetXaxis()->GetBinUpEdge(ibin)));
 	  t1->Draw();
 	}
+      c->cd(1);
+      TPaveText *t1 = GetPaveText(0.15,0.4,0.5,0.6,0.15,62);
+      t1->AddText(Form("%s%%",cent_Name[k]));
+      t1->SetTextColor(4);
+      t1->Draw();
       if(savePlot)
-	c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbTrkEff/%sFitTrkPtRes_PtBins.pdf",run_type,run_cfg_name.Data()));
+	c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbTrkEff/%sFitTrkPtRes_PtBins_cent%s.pdf",run_type,run_cfg_name.Data(),cent_Title[k]));
     }
 
-  TCanvas *c = new TCanvas("FitTrkPtRes","FitTrkPtRes",1100,700);
-  c->Divide(3,2);
+  TCanvas *c1 = new TCanvas("FitTrkPtRes","FitTrkPtRes",1300,700);
+  c1->Divide(4,2);
+  TCanvas *c2 = new TCanvas("FitTrkPtRes2","FitTrkPtRes2",1100,700);
+  c2->Divide(3,2);
   TH1F *hFit = 0x0;
   for(int k=0; k<nCentBins; k++)
     {
@@ -836,52 +842,54 @@ void resolution(TString inName, const bool savePlot = 1, const bool saveHisto = 
       hFit->Fit(funcRes[k],"IR0");
       hFit->SetMarkerStyle(21);
       hFit->GetYaxis()->SetRangeUser(0,0.1);
-      c->cd(k+1);
       hFit->SetTitle(";p_{T,mc} (GeV/c);#sigma(p_{T})/p_{T}");
-      hFit->Draw("P");
       TPaveText *t1 = GetTitleText(Form("p_{T} resolution of primary tracks (%s%%)",cent_Name[k]),0.05);
-      t1->Draw();
       funcRes[k]->SetLineColor(2);
+
+      if(k<8) c1->cd(k+1);
+      else    c2->cd(k-7);
+      hFit->Draw("P");
       funcRes[k]->Draw("same");
+      t1->Draw();
     }
-  c->cd(6);
-  leg = new TLegend(0.2,0.4,0.4,0.7);
+  c1->cd(1);
+  leg = new TLegend(0.15,0.5,0.4,0.75);
   leg->SetBorderSize(0);
   leg->SetFillColor(0);
-  leg->SetTextSize(0.06);
+  leg->SetTextSize(0.05);
   leg->SetHeader(run_type);
   leg->AddEntry(hFit,"Embedding data","P");
   leg->AddEntry(funcRes[0],"Fit: #sqrt{(a*p_{T})^{2}+b^{2}}","L");
   leg->Draw();
   if(savePlot)
     {
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbTrkEff/%sFitTrkPtResVsPt_CentBins.pdf",run_type,run_cfg_name.Data()));
+      c1->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbTrkEff/%sFitTrkPtResVsPt_CentBins.pdf",run_type,run_cfg_name.Data()));
     }
 
-  TString legName_cent[nCentBins-1];
+  TString legName_cent[7];
   bool drawLegend = true;
   if(year==2013) drawLegend = false;
   list->Clear();
-  for(int k=0; k<nCentBins-1; k++)
+  for(int k=1; k<8; k++)
     {
-      TH1F *htmp = (TH1F*)hTrkPtRes[k+1]->Clone(Form("%s_clone",hTrkPtRes[k+1]->GetName()));
-      legName_cent[k] = Form("%s%%",cent_Name[k+1]);
+      TH1F *htmp = (TH1F*)hTrkPtRes[k]->Clone(Form("%s_clone",hTrkPtRes[k]->GetName()));
+      legName_cent[k-1] = Form("%s%%",cent_Name[k]);
       list->Add(htmp);
     }
-  c = drawHistos(list,Form("TrkPtRes"),Form("p_{T} resolution of primary muon tracks;p_{T,true} (GeV/c);#sigma(p_{T})/p_{T}"),kTRUE,0,20,kTRUE,0,0.1,kFALSE,drawLegend,legName_cent,drawLegend,"",0.3,0.5,0.6,0.85,kTRUE);
+  c = drawHistos(list,Form("TrkPtRes"),Form("p_{T} resolution of primary muon tracks;p_{T,true} (GeV/c);#sigma(p_{T})/p_{T}"),kTRUE,0,20,kTRUE,0,0.1,kFALSE,drawLegend,legName_cent,drawLegend,run_type,0.3,0.5,0.55,0.85,kTRUE);
   if(savePlot)
     {
       c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbTrkEff/%sMcTrkPtResVsPt_CentBins.pdf",run_type,run_cfg_name.Data()));
     }
 
   list->Clear();
-  for(int k=0; k<nCentBins-1; k++)
+  for(int k=1; k<8; k++)
     {
-      TH1F *htmp = (TH1F*)hTrkPtShift[k+1]->Clone(Form("%s_clone",hTrkPtShift[k+1]->GetName()));
+      TH1F *htmp = (TH1F*)hTrkPtShift[k]->Clone(Form("%s_clone",hTrkPtShift[k]->GetName()));
       htmp->Scale(100);
       list->Add(htmp);
     }
-  c = drawHistos(list,Form("TrkPtShift"),Form("p_{T} shift of primary muon tracks;p_{T,true} (GeV/c);<#Deltap_{T}/p_{T}> (%%)"),kTRUE,0,11,kTRUE,-0.5,0.5,kFALSE,drawLegend,legName_cent,drawLegend,"",0.25,0.45,0.15,0.4,kTRUE);
+  c = drawHistos(list,Form("TrkPtShift"),Form("p_{T} shift of primary muon tracks;p_{T,true} (GeV/c);<#Deltap_{T}/p_{T}> (%%)"),kTRUE,0,11,kTRUE,-0.5,0.5,kFALSE,drawLegend,legName_cent,drawLegend,run_type,0.2,0.45,0.15,0.4,kTRUE);
   if(savePlot)
     {
       c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbTrkEff/%sMcTrkPtShiftVsPt_CentBins.pdf",run_type,run_cfg_name.Data()));
@@ -892,30 +900,28 @@ void resolution(TString inName, const bool savePlot = 1, const bool saveHisto = 
   hTrkDpt->Reset();
   int nPtBins = hResVsTruePt[0]->GetNbinsX();
   for(int bin=1; bin<=nPtBins; bin++)
-  //for(int bin=100; bin<=200; bin++)
     {						
       TH1F *htmp = (TH1F*)hResVsTruePt[0]->ProjectionY(Form("%s_proj_bin%d",hResVsTruePt[0]->GetName(),bin),bin,bin);
       double pt = hResVsTruePt[0]->GetXaxis()->GetBinCenter(bin);
       double res = funcRes[0]->Eval(pt);
-      //double scale = 0.01/res;
-      double scale = 1;
+      double scale = 0.01/res;
       for(int jbin=1; jbin<=htmp->GetNbinsX(); jbin++)
 	{
 	  hTrkDpt->Fill(htmp->GetBinCenter(jbin)*scale, htmp->GetBinContent(jbin));
 	}
     }
   hTrkDpt->SetMarkerStyle(20);
-  // Tf1 *funcTrkDpt = new TF1(Form("Fit_dpTOverPt_%s",cent_Title[0]),CrystalBall,-0.8,0.8,5);
-  // funcTrkDpt->SetParameters(1, 0, 0.001, 1, hTrkDpt->GetMaximum());
-  TF1 *funcTrkDpt = new TF1(Form("Fit_dpTOverPt_%s",cent_Title[0]),DoubleCrystalBall,-0.6,0.3,7);
-  funcTrkDpt->SetParameters(hTrkDpt->GetMaximum(), 3, 0, 0.001, 10, 3, 10);
-  // funcTrkDpt->FixParameter(1, 1.27);
-  // funcTrkDpt->FixParameter(4, 3.786);
-  // hTrkDpt->Fit(funcTrkDpt, "IR0Q");
+  // TF1 *funcTrkDpt = new TF1(Form("Fit_dpTOverPt_%s",cent_Title[0]),CrystalBall,-0.4,0.4,5);
+  // funcTrkDpt->SetParameters(1, 0, 0.01, 10, hTrkDpt->GetMaximum());
+  TF1 *funcTrkDpt = new TF1(Form("Fit_dpTOverPt_%s",cent_Title[0]),DoubleCrystalBall,-0.4,0.2,7);
+  funcTrkDpt->SetParameters(7e6, 0, 0.001, 3, 1, 3, 1);
+  funcTrkDpt->FixParameter(1, 0.000276);
+  funcTrkDpt->FixParameter(2, 0.00949);
+  //hTrkDpt->Fit(funcTrkDpt, "IR0Q");
   c = draw1D(hTrkDpt,Form("%s: distribution of (p_{T,true}-p_{T,reco})/p_{T,true} for sampling (%s%%)",run_type,cent_Name[0]),true);
   // funcTrkDpt->SetLineColor(2);
   // funcTrkDpt->SetLineStyle(2);
-  // funcTrkDpt->Draw("sames");
+  //funcTrkDpt->Draw("sames");
   if(savePlot)
     {
       c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbTrkEff/%sDeltaTrkPt_cent%s.pdf",run_type,run_cfg_name.Data(),cent_Title[0]));

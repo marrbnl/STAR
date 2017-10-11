@@ -12,8 +12,8 @@ void sys_JpsiYield()
   gStyle->SetStatW(0.2);                
   gStyle->SetStatH(0.2);
 
-  YieldVsPt();
-  //YieldVsNpart();
+  //YieldVsPt();
+  YieldVsNpart();
 }
 
 //================================================
@@ -46,9 +46,9 @@ void YieldVsPt(int savePlot = 0, int saveHisto = 0)
       hMax[i][1] = new TH1F(Form("Sys_min_%s",cent_Title[i]),"",nbins,xbins);
     }
 
-  const int nSys = 12;
-  const char *sys_name[nSys]  = {"","_LargeScale","_SmallScale","_ScaleFit","_Binning","_BkgFunc1","_BkgFunc2","_LargeFit","_SmallFit","_SigFunc","_FixSig","_FixSigUp"};
-  const char *sys_leg[nSys] = {"Default","Larger bkg norm range","Smaller bkg norm range","Fit ME/SE w/ pol0","Binning","Res. bkg pol0","Res. bkg pol2","Larger sig fit range","Smaller sig fit range","Crystal-ball","Fix sig. down","Fix sig. up"};
+  const int nSys = 13;
+  const char *sys_name[nSys]  = {"","_LargeScale","_SmallScale","_ScaleFit","_Binning","_BkgFunc1","_BkgFunc2","_LargeFit","_SmallFit","_SigFunc","_FixSigDown","_FixSigUp","_LineShape"};
+  const char *sys_leg[nSys] = {"Default","Larger bkg norm range","Smaller bkg norm range","Fit ME/SE w/ pol0","Binning","Res. bkg pol0","Res. bkg pol2","Larger sig fit range","Smaller sig fit range","Crystal-ball","Fix sig. down","Fix sig. up","line shape"};
 
   TString outName    = Form("Rootfiles/%s.JpsiYield.pt%1.1f.pt%1.1f.%sroot",run_type,pt1_cut,pt2_cut,run_config);
   TString outNameSys = Form("Rootfiles/%s.Sys.JpsiYield.root",run_type);
@@ -72,8 +72,8 @@ void YieldVsPt(int savePlot = 0, int saveHisto = 0)
     }
 
   const char* method = "Fit";
-  const int color_sys[nSys+1] = {1, 2, 3, 4, 6, 7, 8, 1, 2, 4, 6, 7 };
-  const int nSys_used = 12;
+  const int color_sys[nSys+1] = {1, 2, 3, 4, 6, 7, 8, 1, 2, 4, 6, 7, 8 };
+  const int nSys_used = 13;
   for(int i=0; i<nCentBins; i++)
     {
       for(int j=0; j<nSys_used; j++)
@@ -136,7 +136,7 @@ void YieldVsPt(int savePlot = 0, int saveHisto = 0)
 	      leg[l]->SetTextSize(0.04);
 	    }
 	  for(int j=0; j<nSys_used; j++)
-	    leg[j/6]->AddEntry(hSignal[i][j],sys_leg[j],"P");
+	    leg[j/7]->AddEntry(hSignal[i][j],sys_leg[j],"P");
 	  //leg[1]->AddEntry(hSignal[i][nSys],"\"Bin counting\" as check","P");
 	}
       
@@ -199,7 +199,7 @@ void YieldVsPt(int savePlot = 0, int saveHisto = 0)
 
 
 //================================================
-void YieldVsNpart(int savePlot = 0, int saveHisto = 0)
+void YieldVsNpart(int savePlot = 1, int saveHisto = 0)
 {
  // re-assign global constants
   const int nPtBins         = nPtBins_npart;
@@ -220,9 +220,9 @@ void YieldVsNpart(int savePlot = 0, int saveHisto = 0)
       hSys[i] = new TH1F(Form("Sys_signalExt_pt%s",pt_Name[i]),Form("Systematic uncertainty for signal extraction (%s GeV/c)",pt_Name[i]),nCentBins[i],0,nCentBins[i]);
     }
 
-  const int nSys = 12;
-  const char *sys_name[nSys]  = {"","_LargeScale","_SmallScale","_ScaleFit","_Binning","_BkgFunc1","_BkgFunc2","_LargeFit","_SmallFit","_SigFunc","_FixSig","_FixSigUp"};
-  const char *sys_leg[nSys] = {"Default","Larger bkg norm range","Smaller bkg norm range","Fit ME/SE w/ pol0","Binning","Res. bkg pol0","Res. bkg pol2","Larger sig fit range","Smaller sig fit range","Crystal-ball","Fix sig. down","Fix sig. up"};
+  const int nSys = 13;
+  const char *sys_name[nSys]  = {"","_LargeScale","_SmallScale","_ScaleFit","_Binning","_BkgFunc1","_BkgFunc2","_LargeFit","_SmallFit","_SigFunc","_FixSigDown","_FixSigUp","_LineShape"};
+  const char *sys_leg[nSys] = {"Default","Larger bkg norm range","Smaller bkg norm range","Fit ME/SE w/ pol0","Binning","Res. bkg pol0","Res. bkg pol2","Larger sig fit range","Smaller sig fit range","Crystal-ball","Fix sig. down","Fix sig. up","Line shape"};
 
   TString outName    = Form("Rootfiles/%s.JpsiYield.pt%1.1f.pt%1.1f.%sroot",run_type,pt1_cut,pt2_cut,run_config);
   TString outNameSys = Form("Rootfiles/%s.Sys.JpsiYield.root",run_type);
@@ -232,8 +232,8 @@ void YieldVsNpart(int savePlot = 0, int saveHisto = 0)
   else          fsys = TFile::Open(Form("%s",outNameSys.Data()),"read");
 
 
-  const int nSys_used = 12;
-  const int color_sys[nSys] = {1, 2, 3, 4, 6, 7, 8, 1, 2, 4, 6, 8};
+  const int nSys_used = 10;
+  const int color_sys[nSys] = {1, 2, 3, 4, 6, 7, 8, 1, 2, 4, 6, 7, 8};
 
   // // check chi2
   // TH1F *hChi2[nPtBins][nSys];
@@ -291,7 +291,8 @@ void YieldVsNpart(int savePlot = 0, int saveHisto = 0)
 	  t1->Draw();
 	  for(int k=0; k<nCentBins[i]; k++)
 	    {
-	      if(i==1 && k==5 && j==9) continue;
+	      if(i==1 && k==6 && j==4) continue;
+	      if(i==0 && k==0 && j==5) continue;
 	      double value = fabs(htmp->GetBinContent(k+1)-1);
 	      if(max[i][k]<value) max[i][k] = value;
 	    }
@@ -323,7 +324,7 @@ void YieldVsNpart(int savePlot = 0, int saveHisto = 0)
 	}
       for(int j=0; j<nSys_used; j++)
 	{
-	  leg[j/6]->AddEntry(hSignal[i][j],sys_leg[j],"P");
+	  leg[j/7]->AddEntry(hSignal[i][j],sys_leg[j],"P");
 	}
       leg[1]->AddEntry(hSys[i],"Maximum deviation","L");
       leg[0]->Draw();

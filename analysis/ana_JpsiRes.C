@@ -42,11 +42,9 @@ const char *run_type = "Run14_AuAu200";
 const double pt1_cut = 1.5, pt2_cut = 1.3;
 const double low_mass = 2.9;
 const double high_mass = 3.3;
-const int nCentBins = 5;
-const int centBins_low[nCentBins]  = {1,13,9,5,1};
-const int centBins_high[nCentBins] = {16,16,12,8,4};
-const char *cent_Name[nCentBins] = {"0-80","0-20","20-40","40-60","60-80"};
-const char *cent_Title[nCentBins] = {"0080","0020","2040","4060","6080"};
+const int nCentBins = 11;
+const char *cent_Name[nCentBins] = {"0-80","0-10","10-20","20-30","30-40","40-50","50-60","60-80","0-20","20-40","40-60"};
+const char *cent_Title[nCentBins] = {"0080","0010","1020","2030","3040","4050","5060","6080","0020","2040","4060"};
 const int nPtBins = 10;
 const double ptBins_low[nPtBins]  = {0,0,1,2,3,4,5,6,8,10};
 const double ptBins_high[nPtBins] = {15,1,2,3,4,5,6,8,10,15};
@@ -96,6 +94,7 @@ TRandom3 *myRandom;
 TH2F *hTrkResVsPt[nCentBins];
 TH1F *hTrkResBin[nCentBins][400];
 TF1 *funcTrkRes[nCentBins];
+TH1F *hDeltaPt;
 
 void tuneResolution(const int icent, const bool savePlot);
 void smear(const double mass, const int icent, const int nExpr, const double shift, const double sigma, TF1 *hInputPt, TH2F *hRcJpsiMassVsPt,  const bool isWeight = 0, const bool debug = 0);
@@ -125,7 +124,7 @@ void ana_JpsiRes()
     
   // tracking resolution for single muons
   TFile *fRes = 0x0;
-  if(year==2013 || year==2014) fRes = TFile::Open(Form("Rootfiles/%s.EmbTrkEff.root",run_type),"read");
+  if(year==2014) fRes = TFile::Open(Form("Rootfiles/%s.EmbTrkEff.root",run_type),"read");
   else if(year==2015) fRes = TFile::Open(Form("Rootfiles/%s.PtResolution.root",run_type),"read");
   else if(year==2016) fRes = TFile::Open("Rootfiles/Upsilon1S.ptrk.Embed.root","read");
   if(!fRes)
@@ -134,16 +133,20 @@ void ana_JpsiRes()
     }
   else
     {
+      if(year==2014)
+	{
+	  hDeltaPt = (TH1F*)fRes->Get("hdpTOverPt_0080");
+	}
       for(int icent=0; icent<nCentBins; icent++)
 	{
-	  if(year==2013 || year==2014)
+	  if(year==2014)
 	    {
-	      hTrkResVsPt[icent] = (TH2F*)fRes->Get(Form("pTrkRes_vs_RecoPt_%s",cent_Title[icent]));
+	      hTrkResVsPt[icent] = (TH2F*)fRes->Get(Form("pTrkRes_vs_TruePt_%s",cent_Title[icent]));
 	      funcTrkRes[icent] = (TF1*)fRes->Get(Form("pTrkResFit_%s",cent_Title[icent]));
 	    }
 	  else if(year==2015)
 	    {
-	      hTrkResVsPt[icent] = (TH2F*)fRes->Get(Form("pTrkRes_vs_RecoPt_%s",cent_Title[icent]));
+	      hTrkResVsPt[icent] = (TH2F*)fRes->Get(Form("pTrkRes_vs_TruePt_%s",cent_Title[icent]));
 	    }
 	  else if(year==2016)
 	    {
@@ -163,11 +166,11 @@ void ana_JpsiRes()
 //================================================
 void tuneResolution(const int icent, const bool savePlot)
 {
-  const int anaType = 3; // 0 - scan; 1 - determine smear & shift; 2 - generate final smear
-  const int nShiftScan = 9;
-  const double shiftStep = 0.005;
-  const int nSmearScan = 11;
-  const double smearStep = 0.002;
+  const int anaType = 1; // 0 - scan; 1 - determine smear & shift; 2 - generate final smear
+  const int nShiftScan = 1;
+  const double shiftStep = 0.0005;
+  const int nSmearScan = 20;
+  const double smearStep = 0.0005;
   const TString outName = Form("Rootfiles/%s.TrkResScan.%sroot",run_type,run_config);
   const int nbins = nPtBins -1;
   double xbins[nbins+1];
@@ -206,7 +209,7 @@ void tuneResolution(const int icent, const bool savePlot)
 	      if(i==0)        shift = 0;
 	      else if(i%2==1) shift = (i+1)/2*shiftStep;
 	      else            shift = (i+1)/2*shiftStep*(-1);
-	      printf("[i] Scan (%d,%d) = (%5.3f, %5.3f)\n",i,k,shift,sigma);
+	      printf("[i] Scan (%d,%d) = (%5.4f, %5.4f)\n",i,k,shift,sigma);
 	      smear(jpsiMass, icent, 5e6, shift, sigma, funcInputJpsi, hRcJpsiMassScan[i][k], 0, 0);
 	    }
 	}
@@ -232,7 +235,7 @@ void tuneResolution(const int icent, const bool savePlot)
 
 	  TH2F *hEmbedJpsi[2];
 	  hEmbedJpsi[0] = (TH2F*)fembed->Get(Form("hJpsiMassVsPt_Tpc_cent%s",cent_Title[icent]));
-	  hEmbedJpsi[1] = (TH2F*)fscan->Get(Form("hRcJpsiMassVsPt_%s_scan0_0",cent_Title[icent]));
+	  hEmbedJpsi[1] = (TH2F*)fscan->Get(Form("hRcJpsiMassVsPt_%s_scan0_8",cent_Title[icent]));
 
 	  TObjArray embSlices[2];
 	  TH1F *hEmbMean[2];
@@ -534,37 +537,41 @@ void tuneResolution(const int icent, const bool savePlot)
   const char *sysName_scan[3] = {"def","min","max"};
   if(anaType == 2)
     {
-      TH2F *hRcJpsiMass[3];
+      TH2F *hRcJpsiMass[nCentBins][3];
       TFile *fout = TFile::Open(outName.Data(),"update");
       TH1F *hFinalShift = (TH1F*)fout->Get(Form("hFinalShift_cent%s",cent_Title[icent]));
       TH1F *hFinalSmear = (TH1F*)fout->Get(Form("hFinalSmear_cent%s",cent_Title[icent]));
 
-      for(int i=0; i<3; i++)
+      TH1F *hJpsiEff[nCentBins][3][2];
+      for(int k=0; k<nCentBins; k++)
 	{
-	  hRcJpsiMass[i] = new TH2F(Form("hRcJpsiMass_%s_final_%s",cent_Title[icent],sysName_scan[i]),Form("Mass distribution of reconstructed J/#psi (%s%%);p_{T} (GeV/c);mass (GeV/c^{2})",cent_Name[icent]),kNPtBins, kLowPtBound, kHighPtBound, kNMassBins, kLowMassBound, kHighMassBound);
-	  double shiftvalue = hFinalShift->GetBinContent(i+1);
-	  double smearvalue = hFinalSmear->GetBinContent(i+1);
-	  if(year==2014 || year==2015 || year==2016) shiftvalue = 0;
-	  printf("[i] Start final scanning: %s = (%4.4f,%4.4f)\n",sysName_scan[i],shiftvalue,smearvalue);
-	  smear(jpsiMass, icent, 1e7, shiftvalue, smearvalue, funcInputJpsi, hRcJpsiMass[i], 1, 0);
-	}
+	  for(int i=0; i<3; i++)
+	    {
+	      hRcJpsiMass[k][i] = new TH2F(Form("hRcJpsiMass_%s_final_%s",cent_Title[k],sysName_scan[i]),Form("Mass distribution of reconstructed J/#psi (%s%%);p_{T} (GeV/c);mass (GeV/c^{2})",cent_Name[k]),kNPtBins, kLowPtBound, kHighPtBound, kNMassBins, kLowMassBound, kHighMassBound);
+	      double shiftvalue = hFinalShift->GetBinContent(i+1);
+	      double smearvalue = hFinalSmear->GetBinContent(i+1);
+	      if(year==2014 || year==2015 || year==2016) shiftvalue = 0;
+	      printf("[i] Start final scanning: %s = (%4.4f,%4.4f)\n",sysName_scan[i],shiftvalue,smearvalue);
+	      smear(jpsiMass, k, 1e7, shiftvalue, smearvalue, funcInputJpsi, hRcJpsiMass[k][i], 1, 0);
+	    }
 
-      TH1F *hJpsiEff[3][2];
-      TH1F *hAll = (TH1F*)hRcJpsiMass[0]->ProjectionX(Form("JpsiPt_all_cent%s",cent_Title[icent]));
-      TH1F *hAllrebin = (TH1F*)hAll->Rebin(nbins,Form("%s_rebin",hAll->GetName()),xbins);
-      for(int i=0; i<3; i++)
-	{
-	  hJpsiEff[i][0] = (TH1F*)hRcJpsiMass[i]->ProjectionX(Form("JpsiSmearEff_%s_cent%s",sysName_scan[i],cent_Title[icent]));
-	  hJpsiEff[i][1] = (TH1F*)hJpsiEff[i][0]->Rebin(nbins,Form("JpsiSmearEff_%s_cent%s_rebin",sysName_scan[i],cent_Title[icent]),xbins);
-	  hJpsiEff[i][0]->Divide(hAll);
-	  hJpsiEff[i][1]->Divide(hAllrebin);
-	}
+      
+	  TH1F *hAll = (TH1F*)hRcJpsiMass[k][0]->ProjectionX(Form("JpsiPt_all_cent%s",cent_Title[k]));
+	  TH1F *hAllrebin = (TH1F*)hAll->Rebin(nbins,Form("%s_rebin",hAll->GetName()),xbins);
+	  for(int i=0; i<3; i++)
+	    {
+	      hJpsiEff[k][i][0] = (TH1F*)hRcJpsiMass[k][i]->ProjectionX(Form("JpsiSmearEff_%s_cent%s",sysName_scan[i],cent_Title[k]));
+	      hJpsiEff[k][i][1] = (TH1F*)hJpsiEff[k][i][0]->Rebin(nbins,Form("JpsiSmearEff_%s_cent%s_rebin",sysName_scan[i],cent_Title[k]),xbins);
+	      hJpsiEff[k][i][0]->Divide(hAll);
+	      hJpsiEff[k][i][1]->Divide(hAllrebin);
+	    }
 
-      for(int i=0; i<3; i++)
-	{
-	  hRcJpsiMass[i]->Write("",TObject::kOverwrite);
-	  hJpsiEff[i][0]->Write("",TObject::kOverwrite);
-	  hJpsiEff[i][1]->Write("",TObject::kOverwrite);
+	  for(int i=0; i<3; i++)
+	    {
+	      hRcJpsiMass[k][i]->Write("",TObject::kOverwrite);
+	      hJpsiEff[k][i][0]->Write("",TObject::kOverwrite);
+	      hJpsiEff[k][i][1]->Write("",TObject::kOverwrite);
+	    }
 	}
     }
 
@@ -755,6 +762,8 @@ void smear(const double mass, const int icent, const int nExpr, const double shi
 {
   const int nHisto = hTrkResVsPt[icent]->GetNbinsX();
   hRcJpsiMassVsPt->Sumw2();
+  TF1 *hTrkResTmp = (TF1*)funcTrkRes[icent]->Clone(Form("hTrkRes"));
+  hTrkResTmp->SetParameter(0, sigma);
   for(int i=0; i<nExpr; i++)
     {
       double mc_pt  = myRandom->Uniform(0,20);
@@ -781,6 +790,11 @@ void smear(const double mass, const int icent, const int nExpr, const double shi
 
       if(pt1<0.5 || fabs(eta1) > 0.5) continue;
       if(pt2<0.5 || fabs(eta2) > 0.5) continue;
+
+      double rc_pt1 = pt1 - (hDeltaPt->GetRandom() * hTrkResTmp->Eval(pt1)/0.01) * pt1;
+      double rc_pt2 = pt2 - (hDeltaPt->GetRandom() * hTrkResTmp->Eval(pt2)/0.01) * pt2;
+
+      /*
       //if(fabs(eta1) > 0.5 || fabs(eta2) > 0.5) continue;
 
       // momentum resolution & shift
@@ -810,6 +824,7 @@ void smear(const double mass, const int icent, const int nExpr, const double shi
 	  rc_pt1 = emb_pt1 * myRandom->Gaus(1+shift,TMath::Power(emb_pt1,1)*sigma);
 	  rc_pt2 = emb_pt2 * myRandom->Gaus(1+shift,TMath::Power(emb_pt2,1)*sigma);
 	}
+      */
       double leadpt = rc_pt1 > rc_pt2 ? rc_pt1 : rc_pt2;
       double subpt  = rc_pt1 < rc_pt2 ? rc_pt1 : rc_pt2;
       if(leadpt<pt1_cut || subpt<pt2_cut) continue;

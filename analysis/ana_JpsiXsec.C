@@ -266,7 +266,7 @@ void trgSetup(const bool savePlot = 0)
 }
 
 //================================================
-void xsec_Run14(const bool savePlot = 0, const bool saveHisto = 0)
+void xsec_Run14(const bool savePlot = 1, const bool saveHisto = 0)
 {
 
   //==============================================

@@ -33,20 +33,25 @@ void makeHistos(const int saveHistos = 1)
   const int nTypes = 2;
   const char *trackType[nTypes] = {"p","g"};
   THnSparseF *hnTrkPtRes[nTypes];
-  TH2F *hResVsRecoPt[nTypes][nCentBins];
-  TH2F *hResVsTruePt[nTypes][nCentBins];
+  const int nCentBins_tmp = 11;
+  const int centBins_low_tmp[nCentBins_tmp]  = {1, 13,9, 5,1,15,13,11,9, 7,5};
+  const int centBins_high_tmp[nCentBins_tmp] = {16,16,12,8,4,16,14,12,10,8,6};
+  const char *cent_Name_tmp[nCentBins_tmp] = {"0-80","0-20","20-40","40-60","60-80","0-10","10-20","20-30","30-40","40-50","50-60"};
+  const char *cent_Title_tmp[nCentBins_tmp] = {"0080","0020","2040","4060","6080","0010","1020","2030","3040","4050","5060"};
+  TH2F *hResVsRecoPt[nTypes][nCentBins_tmp];
+  TH2F *hResVsTruePt[nTypes][nCentBins_tmp];
   for(int i=0; i<2; i++)
     {
       hnTrkPtRes[i]= (THnSparseF*)f->Get(Form("mh%sTrkPtRes_di_mu",trackType[i]));
-      for(int k=0; k<nCentBins; k++)
+      for(int k=0; k<nCentBins_tmp; k++)
 	{
-	  hnTrkPtRes[i]->GetAxis(3)->SetRange(centBins_low[k],centBins_high[k]);
+	  hnTrkPtRes[i]->GetAxis(3)->SetRange(centBins_low_tmp[k],centBins_high_tmp[k]);
 	  hResVsRecoPt[i][k] = (TH2F*)hnTrkPtRes[i]->Projection(0,1);
-	  hResVsRecoPt[i][k]->SetName(Form("%sTrkRes_vs_RecoPt_%s",trackType[i],cent_Title[k]));
+	  hResVsRecoPt[i][k]->SetName(Form("%sTrkRes_vs_RecoPt_%s",trackType[i],cent_Title_tmp[k]));
 	  hResVsRecoPt[i][k]->SetTitle();
 	  
 	  hResVsTruePt[i][k] = (TH2F*)hnTrkPtRes[i]->Projection(0,2);
-	  hResVsTruePt[i][k]->SetName(Form("%sTrkRes_vs_TruePt_%s",trackType[i],cent_Title[k]));
+	  hResVsTruePt[i][k]->SetName(Form("%sTrkRes_vs_TruePt_%s",trackType[i],cent_Title_tmp[k]));
 	  hResVsTruePt[i][k]->SetTitle();
       
 	  hnTrkPtRes[i]->GetAxis(3)->SetRange(0,-1);
@@ -229,13 +234,16 @@ void makeHistos(const int saveHistos = 1)
     {
       printf("+++ Save histograms +++\n");
       TFile *fout = TFile::Open(Form("Rootfiles/%s.EmbTrkEff.root",run_type),"recreate");
-      for(int k=0; k<nCentBins; k++)
+      for(int k=0; k<nCentBins_tmp; k++)
 	{
 	  for(int i=0; i<2; i++)
 	    {
 	      hResVsRecoPt[i][k]->Write();
 	      hResVsTruePt[i][k]->Write();
 	    }
+	}
+      for(int k=0; k<nCentBins; k++)
+	{
 	  for(int i=0; i<nDet; i++)
 	    {
 	      for(int j=0; j<3; j++)

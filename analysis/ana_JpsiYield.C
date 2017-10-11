@@ -39,7 +39,7 @@ void ana_JpsiYield()
 
 
 //================================================
-void fitYield(int icent = 0, int savePlot = 1, int saveHisto = 1)
+void fitYield(int icent = 3, int savePlot = 0, int saveHisto = 0)
 {
   const int nCentBins       = nCentBins_pt; 
   const int* centBins_low   = centBins_low_pt;
@@ -91,7 +91,7 @@ void fitYield(int icent = 0, int savePlot = 1, int saveHisto = 1)
 }
 
 //================================================
-void yieldVsPt(int savePlot = 0)
+void yieldVsPt(int savePlot = 1)
 {
   const int nPtBins         = nPtBins_pt;
   const double* ptBins_low  = ptBins_low_pt;
@@ -255,7 +255,7 @@ void yieldVsPt(int savePlot = 0)
 }
 
 //================================================
-void yieldVsNpart(int savePlot = 0)
+void yieldVsNpart(int savePlot = 1)
 {
   const int nPtBins         = nPtBins_npart;
   const double* ptBins_low  = ptBins_low_npart;
