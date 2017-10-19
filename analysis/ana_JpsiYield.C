@@ -39,7 +39,7 @@ void ana_JpsiYield()
 
 
 //================================================
-void fitYield(int icent = 3, int savePlot = 0, int saveHisto = 0)
+void fitYield(int icent = 0, int savePlot = 1, int saveHisto = 1)
 {
   const int nCentBins       = nCentBins_pt; 
   const int* centBins_low   = centBins_low_pt;
@@ -93,6 +93,7 @@ void fitYield(int icent = 3, int savePlot = 0, int saveHisto = 0)
 //================================================
 void yieldVsPt(int savePlot = 1)
 {
+  gStyle->SetOptFit(0);
   const int nPtBins         = nPtBins_pt;
   const double* ptBins_low  = ptBins_low_pt;
   const double* ptBins_high = ptBins_high_pt;
@@ -197,13 +198,17 @@ void yieldVsPt(int savePlot = 1)
 	}
     }
 
+  
+  TFile *fin2 = TFile::Open(Form("Rootfiles/%s.TrkResScan.input.root",run_type),"read");
   // compare fit parameters
   TH1F *hMean[nCentBins];
   TH1F *hSigma[nCentBins];
+  TH1F *hChi2[nCentBins];
   for(int i=0; i<nCentBins; i++)
     {
-      hMean[i] = (TH1F*)fin->Get(Form("Jpsi_FitMean_cent%s_weight",cent_Title[i]));
-      hSigma[i] = (TH1F*)fin->Get(Form("Jpsi_FitSigma_cent%s_weight",cent_Title[i]));
+      hMean[i] = (TH1F*)fin2->Get(Form("Jpsi_FitMean_cent%s_weight",cent_Title[i]));
+      hSigma[i] = (TH1F*)fin2->Get(Form("Jpsi_FitSigma_cent%s_weight",cent_Title[i]));
+      hChi2[i] = (TH1F*)fin->Get(Form("Jpsi_Chi2_cent%s_weight",cent_Title[i]));
     }
   list->Clear();
   for(int i=0; i<nCentBins; i++)
@@ -223,7 +228,7 @@ void yieldVsPt(int savePlot = 1)
 	}
       list->Add(hMean[i]);
     }
-  c = drawHistos(list,"JpsiMeanVsPt","Mean of J/psi peak;p_{T} (GeV/c);Mean",kFALSE,0,20,kTRUE,3.04,3.2,kFALSE,drawLegend,legName,drawLegend,run_type,0.15,0.35,0.6,0.88,kTRUE);
+  c = drawHistos(list,"JpsiMeanVsPt",Form("%s: mean of J/psi peak;p_{T} (GeV/c);Mean",run_type),kFALSE,0,20,kTRUE,3.04,3.2,kFALSE,drawLegend,legName,drawLegend,run_type,0.15,0.35,0.6,0.88,kTRUE);
   if(savePlot) 
     {
       c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiYield/%sJpsiMeanVsPt.pdf",run_type,run_cfg_name.Data()));
@@ -247,10 +252,34 @@ void yieldVsPt(int savePlot = 1)
 	}
       list->Add(hSigma[i]);
     }
-  c = drawHistos(list,"JpsiSigmaVsPt","Width of J/psi peak;p_{T} (GeV/c);#sigma",kFALSE,0,20,kTRUE,0,0.15,kFALSE,drawLegend,legName,drawLegend,run_type,0.15,0.35,0.6,0.88,kTRUE);
+  c = drawHistos(list,"JpsiSigmaVsPt",Form("%s: width of J/psi peak;p_{T} (GeV/c);#sigma",run_type),kFALSE,0,20,kTRUE,0,0.15,kFALSE,drawLegend,legName,drawLegend,run_type,0.15,0.35,0.6,0.88,kTRUE);
   if(savePlot) 
     {
       c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiYield/%sJpsiSigmaVsPt.pdf",run_type,run_cfg_name.Data()));
+    }
+
+  list->Clear();
+  for(int i=0; i<nCentBins; i++)
+    {
+      if(i==2 || i==3)
+	{
+	  hChi2[i]->SetBinContent(nPtBins-1,-1);
+	  hChi2[i]->SetBinError(nPtBins-1,1e-10);
+	}
+      else if(i==4)
+	{
+	  for(int bin=7; bin<=9; bin++)
+	    {
+	      hChi2[i]->SetBinContent(bin,-1);
+	      hChi2[i]->SetBinError(bin,1e-10);
+	    }
+	}
+      list->Add(hChi2[i]);
+    }
+  c = drawHistos(list,"JpsiChi2VsPt","Chi2/NDF of J/psi fit;p_{T} (GeV/c);Chi2/NDF",kFALSE,0,20,kTRUE,0,3,kFALSE,drawLegend,legName,drawLegend,run_type,0.65,0.85,0.6,0.88,kTRUE);
+  if(savePlot) 
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiYield/%sJpsiChi2VsPt.pdf",run_type,run_cfg_name.Data()));
     }
 }
 
@@ -317,6 +346,23 @@ void yieldVsNpart(int savePlot = 1)
       if(savePlot) 
 	{
 	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiYield/%sJpsiSignifVsCent_pt%s_Fitting.pdf",run_type,run_cfg_name.Data(),pt_Name[i]));
+	}
+    }
+
+  TH1F *hChi2[nPtBins];
+  for(int i=0; i<nPtBins; i++)
+    {
+      hChi2[i] = (TH1F*)fin->Get(Form("Jpsi_FitChi2_pt%s_weight",pt_Name[i]));
+      hChi2[i]->GetYaxis()->SetRangeUser(0,2);
+      hChi2[i]->SetMarkerStyle(20);
+      hChi2[i]->SetMarkerColor(i+1);
+      hChi2[i]->SetLineColor(i+1);
+      hChi2[i]->SetMarkerSize(1.2);
+      hChi2[i]->GetXaxis()->SetLabelSize(0.045);
+      c = draw1D(hChi2[i],Form("%s: chi2/NDF of J/psi signal fitting (p_{T} > %1.0f GeV/c)",run_type,ptBins_low[i]));
+      if(savePlot) 
+	{
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiYield/%sJpsiChi2VsCent_pt%s_Fitting.pdf",run_type,run_cfg_name.Data(),pt_Name[i]));
 	}
     }
 }

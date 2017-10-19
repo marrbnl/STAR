@@ -10,7 +10,68 @@ void ana_RefMult()
   gStyle->SetStatW(0.2);                
   gStyle->SetStatH(0.2);
 
-  Run16vs14();
+  run14CentCalib();
+  //Run16vs14();
+}
+
+//================================================
+void run14CentCalib(const int savePlot = 1)
+{
+  // centrality calibration
+  TFile *fcalib = TFile::Open("Rootfiles/run14.PicoTree.May20_ReDo_VPDNoVtx_MTD.root","read");
+  TH3F *gRefMultVsZdcVsVz = (TH3F*)fcalib->Get("mgRefMultVsZdcVsVzTriggerCorrWg_0");
+  TH1F *hData = (TH1F*)gRefMultVsZdcVsVz->ProjectionZ("hgRefMult_CorrWg");
+  TCanvas *c = draw1D(hData,"VPD-ZDC-novtx-mon: gRefMult distribution after calibration w/ weight",true);
+  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/Guannan_VpdZdcNoVtx_gRefMultCorrWg.pdf",run_type));
+
+  const int nCentBins = 16;
+  const double xCentBins[nCentBins+1] = {11, 16, 23, 32, 44, 59, 77, 99, 126, 157, 193, 235, 283, 338, 401, 472, 700}; // SL15c
+  TH1F *hCalibCent = new TH1F("hCalibCent","",nCentBins,0,nCentBins);
+  for(int bin=1; bin<=nCentBins; bin++)
+    {
+      double err;
+      double val = hData->IntegralAndError(hData->FindFixBin(xCentBins[bin-1]+0.1),
+					   hData->FindFixBin(xCentBins[bin]-0.1),
+					   err);
+      hCalibCent->GetXaxis()->SetBinLabel(bin, Form("%d-%d%%",80-bin*5, 85-bin*5));
+      hCalibCent->SetBinContent(bin, val);
+      hCalibCent->SetBinError(bin, err);
+    }
+  hCalibCent->Scale(1./hCalibCent->Integral(15,16)*2);
+  hCalibCent->GetXaxis()->SetLabelSize(0.045);
+  hCalibCent->GetYaxis()->SetRangeUser(0.95,1.05);
+  c = draw1D(hCalibCent,"VPD-ZDC-novtx-mon: centrality distribution after calibration w/ weight",false,false);
+  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/Guannan_VpdZdcNoVtx_Centrality.pdf",run_type));
+
+  // gRefMult in prod_high
+  TFile *fdata = TFile::Open("output/Run14_AuAu200.MB.VtxEff.prod_high.root","read");
+  THnSparseF *mhEventMult = (THnSparseF*)fdata->Get("mhEventMult_qa_mb");
+  TH1F *hgRefMultHigh = (TH1F*)mhEventMult->Projection(1);
+  hgRefMultHigh->Sumw2();
+  hgRefMultHigh->Scale(1./hgRefMultHigh->Integral(hgRefMultHigh->FindFixBin(100),hgRefMultHigh->FindFixBin(300)));
+  hgRefMultHigh->GetXaxis()->SetRangeUser(0,700);
+  hgRefMultHigh->GetYaxis()->SetRangeUser(1e-6,1e-1);
+  c = draw1D(hgRefMultHigh,Form("%s: gRefMultCorr distribution w/ weight",run_type),true);
+  TH1F *hgRefMultMid = (TH1F*)hData->Clone("hgRefMultMid");
+  hgRefMultMid->Scale(1./hgRefMultMid->Integral(hgRefMultMid->FindFixBin(100),hgRefMultMid->FindFixBin(300)));
+  hgRefMultMid->SetMarkerColor(2);
+  hgRefMultMid->SetLineColor(2);
+  hgRefMultMid->Draw("sames");
+  for(int i=0; i<nCentBins; i++)
+    {
+      double max = hgRefMultHigh->GetBinContent(hgRefMultHigh->FindBin(xCentBins[i]));
+      TLine *line = GetLine(xCentBins[i], 1e-6, xCentBins[i], max);
+      line->Draw();
+    }
+  TLegend *leg = new TLegend(0.5,0.7,0.7,0.85);
+  leg->SetBorderSize(0);
+  leg->SetFillColor(0);
+  leg->SetTextSize(0.035);
+  leg->SetHeader("VPD-ZDC-novtx-mon");
+  leg->AddEntry(hgRefMultMid,"prod_low/mid","L");
+  leg->AddEntry(hgRefMultHigh,"prod_high","L");
+  leg->Draw();
+  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/VpdZdcNoVtx_gRefMultCorrWg_HighToMid.pdf",run_type));
 }
 
 
@@ -20,8 +81,8 @@ void Run16vs14(const int savePlot = 0)
   const int nData = 2;
   const char* data_name[nData] = {"Run14_AuAu200","Run16_AuAu200"};
   TFile *fdata[nData];
-  fdata[0] = TFile::Open("output/Run14.AuAu200.MB.RefMult.root","read");
-  fdata[1] = TFile::Open("output/Run16.AuAu200.MB.RefMult.root","read");
+  fdata[0] = TFile::Open("output/Run14_AuAu200.MB.RefMult.root","read");
+  fdata[1] = TFile::Open("output/Run16_AuAu200.MB.RefMult.root","read");
   THnSparseF *mhRefMult[nData];
   TH1F *hTpcVz[nData];
   TH1F *hZdcRate[nData];

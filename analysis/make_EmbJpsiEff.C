@@ -57,7 +57,8 @@ const int centBins_high_npart[16] = { 16,14,12,10,8,6,4,2, 16,14,12,10,8,6,4,4 }
 const char *cent_Name_npart[16] = {"0-10","10-20","20-30","30-40","40-50","50-60","60-70","70-80", "0-10","10-20","20-30","30-40","40-50","50-60","60-80","60-70"};
 const char *cent_Title_npart[16] = {"0010","1020","2030","3040","4050","5060","6070","7080", "0010","1020","2030","3040","4050","5060","6080","6070"};
 
-const char *trkEffType[7] = {"MC","Tpc","MtdMth","Fake","MuonPid","MtdTrig","TrigUnit"};
+const int nEffType = 8;
+const char *trkEffType[nEffType] = {"MC","Tpc","MtdMth","Fake","MuonPid","MtdTrig","TrigUnit","Embed"};
 const char *weight_name[2] = {"","_w"};
 const double muMass = 0.1057;
 const double pi = 3.1415926;
@@ -87,9 +88,9 @@ void make_EmbJpsiEff()
   TH1F *hStat = (TH1F*)f->Get("hEventStat");
   printf("[i] # of events: %4.4e\n",hStat->GetBinContent(3));
 
-  //makeJpsi(1);
+  makeJpsi(1);
   //makeDataJpsiWeight(1);
-  makeJpsiTpcEffVsZdc(1, 1);
+  // makeJpsiTpcEffVsZdc(1, 1);
 }
 
 //================================================
@@ -405,13 +406,13 @@ void makeJpsi(const bool saveHisto)
   const char** cent_Name    = cent_Name_pt;
   const char** cent_Title   = cent_Title_pt;
 
-  THnSparseF *hnJpsiInfo[7][2];
-  TH1F *hJpsiInvMass[7][nCentBins][2];
-  TH1F *hJpsiPt[7][nCentBins][2];
-  TH2F *hJpsiMassVsPt[7][nCentBins][2];
-  TH1F *hJpsiRapdity[7][nCentBins][2];
+  THnSparseF *hnJpsiInfo[nEffType][2];
+  TH1F *hJpsiInvMass[nEffType][nCentBins][2];
+  TH1F *hJpsiPt[nEffType][nCentBins][2];
+  TH2F *hJpsiMassVsPt[nEffType][nCentBins][2];
+  TH1F *hJpsiRapdity[nEffType][nCentBins][2];
 
-  for(int i=0; i<7; i++)
+  for(int i=0; i<nEffType; i++)
     {
       for(int w=0; w<1; w++)
 	{
@@ -501,7 +502,7 @@ void makeJpsi(const bool saveHisto)
     {
       printf("+++ Save histograms +++\n");
       TFile *fout = TFile::Open(Form("Rootfiles/%s.EmbJpsiEff.pt%1.1f.pt%1.1f.root",run_type,pt1_cut,pt2_cut),"update");
-      for(int i=0; i<7; i++)
+      for(int i=0; i<nEffType; i++)
 	{
 	  for(int w=0; w<1; w++)
 	    {

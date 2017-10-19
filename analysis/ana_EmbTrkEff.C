@@ -42,9 +42,9 @@ void ana_EmbTrkEff()
   printf("# of events: %4.4e\n",hStat->GetBinContent(3));
 
   //efficiency(outName);
-  resolution(outName);
+  //resolution(outName);
   //effVsZdc();
-  //effVsCent();
+  effVsCent();
   //effVsEta();
   //TrkEff3D(outName, outPDF);
 }
@@ -213,7 +213,7 @@ void effVsZdc(const int savePlot = 1, const int saveHisto = 1)
 }
 
 //================================================
-void effVsCent(const int savePlot = 0)
+void effVsCent(const int savePlot = 1)
 {
   const int nCentBins       = nCentBins_pt; 
   const int* centBins_low   = centBins_low_pt;
@@ -224,7 +224,7 @@ void effVsCent(const int savePlot = 0)
   // TofMult vs. gRefMult
   const char *hName[4] = {"TofMultVsgRefMult", "TofMultVsgRefMultCorr", "NgTrkVsCent", "ZdcRateVsCent"};
   const char *trgSetupName[4] = {"prod","prod_low","prod_mid","prod_high"};
-  TFile *fdata = TFile::Open("output/Run14_AuAu200.jpsi.root", "read");
+  TFile *fdata = TFile::Open("output/Run14_AuAu200.Embed.Jpsi.root", "read");
   TH2F *h2Corr[4][4];
   for(int i=0; i<4; i++)
     {
@@ -255,7 +255,7 @@ void effVsCent(const int savePlot = 0)
 	      if(i==2)
 		{
 		  h2Corr[i][j]->SetTitle(";;NGlobTrks");
-		  h2Corr[i][j]->GetYaxis()->SetRangeUser(0, 4000);
+		  h2Corr[i][j]->GetYaxis()->SetRangeUser(0, 25000);
 		}
 	      if(i==3)
 		{
@@ -274,9 +274,10 @@ void effVsCent(const int savePlot = 0)
 	      pro->SetMarkerStyle(21);
 	      pro->Draw("sames");
 	    }
-      TPaveText *t1 = GetTitleText(Form("%s_%s",run_type,trgSetupName[j]),0.055);
-      t1->Draw();
+	  TPaveText *t1 = GetTitleText(Form("%s_%s",run_type,trgSetupName[j]),0.055);
+	  t1->Draw();
 	}
+      if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbTrkEff/Embed_%s.pdf",run_type,hName[i]));
     }
 
       
@@ -768,7 +769,7 @@ void efficiency(TString inName, const bool savePlot = 0, const bool saveHisto = 
 }
 
 //================================================
-void resolution(TString inName, const bool savePlot = 0, const bool saveHisto = 0)
+void resolution(TString inName, const bool savePlot = 1, const bool saveHisto = 0)
 {
   const int nCentBins       = 11; 
   const char* cent_Name[nCentBins]    = {"0-80","0-10","10-20","20-30","30-40","40-50","50-60","60-80","0-20","20-40","40-60"};
@@ -791,7 +792,11 @@ void resolution(TString inName, const bool savePlot = 0, const bool saveHisto = 
       TH2F *h2tmp = (TH2F*)hResVsTruePt[k]->Clone(Form("%s_clone",hResVsTruePt[k]->GetName()));
       if(k==7) h2tmp->RebinX(10);
       else    h2tmp->RebinX(5);
-      if(k==0) c = draw2D(h2tmp);
+      if(k==0) 
+	{
+	  c = draw2D(h2tmp,Form("%s: %s%%",run_type,cent_Name[k]));
+	  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbTrkEff/%spTrkResVsTruePt_cent%s.pdf",run_type,run_cfg_name.Data(),cent_Title[k]));
+	}
       hTrkPtRes[k] = (TH1F*)h2tmp->ProjectionX(Form("pTrkRes_%s",cent_Title[k]));
       hTrkPtRes[k]->Reset();
       hTrkPtShift[k] = (TH1F*)h2tmp->ProjectionX(Form("pTrkShift_%s",cent_Title[k]));
@@ -830,8 +835,7 @@ void resolution(TString inName, const bool savePlot = 0, const bool saveHisto = 
 
   TCanvas *c1 = new TCanvas("FitTrkPtRes","FitTrkPtRes",1300,700);
   c1->Divide(4,2);
-  TCanvas *c2 = new TCanvas("FitTrkPtRes2","FitTrkPtRes2",1100,700);
-  c2->Divide(3,2);
+  TCanvas *c2 = new TCanvas("FitTrkPtRes2","FitTrkPtRes2",800,600);
   TH1F *hFit = 0x0;
   for(int k=0; k<nCentBins; k++)
     {
@@ -847,10 +851,17 @@ void resolution(TString inName, const bool savePlot = 0, const bool saveHisto = 
       funcRes[k]->SetLineColor(2);
 
       if(k<8) c1->cd(k+1);
-      else    c2->cd(k-7);
       hFit->Draw("P");
       funcRes[k]->Draw("same");
       t1->Draw();
+
+      if(k==0)    
+	{
+	  c2->cd();
+	  hFit->Draw("P");
+	  funcRes[k]->Draw("same");
+	  t1->Draw();
+	}
     }
   c1->cd(1);
   leg = new TLegend(0.15,0.5,0.4,0.75);
@@ -864,6 +875,7 @@ void resolution(TString inName, const bool savePlot = 0, const bool saveHisto = 
   if(savePlot)
     {
       c1->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbTrkEff/%sFitTrkPtResVsPt_CentBins.pdf",run_type,run_cfg_name.Data()));
+      c2->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbTrkEff/%sFitTrkPtResVsPt_Cent0080.pdf",run_type,run_cfg_name.Data()));
     }
 
   TString legName_cent[7];
@@ -1138,7 +1150,7 @@ void TrkEff3D(TString inName, TString outPDFName, const bool savePlot = 1, const
 
 
   // in (phi,eta) bins
-  const int index = 1; // 1 - tpc; 2 - mtd; 3 - final
+  const int index = 3; // 1 - tpc; 2 - mtd; 3 - final
   const int neta = 8;
   const int nphi = 180;
   const int nCanvas = nphi*neta/15;

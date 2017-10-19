@@ -12,10 +12,10 @@ void ana_Lumi()
   gStyle->SetStatH(0.2);
 
   //makeHistoLumi();
-  //makeHistoData();
+  makeHistoData();
 
   //Lumi2013();
-  Lumi2014();
+  //Lumi2014();
   //Lumi2015();
   //pAuCent();
   //Nevents();
@@ -347,7 +347,7 @@ void Lumi2013(const int savePlot = 0, const int saveHisto = 0)
 }
 
 //================================================
-void Lumi2014(const int savePlot = 1, const int saveHisto = 1)
+void Lumi2014(const int savePlot = 1, const int saveHisto = 0)
 {
   TList *list = new TList;
   TString legName[3] = {"|vr_{TPC}| < 2 cm", "+|vz_{TPC}| < 100 cm", "+ |vz_{TPC}-vz_{VPD}| < 3 cm"};
@@ -394,6 +394,8 @@ void Lumi2014(const int savePlot = 1, const int saveHisto = 1)
       hMtdVtxEff->SetBinError(bin,err);
       if(y==0)
 	{
+	  // mainly due to tof not included in the run
+	  // consequently, vpd information is not read out
 	  printf("[w] 0 efficiency for run %d: %1.0f/%1.0f\n",bin+start_run-1,hEvtRunAcc->GetBinContent(bin),hEvtRun->GetBinContent(bin));
 	}
     }
@@ -431,10 +433,31 @@ void Lumi2014(const int savePlot = 1, const int saveHisto = 1)
     {
       hMbCent[i]->SetLineWidth(2);
       list->Add(hMbCent[i]);
+      if(i==1)
+	{
+	  for(int bin=1; bin<=hMbCent[i]->GetNbinsX()/2; bin++)
+	    {
+	      cout << "bin = " << bin << ": " << (hMbCent[i]->GetBinContent(bin)+hMbCent[i]->GetBinContent(bin+1)) << endl;
+	    }
+	}
     }
-  c = drawHistos(list,"MbCent","VPD-ZDC-novtx-mon: distribution of centrality bins;cent",true,0,17,true,0,1.2*hMbCent[1]->GetMaximum(),kFALSE,kTRUE,legName3,kTRUE,"",0.5,0.7,0.2,0.35,false);
+  c = drawHistos(list,"MbCent","VPD-ZDC-novtx-mon: distribution of centrality bins;cent",true,0,16,true,0,1.2*hMbCent[1]->GetMaximum(),kFALSE,kTRUE,legName3,kTRUE,"",0.5,0.7,0.2,0.35,false);
   if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/VpdZdcNoVtx_CentWeight.pdf",run_type));
   list->Clear();
+
+  TH1F *hMbCentLumi[4];
+  for(int i=0; i<4; i++)
+    {
+      hMbCentLumi[i] = (TH1F*)fMB->Get(Form("Cent_%s_w",setupName[i]));
+      //hMbCentLumi[i]->Rebin(2);
+      hMbCentLumi[i]->Scale(1./hMbCentLumi[i]->Integral(15,16)*2);
+      hMbCentLumi[i]->SetLineWidth(2);
+      list->Add(hMbCentLumi[i]);
+    }
+  c = drawHistos(list,"MbCentLumi","VPD-ZDC-novtx-mon: distribution of centrality bins;cent",true,0,16,kTRUE,0.5,1.2,kFALSE,kTRUE,legName2,kTRUE,"trgsetupname",0.3,0.5,0.16,0.36,false);
+  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/VpdZdcNoVtx_CentVsLumi.pdf",run_type));
+  list->Clear();
+  return;
 
   // Vertex distribution
   TH1F *hTpcVz[4];
@@ -611,6 +634,11 @@ void Lumi2014(const int savePlot = 1, const int saveHisto = 1)
   if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/VpdZdcNoVtx_VtxCutEffLumi.pdf",run_type));
 
   // rejection factor during production
+  const int nRuns = 19;
+  const int runIDs[nRuns] = {15081015, 15084002, 15090006, 15097059, 15102021, 
+			     15104018, 15104039, 15104059, 15107077, 15119021,
+			     15149073, 15151036, 15151037, 15151038, 15151039,
+			     15151040, 15151041, 15151042, 15162019};
   TFile *frf = TFile::Open("./output/Run14_AuAu200.RejectFactor.root","read");
   TH1F *hEvtAll = (TH1F*)frf->Get("hEvtAll");
   TH1F *hEvtAcc = (TH1F*)frf->Get("hEvtAcc");
@@ -635,6 +663,16 @@ void Lumi2014(const int savePlot = 1, const int saveHisto = 1)
 	{
 	  fruns >> runnumber;
 	  int bin = hRF->FindFixBin(runnumber);
+	  bool isGoodRun = true;
+	  for(int irun=0; irun<nRuns; irun++)
+	    {
+	      if(runnumber==runIDs[irun])
+		{
+		  isGoodRun = false;
+		  break;
+		}
+	    }
+	  if(!isGoodRun) continue;
 	  hRFLumi[i]->SetBinContent(bin,hRF->GetBinContent(bin));
 	  hRFLumi[i]->SetBinError(bin,hRF->GetBinError(bin));
 	}
@@ -702,6 +740,7 @@ void Lumi2014(const int savePlot = 1, const int saveHisto = 1)
 	}
     }
   printf("+++ %d runs (%4.2fM) are missing +++\n\n",nRF,nRFevts/1e6);
+  return;
   
   // get equivalent # of MB events
   /// Raw # of events
@@ -1231,11 +1270,11 @@ void makeHistoData(const int savePlot = 1, const int saveHisto = 1)
   const char *wName[2] = {"","_w"};
   const char *setupName[5] = {"all","prod","prod_low","prod_mid","prod_high"};
   const char *trgSetupName[4] = {"production","production_low","production_mid","production_high"};
-  const int nCentBins = 16;
-  const int centBins_low[nCentBins]  = {5,  13, 9,  5, 15, 11, 5,  13, 11, 9,  7, 5, 1,  1, 3, 1};
-  const int centBins_high[nCentBins] = {16, 16, 12, 8, 16, 14, 10, 14, 12, 10, 8, 6, 16, 4, 4, 2};
-  const char *cent_Name[nCentBins] = {"0-60","0-20","20-40","40-60","0-10","10-30","30-60","10-20","20-30","30-40","40-50","50-60","0-80","60-80","60-70","70-80"};
-  const char *cent_Title[nCentBins] = {"0060","0020","2040","4060","0010","1030","3060","1020","2030","3040","4050","5060","0080","6080","6070","7080"};
+  const int nCentBins = 17;
+  const int centBins_low[nCentBins]  = {5,  13, 9,  5, 15, 11, 5,  13, 11, 9,  7, 5, 1,  1, 3, 1, 1};
+  const int centBins_high[nCentBins] = {16, 16, 12, 8, 16, 14, 10, 14, 12, 10, 8, 6, 16, 4, 4, 2, 1};
+  const char *cent_Name[nCentBins] = {"0-60","0-20","20-40","40-60","0-10","10-30","30-60","10-20","20-30","30-40","40-50","50-60","0-80","60-80","60-70","70-80","75-80"};
+  const char *cent_Title[nCentBins] = {"0060","0020","2040","4060","0010","1030","3060","1020","2030","3040","4050","5060","0080","6080","6070","7080","7580"};
   TH1F *hNEvents[5][2];
   TH1F *hTpcVz[5][nCentBins];
   TH1F *hDiffVz[5][nCentBins];
