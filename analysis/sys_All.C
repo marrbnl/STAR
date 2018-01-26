@@ -22,7 +22,7 @@ void sys_All()
 
 
 //================================================
-void mergeSystematics(int savePlot = 1, int saveHisto = 1)
+void mergeSystematics(int savePlot = 0, int saveHisto = 0)
 {
   TFile *fout = 0x0;
   if(saveHisto) fout = TFile::Open(Form("Rootfiles/%s.Sys.JpsiXsec.root",run_type),"update");
@@ -80,13 +80,15 @@ void mergeSystematics(int savePlot = 1, int saveHisto = 1)
     {
       hJpsiSysVsPt[0][s]->SetLineColor(color[s]);
       hJpsiSysVsPt[0][s]->SetLineWidth(2);
-      hJpsiSysVsPt[0][s]->GetYaxis()->SetRangeUser(0,0.25);
+      hJpsiSysVsPt[0][s]->GetYaxis()->SetRangeUser(0,0.3);
       hJpsiSysVsPt[0][s]->SetTitle(";p_{T} (GeV/c)");
       if(s>0) hJpsiSysVsPt[0][s]->SetLineStyle(2);
       else    hJpsiSysVsPt[0][s]->SetLineStyle(1);
       if(s==0) hJpsiSysVsPt[0][s]->DrawCopy();
       else     hJpsiSysVsPt[0][s]->DrawCopy("sames");
       leg1[s/3]->AddEntry(hJpsiSysVsPt[0][s],legName[s],"L");
+      printf("[i] %s: sys = %2.2f for pT = %2.1f\n",legName[s].Data(),hJpsiSysVsPt[0][s]->GetBinContent(1)*100,hJpsiSysVsPt[0][s]->GetBinCenter(1));
+      printf("[i] %s: sys = %2.2f for pT = %2.1f\n",legName[s].Data(),hJpsiSysVsPt[0][s]->GetBinContent(6)*100,hJpsiSysVsPt[0][s]->GetBinCenter(6));
     }
   TPaveText *t1 = GetTitleText(Form("%s: systematic uncertainty of J/psi vs. p_{T} (%s%%)",run_type,cent_Name_pt[0]),0.04);
   t1->Draw();
@@ -95,6 +97,10 @@ void mergeSystematics(int savePlot = 1, int saveHisto = 1)
       leg1[i]->Draw();
     }
   if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiXsec/JpsiSysVsPt_0080.pdf",run_type));
+  if(gSaveAN)
+    {
+      c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch5_TotSysVsPt_cent0080.pdf"));
+    }
 
   // Systematics vs. cent
   for(int i=0; i<nPtBins_npart; i++)
@@ -104,7 +110,7 @@ void mergeSystematics(int savePlot = 1, int saveHisto = 1)
 	{
 	  hJpsiSysVsCent[i][s]->SetLineColor(color[s]);
 	  hJpsiSysVsCent[i][s]->SetLineWidth(2);
-	  hJpsiSysVsCent[i][s]->GetYaxis()->SetRangeUser(0,0.25);
+	  hJpsiSysVsCent[i][s]->GetYaxis()->SetRangeUser(0,0.4);
 	  hJpsiSysVsCent[i][s]->GetXaxis()->SetLabelSize(0.05);
 	  if(s>0) hJpsiSysVsCent[i][s]->SetLineStyle(2);
 	  else    hJpsiSysVsCent[i][s]->SetLineStyle(1);
@@ -118,12 +124,16 @@ void mergeSystematics(int savePlot = 1, int saveHisto = 1)
 	  leg1[j]->Draw();
 	}
       if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiXsec/JpsiSysVsCent_Pt%s.pdf",run_type,pt_Name_npart[i]));
+      if(gSaveAN)
+	{
+	  c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch5_TotSysVsCent_Pt%1.0f.pdf",ptBins_low_npart[i]));
+	}
     }
 
 
   // systematics vs. pt for different centrality
   c = new TCanvas("SysVsPt_centComp","SysVsPt_centComp",800,600);
-  TLegend *leg = new TLegend(0.3, 0.6, 0.5, 0.85);
+  TLegend *leg = new TLegend(0.5, 0.6, 0.7, 0.85);
   leg->SetBorderSize(0);
   leg->SetFillColor(0);
   leg->SetTextSize(0.035);
@@ -131,9 +141,15 @@ void mergeSystematics(int savePlot = 1, int saveHisto = 1)
     {
       hJpsiSysVsPt[i][0]->SetLineColor(color[i]);
       hJpsiSysVsPt[i][0]->SetLineWidth(2);
-      hJpsiSysVsPt[i][0]->GetYaxis()->SetRangeUser(0.1,0.2);
+      hJpsiSysVsPt[i][0]->GetYaxis()->SetRangeUser(0,0.4);
       hJpsiSysVsPt[i][0]->SetTitle(";p_{T} (GeV/c)");
       hJpsiSysVsPt[i][0]->SetLineStyle(1);
+      if(i==2 || i==3) hJpsiSysVsPt[i][0]->SetBinContent(9, 0);
+      if(i==4)
+	{
+	  for(int bin=7; bin<=9; bin++)
+	    hJpsiSysVsPt[i][0]->SetBinContent(bin, 0);
+	}
       if(i==0) hJpsiSysVsPt[i][0]->DrawCopy();
       else     hJpsiSysVsPt[i][0]->DrawCopy("sames");
       leg->AddEntry(hJpsiSysVsPt[i][0],Form("%s%%",cent_Name_pt[i]),"L");
@@ -142,6 +158,10 @@ void mergeSystematics(int savePlot = 1, int saveHisto = 1)
   t1->Draw();
   leg->Draw();
   if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiXsec/JpsiSysVsPt_CompCent.pdf",run_type));
+  if(gSaveAN)
+    {
+      c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch5_TotSysVsPt_CompCent.pdf"));
+    }
 
   if(saveHisto)
     {

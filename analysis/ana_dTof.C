@@ -17,31 +17,65 @@ void ana_Dtof()
 }
 
 //================================================
-void TagAndProbe(const int savePlot = 1, const int saveHisto = 1)
+void TagAndProbe(const int savePlot = 1, const int saveHisto = 0)
 {
   // const int year = 2014;
   // const char* run_type = "Run14_AuAu200";
   // const double dtofCut = 0.75;
 
   const int year = 2015;
-  const char* run_type = "Run15_pp200";
+  const char* run_type = "Run15_pAu200";
   const double dtofCut = 1;
 
   const int nbins = 6;
   const double xbins[nbins+1] = {1.3,1.5,2.0,2.5,3.0,5.0,10.0};
 
   if(year==2014) f = TFile::Open("Output/Run14_AuAu200.jpsi.root","read");
-  else           f = TFile::Open(Form("Output/%s.TagAndProbe.root",run_type),"read");
+  if(year==2015) f = TFile::Open(Form("Output/%s.jpsi.root",run_type),"read");
   THnSparseF *hnDtof = (THnSparseF*)f->Get("mhTaP_dtof_di_mu");
-  hnDtof->GetAxis(3)->SetRange(1,1);
+  THnSparseF *hnDtofAcc = NULL;
+  if(year==2015) 
+    {
+      hnDtofAcc = (THnSparseF*)f->Get("mhTaP_dtof_Acc_di_mu");
+    }
 
+  // unlike-sign distribution
+  hnDtof->GetAxis(3)->SetRange(1,1);
+  if(hnDtofAcc) hnDtofAcc->GetAxis(3)->SetRange(1,1);
   TH2F *hInvMassVsPt[2];
   hInvMassVsPt[0] = (TH2F*)hnDtof->Projection(0,1);
   hInvMassVsPt[0]->SetName("mhTaP_dtof_di_mu_All");
-  if(year==2014) hnDtof->GetAxis(2)->SetRangeUser(-100, dtofCut-1e-4);
-  if(year==2015) hnDtof->GetAxis(2)->SetRangeUser(-1*dtofCut+1e-4, dtofCut-1e-4);
-  hInvMassVsPt[1] = (TH2F*)hnDtof->Projection(0,1);
+  if(year==2014) 
+    {
+      hnDtof->GetAxis(2)->SetRangeUser(-100, dtofCut-1e-4);
+      hInvMassVsPt[1] = (TH2F*)hnDtof->Projection(0,1);
+    }
+  if(year==2015) 
+    {
+      hnDtofAcc->GetAxis(2)->SetRangeUser(-1*dtofCut+1e-4, dtofCut-1e-4);
+      hInvMassVsPt[1] = (TH2F*)hnDtofAcc->Projection(0,1);
+    }
   hInvMassVsPt[1]->SetName("mhTaP_dtof_di_mu_Acc");
+
+  // like-sign distribution
+  hnDtof->GetAxis(3)->SetRange(2,2);
+  if(hnDtofAcc) hnDtofAcc->GetAxis(3)->SetRange(2,2);
+  TH2F *hInvMassVsPtLS[2];
+  hInvMassVsPtLS[0] = (TH2F*)hnDtof->Projection(0,1);
+  hInvMassVsPtLS[0]->SetName("mhTaP_dtof_di_mu_All_LS");
+  if(year==2014) 
+    {
+      hnDtof->GetAxis(2)->SetRangeUser(-100, dtofCut-1e-4);
+      hInvMassVsPtLS[1] = (TH2F*)hnDtof->Projection(0,1);
+    }
+  if(year==2015) 
+    {
+      hnDtofAcc->GetAxis(2)->SetRangeUser(-1*dtofCut+1e-4, dtofCut-1e-4);
+      hInvMassVsPtLS[1] = (TH2F*)hnDtofAcc->Projection(0,1);
+    }
+  hInvMassVsPtLS[1]->SetName("mhTaP_dtof_di_mu_Acc_LS");
+  hnDtof->GetAxis(3)->SetRange(0,-1);
+  if(hnDtofAcc) hnDtofAcc->GetAxis(3)->SetRange(0,-1);
 
   // Get the mean pT
   TH1F *hMeanPt = new TH1F("hMeanPt", "Mean p_{T} of muons", nbins, 0, nbins);
@@ -57,7 +91,8 @@ void TagAndProbe(const int savePlot = 1, const int saveHisto = 1)
   // Fit to invariant mass
   //==============================================
   TString hTitle[2] = {"All", Form("#Deltatof<%2.2fns",dtofCut)};
-  if(year==2015) hTitle[1] = Form("|#Deltatof|<%2.0fns",dtofCut);
+  //if(year==2015) hTitle[1] = Form("|#Deltatof|<%2.0fns",dtofCut);
+  if(year==2015) hTitle[1] = Form("Muon PID cuts");
   const TString hName[2] = {"All","Acc"};
   TH1F *hInvMass[2][nbins];
   TF1 *funcInvMass[2][nbins];
@@ -75,44 +110,52 @@ void TagAndProbe(const int savePlot = 1, const int saveHisto = 1)
 	  hInvMass[i][j] = (TH1F*)hInvMassVsPt[i]->ProjectionY(Form("hInvMass_bin%d_%d",j+1,i),low_bin, up_bin);
 	  hInvMass[i][j]->SetTitle("");
 	  hInvMass[i][j]->Sumw2();
-	  if(j<3) hInvMass[i][j]->Rebin(2);
-	  else    hInvMass[i][j]->Rebin(5);
-	  funcInvMass[i][j] = new TF1(Form("func_%s",hInvMass[i][j]->GetName()),"gausn(0)+pol3(3)",2.5,3.6);
-	  funcInvMass[i][j]->SetParameter(0, 100);
-	  funcInvMass[i][j]->FixParameter(1, 3.096);
-	  funcInvMass[i][j]->SetParameter(2, 0.5);
-	  if(j==0) 
-	    {
-	      funcInvMass[i][j]->SetParLimits(2, 0, 0.05);
-	    }
-	  if(j==2) 
-	    {
-	      funcInvMass[i][j]->SetParameter(0, 100);
-	      funcInvMass[i][j]->SetParameter(2, 0.05);
-	    }
+	  TH1F *hLS = (TH1F*)hInvMassVsPtLS[i]->ProjectionY(Form("hInvMass_bin%d_%d_UL",j+1,i),low_bin, up_bin);
+	  hLS->Sumw2();
+	  hInvMass[i][j]->Add(hLS, -1);
 
 	  if(year==2014)
 	    {
+	      if(j<3) hInvMass[i][j]->Rebin(2);
+	      else    hInvMass[i][j]->Rebin(5);
+	    }
+	  if(year==2015)
+	    {
+	      if(j<3) hInvMass[i][j]->Rebin(3);
+	      else if(j<5)  hInvMass[i][j]->Rebin(5);
+	      else hInvMass[i][j]->Rebin(10);
+	    }
+
+	  if(year==2014) 
+	    {
+	      funcInvMass[i][j] = new TF1(Form("func_%s",hInvMass[i][j]->GetName()),"gausn(0)+pol3(3)",2.6,3.8);
 	      if(j==0) funcInvMass[i][j]->SetRange(2.85, 3.4);
 	      if(j==2) funcInvMass[i][j]->SetRange(2.5, 3.3);
 	    }
-
+	  if(year==2015) funcInvMass[i][j] = new TF1(Form("func_%s",hInvMass[i][j]->GetName()),"gausn(0)+pol1(3)",2.5,4.0);
+	  funcInvMass[i][j]->SetParameter(0, hInvMass[i][j]->GetMaximum());
+	  funcInvMass[i][j]->SetParameter(1, 3.096);
+	  funcInvMass[i][j]->SetParameter(2, 0.1);
 	  if(i==1)
 	    {
 	      funcInvMass[i][j]->SetParameters(funcInvMass[0][j]->GetParameters());
-	      funcInvMass[i][j]->FixParameter(2, funcInvMass[0][j]->GetParameter(2));
+	      funcInvMass[i][j]->SetParameter(1, funcInvMass[0][j]->GetParameter(1));
+	      funcInvMass[i][j]->SetParameter(2, funcInvMass[0][j]->GetParameter(2));
 	    }
 
-	  if(j<2) hInvMass[i][j]->GetXaxis()->SetRangeUser(2.8, 3.5);
+	  hInvMass[i][j]->GetXaxis()->SetRangeUser(2.5, 4.0);
 	  hInvMass[i][j]->Fit(funcInvMass[i][j], "IR0S");
 	  c->cd(j+1);
+	  hInvMass[i][j]->SetMaximum(1.5*hInvMass[i][j]->GetMaximum());
 	  hInvMass[i][j]->SetMarkerStyle(24);
 	  hInvMass[i][j]->Draw();
 	  funcInvMass[i][j]->SetLineStyle(2);
 	  funcInvMass[i][j]->SetLineColor(2);
 	  funcInvMass[i][j]->GetRange(xmin, xmax);
-	  TF1 *tmpBkg = new TF1(Form("TmpBkg_%d_%d",i,j), "pol3", xmin, xmax);
-	  for(int ipar=0; ipar<4; ipar++)
+	  TF1 *tmpBkg = NULL;
+	  if(year==2014) tmpBkg = new TF1(Form("TmpBkg_%d_%d",i,j), "pol3", xmin, xmax);
+	  if(year==2015) tmpBkg = new TF1(Form("TmpBkg_%d_%d",i,j), "pol1", xmin, xmax);
+	  for(int ipar=0; ipar<tmpBkg->GetNpar(); ipar++)
 	    {
 	      tmpBkg->SetParameter(ipar, funcInvMass[i][j]->GetParameter(ipar+3));
 	    }
@@ -127,7 +170,9 @@ void TagAndProbe(const int savePlot = 1, const int saveHisto = 1)
 	  hJpsiCounts[i]->SetBinError(j+1, fabs(funcInvMass[i][j]->GetParError(0))/bin_width);
 	}
       if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Dtof/TagAndProbe_FitInvMass_%s.pdf",run_type,hName[i].Data()));
+      if(gSaveAN)  c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_DtofEff_FitInvMass_%s.pdf",hName[i].Data()));
     }
+
   TList *list = new TList;
   for(int i=0; i<2; i++)
     {
@@ -135,6 +180,7 @@ void TagAndProbe(const int savePlot = 1, const int saveHisto = 1)
     }
   TCanvas *c = drawHistos(list,"JpsiCounts",Form("%s: # of Jpsi vs. muon p_{T};p_{T}^{#mu} (GeV/c);counts",run_type),kFALSE,0,30,kFALSE,0.5,1.1,kTRUE,kTRUE,hTitle,kTRUE,"",0.5,0.7,0.6,0.85,true);
   if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Dtof/TagAndProbe_JpsiCounts.pdf",run_type));
+  if(gSaveAN)  c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_DtofEff_JpsiCounts.pdf"));
 
   //==============================================
   // extract efficiency
@@ -144,9 +190,9 @@ void TagAndProbe(const int savePlot = 1, const int saveHisto = 1)
     {
       hJpsiCountsClone[i] = (TH1F*)hJpsiCounts[i]->Clone(Form("%s_clone",hJpsiCounts[i]->GetName()));
     }
-  for(int bin=1; bin<nbins; bin++)
+  for(int bin=1; bin<=nbins; bin++)
     {
-      if(hJpsiCountsClone[1]->GetBinContent(bin)>hJpsiCountsClone[0]->GetBinContent(bin))
+      if(hJpsiCountsClone[1]->GetBinContent(bin)>=hJpsiCountsClone[0]->GetBinContent(bin))
 	{
 	  hJpsiCountsClone[1]->SetBinContent(bin, hJpsiCountsClone[0]->GetBinContent(bin));
 	}
@@ -181,7 +227,11 @@ void TagAndProbe(const int savePlot = 1, const int saveHisto = 1)
     }
   TGraphErrors *gfit = (TGraphErrors*)gDtofEff->Clone(Form("Fit_%s",gDtofEff->GetName()));
   TF1 *funcDtofEff = new TF1(Form("%s_FitFunc",gDtofEff->GetName()),"[0]-exp(-1*[1]*(x-[2]))",1.2,7);
-  if(year==2015) funcDtofEff->SetParameter(0, 0.985);
+  if(year==2015) 
+    {
+      funcDtofEff->SetParameter(0, 0.985);
+      //funcDtofEff->FixParameter(1, 0);
+    }
   gfit->Fit(funcDtofEff,"R0");
   funcDtofEff->SetLineColor(2);
   funcDtofEff->SetLineStyle(2);
@@ -238,7 +288,7 @@ void TagAndProbe(const int savePlot = 1, const int saveHisto = 1)
   for(int j = 0; j < nexpr; j++)
     {
       TF1 *funcTmp = new TF1(Form("FitFunc_%s",gEffRndm[j]->GetName()),"[0]-exp(-1*[1]*(x-[2]))",1.2,7);
-      funcTmp->SetParameters(funcDtofEff->GetParameters());
+      if(year==2014)funcTmp->SetParameters(funcDtofEff->GetParameters());
       gEffRndm[j]->Fit(funcTmp,"R0Q");
       c->cd();
       funcTmp->SetLineStyle(2);
@@ -296,6 +346,7 @@ void TagAndProbe(const int savePlot = 1, const int saveHisto = 1)
   t1->AddText(run_type);
   t1->Draw();
   if(savePlot) cFit->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Dtof/TagAndProbe_DtofEff%2.2f_RndmFit.pdf",run_type,dtofCut));
+  if(gSaveAN)  cFit->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_DtofEff_RndmFit.pdf"));
   c->cd();
   leg->Draw();
   if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Dtof/TagAndProbe_DtofEff%2.2f_RndmCurve.pdf",run_type,dtofCut));
@@ -319,6 +370,7 @@ void TagAndProbe(const int savePlot = 1, const int saveHisto = 1)
   leg->AddEntry(gLimits[2],"Upper limit","PL");
   leg->Draw();
   if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Dtof/TagAndProbe_DtofEff%2.2f_RndmLimits.pdf",run_type,dtofCut));
+  if(gSaveAN)  c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_DtofEff_RndmLimits.pdf"));
 
   //==============================================
   // Final efficiency
@@ -331,15 +383,17 @@ void TagAndProbe(const int savePlot = 1, const int saveHisto = 1)
     }
   if(year==2015)
     {
-      hplot->GetYaxis()->SetRangeUser(0.8, 1.05);
-      c = draw1D(hplot,Form("%s: efficiency for |#Deltatof| < %2.0f ns cut",run_type,dtofCut));
+      hplot->GetYaxis()->SetRangeUser(0.5, 1.1);
+      //c = draw1D(hplot,Form("%s: efficiency for |#Deltatof| < %2.0f ns cut",run_type,dtofCut));
+      c = draw1D(hplot,Form("%s: efficiency for muon PID cuts",run_type));
     }
   gPad->SetGrid(0,1);
   gDtofEff->SetMarkerStyle(21);
   gDtofEff->SetMarkerSize(1.5);
   gDtofEff->Draw("samesPEZ");
   if(year==2014) funcDtofEff->Draw("sames");
-  if(year==2015) funcLimits[0]->Draw("sames");
+  //if(year==2015) funcLimits[0]->Draw("sames");
+  if(year==2015) funcDtofEff->Draw("sames");
   TLegend *leg = new TLegend(0.2,0.3,0.35,0.45);
   leg->SetBorderSize(0);
   leg->SetFillColor(0);
@@ -347,7 +401,8 @@ void TagAndProbe(const int savePlot = 1, const int saveHisto = 1)
   leg->SetHeader("Tag-and-probe");
   leg->AddEntry(gDtofEff,"Data","p");
   if(year==2014) leg->AddEntry(funcDtofEff,"Fit to data","L");
-  if(year==2015) leg->AddEntry(funcLimits[0],"Mean of randomization","L");
+  if(year==2015) leg->AddEntry(funcDtofEff,"Fit to data","L");
+  //if(year==2015) leg->AddEntry(funcLimits[0],"Mean of randomization","L");
   leg->Draw();
   if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Dtof/TagAndProbe_DtofEff%2.2f.pdf",run_type,dtofCut));
   funcLimits[1]->DrawCopy("sames");
@@ -360,12 +415,13 @@ void TagAndProbe(const int savePlot = 1, const int saveHisto = 1)
   leg2->AddEntry(funcLimits[1],"Systematic uncertainty","L");
   leg2->Draw();
   if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Dtof/TagAndProbe_DtofEff%2.2f_WithSys.pdf",run_type,dtofCut));
+  if(gSaveAN)  c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_DtofEffWithSys.pdf"));
 
   //==============================================
   // Compare with Jpsi muon method
   //==============================================
   TFile *fout = 0x0;
-  if(year==2014)
+  if(year==0)
     {
       if(saveHisto) fout = TFile::Open(Form("Rootfiles/%s.DtofEff.root",run_type),"update");
       else          fout = TFile::Open(Form("Rootfiles/%s.DtofEff.root",run_type),"read");

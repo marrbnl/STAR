@@ -20,7 +20,7 @@
 #include <cmath>
 using namespace std;
 
-#define YEAR 2015
+#define YEAR 2013
 
 #if (YEAR==2013)
 char *run_type = "Run13_pp500";
@@ -114,8 +114,8 @@ void makeHisto(const int savePlot, const int saveHisto)
 
       if(year==2013)
 	{
-	  nPtBins = 6;
-	  double xbins_tmp[7] = {0,1,2,3,4,6,8};
+	  nPtBins = 5;
+	  double xbins_tmp[6] = {0,1.5,3,5,7,9};
 	  std::copy(std::begin(xbins_tmp), std::end(xbins_tmp), std::begin(xPtBins));
 	}
       else if(year==2014)
@@ -214,7 +214,7 @@ void makeHisto(const int savePlot, const int saveHisto)
     {
       int backleg = i/5 + 1;
       int module = i%5 + 1;
-      TF1 *func  = (TF1*)fRespEff->Get(Form("fSclPtTmpBkl%d_Mod%d",i/5,i%5));
+      TF1 *func  = (TF1*)fRespEff->Get(Form("fSclPtMtdEffBkl%d_Mod%d",i/5,i%5));
       TF1 *func1 = (TF1*)fRespEff->Get(Form("fPtMtdEffBkl%d_Mod%d",i/5,i%5));
       hRespEff[i] = new TH1F(Form("MtdRespEffvsPt_Bkl%d_Mod%d",backleg,module),Form("MtdRespEffvsPt_Bkl%d_Mod%d",backleg,module),1000,0,20);
       for(int bin=1; bin<=hRespEff[i]->GetNbinsX(); bin++)
@@ -228,7 +228,7 @@ void makeHisto(const int savePlot, const int saveHisto)
 	    }
 	  else
 	    {		      
-	      if(i/5>=9 && i/5<=21) 
+	      if(backleg>9 && backleg<23) 
 		{
 		  hRespEff[i]->SetBinContent(bin,func1->Eval(x));
 		  funcRespEff[i] = (TF1*)func1->Clone(Form("funcMtdRespEffvsPt_Bkl%d_Mod%d",backleg,module));
@@ -246,7 +246,6 @@ void makeHisto(const int savePlot, const int saveHisto)
   if(mode==0)
     {
       toyMC(jpsiMass, 1e7, 0, 0, pt1_cut, pt2_cut, hMcJpsiPt, hRespEff, hInputJpsiPt, hMtdJpsiPt, hAccJpsiPt, hMuonMap, hMuonMapTriggered);
-      
       hInputJpsiPt->SetMarkerStyle(20);
       TCanvas *c = new TCanvas("Input_Jpsi","Input_Jpsi",1100,700);
       c->Divide(2,2);
@@ -315,8 +314,32 @@ void makeHisto(const int savePlot, const int saveHisto)
       TH1F *hSclFacErr[150];
       for(int i=0; i<150; i++)
 	{
-	  hSclFacErr[i] = (TH1F*)fRespEff->Get(Form("MtdRespEffCosmic_BL%d_Mod%d",i/5+1, i%5+1));
+	  int bl = i/5+1;
+	  hSclFacErr[i] = (TH1F*)hRespEff[i]->Clone(Form("hSclFacErr_BL%d_Mod%d",i/5+1, i%5+1));
+	  if(bl>9 && bl<23) 
+	    {
+	      TH1F *hFitError = (TH1F*)fRespEff->Get(Form("MtdRespEffCosmic_BL%d_Mod%d",i/5+1, i%5+1));
+	      for(int bin=1; bin<=hSclFacErr[i]->GetNbinsX(); bin++)
+		{
+		  double x = hSclFacErr[i]->GetBinCenter(bin);
+		  double jbin = hFitError->FindFixBin(x);
+		  double scale = hFitError->GetBinError(jbin)/hFitError->GetBinContent(jbin)*2;
+		  //if(year==2013) scale *= 0.5;
+		  hSclFacErr[i]->SetBinError(bin, hSclFacErr[i]->GetBinContent(bin)*scale);
+		}
+	    }
+	  else
+	    {
+	      TF1 *funcFitError = (TF1*)fRespEff->Get(Form("fHighPtBkl%d_Mod%d",bl-1,i%5));
+	      for(int bin=1; bin<=hSclFacErr[i]->GetNbinsX(); bin++)
+		{
+		  double scale = funcFitError->GetParError(0)/funcFitError->GetParameter(0)*2;
+		  //if(year==2013) scale *= 0.5;
+		  hSclFacErr[i]->SetBinError(bin, hSclFacErr[i]->GetBinContent(bin)*scale);
+		}
+	    }
 	}
+
       const int nIter = 50;
       TH1F *hSysInputJpsi[nIter];
       TH1F *hSysMtdJpsiPt[nIter];
@@ -327,6 +350,7 @@ void makeHisto(const int savePlot, const int saveHisto)
       TCanvas *c = 0x0;
       for(int ih = 0; ih<nIter; ih++)
 	{
+	  printf("[i] Iteration %d\n",ih+1);
 	  hSysInputJpsi[ih] = new TH1F(Form("%s_hSysInput_%d",part_name,ih),Form("p_{T} distribution of input %s;p_{T} (GeV/c)",part_title),nPtBins,xPtBins);
 	  hSysMtdJpsiPt[ih] = new TH1F(Form("%s_hSysMtdPt_%d",part_name,ih),Form("p_{T} distribution of %s in MTD;p_{T} (GeV/c)",part_title),nPtBins,xPtBins);
 	  hSysAccJpsiPt[ih] = new TH1F(Form("%s_hSysAccPt_%d",part_name,ih),Form("p_{T} distribution of triggered %s;p_{T} (GeV/c)",part_title),nPtBins,xPtBins);
@@ -346,7 +370,7 @@ void makeHisto(const int savePlot, const int saveHisto)
 		  hRespEffTmp[i]->SetBinContent(bin, eff_new);
 		}
 	    }
-	  toyMC(jpsiMass, 4e7, 0, 1, pt1_cut, pt2_cut, hMcJpsiPt, hRespEffTmp, hSysInputJpsi[ih], hSysMtdJpsiPt[ih], hSysAccJpsiPt[ih]);
+	  toyMC(jpsiMass, 1e7, 0, 1, pt1_cut, pt2_cut, hMcJpsiPt, hRespEffTmp, hSysInputJpsi[ih], hSysMtdJpsiPt[ih], hSysAccJpsiPt[ih]);
 	  hSysJpsiPtEff[ih] = (TH1F*)hSysAccJpsiPt[ih]->Clone(Form("%s_hSysPtEff_%d",part_name,ih));
 	  hSysJpsiPtEff[ih]->Divide(hSysMtdJpsiPt[ih]);
 	  hSysJpsiPtEff[ih]->SetMarkerStyle(20);
@@ -392,40 +416,49 @@ void makeHisto(const int savePlot, const int saveHisto)
       myRandom->SetSeed(0);
 
       // average the difference for bottom backleg
-      TH1F *hRatio = new TH1F("hRatio","",1000,0,20);
-      TH1F *hRatioMod[150];
-      int nBins = hRatio->GetNbinsX();
-      int nMods = 0;
-      for(int i=0; i<150; i++)
+      TH1F *hRatio = NULL;
+      if(year==2013)
 	{
-	  int bl = i/5 + 1;
-	  int mod = i%5 +1;
-	  hRatioMod[i] = new TH1F(Form("hRatio_%d",i),"",1000,0,20);
-	  if(bl<=9 || bl>=23) continue;
-	  if(!isInMtd(bl,mod,0)) continue;
-	  nMods ++;
-	  TF1 *func1 = (TF1*)fRespEff->Get(Form("fPtMtdEffBkl%d_Mod%d",i/5,i%5));
-	  TF1 *func2 = (TF1*)fRespEff->Get(Form("fSclPtTmpBkl%d_Mod%d",i/5,i%5));
-	  for(int bin=1; bin<=hRatioMod[i]->GetNbinsX(); bin++)
-	    {
-	      double x = hRatioMod[i]->GetBinCenter(bin);
-	      double ratio = 1;
-	      if(x>1) ratio = fabs(1-func1->Eval(x)/func2->Eval(x))+1;
-	      hRatioMod[i]->SetBinContent(bin,ratio);
-	      hRatioMod[i]->SetBinError(bin,1e-10);
-	    }
+	  TFile *f2014 = TFile::Open("Rootfiles/Run14_AuAu200.Sys.MtdRespEff.root","read");
+	  hRatio = (TH1F*)f2014->Get("DifferenceToTemplate_BottomBL");
 	}
-      printf("[i] %d modules are used for average\n",nMods);
-      for(int bin=1; bin<=hRatio->GetNbinsX(); bin++)
+      else
 	{
-	  double value = 0;
+	  hRatio = new TH1F("hRatio","",1000,0,20);
+	  TH1F *hRatioMod[150];
+	  int nBins = hRatio->GetNbinsX();
+	  int nMods = 0;
 	  for(int i=0; i<150; i++)
 	    {
-	      if(hRatioMod[i]->GetEntries()<1) continue;
-	      value += hRatioMod[i]->GetBinContent(bin);
+	      int bl = i/5 + 1;
+	      int mod = i%5 +1;
+	      hRatioMod[i] = new TH1F(Form("hRatio_%d",i),"",1000,0,20);
+	      if(bl<=9 || bl>=23) continue;
+	      if(!isInMtd(bl,mod,0)) continue;
+	      nMods ++;
+	      TF1 *func1 = (TF1*)fRespEff->Get(Form("fPtMtdEffBkl%d_Mod%d",i/5,i%5));
+	      TF1 *func2 = (TF1*)fRespEff->Get(Form("fSclPtMtdEffBkl%d_Mod%d",i/5,i%5));
+	      for(int bin=1; bin<=hRatioMod[i]->GetNbinsX(); bin++)
+		{
+		  double x = hRatioMod[i]->GetBinCenter(bin);
+		  double ratio = 1;
+		  if(x>1) ratio = fabs(1-func1->Eval(x)/func2->Eval(x))+1;
+		  hRatioMod[i]->SetBinContent(bin,ratio);
+		  hRatioMod[i]->SetBinError(bin,1e-10);
+		}
 	    }
-	  hRatio->SetBinContent(bin,value/nMods);
-	  hRatio->SetBinError(bin,1e-10);
+	  printf("[i] %d modules are used for average\n",nMods);
+	  for(int bin=1; bin<=hRatio->GetNbinsX(); bin++)
+	    {
+	      double value = 0;
+	      for(int i=0; i<150; i++)
+		{
+		  if(hRatioMod[i]->GetEntries()<1) continue;
+		  value += hRatioMod[i]->GetBinContent(bin);
+		}
+	      hRatio->SetBinContent(bin,value/nMods);
+	      hRatio->SetBinError(bin,1e-10);
+	    }
 	}
       hRatio->SetMarkerStyle(25);
       hRatio->SetLineStyle(2);
@@ -433,6 +466,7 @@ void makeHisto(const int savePlot, const int saveHisto)
       hRatio->GetYaxis()->SetRangeUser(0.9,1.1);
       TCanvas *c1 = draw1D(hRatio,"Average difference to Template for bottom backlegs;p_{T} (GeV/c);Cosmic/Template");
       if(savePlot) c1->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/RatioToTemplate_BottomBL.pdf",run_type));
+
 
       const int nIter = 2;
       TH1F *hSysInputJpsi[nIter];
@@ -452,7 +486,7 @@ void makeHisto(const int savePlot, const int saveHisto)
 	    {
 	      hRespEffTmp[i] = new TH1F(Form("hRespEffTmp_%d_%d",i,ih),"",1000,0,20);
 	      TF1 *func1 = (TF1*)fRespEff->Get(Form("fPtMtdEffBkl%d_Mod%d",i/5,i%5));
-	      TF1 *func2 = (TF1*)fRespEff->Get(Form("fSclPtTmpBkl%d_Mod%d",i/5,i%5));
+	      TF1 *func2 = (TF1*)fRespEff->Get(Form("fSclPtMtdEffBkl%d_Mod%d",i/5,i%5));
 	      for(int bin=1; bin<=hRespEffTmp[i]->GetNbinsX(); bin++)
 		{
 		  double x = hRespEffTmp[i]->GetBinCenter(bin);
@@ -508,6 +542,7 @@ void makeHisto(const int savePlot, const int saveHisto)
       if(saveHisto)
 	{
 	  TFile *fout = TFile::Open(Form("Rootfiles/%s.Sys.MtdRespEff.root",run_type),"update");
+	  hRatio->Write("DifferenceToTemplate_BottomBL",TObject::kOverwrite);
 	  for(int i=0; i<nPtBins+2; i++)
 	    {
 	      hJpsiEffPtBin[i]->Write("",TObject::kOverwrite);

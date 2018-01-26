@@ -15,7 +15,73 @@ void ana_VtxEff()
   TString cut_name = run_config;
   f = TFile::Open(Form("./output/Run14.AuAu200.MB.VtxEff.root"),"read");
 
-  anaDiffVzEff();
+  //anaDiffVzEff();
+  VpdQa();
+}
+
+//================================================
+void VpdQa(int savePlot = 0)
+{
+  TFile *fdata = TFile::Open("output/Run14_AuAu200.MB.VtxEff.prod_high.root","read");
+  THnSparseF *mhVpdBbqMxq = (THnSparseF*)fdata->Get("mhVpdBbqMxq_mb");
+  TH2F *hBbqVsMxq[9];
+  TCanvas *c1 = new TCanvas("mhVpdBbqMxq", "mhVpdBbqMxq", 1100, 700);
+  c1->Divide(3,3);
+  for(int k=0; k<9; k++)
+    {
+      mhVpdBbqMxq->GetAxis(2)->SetRange(k+1, k+1);
+      hBbqVsMxq[k] = (TH2F*)mhVpdBbqMxq->Projection(0,1);
+      hBbqVsMxq[k]->SetName(Form("hBbqVsMxq_cent%d",k));
+      c1->cd(k+1);
+      gPad->SetLogz();
+      hBbqVsMxq[k]->SetTitle("");
+      hBbqVsMxq[k]->Draw("colz");
+      TPaveText *t1 = GetTitleText(Form("VpdZdcNoVtx: %d-%d %% (prod_high)",75-k*5, 80-k*5), 0.06);
+      t1->Draw();
+    }
+  if(savePlot)  c1->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_VtxEff/mb_VpdBbqVsMxq.png",run_type));
+
+
+  THnSparseF *mhVpdNtube = (THnSparseF*)fdata->Get("mhVpdNtube_mb");
+  TH2F *hNtube[9];
+  TCanvas *c1 = new TCanvas("VpdNtube", "VpdNtube", 1100, 700);
+  c1->Divide(3,3);
+  for(int k=0; k<9; k++)
+    {
+      mhVpdNtube->GetAxis(2)->SetRange(k+1, k+1);
+      hNtube[k] = (TH2F*)mhVpdNtube->Projection(0,1);
+      hNtube[k]->SetName(Form("hNtube_cent%d",k));
+      c1->cd(k+1);
+      gPad->SetLogz();
+      hNtube[k]->SetTitle("");
+      hNtube[k]->Draw("colz");
+      TPaveText *t1 = GetTitleText(Form("VpdZdcNoVtx: %d-%d %% (prod_high)",75-k*5, 80-k*5), 0.06);
+      t1->Draw();
+    }
+  if(savePlot)  c1->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_VtxEff/mb_VpdNtube.png",run_type));
+
+  THnSparseF *mhEventCent = (THnSparseF*)fdata->Get("mhEventCent_qa_mb");
+  TH1F *hVpdVz[9];
+  TCanvas *c1 = new TCanvas("hVpdVz", "hVpdVz", 1100, 700);
+  c1->Divide(3,3);
+  for(int k=0; k<9; k++)
+    {
+      mhEventCent->GetAxis(3)->SetRange(k+1, k+1);
+      hVpdVz[k] = (TH1F*)mhEventCent->Projection(2);
+      hVpdVz[k]->SetName(Form("hVpdVz_cent%d",k));
+      c1->cd(k+1);
+      gPad->SetLogy();
+      hVpdVz[k]->SetMaximum(10* hVpdVz[k]->GetMaximum());
+      hVpdVz[k]->SetTitle("");
+      hVpdVz[k]->Draw();
+      TPaveText *t1 = GetTitleText(Form("VpdZdcNoVtx: %d-%d %% (prod_high)",75-k*5, 80-k*5), 0.06);
+      t1->Draw();
+
+      TPaveText *t1 = GetPaveText(0.3,0.4,0.75,0.85, 0.06);
+      t1->AddText(Form("|VpdVz| > 800 cm: %4.2f%%",(1-hVpdVz[k]->Integral(hVpdVz[k]->FindBin(-800),hVpdVz[k]->FindBin(800))/hVpdVz[k]->Integral(0,-1))*100));
+      t1->Draw();
+    }
+  if(savePlot)  c1->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_VtxEff/mb_VpdVz.pdf",run_type));
 }
 
 //================================================
@@ -166,9 +232,22 @@ void anaDiffVzEff(int savePlot = 1)
   if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_VtxEff/Mtd_VzDiffInTofMult.pdf",run_type));
   list->Clear();
 
-  return;
+
+  // check the Jpsi counts
+  THnSparseF *mhInvMassCent = (THnSparseF*)fmtd->Get("mhInvMassCent_qa_di_mu");
+  TH2F *hTofMultVsCentJpsi = (TH2F*)mhInvMassCent->Projection(2,1);
+  for(int i=0; i<16; i++)
+    {
+      hTofMultVsCentJpsi->GetXaxis()->SetBinLabel(i+1, Form("%d-%d%%",75-i*5,80-i*5));
+    }
+  hTofMultVsCentJpsi->GetXaxis()->SetRangeUser(0,16);
+  c = draw2D(hTofMultVsCentJpsi,"TofMult vs. centrality for events with an unlike-sign muon pair;;tofMult");
+  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_VtxEff/Mtd_TofMultVsCentJpsi.pdf",run_type));
 
   // dz distribution in different centrality bins
+  const bool applyTofMultCut = true;
+  const char* tofMultCutName[2] = {"","_TofMultCut"};
+  const int tofMult_cut[4] = {200, 300, 400, 500};
   TH2F *hVzDiffVsCent[2];
   hn[0]->GetAxis(1)->SetRangeUser(-100, 100);
   hn[0]->GetAxis(3)->SetRangeUser(0,2);
@@ -178,6 +257,23 @@ void anaDiffVzEff(int savePlot = 1)
 
   hn[1]->GetAxis(1)->SetRangeUser(-100, 100);
   hVzDiffVsCent[1] = (TH2F*)hn[1]->Projection(0,3);
+  if(applyTofMultCut)
+    {
+      for(int k=0; k<4; k++)
+	{
+	  hn[1]->GetAxis(3)->SetRange(k+1, k+1);
+	  hn[1]->GetAxis(5)->SetRangeUser(tofMult_cut[k], 3000);
+	  TH1F *htmp = (TH1F*)hn[1]->Projection(0);
+	  htmp->SetName(Form("hVzDiff_cent%d",k));
+	  for(int bin=0; bin<=hVzDiffVsCent[1]->GetNbinsY()+1; bin++)
+	    {
+	      hVzDiffVsCent[1]->SetBinContent(k+1, bin, hVzDiffVsCent[1]->GetBinContent(k+1,bin)-htmp->GetBinContent(bin));
+	      hVzDiffVsCent[1]->SetBinError(k+1, bin, sqrt(hVzDiffVsCent[1]->GetBinContent(k+1,bin)));
+	    }
+	  hn[1]->GetAxis(3)->SetRange(0, -1);
+	  hn[1]->GetAxis(5)->SetRange(0, -1);
+	}
+    }
   hn[1]->GetAxis(1)->SetRange(0,-1);
   TH1F *hVzDiff[2][16];
   TF1  *funcVzDiff[2][16];
@@ -207,7 +303,7 @@ void anaDiffVzEff(int savePlot = 1)
 	  funcVzDiff[j][i]->SetRange(mean-n*sigma, mean+n*sigma);
 	  hVzDiff[j][i]->Fit(funcVzDiff[j][i], "IR0Q");
 	  hVzDiff[j][i]->SetTitle("");
-	  hVzDiff[j][i]->Draw();
+	  hVzDiff[j][i]->Draw("HIST");
 	  funcVzDiff[j][i]->SetLineStyle(2);
 	  funcVzDiff[j][i]->SetLineColor(2);
 	  funcVzDiff[j][i]->Draw("sames");
@@ -221,7 +317,7 @@ void anaDiffVzEff(int savePlot = 1)
 	  t1->AddText(Form("#sigma = %2.2fcm",funcVzDiff[j][i]->GetParameter(2)));
 	  t1->Draw();
 	}
-      if(savePlot)  cDz[j]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_VtxEff/%s_FitVzDiffDis.pdf",run_type,name[j]));
+      if(savePlot)  cDz[j]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_VtxEff/%s_FitVzDiffDis%s.pdf",run_type,name[j],tofMultCutName[applyTofMultCut]));
     }
 
   for(int j=0; j<2; j++)
@@ -229,7 +325,7 @@ void anaDiffVzEff(int savePlot = 1)
       list->Add(hVzDiffEff[j]);
     }
   c = drawHistos(list,"VzDiffEff",Form("%s: efficiency of |#Deltavz| < 3 cm cut",run_type),false,0,120,true,0.2,1.1,false,true,trigName,true,"Bin-counting",0.5,0.7,0.5,0.65);
-  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_VtxEff/MtdVsMb_VzDiffEff.pdf",run_type));
+  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_VtxEff/MtdVsMb_VzDiffEff%s.pdf",run_type,tofMultCutName[applyTofMultCut]));
   list->Clear();
 
   for(int j=0; j<2; j++)
@@ -237,6 +333,6 @@ void anaDiffVzEff(int savePlot = 1)
       list->Add(hVzDiffSigma[j]);
     }
   c = drawHistos(list,"VzDiffSigma",Form("%s: width of #Deltavz distribution",run_type),false,0,120,true,0.3,1.7,false,true,trigName,true,"",0.5,0.7,0.5,0.65);
-  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_VtxEff/MtdVsMb_VzDiffSigma.pdf",run_type));
+  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_VtxEff/MtdVsMb_VzDiffSigma%s.pdf",run_type,tofMultCutName[applyTofMultCut]));
   list->Clear();
 }

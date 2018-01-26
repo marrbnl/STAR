@@ -42,6 +42,7 @@ const int nPtBins_pt = 10;
 const double ptBins_low_pt[nPtBins_pt]  = {0,0,1,2,3,4,5,6,8,10};
 const double ptBins_high_pt[nPtBins_pt] = {15,1,2,3,4,5,6,8,10,15};
 const char *pt_Name_pt[nPtBins_pt] = {"0-15","0-1","1-2","2-3","3-4","4-5","5-6","6-8","8-10","10-15"};
+const char *pt_Title_pt[nPtBins_pt] = {"0.15 < p_{T} < 15 GeV/c","0.15 < p_{T} < 1 GeV/c","1 < p_{T} < 2 GeV/c","2 < p_{T} < 3 GeV/c","3 < p_{T} < 4 GeV/c","4 < p_{T} < 5 GeV/c","5 < p_{T} < 6 GeV/c","6 < p_{T} < 8 GeV/c","8 < p_{T} < 10 GeV/c","10 < p_{T} < 15 GeV/c"};
 const int nCentBins_pt = 5;
 const int centBins_low_pt[nCentBins_pt]  = {1,13,9,5,1};
 const int centBins_high_pt[nCentBins_pt] = {16,16,12,8,4};
@@ -51,6 +52,7 @@ const int nPtBins_npart = 2;
 const double ptBins_low_npart[nPtBins_npart]  = {0,5};
 const double ptBins_high_npart[nPtBins_npart] = {15,15};
 const char *pt_Name_npart[nPtBins_npart] = {"0-15","5-15"};
+const char *pt_Title_npart[nPtBins_npart] = {"p_{T} > 0.15 GeV/c","p_{T} > 5 GeV/c"};
 const int nCentBins_npart[nPtBins_npart] = {8,7};
 const int centBins_low_npart[16]  = { 15,13,11,9,7,5,3,1, 15,13,11,9,7,5,1,3 };
 const int centBins_high_npart[16] = { 16,14,12,10,8,6,4,2, 16,14,12,10,8,6,4,4 };
@@ -88,9 +90,9 @@ void make_EmbJpsiEff()
   TH1F *hStat = (TH1F*)f->Get("hEventStat");
   printf("[i] # of events: %4.4e\n",hStat->GetBinContent(3));
 
-  makeJpsi(1);
+  //makeJpsi(1);
   //makeDataJpsiWeight(1);
-  // makeJpsiTpcEffVsZdc(1, 1);
+  makeJpsiTpcEffVsZdc(1, 1);
 }
 
 //================================================
@@ -109,6 +111,7 @@ void makeJpsiTpcEffVsZdc(const int savePlot, const int saveHisto)
     xbins[i] = ptBins_low_pt[i+1];
   xbins[nbins] = ptBins_high_pt[nbins];
 
+
   myRandom = new TRandom3();
   myRandom->SetSeed(0);
   const int nExpr = 1e6;
@@ -124,12 +127,11 @@ void makeJpsiTpcEffVsZdc(const int savePlot, const int saveHisto)
   TH1F *hMcJpsiPtRebinAll;
   TH1F *hRcJpsiPtRebinAll;
   TH1F *hTpcJpsiEffRebinAll;
-
+  
   TH1F *hInputJpsiAll = (TH1F*)fWeight->Get("TBW_JpsiYield_AuAu200_cent0060");
   getJpsiEff(mass, nExpr, hInputJpsiAll, funcTrkEffAll, hMcJpsiPtAll, hRcJpsiPtAll, 0);
   hTpcJpsiEffAll = (TH1F*)hRcJpsiPtAll->Clone(Form("JpsiTpcEff_All"));
   hTpcJpsiEffAll->Divide(hMcJpsiPtAll);
-
   hMcJpsiPtRebinAll = (TH1F*)hMcJpsiPtAll->Rebin(nbins, Form("%s_rebin",hMcJpsiPtAll->GetName()), xbins);
   hRcJpsiPtRebinAll = (TH1F*)hRcJpsiPtAll->Rebin(nbins, Form("%s_rebin",hRcJpsiPtAll->GetName()), xbins);
   hTpcJpsiEffRebinAll = (TH1F*)hRcJpsiPtRebinAll->Clone(Form("%s_rebin",hTpcJpsiEffAll->GetName()));
@@ -501,7 +503,7 @@ void makeJpsi(const bool saveHisto)
   if(saveHisto)
     {
       printf("+++ Save histograms +++\n");
-      TFile *fout = TFile::Open(Form("Rootfiles/%s.EmbJpsiEff.pt%1.1f.pt%1.1f.root",run_type,pt1_cut,pt2_cut),"update");
+      TFile *fout = TFile::Open(Form("Rootfiles/%s.EmbJpsiEff.pt%1.1f.pt%1.1f.root",run_type,pt1_cut,pt2_cut),"recreate");
       for(int i=0; i<nEffType; i++)
 	{
 	  for(int w=0; w<1; w++)

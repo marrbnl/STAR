@@ -20,9 +20,9 @@ void make_MtdTrigEff()
 
 
 //================================================
-void makeHistos(const int savePlot = 0, const int saveHisto = 0)
+void makeHistos(const int savePlot = 1, const int saveHisto = 1)
 {
-  const int year = 20152;
+  const int year = 2015;
 
   if(year==2014)
     {
@@ -32,7 +32,7 @@ void makeHistos(const int savePlot = 0, const int saveHisto = 0)
       const int nBinsTacDiff = 26;
       const double xBinsTacDiff[nBinsTacDiff+1] = {760,765,770,775,780,782,784,786,788,789,790,791,792,793,795,797,801,805,809,813,817,821,825,829,833,837,841};
       const double fit_min = 789;
-      const double fit_max = 810;
+      const double fit_max = 820;
     }
   else if(year==2015)
     {
@@ -51,8 +51,8 @@ void makeHistos(const int savePlot = 0, const int saveHisto = 0)
       const char *data_title  = "Run15 p+p @ 200 GeV";
       const int nBinsTacDiff = 28;
       const double xBinsTacDiff[nBinsTacDiff+1] = {860,865,870,875,880,885,890,895,900,905,910,915,920,925,930,935,940,945,950,955,960,965,970,975,980,985,990,995,1000};
-      const double fit_min = 915;
-      const double fit_max = 950;
+      const double fit_min = 910;
+      const double fit_max = 960;
     }
   else if(year==2016)
     {
@@ -71,7 +71,9 @@ void makeHistos(const int savePlot = 0, const int saveHisto = 0)
   const int nPtBins = nbins -1;
   const double xPtBins[nPtBins+1] = {1.3, 1.5, 2.0, 2.5, 3.0, 5.0, 10.0}; 
 
-  TFile *fdata = TFile::Open(Form("output/%s.JpsiMuon.%sroot",data_name,config),"read");
+  TFile *fdata = 0x0;
+  if(year==2015 || year==20152) fdata = TFile::Open(Form("output/%s.jpsi.%sroot",data_name,config),"read");
+  else fdata = TFile::Open(Form("output/%s.JpsiMuon.%sroot",data_name,config),"read");
 
   //==============================================
   // compare invariant mass
@@ -147,6 +149,10 @@ void makeHistos(const int savePlot = 0, const int saveHisto = 0)
   leg->Draw();
   if(savePlot)
     c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdTrigEff/%sTacDiff_InvMassLSvsUL.pdf",data_name,config));
+  if(gSaveAN)
+    {
+      c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_EffTirg_InvMassLSvsUL_%s.pdf",data_name));
+    }
 
   //==============================================
   // scale factor
@@ -187,7 +193,7 @@ void makeHistos(const int savePlot = 0, const int saveHisto = 0)
   gScaleFactor->SetMarkerStyle(21);
   c = drawGraph(gScaleFactor);
   TPaveText *t1 = GetPaveText(0.15,0.2,0.2,0.23,0.03);
-  t1->AddText(Form("%1.1f < p_{T} < %1.1f",lowbins[0],upbins[0]));
+  t1->AddText(Form("%1.1f < p_{T,#mu} < %1.1f",lowbins[0],upbins[0]));
   t1->Draw();
   if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdTrigEff/%sTacDiff_ScaleFactor.pdf",data_name,config));
   double *scales = gScaleFactor->GetY();
@@ -296,10 +302,14 @@ void makeHistos(const int savePlot = 0, const int saveHisto = 0)
       leg->Draw();
     }
   if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdTrigEff/%sTacDiff_ULvsLS_InPtBins.pdf",data_name,config));
+  if(gSaveAN)
+    {
+      c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_EffTirg_TacDiffLSvsUL_%s.pdf",data_name));
+    }
 
 
   //==============================================
-  // re-calculate background in larger mass window[2,4]
+  // re-calculate background use all LS pairs
   //==============================================
   TH1F *hMeanPt[2];
   TH2F *hTacDiffVsTrigUnitBkg[2][nbins];
@@ -344,6 +354,41 @@ void makeHistos(const int savePlot = 0, const int saveHisto = 0)
 	    {
 	      funcTacDiffTrigUnit[i][bin][j] = new TF1(Form("%s_FitTacDiff_%s_TrigUnit%d_PtBin%d",data_name,type_name[i],j+1,bin),"gaus",fit_min,fit_max);
 	      if(bin==nbins-1) funcTacDiffTrigUnit[i][bin][j]->SetRange(fit_min, fit_max + 10);
+	      if(year==2014)
+		{
+		  if(j==4 || j==5)
+		    {
+		      if(bin==1) funcTacDiffTrigUnit[i][bin][j]->SetRange(fit_min, 795);
+		      else if(bin<nbins-1) funcTacDiffTrigUnit[i][bin][j]->SetRange(fit_min, 800);
+		    }
+		  if(j==1)
+		    {
+		      if(bin>=1 && bin<=3) funcTacDiffTrigUnit[i][bin][j]->SetRange(fit_min, 795);
+		      else funcTacDiffTrigUnit[i][bin][j]->SetRange(fit_min, 800);
+		    }
+		}
+	      else if(year==20152)
+		{
+		  if(j==1 || (j>=4 && j<=7))
+		    {
+		      funcTacDiffTrigUnit[i][bin][j]->SetRange(fit_min-10, fit_max);
+		    }
+		  if(j==22 && bin==5)
+		    {
+		      funcTacDiffTrigUnit[i][bin][j]->SetRange(fit_min-10, fit_max);
+		    }
+		}
+	      else if(year==2015)
+		{
+		  if(j==21 && bin==5)
+		    {
+		      funcTacDiffTrigUnit[i][bin][j]->SetRange(fit_min, fit_max+10);
+		    }
+		  if(j==1 || j==7 || j==23)
+		    {
+		      funcTacDiffTrigUnit[i][bin][j]->SetRange(fit_min, fit_max-10);
+		    }
+		}
 	    }
 	}
       for(int bin=0; bin<nbins; bin++)
@@ -397,6 +442,10 @@ void makeHistos(const int savePlot = 0, const int saveHisto = 0)
 	  leg->Draw();
 	  if(savePlot) 
 	    c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdTrigEff/%sTacDiffFit_%s_PtBin%d.pdf",data_name,config,type_name[i],bin));
+	  if(gSaveAN && i==2)
+	    {
+	      c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_%s_FitTacDiffLS_Pt%d.pdf",data_name,bin));
+	    }
 	}
     }
 
@@ -415,7 +464,7 @@ void makeHistos(const int savePlot = 0, const int saveHisto = 0)
 	  hTacDiffMeanVsTrigUnit[i][bin]->SetMarkerColor(TMath::Power(2,i-1));
 	  hTacDiffMeanVsTrigUnit[i][bin]->SetLineColor(TMath::Power(2,i-1));
 	  TH1F *htmp = (TH1F*)hTacDiffMeanVsTrigUnit[i][bin]->Clone(Form("%s_tmp",hTacDiffMeanVsTrigUnit[i][bin]->GetName()));
-	  if(year==2014) htmp->GetYaxis()->SetRangeUser(790,805);
+	  if(year==2014) htmp->GetYaxis()->SetRangeUser(788,805);
 	  if(year==2015) htmp->GetYaxis()->SetRangeUser(900, 920);
 	  if(year==20152) htmp->GetYaxis()->SetRangeUser(915, 935);
 	  htmp->SetTitle(";TrigUnit;<#DeltaTacSum>");
@@ -436,6 +485,43 @@ void makeHistos(const int savePlot = 0, const int saveHisto = 0)
   leg->Draw();
   if(savePlot)
     c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdTrigEff/%sTacDiffMeanVsTrigUnit_BkgULvsLS.pdf",data_name,config));
+
+  // check pT dependence
+  c = new TCanvas(Form("%s_TacDiffVsPt",data_name),Form("%s_TacDiffVsPt",data_name),1200,800);
+  c->Divide(6,5);
+  TF1 *funcTacDiffMeanVsPtLS[nTrigUnit];
+  for(int j=0; j<nTrigUnit; j++)
+    {
+      c->cd(j+1);
+      if(year==2014)
+	{
+	  if(j==1) hTacDiffMeanVsPt[2][j]->GetYaxis()->SetRangeUser(785, 805);
+	  else hTacDiffMeanVsPt[2][j]->GetYaxis()->SetRangeUser(790, 810);
+	}
+      else if(year==2015)
+	{
+	  hTacDiffMeanVsPt[2][j]->GetYaxis()->SetRangeUser(900, 925);
+	}
+      else if(year==20152)
+	{
+	  hTacDiffMeanVsPt[2][j]->GetYaxis()->SetRangeUser(915, 935);
+	}
+      hTacDiffMeanVsPt[2][j]->SetMarkerStyle(25);
+      funcTacDiffMeanVsPtLS[j] = new TF1(Form("funcTacDiffMeanVsPtLS_TrigUnit%d",j+1), "[0]-exp(-1*[1]*(x-[2]))",1.3,10);
+      if(year==2014) funcTacDiffMeanVsPtLS[j]->SetParameters(800,2,0.5);
+      else if(year==2015) funcTacDiffMeanVsPtLS[j]->SetParameters(915,2,0.5);
+      else if(year==20152) funcTacDiffMeanVsPtLS[j]->SetParameters(930,2,0.5);
+      hTacDiffMeanVsPt[2][j]->Fit(funcTacDiffMeanVsPtLS[j],"IR0Q");
+      hTacDiffMeanVsPt[2][j]->SetTitle("");
+      hTacDiffMeanVsPt[2][j]->Draw();
+      funcTacDiffMeanVsPtLS[j]->SetLineColor(2);
+      funcTacDiffMeanVsPtLS[j]->SetLineStyle(2);
+      funcTacDiffMeanVsPtLS[j]->Draw("sames");
+      TPaveText *t1 = GetTitleText(Form("TrigUnit = %d",j+1),0.08);
+      t1->Draw();
+    }
+  if(savePlot)
+    c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdTrigEff/%sTacDiffMeanVsPt_LS.pdf",data_name,config));
 
   if(saveHisto)
     {

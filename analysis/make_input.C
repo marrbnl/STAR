@@ -2,11 +2,12 @@
 void make_input()
 {
   gStyle->SetOptStat(0);
-  Run14AuAu200();
+  //Run14AuAu200();
+  Run14AuAu200_2();
 }
 
 //================================================
-void Run14AuAu200(const int savePlot = 1, const int saveHisto = 1)
+void Run14AuAu200(const int savePlot = 0, const int saveHisto = 0)
 {
   TFile *fData = TFile::Open("output/Run14_AuAu200.jpsi.root","read");
   TFile *fEmb = TFile::Open(Form("./output/Run14_AuAu200.Embed.Jpsi.root"),"read");
@@ -26,22 +27,17 @@ void Run14AuAu200(const int savePlot = 1, const int saveHisto = 1)
       list->Add(hVertex[i]);
     }
   c = drawHistos(list,"Compare_TpcVz","Z distribution of TPC vertex",kFALSE,0,800,kFALSE,0,0,kFALSE,kTRUE,legName,kTRUE,"",0.65,0.8,0.7,0.85,kFALSE);
-  if(savePlot)
-    {
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbJpsiEff/TpcVz_EmbedVsData.pdf",run_type));
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbJpsiEff/TpcVz_EmbedVsData.png",run_type));
-    }
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbJpsiEff/TpcVz_EmbedVsData.pdf",run_type));
+  if(gSaveAN)  c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch1_TpcVz_EmbedVsData.pdf"));
+
   TH1F *hRatio = (TH1F*) hVertex[1]->Clone(Form("VtxWeight"));
   hRatio->Divide(hVertex[0]);
   hRatio->SetTitle(";vz (cm);Ratio=Data/Embed");
   hRatio->SetMarkerStyle(21);
   hRatio->GetXaxis()->SetRangeUser(-100,100);
   c = draw1D(hRatio);
-  if(savePlot)
-    {
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbJpsiEff/TpcVz_EmbedOverData.pdf",run_type));
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbJpsiEff/TpcVz_EmbedOverData.png",run_type));
-    }
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbJpsiEff/TpcVz_EmbedOverData.pdf",run_type));
+  if(gSaveAN)  c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch1_TpcVz_EmbedOverData.pdf"));
 
   // TPC acceptance loss
   const int nHistos = 2;
@@ -133,6 +129,13 @@ void Run14AuAu200(const int savePlot = 1, const int saveHisto = 1)
       hTrkPhiCorr[k]->SetMarkerColor(4);
       hTrkPhiCorr[k]->Draw("samesP");
     }
+  TLegend *leg = new TLegend(0.1,0.5,0.7,0.6);
+  leg->SetBorderSize(0);
+  leg->SetFillColor(0);
+  leg->SetTextSize(0.05);
+  leg->AddEntry(hTrkPhiCorr[0], "Reco MC #mu tracks after correction","P");
+  cPhi[0]->cd(6);
+  leg->Draw();
   c = draw2D(hTpcCorr,"",0.04,false);
   if(savePlot)  
     {
@@ -140,6 +143,13 @@ void Run14AuAu200(const int savePlot = 1, const int saveHisto = 1)
       cPhi[1]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbTrkEff/CompTrkPhi_PosEta.pdf",run_type));
       c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbTrkEff/TpcAccCorrFactor.pdf",run_type));
     }
+  if(gSaveAN)   
+    {
+      cPhi[0]->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_CompTrkPhi_NegEta.pdf"));
+      cPhi[1]->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_CompTrkPhi_PosEta.pdf"));
+      c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_TpcAccCorr.pdf"));
+    }
+
 
   // input Jpsi shape
   TH1F *hInPutJpsiPt[4];
@@ -242,5 +252,43 @@ void Run14AuAu200(const int savePlot = 1, const int saveHisto = 1)
 	    }
 	}
       hTpcCorr->Write("",TObject::kOverwrite);
+    } 
+}
+
+
+//================================================
+void Run14AuAu200_2(const int saveHisto = 1)
+{
+  // MTD response efficiency
+  TFile *fMtd =  TFile::Open(Form("Rootfiles/%s.MtdRespEff.root",run_type),"read");
+  TF1 *funcRespEffCos[30][5];
+  for(int i=0; i<30; i++)
+    {
+      for(int j=0; j<5; j++)
+	{
+	  funcRespEffCos[i][j] = (TF1*)fMtd->Get(Form("funcMtdRespEffvsPt_Bkl%d_Mod%d",i+1,j+1));
+	  funcRespEffCos[i][j]->SetName(Form("Cosmic_MtdRespEff_BL%d_Mod%d",i+1,j+1));
+	}
+    }
+  
+
+  // trigger efficiency
+  TFile *fTrig =  TFile::Open(Form("Rootfiles/%s.Sys.MtdTrigEff.root",run_type));
+  TF1 *hMuonTrigEff = (TF1*)fTrig->Get("Run14_AuAu200_Muon_TacDiffEff");
+
+
+  
+  // save
+  if(saveHisto)
+    {
+      TFile *fout =  TFile::Open("Rootfiles/Run14_AuAu200.Input.root","update");
+      hMuonTrigEff->Write("MtdTrigEff_FitFunc",TObject::kOverwrite);
+      for(int i=0; i<30; i++)
+	{
+	  for(int j=0; j<5; j++)
+	    {
+	      funcRespEffCos[i][j]->Write("",TObject::kOverwrite);
+	    }
+	}
     } 
 }

@@ -17,7 +17,7 @@ void sys_JpsiYield()
 }
 
 //================================================
-void YieldVsPt(int savePlot = 1, int saveHisto = 1)
+void YieldVsPt(int savePlot = 0, int saveHisto = 0)
 {
  // re-assign global constants
   const int nPtBins         = nPtBins_pt;
@@ -48,7 +48,7 @@ void YieldVsPt(int savePlot = 1, int saveHisto = 1)
 
   const int nSys = 13;
   const char *sys_name[nSys]  = {"","_LargeScale","_SmallScale","_ScaleFit","_Binning","_BkgFunc1","_BkgFunc2","_LargeFit","_SmallFit","_SigFunc","_FixSigDown","_FixSigUp","_LineShape"};
-  const char *sys_leg[nSys] = {"Default","Larger bkg norm range","Smaller bkg norm range","Fit ME/SE w/ pol0","Binning","Res. bkg pol0","Res. bkg pol2","Larger sig fit range","Smaller sig fit range","Crystal-ball","Fix sig. down","Fix sig. up","line shape"};
+  const char *sys_leg[nSys] = {"Default","Larger bkg norm range","Smaller bkg norm range","Fit ME/SE w/ pol0","Binning","Res. bkg order-1","Res. bkg order+1","Larger sig fit range","Smaller sig fit range","Crystal-ball","Fix sig. down","Fix sig. up","line shape"};
 
   TString outName    = Form("Rootfiles/%s.JpsiYield.pt%1.1f.pt%1.1f.%sroot",run_type,pt1_cut,pt2_cut,run_config);
   TString outNameSys = Form("Rootfiles/%s.Sys.JpsiYield.root",run_type);
@@ -196,6 +196,10 @@ void YieldVsPt(int savePlot = 1, int saveHisto = 1)
     {
       c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/sys_JpsiXsec/Sys_signalExt.pdf",run_type));
     }
+  if(gSaveAN)
+    {
+      c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch5_SysSigExtVsPt.pdf"));
+    }
 
   if(saveHisto)
     {
@@ -211,7 +215,7 @@ void YieldVsPt(int savePlot = 1, int saveHisto = 1)
 
 
 //================================================
-void YieldVsNpart(int savePlot = 1, int saveHisto = 1)
+void YieldVsNpart(int savePlot = 0, int saveHisto = 0)
 {
  // re-assign global constants
   const int nPtBins         = nPtBins_npart;
@@ -234,7 +238,7 @@ void YieldVsNpart(int savePlot = 1, int saveHisto = 1)
 
   const int nSys = 14;
   const char *sys_name[nSys]  = {"","_LargeScale","_SmallScale","_ScaleFit","_Binning","_BkgFunc1","_BkgFunc2","_LargeFit","_SmallFit","_SigFunc","_FixSigDown","_FixSigUp","_LineShape",""};
-  const char *sys_leg[nSys] = {"Default","Larger bkg norm range","Smaller bkg norm range","Fit ME/SE w/ pol0","Binning","Res. bkg pol0","Res. bkg pol2","Larger sig fit range","Smaller sig fit range","Crystal-ball","Fix sig. down","Fix sig. up","Line shape","Bin-counting"};
+  const char *sys_leg[nSys] = {"Default","Larger bkg norm range","Smaller bkg norm range","Fit ME/SE w/ pol0","Binning","Res. bkg order-1","Res. bkg order+1","Larger sig fit range","Smaller sig fit range","Crystal-ball","Fix sig. down","Fix sig. up","Line shape","Bin-counting"};
 
   TString outName    = Form("Rootfiles/%s.JpsiYield.pt%1.1f.pt%1.1f.%sroot",run_type,pt1_cut,pt2_cut,run_config);
   TString outNameSys = Form("Rootfiles/%s.Sys.JpsiYield.root",run_type);
@@ -329,6 +333,10 @@ void YieldVsNpart(int savePlot = 1, int saveHisto = 1)
       if(savePlot)
 	{
 	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/sys_JpsiXsec/Npart.Sys_signalExt_pt%s.pdf",run_type,pt_Name[i]));
+	}
+      if(gSaveAN)
+	{
+	  c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch5_SysSigExtVsCent_Pt%1.0f.pdf",ptBins_low[i]));
 	}
     }
 

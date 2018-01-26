@@ -41,16 +41,16 @@ void ana_EmbTrkEff()
   TH1F *hStat = (TH1F*)f->Get("hEventStat");
   printf("# of events: %4.4e\n",hStat->GetBinContent(3));
 
-  //efficiency(outName);
-  //resolution(outName);
-  //effVsZdc();
-  effVsCent();
+  //efficiency(outName, 1, 1);
+  resolution(outName, 1, 1);
+  //effVsZdc(1,1);
+  //effVsCent(1);
   //effVsEta();
   //TrkEff3D(outName, outPDF);
 }
 
 //================================================
-void effVsZdc(const int savePlot = 1, const int saveHisto = 1)
+void effVsZdc(const int savePlot = 0, const int saveHisto = 0)
 {
   const int* nCentBins      = nCentBins_npart; 
   const int* centBins_low   = centBins_low_npart;
@@ -80,9 +80,10 @@ void effVsZdc(const int savePlot = 1, const int saveHisto = 1)
 	      hMcTrkPtInZdc[i][j][k] = (TH1F*)htmp->Rebin(nTrkPtBins, Form("%s_rebin",htmp->GetName()), xTrkPtBins);
 	      if(k==0 && j==0) hMcTrkPtInZdcAll[i] = (TH1F*)hMcTrkPtInZdc[i][j][k]->Clone(Form("%s_All",htmp->GetName()));
 	      else             hMcTrkPtInZdcAll[i]->Add(hMcTrkPtInZdc[i][j][k]);
+	      if(k==kNCent-2 && j==6) hMcTrkPtInZdc[i][j][k]->Rebin(2);
 	      if(k==kNCent-1)
 		{
-		  hMcTrkPtInZdc[i][j][k-1]->Add(hMcTrkPtInZdc[i][j][k]);
+		  //hMcTrkPtInZdc[i][j][k-1]->Add(hMcTrkPtInZdc[i][j][k]);
 		  hMcTrkPtInZdc[i][j][k] = (TH1F*)hMcTrkPtInZdc[i][j][k-1]->Clone(hMcTrkPtInZdc[i][j][k-1]->GetName());
 		}
 	    }
@@ -108,6 +109,10 @@ void effVsZdc(const int savePlot = 1, const int saveHisto = 1)
   leg0->AddEntry(funcTrkEffAll, "Fit function: p0-e^{p1*(x-p2)}", "L");
   leg0->Draw();
   if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbJpsiEff/Embed_FitTpcTrkEff_All.pdf",run_type));
+  if(gSaveAN)
+    {
+      c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_EffTotal_FitTrkEffAll.pdf"));
+    }
 
   TH1F *hTrkEff[gNZdcRate][kNCent];
   TF1 *funcTrkEff[gNZdcRate][kNCent];
@@ -138,7 +143,7 @@ void effVsZdc(const int savePlot = 1, const int saveHisto = 1)
 	  funcTrkEff[j][k]->Draw("sames");
 	  TPaveText *t1 = GetTitleText(Form("%d < ZDCrate < %d kHz",j*10,10+j*10),0.06);
 	  t1->Draw();
-	  if(j==gNZdcRate-1 && k>=5)
+	  if(j==gNZdcRate-1 && k==5)
 	    {
 	      funcTrkEff[j][k]->SetParameter(0, funcTrkEff[j][4]->GetParameter(0));
 	      funcTrkEff[j][k]->SetParError(0, funcTrkEff[j][4]->GetParError(0));
@@ -155,6 +160,10 @@ void effVsZdc(const int savePlot = 1, const int saveHisto = 1)
       leg0->AddEntry(funcTrkEff[1][k], "Fit function: p0-e^{p1*(x-p2)}", "L");
       leg0->Draw();
       if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbJpsiEff/Embed_FitTpcTrkEff_cent%s.pdf",run_type,cent_Title[k]));
+      if(gSaveAN)
+	{
+	  c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_EffTotal_FitTrkEff_cent%s.pdf",cent_Title[k]));
+	}
     }
 
   // compare efficiency at high pT
@@ -187,6 +196,7 @@ void effVsZdc(const int savePlot = 1, const int saveHisto = 1)
       leg[j/6]->AddEntry(hTpcTrkEffVsCent[j],Form("%d < ZDC < %d kHz",j*10,j*10+10),"P");
       if(j==0) 
 	{
+	  hTpcTrkEffVsCent[j]->GetYaxis()->SetRangeUser(0,1);
 	  c = draw1D(hTpcTrkEffVsCent[j]);
 	  TPaveText *t1 = GetTitleText(Form("%s: TPC tracking efficiency at high p_{T}",run_type),0.04);
 	  t1->Draw();
@@ -195,6 +205,10 @@ void effVsZdc(const int savePlot = 1, const int saveHisto = 1)
     }
   for(int l=0; l<2; l++) leg[l]->Draw();
   if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbJpsiEff/Embed_TrkTpcEffVsCentVsZdc.pdf",run_type));
+  if(gSaveAN)
+    {
+      c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_EffTotal_TrkTpcEffVsCentVsZdc.pdf",cent_Title[k]));
+    }
 
   if(saveHisto)
     {
@@ -213,7 +227,7 @@ void effVsZdc(const int savePlot = 1, const int saveHisto = 1)
 }
 
 //================================================
-void effVsCent(const int savePlot = 1)
+void effVsCent(const int savePlot = 0)
 {
   const int nCentBins       = nCentBins_pt; 
   const int* centBins_low   = centBins_low_pt;
@@ -249,6 +263,13 @@ void effVsCent(const int savePlot = 1)
 	      h2Corr[i][j]->GetYaxis()->SetRangeUser(0, 3000);
 	      h2Corr[i][j]->GetYaxis()->SetTitleOffset(1.2);
 	      h2Corr[i][j]->Draw("colz");
+	      if(i==1)
+		{
+		  TLine *line1 = GetLine(0,0,100,3000);
+		  line1->Draw();
+		  TLine *line2 = GetLine(0,0,700,350);
+		  line2->Draw();
+		}
 	    }
 	  else if(i==2 || i==3)
 	    {
@@ -278,10 +299,11 @@ void effVsCent(const int savePlot = 1)
 	  t1->Draw();
 	}
       if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbTrkEff/Embed_%s.pdf",run_type,hName[i]));
+      if(gSaveAN && i==2)
+	{
+	  c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_EffTpc_%s.pdf",hName[i]));
+	}
     }
-
-      
-  return;
 
   TFile *fin  = TFile::Open(Form("Rootfiles/%s.EmbTrkEff.root",run_type),"read");
   TList *list = new TList;
@@ -400,6 +422,10 @@ void effVsCent(const int savePlot = 1)
   c->cd(1);
   leg->Draw();
   if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbTrkEff/McTpcEff_vs_Lumi.pdf",run_type));
+  if(gSaveAN)
+    {
+      c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_EffTpc_EffVsLumi.pdf"));
+    }
 
   // efficiency vs centrality
   list->Clear();
@@ -421,6 +447,10 @@ void effVsCent(const int savePlot = 1)
     }
   c = drawHistos(list,"TpcEff_vs_Cent",Form("TPC tracking efficiency (p_{T,mc} > %1.0f GeV/c);;Efficiency",pt_cut),false,2.0,3.8,true,0,1,kFALSE,kTRUE,legName_trg,true,"|#eta_{MC}| < 0.5",0.5,0.7,0.2,0.45,kTRUE,0.04,0.04,false,1,false,true); 
   if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbTrkEff/McTpcEff_vs_Cent.pdf",run_type));
+  if(gSaveAN)
+    {
+      c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_EffTpc_EffVsCent.pdf"));
+    }
 
   // other efficiencies
   const char *trkEffTitle[4] = {"Tpc tracking","MTD matching","muon PID","MTD trigger"};
@@ -452,10 +482,14 @@ void effVsCent(const int savePlot = 1)
   c->cd(1);
   leg->Draw();
   if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbTrkEff/McTrkEff_vs_Cent.pdf",run_type));
+  if(gSaveAN)
+    {
+      c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_EffTpc_OtherEffVsPt.pdf"));
+    }
 }
 
 //================================================
-void effVsEta(const int savePlot = 1)
+void effVsEta(const int savePlot = 0)
 {
   TList *list = new TList;
 
@@ -497,7 +531,7 @@ void effVsEta(const int savePlot = 1)
 }
 
 //================================================
-void efficiency(TString inName, const bool savePlot = 0, const bool saveHisto = 0)
+void efficiency(TString inName, const bool savePlot = 1, const bool saveHisto = 1)
 {
   const int nCentBins       = nCentBins_pt; 
   const int* centBins_low   = centBins_low_pt;
@@ -571,7 +605,7 @@ void efficiency(TString inName, const bool savePlot = 0, const bool saveHisto = 
 	}
     }
 
-  TString legName[4] = {"MC input","Reconstructed in TPC","Match to MTD","Total efficiency"};
+  TString legName[4] = {"MC input","TPC tracking","MTD matched","Muon PID/trigger"};
   const char *eff_type[4] = {"MC input","reconstructed in TPC","matched to MTD","fulfill PID/trigger"};
   TString legName_charge[3] = {"All","Positive","Negative"};
   for(int k=0; k<nCentBins; k++)
@@ -606,9 +640,7 @@ void efficiency(TString inName, const bool savePlot = 0, const bool saveHisto = 
 	  leg->SetBorderSize(0);
 	  leg->SetFillColor(0);
 	  leg->SetTextSize(0.035);
-	  if(i==1) leg->SetHeader("TPC tracking");
-	  if(i==2) leg->SetHeader("MTD matched");
-	  if(i==3) leg->SetHeader("Muon PID/trigger");
+	  leg->SetHeader(legName[i].Data());
 	  for(int j=0; j<3; j++)
 	    {
 	      if(j==0) hMcTrkEtaEff[k][i][j]->SetMarkerStyle(19+i);
@@ -636,6 +668,10 @@ void efficiency(TString inName, const bool savePlot = 0, const bool saveHisto = 
 	{
 	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbTrkEff/%sMcTrkEtaEff_cent%s.pdf",run_type,run_cfg_name.Data(),cent_Title[k]));
 	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbTrkEff/%sMcTrkEtaEff_cent%s.png",run_type,run_cfg_name.Data(),cent_Title[k]));
+	}
+      if(gSaveAN && k==0)
+	{
+	  c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_EffTpc_EffVsEta_cent%s.pdf",cent_Title[k]));
 	}
  
       // efficiency vs phi
@@ -697,7 +733,11 @@ void efficiency(TString inName, const bool savePlot = 0, const bool saveHisto = 
 	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbTrkEff/%sMcTrkPhiEff_cent%s.pdf",run_type,run_cfg_name.Data(),cent_Title[k]));
 	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbTrkEff/%sMcTrkPhiEff_cent%s.png",run_type,run_cfg_name.Data(),cent_Title[k]));
 	}
-
+      if(gSaveAN && k==0)
+	{
+	  c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_EffTpc_EffVsPhi_cent%s.pdf",cent_Title[k]));
+	}
+ 
 
       // efficiency vs pt
       for(int j=0; j<3; j++)
@@ -769,7 +809,7 @@ void efficiency(TString inName, const bool savePlot = 0, const bool saveHisto = 
 }
 
 //================================================
-void resolution(TString inName, const bool savePlot = 1, const bool saveHisto = 0)
+void resolution(TString inName, const bool savePlot = 0, const bool saveHisto = 0)
 {
   const int nCentBins       = 11; 
   const char* cent_Name[nCentBins]    = {"0-80","0-10","10-20","20-30","30-40","40-50","50-60","60-80","0-20","20-40","40-60"};
@@ -796,6 +836,10 @@ void resolution(TString inName, const bool savePlot = 1, const bool saveHisto = 
 	{
 	  c = draw2D(h2tmp,Form("%s: %s%%",run_type,cent_Name[k]));
 	  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbTrkEff/%spTrkResVsTruePt_cent%s.pdf",run_type,run_cfg_name.Data(),cent_Title[k]));
+	  if(gSaveAN)
+	    {
+	      c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch3_MomSmear_TrkResVsTruePt.pdf"));
+	    }
 	}
       hTrkPtRes[k] = (TH1F*)h2tmp->ProjectionX(Form("pTrkRes_%s",cent_Title[k]));
       hTrkPtRes[k]->Reset();
@@ -876,6 +920,10 @@ void resolution(TString inName, const bool savePlot = 1, const bool saveHisto = 
     {
       c1->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbTrkEff/%sFitTrkPtResVsPt_CentBins.pdf",run_type,run_cfg_name.Data()));
       c2->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbTrkEff/%sFitTrkPtResVsPt_Cent0080.pdf",run_type,run_cfg_name.Data()));
+    }
+  if(gSaveAN)
+    {
+      c1->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch3_MomSmear_FitTrkPtRes.pdf"));
     }
 
   TString legName_cent[7];

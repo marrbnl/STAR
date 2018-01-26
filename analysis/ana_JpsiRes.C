@@ -21,6 +21,7 @@
 using namespace std;
 
 #define YEAR 2014
+const bool gSaveAN = true;
 
 #if (YEAR==2013)
 const char *run_config = "VtxCut.";
@@ -176,13 +177,13 @@ void ana_JpsiRes()
 	}
     }
 
-  tuneResolution(4,1);
+  tuneResolution(0,0);
 }
 
 //================================================
 void tuneResolution(const int icent, const bool savePlot)
 {
-  const int anaType = 3; // 0 - scan; 1 - determine smear & shift; 2 - generate final smear
+  const int anaType = 1; // 0 - scan; 1 - determine smear & shift; 2 - generate final smear
   const int nShiftScan = 1;
   const double shiftStep = 0.0005;
   const int nSmearScan = 20;
@@ -281,7 +282,7 @@ void tuneResolution(const int icent, const bool savePlot)
 	  TCanvas *c1 = new TCanvas("embed_mean", "embed_mean", 800, 600);
 	  hEmbMean[0]->Draw();
 	  hEmbMean[1]->Draw("sames");
-	  TPaveText *t1 = GetTitleText("Mean of J/#Psi mass peak");
+	  TPaveText *t1 = GetTitleText(Form("Mean of J/#Psi mass peak (%s%%)",cent_Name[icent]));
 	  t1->Draw();
 	  TLegend *leg = new TLegend(0.18,0.65,0.42,0.88);
 	  leg->SetBorderSize(0);
@@ -293,14 +294,18 @@ void tuneResolution(const int icent, const bool savePlot)
 	  leg->Draw();
 	  if(savePlot)
 	    c1->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiRes/JpsiMean_ToyMcVsEmbed_cent%s.pdf",run_type,cent_Title[icent]));
+	  if(gSaveAN && icent==0)
+	    c1->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch3_MomSmear_ToyMCvsEmb_JpsiMean.pdf"));
 	  c1 = new TCanvas("embed_sigma", "embed_sigma", 800, 600);
 	  hEmbSigma[0]->Draw();
 	  hEmbSigma[1]->Draw("sames");
-	  t1 = GetTitleText("Width of J/#Psi mass peak");
+	  t1 = GetTitleText(Form("Width of J/#Psi mass peak (%s%%)",cent_Name[icent]));
 	  t1->Draw();
 	  leg->Draw();
 	  if(savePlot)
 	    c1->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiRes/JpsiSigma_ToyMcVsEmbed_cent%s.pdf",run_type,cent_Title[icent]));
+	  if(gSaveAN && icent==0)
+	    c1->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch3_MomSmear_ToyMCvsEmb_JpsiSigma.pdf"));
 	}
 
       // check with real data
@@ -468,10 +473,12 @@ void tuneResolution(const int icent, const bool savePlot)
 		  funcTmp->Draw("sames");
 		}
 	    }
-	  hSmearSigma[i]->GetXaxis()->SetRangeUser(ptBins_low[0],ptBins_high[0]);
 	  hSmearSigma[i]->GetYaxis()->SetRangeUser(0.02,0.2);
 	  hSmearSigma[i]->SetMarkerStyle(20+i);
 	  hSmearSigma[i]->SetTitle(";p_{T} (GeV/c);#sigma");
+	  if((icent==0 || icent==1)) hSmearSigma[i]->GetXaxis()->SetRangeUser(0,10);
+	  if((icent==2 || icent==3)) hSmearSigma[i]->GetXaxis()->SetRangeUser(0,8);
+	  if(icent==4) hSmearSigma[i]->GetXaxis()->SetRangeUser(0,5);
 	  cSmear->cd();
 	  if(i==0) hSmearSigma[i]->Draw();
 	  else     hSmearSigma[i]->Draw("sames");
@@ -504,6 +511,8 @@ void tuneResolution(const int icent, const bool savePlot)
       t1->Draw();
       if(savePlot)
 	cSmear->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiRes/JpsiSigma_ScanToyMcVsData_cent%s.pdf",run_type,cent_Title[icent]));
+      if(gSaveAN && icent==0)
+	cSmear->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch3_MomSmear_ScanToyMcVsData.pdf"));
 
       printf("[i] Scan smear\n");
       // randomization data points with error bars 500 times to get the 
@@ -548,6 +557,8 @@ void tuneResolution(const int icent, const bool savePlot)
 	      t1->Draw();
 	      if(savePlot)
 		c1->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiRes/JpsiSigma_Chi2_Expr%d_cent%s.pdf",run_type,i,cent_Title[icent]));
+	      if(gSaveAN && icent==0)
+		c1->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch3_MomSmear_ToyMcChi2Dis.pdf"));
 	    }
 	  hSmearPar->Fill(hFitSmearChi2->GetMinimumX());
 	}
@@ -564,6 +575,8 @@ void tuneResolution(const int icent, const bool savePlot)
       hFinalSmear->SetBinContent(3, funcSmearPar->GetParameter(1)+funcSmearPar->GetParameter(2));
       if(savePlot)
 	c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiRes/JpsiSigma_FitSmearPar_cent%s.pdf",run_type,cent_Title[icent]));
+      if(gSaveAN && icent==0)
+	c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch3_MomSmear_DeterSmearPar.pdf"));
       /*
       printf("[i] Scan smear\n");
       TH1F *hSmearChi2[3];
@@ -737,6 +750,8 @@ void tuneResolution(const int icent, const bool savePlot)
       leg1->Draw();
       if(savePlot)
 	c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiRes/JpsiSigma_SmearToyMCVsData_cent%s.pdf",run_type,cent_Title[icent]));
+      if(gSaveAN)
+	c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch3_MomSmear_ToyMCvsData_JpsiSigma_%s.pdf",cent_Title[icent]));
 
       // signal shape
       TH1F *hJpsiShape[2][nPtBins-1];
@@ -846,6 +861,8 @@ void tuneResolution(const int icent, const bool savePlot)
       TLine *line = GetLine(0,1,15,1,1);
       line->Draw();
       if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiRes/SmearSys_cent%s.pdf",run_type,cent_Title[icent]));
+      if(gSaveAN && icent==0)
+	c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch3_MomSmear_SmearParSys.pdf"));
       fscan->cd();
       gEffSys->Write("",TObject::kOverwrite);
     }

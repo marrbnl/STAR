@@ -12,10 +12,11 @@ void ana_Lumi()
   gStyle->SetStatH(0.2);
 
   //makeHistoLumi();
-  makeHistoData();
+  //makeHistoData();
+  //mergeHisto();
 
   //Lumi2013();
-  //Lumi2014();
+  Lumi2014();
   //Lumi2015();
   //pAuCent();
   //Nevents();
@@ -347,7 +348,7 @@ void Lumi2013(const int savePlot = 0, const int saveHisto = 0)
 }
 
 //================================================
-void Lumi2014(const int savePlot = 1, const int saveHisto = 0)
+void Lumi2014(const int savePlot = 0, const int saveHisto = 0)
 {
   TList *list = new TList;
   TString legName[3] = {"|vr_{TPC}| < 2 cm", "+|vz_{TPC}| < 100 cm", "+ |vz_{TPC}-vz_{VPD}| < 3 cm"};
@@ -374,6 +375,7 @@ void Lumi2014(const int savePlot = 1, const int saveHisto = 0)
   TH2F *hCentWeight = (TH2F*)fMtd->Get("mhCentWeight_di_mu");
   c = draw2D(hCentWeight,"Event weights vs. multiplicity");
   if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/EventWeight.pdf",run_type));
+  if(gSaveAN)   c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch1_EventWeight.pdf"));
 
   /// vertex finding efficiency
   TH1F *hEvtRun = (TH1F*)fMtd->Get("mhEvtRun_di_mu");
@@ -437,12 +439,13 @@ void Lumi2014(const int savePlot = 1, const int saveHisto = 0)
 	{
 	  for(int bin=1; bin<=hMbCent[i]->GetNbinsX()/2; bin++)
 	    {
-	      cout << "bin = " << bin << ": " << (hMbCent[i]->GetBinContent(bin)+hMbCent[i]->GetBinContent(bin+1)) << endl;
+	      cout << "bin = " << bin << ": " << (hMbCent[i]->GetBinContent(bin*2-1)+hMbCent[i]->GetBinContent(bin*2)) << endl;
 	    }
 	}
     }
   c = drawHistos(list,"MbCent","VPD-ZDC-novtx-mon: distribution of centrality bins;cent",true,0,16,true,0,1.2*hMbCent[1]->GetMaximum(),kFALSE,kTRUE,legName3,kTRUE,"",0.5,0.7,0.2,0.35,false);
   if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/VpdZdcNoVtx_CentWeight.pdf",run_type));
+  if(gSaveAN)   c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch1_Centrality.pdf"));
   list->Clear();
 
   TH1F *hMbCentLumi[4];
@@ -450,14 +453,14 @@ void Lumi2014(const int savePlot = 1, const int saveHisto = 0)
     {
       hMbCentLumi[i] = (TH1F*)fMB->Get(Form("Cent_%s_w",setupName[i]));
       //hMbCentLumi[i]->Rebin(2);
-      hMbCentLumi[i]->Scale(1./hMbCentLumi[i]->Integral(15,16)*2);
+      //hMbCentLumi[i]->Scale(1./hMbCentLumi[i]->Integral(15,16)*2);
+      hMbCentLumi[i]->Scale(1./hMbCentLumi[i]->Integral()*16);
       hMbCentLumi[i]->SetLineWidth(2);
       list->Add(hMbCentLumi[i]);
     }
   c = drawHistos(list,"MbCentLumi","VPD-ZDC-novtx-mon: distribution of centrality bins;cent",true,0,16,kTRUE,0.5,1.2,kFALSE,kTRUE,legName2,kTRUE,"trgsetupname",0.3,0.5,0.16,0.36,false);
   if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/VpdZdcNoVtx_CentVsLumi.pdf",run_type));
   list->Clear();
-  return;
 
   // Vertex distribution
   TH1F *hTpcVz[4];
@@ -574,6 +577,7 @@ void Lumi2014(const int savePlot = 1, const int saveHisto = 0)
 	}
     }
   if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/VpdZdcNoVtx_VtxCutEff.pdf",run_type));
+  if(gSaveAN)   c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch1_VtxCutEff.png"));
 
   // different luminosity
   TH1F *hVtxEffLumi[nCentBins][4];
@@ -634,11 +638,15 @@ void Lumi2014(const int savePlot = 1, const int saveHisto = 0)
   if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/VpdZdcNoVtx_VtxCutEffLumi.pdf",run_type));
 
   // rejection factor during production
-  const int nRuns = 19;
-  const int runIDs[nRuns] = {15081015, 15084002, 15090006, 15097059, 15102021, 
-			     15104018, 15104039, 15104059, 15107077, 15119021,
-			     15149073, 15151036, 15151037, 15151038, 15151039,
-			     15151040, 15151041, 15151042, 15162019};
+  const int nRuns = 38;
+  const int runIDs[nRuns] = {15078103, 15078104, 15078107, 15078108, 15079059, 
+			     15079061, 15084002, 15084022, 15084052, 15088003, 
+			     15090006, 15097032, 15097034, 15102021, 15104018, 
+			     15104039, 15104059, 15106008, 15106009, 15106010, 
+			     15106011, 15107077, 15110032, 15110038, 15119021, 
+			     15132026, 15142054, 15151035, 15151036, 15151037, 
+			     15151038, 15151039, 15151040, 15151041, 15151042, 
+			     15151043, 15162019, 15166023};
   TFile *frf = TFile::Open("./output/Run14_AuAu200.RejectFactor.root","read");
   TH1F *hEvtAll = (TH1F*)frf->Get("hEvtAll");
   TH1F *hEvtAcc = (TH1F*)frf->Get("hEvtAcc");
@@ -673,8 +681,13 @@ void Lumi2014(const int savePlot = 1, const int saveHisto = 0)
 		}
 	    }
 	  if(!isGoodRun) continue;
-	  hRFLumi[i]->SetBinContent(bin,hRF->GetBinContent(bin));
+	  double rf = hRF->GetBinContent(bin);
+	  hRFLumi[i]->SetBinContent(bin,rf);
 	  hRFLumi[i]->SetBinError(bin,hRF->GetBinError(bin));
+	  if((rf>0.51 || rf<0.466) && rf > 0)
+	    {
+	      cout << "Bad run for RF: " << runnumber << " with rf = " << rf << endl;
+	    }
 	}
 
       TH1F *hRFtmp = (TH1F*)hRFLumi[i]->Clone(Form("Fit_%s",hRFLumi[i]->GetName()));
@@ -694,9 +707,9 @@ void Lumi2014(const int savePlot = 1, const int saveHisto = 0)
       t1->Draw();
       list->Add(hRFLumi[i]);
     }
-  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/Dimuon_FitRejectFactorLumi.pdf",run_type));
   c = drawHistos(list,"MtdRFLumi",Form("Dimuon: fraction of events accepted during two-pass reconstruction"),kFALSE,0,30,kTRUE,0.35,0.55,kFALSE,kTRUE,legName2,kTRUE,"trgsetupname",0.3,0.5,0.16,0.36,true);
   if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/Dimuon_RejectFactorLumi.pdf",run_type));
+  if(gSaveAN)   c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch1_RejectFactor.pdf"));
   list->Clear();
 
   // check missing runs
@@ -740,7 +753,6 @@ void Lumi2014(const int savePlot = 1, const int saveHisto = 0)
 	}
     }
   printf("+++ %d runs (%4.2fM) are missing +++\n\n",nRF,nRFevts/1e6);
-  return;
   
   // get equivalent # of MB events
   /// Raw # of events
@@ -828,6 +840,7 @@ void Lumi2014(const int savePlot = 1, const int saveHisto = 0)
 	}
     }
   if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/MB_EvtFractionWithVtxCutCent.pdf",run_type));
+  if(gSaveAN)   c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch1_FitVtxEff.pdf"));
 
   // check vertex efficiency
   printf("+++ check vertex efficiency +++\n");
@@ -1136,9 +1149,9 @@ void Lumi2015(const int savePlot = 0, const int saveHisto = 0)
 }
 
 //================================================
-void makeHistoLumi(const int savePlot = 0, const int saveHisto = 0)
+void makeHistoLumi(const int savePlot = 1, const int saveHisto = 1)
 {
-  //const char *trigName = "VPD-ZDC-novtx-mon";
+  const char *trigName = "VPD-ZDC-novtx-mon";
   //const char *trigName = "VPDMB-novtx";
   //const char *trigName = "dimuon";
   
@@ -1290,11 +1303,12 @@ void makeHistoData(const int savePlot = 1, const int saveHisto = 1)
   TH2F *hDiffVzVsRun[nCentBins];
   TH2F *hCentVsRun[2];
 
-  TFile *fMB = TFile::Open(Form("./output/Run14.AuAu200.MB.VtxEff.root"),"read");
+
+  const char *lumiType = "prod_high";
+  TFile *fMB = TFile::Open(Form("./output/Run14_AuAu200.MB.VtxEff.%s.root",lumiType),"read");
   THnSparseF *hn[2];
   hn[0] = (THnSparseF*)fMB->Get("mhMbEvtEff");
   hn[1] = (THnSparseF*)fMB->Get("mhMbEvtEffWeight");
-
 
   for(int i=0; i<2; i++)
     {
@@ -1446,7 +1460,7 @@ void makeHistoData(const int savePlot = 1, const int saveHisto = 1)
 
   if(saveHisto)
     {
-      TFile *fout = TFile::Open(Form("Rootfiles/%s.Luminosity.root",run_type),"update");
+      TFile *fout = TFile::Open(Form("Rootfiles/%s.Luminosity.%s.root",run_type,lumiType),"update");
       for(int k=0; k<5; k++)
 	{
 	  for(int i=0; i<2; i++)
@@ -1482,3 +1496,124 @@ void makeHistoData(const int savePlot = 1, const int saveHisto = 1)
 	}
     }
 }
+
+
+//================================================
+void mergeHisto(const int saveHisto = 1)
+{
+  if(year!=2014)
+    {
+      printf("[e] Not suitable for %d\n",year);
+      return;
+    }
+
+  const char *wName[2] = {"","_w"};
+  const char *setupName[5] = {"all","prod","prod_low","prod_mid","prod_high"};
+  const char *trgSetupName[4] = {"production","production_low","production_mid","production_high"};
+  const int nCentBins = 17;
+  const char *cent_Title[nCentBins] = {"0060","0020","2040","4060","0010","1030","3060","1020","2030","3040","4050","5060","0080","6080","6070","7080","7580"};
+  TH1F *hNEvents[5][2];
+  TH1F *hTpcVz[5][nCentBins];
+  TH1F *hDiffVz[5][nCentBins];
+  TH1F *hTpcVr[5][nCentBins];
+  TH1F *hNEventsAll[5][nCentBins][2];
+  TH1F *hNEventsVr[5][nCentBins][2];
+  TH1F *hNEventsVz[5][nCentBins][2];
+  TH1F *hNEventsAcc[5][nCentBins][2];
+  TH1F *hCent[5][2];
+
+  TFile *f[2];
+  f[0] = TFile::Open(Form("Rootfiles/%s.Luminosity.prod_low.root",run_type),"read");
+  f[1] = TFile::Open(Form("Rootfiles/%s.Luminosity.prod_high.root",run_type),"read");
+  TFile *fCurr = 0x0;
+  for(int k=0; k<4; k++)
+    {
+    if(k<3) fCurr = f[0];
+    else    fCurr = f[1];
+      for(int i=0; i<2; i++)
+	{
+	  hNEvents[k+1][i] = (TH1F*)fCurr->Get(Form("NEvents_%s%s",setupName[k+1],wName[i]));
+	  if(k==0) hNEvents[0][i] = (TH1F*)hNEvents[k+1][i]->Clone(Form("NEvents_%s%s",setupName[k],wName[i]));
+	  else     hNEvents[0][i]->Add(hNEvents[k+1][i]);
+
+	  for(int j=0; j<nCentBins; j++)
+	    {
+	      if(i==0)
+		{
+		  hTpcVz[k+1][j]  = (TH1F*)fCurr->Get(Form("TpcVz_cent%s_%s%s",cent_Title[j],setupName[k+1],wName[i]));
+		  if(k==0) hTpcVz[0][j] = (TH1F*)hTpcVz[k+1][j]->Clone(Form("TpcVz_cent%s_%s%s",cent_Title[j],setupName[k],wName[i]));
+		  else     hTpcVz[0][j]->Add(hTpcVz[k+1][j]);
+
+		  hTpcVr[k+1][j]  = (TH1F*)fCurr->Get(Form("TpcVr_cent%s_%s%s",cent_Title[j],setupName[k+1],wName[i]));
+		  if(k==0) hTpcVr[0][j] = (TH1F*)hTpcVr[k+1][j]->Clone(Form("TpcVr_cent%s_%s%s",cent_Title[j],setupName[k],wName[i]));
+		  else     hTpcVr[0][j]->Add(hTpcVr[k+1][j]);
+
+		  hDiffVz[k+1][j] = (TH1F*)fCurr->Get(Form("TpcVpdDz_cent%s_%s%s",cent_Title[j],setupName[k+1],wName[i]));
+		  if(k==0) hDiffVz[0][j] = (TH1F*)hDiffVz[k+1][j]->Clone(Form("TpcVpdDz_cent%s_%s%s",cent_Title[j],setupName[k],wName[i]));
+		  else     hDiffVz[0][j]->Add(hDiffVz[k+1][j]);
+		}
+	      hNEventsAll[k+1][j][i] = (TH1F*)fCurr->Get(Form("NEvents_cent%s_%s%s",cent_Title[j],setupName[k+1],wName[i]));
+	      if(k==0) hNEventsAll[0][j][i] = (TH1F*)hNEventsAll[k+1][j][i]->Clone(Form("NEvents_cent%s_%s%s",cent_Title[j],setupName[k],wName[i]));
+	      else     hNEventsAll[0][j][i]->Add(hNEventsAll[k+1][j][i]);
+
+	      hNEventsVr[k+1][j][i]  = (TH1F*)fCurr->Get(Form("NEvents_VrCut_cent%s_%s%s",cent_Title[j],setupName[k+1],wName[i]));
+	      if(k==0) hNEventsVr[0][j][i] = (TH1F*)hNEventsVr[k+1][j][i]->Clone(Form("NEvents_VrCut_cent%s_%s%s",cent_Title[j],setupName[k],wName[i]));
+	      else     hNEventsVr[0][j][i]->Add(hNEventsVr[k+1][j][i]);
+
+	      hNEventsVz[k+1][j][i]  = (TH1F*)fCurr->Get(Form("NEvents_VrVzCut_cent%s_%s%s",cent_Title[j],setupName[k+1],wName[i]));
+	      if(k==0) hNEventsVz[0][j][i] = (TH1F*)hNEventsVz[k+1][j][i]->Clone(Form("NEvents_VrVzCut_cent%s_%s%s",cent_Title[j],setupName[k],wName[i]));
+	      else     hNEventsVz[0][j][i]->Add(hNEventsVz[k+1][j][i]);
+
+	      hNEventsAcc[k+1][j][i] = (TH1F*)fCurr->Get(Form("NEvents_VrVzDzCut_cent%s_%s%s",cent_Title[j],setupName[k+1],wName[i]));
+	      if(k==0) hNEventsAcc[0][j][i] = (TH1F*)hNEventsAcc[k+1][j][i]->Clone(Form("NEvents_VrVzDzCut_cent%s_%s%s",cent_Title[j],setupName[k],wName[i]));
+	      else     hNEventsAcc[0][j][i]->Add(hNEventsAcc[k+1][j][i]);
+
+	      if(j==0)
+		{
+		  hCent[k+1][i] = (TH1F*)fCurr->Get(Form("Cent_%s%s",setupName[k+1],wName[i]));
+		  if(k==0) hCent[0][i] = (TH1F*)hCent[k+1][i]->Clone(Form("Cent_%s%s",setupName[k],wName[i]));
+		  else     hCent[0][i]->Add(hCent[k+1][i]);
+		}
+	    }
+	}
+    }
+
+  if(saveHisto)
+    {
+      TFile *fout = TFile::Open(Form("Rootfiles/%s.Luminosity.root",run_type),"recreate");
+      for(int k=0; k<5; k++)
+	{
+	  for(int i=0; i<2; i++)
+	    {
+	      hNEvents[k][i]->SetTitle("");
+	      hNEvents[k][i]->Write("",TObject::kOverwrite);
+	      for(int j=0; j<nCentBins; j++)
+		{
+		  hNEventsAll[k][j][i]->SetTitle("");
+		  hNEventsVr[k][j][i]->SetTitle("");
+		  hNEventsVz[k][j][i]->SetTitle("");
+		  hNEventsAcc[k][j][i]->SetTitle("");
+		  hNEventsAll[k][j][i]->Write("",TObject::kOverwrite);
+		  hNEventsVr[k][j][i]->Write("",TObject::kOverwrite);
+		  hNEventsVz[k][j][i]->Write("",TObject::kOverwrite);
+		  hNEventsAcc[k][j][i]->Write("",TObject::kOverwrite);
+		  if(j==0)
+		    {
+		      hCent[k][i]->SetTitle("");
+		      hCent[k][i]->Write("",TObject::kOverwrite);
+		    }
+		  if(i==0)
+		    {
+		      hTpcVz[k][j]->SetTitle("");
+		      hTpcVr[k][j]->SetTitle("");
+		      hDiffVz[k][j]->SetTitle("");
+		      hTpcVz[k][j]->Write("",TObject::kOverwrite);
+		      hTpcVr[k][j]->Write("",TObject::kOverwrite);
+		      hDiffVz[k][j]->Write("",TObject::kOverwrite);
+		    }
+		}
+	    }
+	}
+    }
+}
+

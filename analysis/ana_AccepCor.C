@@ -55,7 +55,7 @@ const double gMtdRadius                = 403; // Minimum radius of MTD system ex
 
 TRandom3 *myRandom;
 void MtdAccepLoss(const int savePlot = 0, const int saveHisto = 0);
-void TrkEffCentDep(const int savePlot = 0, const int saveHisto = 0);
+void makeMtdAcc(const int savePlot = 0);
 
 TLorentzVector myBoost(TLorentzVector parent, TLorentzVector daughter);
 TLorentzVector twoBodyDecay(TLorentzVector parent, double dmass);
@@ -104,437 +104,54 @@ void ana_AccepCor()
     }
   if(year==2014)
     {
-      TFile *fWeight = TFile::Open("Rootfiles/Run14_AuAu200.Input.root","read");
-      hMcJpsiPt = (TH1F*)fWeight->Get(Form("hInputJpsiShape_Cent0"));
+      TFile *fWeight = TFile::Open("Rootfiles/models.root","read");
+      hMcJpsiPt = (TH1F*)fWeight->Get(Form("TBW_JpsiYield_AuAu200_cent0060"));
     } 
 
 
-  //MtdAccepLoss(1,1);
-  TrkEffCentDep(1,1);
+  MtdAccepLoss(1,1);
+  //makeMtdAcc(0);
 }
 
 //================================================
-void TrkEffCentDep(const int savePlot, const int saveHisto)
+void makeMtdAcc(const int savePlot)
 {
-  gStyle->SetStatY(0.6);                
-  gStyle->SetStatX(0.9);  
-  gStyle->SetStatW(0.2);                
-  gStyle->SetStatH(0.2);
-
-  // extract single muon efficiency for each centrality
-  // Jpsi coutns as weights
-  TFile *fYield = TFile::Open(Form("Rootfiles/Pico.Run14.AuAu200.jpsi.pt%1.1f.pt%1.1f.yield.root",pt1_cut,pt2_cut),"read");
-  TH1F *hJpsiCounts[gNTrgSetup-1];
-  double nJpsi[nCentBins-1][gNTrgSetup-1] = {0};
-  double nJpsiCent[nCentBins-1] = {0};
-  double nJpsiAll = 0;
-  for(int i=0; i<gNTrgSetup-1; i++)
+  TFile *fdata = TFile::Open(Form("output/%s.jpsi.root",run_type));
+  THnSparseF *mhMtdRunStatus = (THnSparseF*)fdata->Get("mhMtdRunStatus_di_mu");
+  int nRange = 0;
+  TH2F *hMtdMap[10];
+  int runRange[10];
+  if(year==2014)
     {
-      hJpsiCounts[i] = (TH1F*)fYield->Get(Form("NJpsiInCent_weight%s",gTrgSetupName[i+1]));
-      for(int bin=1; bin<=hJpsiCounts[i]->GetNbinsX(); bin++)
-	{
-	  nJpsi[bin-1][i] = hJpsiCounts[i]->GetBinContent(bin);
-	  nJpsiCent[bin-1] += hJpsiCounts[i]->GetBinContent(bin);
-	  nJpsiAll += hJpsiCounts[i]->GetBinContent(bin);
-	  printf("[i] %s%% %s: %4.2f Jpsi\n",cent_Title[bin],gTrgSetupTitle[i+1],nJpsi[bin-1][i]);
-	}
-    }
-
-
-  // tracking efficiency
-  const int nHistos = nCentBins + 6;
-  const char *centTitle[nHistos] = {"0060","0020","2040","4060","010","1020","2030","3040","4050","5060"};
-  const char *trkEffType[2] = {"MC","Tpc"};
-  TFile *fTrkEff = TFile::Open(Form("Rootfiles/%s.TrkEff.root",run_type),"read");
-  TH1F *hMcTrkPt[2][gNTrgSetup-1][nHistos];
-  for(int i=0; i<2; i++)
-    {
-      for(int j=0; j<gNTrgSetup-1; j++)
-	{
-	  for(int k=0; k<nHistos; k++)
-	    {
-	      TH1F *htmp= (TH1F*)fTrkEff->Get(Form("hMcTrkPt_%s_cent%s%s",trkEffType[i],centTitle[k],gTrgSetupTitle[j+1]));
-	      hMcTrkPt[i][j][k] = new TH1F(Form("hMcTrkPt_%s_cent%s%s_clone",trkEffType[i],centTitle[k],gTrgSetupTitle[j+1]),"",(int)(20/htmp->GetBinWidth(1)),0,20);
-	      for(int bin=1; bin<=hMcTrkPt[i][j][k]->GetNbinsX(); bin++)
-		{
-		  double jbin = htmp->FindFixBin(hMcTrkPt[i][j][k]->GetBinCenter(bin));
-		  hMcTrkPt[i][j][k]->SetBinContent(bin,htmp->GetBinContent(jbin));
-		  hMcTrkPt[i][j][k]->SetBinError(bin,TMath::Sqrt(htmp->GetBinContent(jbin)));
-		}
-	      hMcTrkPt[i][j][k]->Rebin(2);
-	    }
-	}
+      nRange = 8;
+      runRange[0] = 15074104;
+      runRange[1] = 15077035;
+      runRange[2] = 15078021;
+      runRange[3] = 15098066;
+      runRange[4] = 15099002;
+      runRange[5] = 15106130;
+      runRange[6] = 15131038;
+      runRange[7] = 15132019;
+      runRange[8] = 15167014;
     }
   
-  // trigger efficiency
-  TFile *fTrigEff = TFile::Open(Form("Rootfiles/Run14.AuAu200.Input.root"),"read");
-  TH1F *hTrigEff[gNTrgSetup-1][nCentBins-1];
-  for(int j=0; j<gNTrgSetup-1; j++)
+  for(int i=0; i<nRange; i++)
     {
-      for(int k=0; k<nCentBins-1; k++)
-	{ 
-	  TH1F *htmp = (TH1F*)fTrigEff->Get(Form("MuonTrigEff_Cent%d%s",0,gTrgSetupName[j+1]));
-	  cout << htmp->GetName() << endl;
-	  hTrigEff[j][k] = new TH1F(Form("MuonTrigEff_Cent%s%s",cent_Title[k+1],gTrgSetupName[j+1]),"",(int)(30/htmp->GetBinWidth(1)),0,30);
-	  for(int bin=1; bin<=hTrigEff[j][k]->GetNbinsX(); bin++)
-	    {
-	      double x = hTrigEff[j][k]->GetBinCenter(bin);
-	      if(x>9) x = htmp->GetBinCenter(htmp->GetNbinsX());
-	      double jbin = htmp->FindFixBin(x);
-	      hTrigEff[j][k]->SetBinContent(bin,htmp->GetBinContent(jbin));
-	      hTrigEff[j][k]->SetBinError(bin, 1e-10);
-	    }
-	}
+      mhMtdRunStatus->GetAxis(2)->SetRange(i+1, i+1);
+      hMtdMap[i] = (TH2F*)mhMtdRunStatus->Projection(1,0);
+      hMtdMap[i]->SetName(Form("hMtdMap_RunRange%d",i+1));
+      hMtdMap[i]->GetYaxis()->SetRangeUser(0,59);
+      TCanvas *c = draw2D(hMtdMap[i],Form("%s: run %d - %d",run_type,runRange[i]+1,runRange[i+1])); 
+      if(savePlot)
+	c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_AccepCor/MtdAcceptanceLoss_RunRange%d.pdf",run_type,i));
     }
 
-  // tracking * trigger efficiency
-  TH1F *hTrkEffTrg[gNTrgSetup-1][nHistos];
-  for(int j=0; j<gNTrgSetup-1; j++)
-    {
-      for(int k=0; k<nHistos; k++)
-	{
-	  hTrkEffTrg[j][k] = (TH1F*)hMcTrkPt[1][j][k]->Clone(Form("hTrkEffTrg_cent%s%s",centTitle[k],gTrgSetupTitle[j+1]));
-	  hTrkEffTrg[j][k]->Divide(hMcTrkPt[0][j][k]);
-	  int index = k-1;
-	  if(k==0) index = 0;
-	  if(k>=nCentBins) index = (k-4)/2;
-	  for(int bin=1; bin<=hTrkEffTrg[j][k]->GetNbinsX(); bin++)
-	    {
-	      double x = hTrkEffTrg[j][k]->GetBinCenter(bin);
-	      double jbin = hTrigEff[j][index]->FindFixBin(x);
-	      double eff = hTrigEff[j][index]->GetBinContent(jbin);
-	      hTrkEffTrg[j][k]->SetBinContent(bin,hTrkEffTrg[j][k]->GetBinContent(bin)*eff);
-	      hTrkEffTrg[j][k]->SetBinError(bin,hTrkEffTrg[j][k]->GetBinError(bin)*eff);
-	    }
-	}
-    }
-  
-  // final avergae efficiency
-  TH1F *hTrkEff[nHistos];
-  for(int k=0; k<nHistos; k++)
-    {
-      hTrkEff[k] = (TH1F*)hMcTrkPt[0][0][k]->Clone(Form("hTrkEff_cent%s",centTitle[k]));
-      hTrkEff[k]->Reset();
-    }
-  //0-60%
-  for(int k=1; k<nCentBins; k++)
-    { 
-      for(int j=0; j<gNTrgSetup-1; j++)
-	{
-	  hTrkEff[0]->Add(hTrkEffTrg[j][k], nJpsi[k-1][j]/nJpsiAll);
-	}
-    }
-  // other centralities
-  for(int k=1; k<nHistos; k++)
-    { 
-      for(int j=0; j<gNTrgSetup-1; j++)
-	{
-	  int index = k-1;
-	  if(k>=nCentBins) index = (k-4)/2;
-	  hTrkEff[k]->Add(hTrkEffTrg[j][k], nJpsi[index][j]/nJpsiCent[index]);
-	}
-    }
-
-  /*
-  for(int k=0; k<nHistos; k++)
-    { 
-      for(int bin=1; bin<=hTrkEff[k]->GetNbinsX(); bin++)
-	{
-	  double value = hTrkEff[k]->GetBinContent(bin);
-	  double error = hTrkEff[k]->GetBinError(bin);
-	  hTrkEff[k]->SetBinContent(bin, 1./value);
-	  hTrkEff[k]->SetBinError(bin, 1./value * error/value);
-	}
-    }
-  */
-
-  TLegend *leg = new TLegend(0.3,0.2,0.5,0.45);
-  leg->SetBorderSize(0);
-  leg->SetFillColor(0);
-  leg->SetTextSize(0.04);
-  leg->SetHeader(run_type);
-  for(int k=0; k<nCentBins; k++)
-    {
-      hTrkEff[k]->SetMarkerStyle(20+k);
-      hTrkEff[k]->SetMarkerColor(TMath::Power(2,k));
-      hTrkEff[k]->SetTitle("TPC tracking efficiency");
-      hTrkEff[k]->GetYaxis()->SetRangeUser(0,0.8);
-      leg->AddEntry(hTrkEff[k],Form("%s%%",cent_Name[k]),"PL");
-    }
-  TCanvas *c = draw1D(hTrkEff[0]);
-  for(int k=1; k<nCentBins; k++)
-    {
-      hTrkEff[k]->Draw("samesP");
-    }
-  leg->Draw();
-  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/CompTrkEff_InCent.pdf",run_type));
-
-  c = new TCanvas("fit_trkeff","fit_trkeff",1200,600);
-  c->Divide(4,3);
-  TF1 *func[nHistos];
-  for(int k=0; k<nHistos; k++)
-    {
-      TH1F *hfit = (TH1F*)hTrkEff[k]->Clone(Form("Fit_%s",hTrkEff[k]->GetName()));
-      hfit->GetXaxis()->SetRangeUser(0.5,20);
-      hfit->GetYaxis()->SetRangeUser(0,0.9);
-      hfit->SetMarkerStyle(25);
-      hfit->SetMarkerColor(1);
-      //func[k] = new TF1(Form("func_%d",k),"[0]*exp(-pow([1]/x,[2])-pow([3]/x/x,[4])-pow([5]/x/x/x,[6]))",1,20);
-      func[k] = new TF1(Form("func_%d",k),"[0]*exp(-pow([1]/x,[2]))",1,5);
-      func[k]->SetParameters(1,0.1,1);
-      hfit->Fit(func[k],"RQ0");
-      c->cd(k+1);
-      hfit->SetTitle("");
-      hfit->Draw();
-      TF1 *funcTmp = (TF1*)func[k]->Clone(Form("%s_clone",func[k]->GetName()));
-      funcTmp->SetRange(1,20);
-      funcTmp->SetLineColor(2);
-      funcTmp->SetLineStyle(2);
-      funcTmp->Draw("sames");
-      func[k]->SetLineColor(4);
-      func[k]->Draw("sames");
-      TPaveText *t1 = GetTitleText(Form("TPC tracking efficiency (%s%%)",centTitle[k]),0.06);
-      t1->Draw();
-      printf("[i] Efficiency for %s is %4.2f%%\n",centTitle[k],funcTmp->Eval(10)*100);
-    }
-  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/FitTrkEff_InCent.pdf",run_type));
-
-
-  // Fit efficiency for each trigger setup
-  c = new TCanvas("fit_trkeff2","fit_trkeff2",1200,600);
-  c->Divide(4,4);
-  TF1 *func2[gNTrgSetup-1][nCentBins];
-  TH1F *hTrkEff2[gNTrgSetup-1][nCentBins];
-  for(int j=0; j<gNTrgSetup-1; j++)
-    {
-      double nJpsiSetup = nJpsi[0][j] + nJpsi[1][j] + nJpsi[2][j];
-      for(int k=0; k<nCentBins; k++)
-	{
-	  hTrkEff2[j][k] = (TH1F*)hTrkEffTrg[j][k]->Clone(Form("hTrkEff2_cent%s%s",centTitle[k],gTrgSetupTitle[j+1]));
-	  if(k==0)
-	    {
-	      hTrkEff2[j][k]->Reset();
-	      for(int icent=1; icent<nCentBins; icent++)
-		{
-		  hTrkEff2[j][k]->Add(hTrkEffTrg[j][icent], nJpsi[icent-1][j]/nJpsiSetup);
-		}
-	    }
-
-	  TH1F *hfit = (TH1F*)hTrkEff2[j][k]->Clone(Form("Fit_%s",hTrkEff2[j][k]->GetName()));
-	  hfit->GetXaxis()->SetRangeUser(0.5,20);
-	  hfit->GetYaxis()->SetRangeUser(0,0.8);
-	  hfit->SetMarkerStyle(25);
-	  hfit->SetMarkerColor(1);
-	  func2[j][k] = new TF1(Form("func_%d_%d",j,k),"[0]*exp(-pow([1]/x,[2]))",1,5);
-	  func2[j][k]->SetParameters(1,0.1,1);
-	  hfit->Fit(func2[j][k],"RQ0");
-	  c->cd(j*nCentBins+k+1);
-	  hfit->SetTitle("");
-	  hfit->Draw();
-	  TF1 *funcTmp = (TF1*)func2[j][k]->Clone(Form("%s_clone",func2[j][k]->GetName()));
-	  funcTmp->SetRange(1,20);
-	  funcTmp->SetLineColor(2);
-	  funcTmp->SetLineStyle(2);
-	  funcTmp->Draw("sames");
-	  func2[j][k]->SetLineColor(4);
-	  func2[j][k]->Draw("sames");
-	  TPaveText *t1 = GetTitleText(Form("TPC tracking efficiency (%s,%s%%)",gTrgSetupTitle[j+1],centTitle[k]),0.06);
-	  t1->Draw();
-	  printf("[i] Efficiency for %s in %s is %4.2f%%\n",centTitle[k],gTrgSetupTitle[j+1],funcTmp->Eval(10)*100);
-	}
-    }
-
-  // Toy MC
-  TH1F *hInJpsiPt;
-  TH1F *hOutJpsiPt[nHistos];
-  TH1F *hOutJpsiPt2[gNTrgSetup-1][nCentBins];
-
-  const int nbins = nPtBins -1;
-  double xbins[nbins+1];
-  for(int i=0; i<nbins; i++)
-    xbins[i] = ptBins_low[i+1];
-  xbins[nbins] = ptBins_high[nbins];
-
-  hInJpsiPt = new TH1F(Form("hInJpsiPt"),"p_{T} distribution of input J/#Psi;p_{T} (GeV/c)",nbins,xbins);
-  hInJpsiPt->Sumw2();
-  for(int i=0; i<nHistos; i++)
-    {
-      hOutJpsiPt[i] = new TH1F(Form("hOutJpsiPt_%d",i),"p_{T} distribution of reconstructed J/#Psi;p_{T} (GeV/c)",nbins,xbins);
-      hOutJpsiPt[i]->Sumw2();
-    }
-  for(int j=0; j<gNTrgSetup-1; j++)
-    {
-      for(int k=0; k<nCentBins; k++)
-	{
-	  hOutJpsiPt2[j][k] = new TH1F(Form("hOutJpsiPt_%d_%d",j,k),"p_{T} distribution of reconstructed J/#Psi;p_{T} (GeV/c)",nbins,xbins);
-	  hOutJpsiPt2[j][k]->Sumw2();
-	}
-    }
-
-
-  const int nExpr = 5e7;
-  for(int i=0; i<nExpr; i++)
-    {
-      double mc_pt  =  myRandom->Uniform(0,20);
-      double weight = hMcJpsiPt->GetBinContent(hMcJpsiPt->FindFixBin(mc_pt));
-      double mc_phi = myRandom->Uniform(-1*pi, pi);
-      double mc_y   = myRandom->Uniform(-0.5, 0.5);
-      double mc_px = mc_pt * TMath::Cos(mc_phi);
-      double mc_py = mc_pt * TMath::Sin(mc_phi);
-      double mc_pz = sqrt(mc_pt*mc_pt+jpsiMass*jpsiMass) * TMath::SinH(mc_y);
-      TLorentzVector parent;
-      parent.SetXYZM(mc_px,mc_py,mc_pz,jpsiMass);
-      hInJpsiPt->Fill(mc_pt,weight);
-
-      TLorentzVector daughter1 = twoBodyDecay(parent,muMass);
-      double pt1 = daughter1.Pt();
-      double eta1 = daughter1.Eta();
-      double phi1 = daughter1.Phi();
-      double z1 = TMath::Tan(pi/2-daughter1.Theta()) * gMtdRadius;
-
-      TLorentzVector daughter2 = parent - daughter1;
-      double pt2 = daughter2.Pt();
-      double eta2 = daughter2.Eta();
-      double phi2 = daughter2.Phi();
-      double z2 = TMath::Tan(pi/2-daughter2.Theta()) * gMtdRadius;
-
-      double leadpt = pt1 > pt2 ? pt1 : pt2;
-      double subpt  = pt1 < pt2 ? pt1 : pt2;
-      if(leadpt<pt1_cut || subpt<pt2_cut) continue;
-      
-      for(int k=0; k<nHistos; k++)
-	{
-	  double eff1 = func[k]->Eval(pt1);
-	  double eff2 = func[k]->Eval(pt2);
-	  double pro1 = myRandom->Uniform(0., 1.);
-	  double pro2 = myRandom->Uniform(0., 1.);
-	  if(pro1<eff1 && pro2<eff2)
-	    {
-	      hOutJpsiPt[k]->Fill(mc_pt,weight);
-	    }
-	}
-
-      for(int j=0; j<gNTrgSetup-1; j++)
-	{
-	  for(int k=0; k<nCentBins; k++)
-	    {
-	      double eff1 = func2[j][k]->Eval(pt1);
-	      double eff2 = func2[j][k]->Eval(pt2);
-	      double pro1 = myRandom->Uniform(0., 1.);
-	      double pro2 = myRandom->Uniform(0., 1.);
-	      if(pro1<eff1 && pro2<eff2)
-		{
-		  hOutJpsiPt2[j][k]->Fill(mc_pt,weight);
-		}
-	    }
-	}
-    }
-
-  TH1F *hJpsiEff[nCentBins];
-  for(int k=0; k<nCentBins; k++)
-    {
-      hJpsiEff[k] = (TH1F*)hOutJpsiPt[k]->Clone(Form("hJpsiEffCorr_cent%s",centTitle[k]));
-      hJpsiEff[k]->Divide(hOutJpsiPt[1]);
-      hJpsiEff[k]->SetMarkerStyle(20+k);
-      hJpsiEff[k]->SetMarkerColor(TMath::Power(2,k));
-      hJpsiEff[k]->SetTitle("Ratio of J/#psi efficiency");
-      hJpsiEff[k]->GetYaxis()->SetRangeUser(0.8,1.2);
-    }
-  c = draw1D(hJpsiEff[0]);
-  hJpsiEff[2]->Draw("sames");
-  hJpsiEff[3]->Draw("sames");
-  leg = new TLegend(0.5,0.65,0.7,0.88);
-  leg->SetBorderSize(0);
-  leg->SetFillColor(0);
-  leg->SetTextSize(0.04);
-  leg->SetHeader(run_type);
-  leg->AddEntry(hTrkEff[0],Form("%s%%/%s%%",cent_Name[0],cent_Name[1]),"PL");
-  leg->AddEntry(hTrkEff[2],Form("%s%%/%s%%",cent_Name[2],cent_Name[1]),"PL");
-  leg->AddEntry(hTrkEff[3],Form("%s%%/%s%%",cent_Name[3],cent_Name[1]),"PL");
-  leg->Draw();
-  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/JpsiEffCorr_ToCentral.pdf",run_type));
-
-
-  TH1F *hJpsiEff2[gNTrgSetup-1][nCentBins];
-  for(int j=0; j<gNTrgSetup-1; j++)
-    {
-      for(int k=0; k<nCentBins; k++)
-	{
-	  hJpsiEff2[j][k] = (TH1F*)hOutJpsiPt2[j][k]->Clone(Form("hJpsiEffCorr_cent%s%s",centTitle[k],gTrgSetupTitle[j+1]));
-	  hJpsiEff2[j][k]->Divide(hOutJpsiPt2[j][1]);
-	  //hJpsiEff2[j][k]->Divide(hOutJpsiPt[1]);
-	  hJpsiEff2[j][k]->SetMarkerStyle(20+k);
-	  hJpsiEff2[j][k]->SetMarkerColor(TMath::Power(2,j));
-	  hJpsiEff2[j][k]->SetTitle("Ratio of J/#psi efficiency");
-	  hJpsiEff2[j][k]->GetYaxis()->SetRangeUser(0.4,1.8);
-	}
-    }
-  c = draw1D(hJpsiEff2[0][0]);
-  for(int j=0; j<gNTrgSetup-1; j++)
-    {
-      for(int k=0; k<nCentBins; k++)
-	{
-	  hJpsiEff2[j][k]->Draw("sames");
-	}
-    }
-
-  // Npart analysis
-  int ptCuts[2] = {0,5};
-  TH1F *hJpsiEffCent[2];
-  for(int i=0; i<2; i++)
-    {
-      hJpsiEffCent[i] = new TH1F(Form("hJpsiEffCor_pt%d-15",ptCuts[i]),"",6,0,6);
-      for(int bin=1; bin<=6; bin++)
-	{
-	  int low_bin = hOutJpsiPt[4]->FindFixBin(ptCuts[i]+1e-4);
-	  int high_bin = hOutJpsiPt[4]->FindFixBin(15-1e-4);
-	  double denom_err;
-	  double denom = hOutJpsiPt[4]->IntegralAndError(low_bin,high_bin,denom_err);
-	  double numer_err;
-	  double numer =  hOutJpsiPt[10-bin]->IntegralAndError(low_bin,high_bin,numer_err);
-	  double value = numer/denom;
-	  double err = value*TMath::Sqrt(numer_err*numer_err/numer/numer+denom_err*denom_err/denom/denom);
-	  hJpsiEffCent[i]->SetBinContent(bin,value);
-	  hJpsiEffCent[i]->SetBinError(bin,err);
-	}
-      hJpsiEffCent[i]->SetMarkerStyle(20+i);
-      hJpsiEffCent[i]->SetMarkerColor(TMath::Power(2,i));
-      hJpsiEffCent[i]->GetYaxis()->SetRangeUser(0.9,1.1);
-    }
-  c = draw1D(hJpsiEffCent[0],"Ratio of J/#psi efficiency to 0-10%");
-  hJpsiEffCent[1]->Draw("samesP");
-
-  if(saveHisto)
-    {
-      TFile *fout = TFile::Open(Form("Rootfiles/%s.JpsiEff.pt%1.1f.pt%1.1f.root",run_type,pt1_cut,pt2_cut),"update");
-      for(int k=0; k<nCentBins; k++)
-	{
-	  hJpsiEff[k]->SetTitle("");
-	  hJpsiEff[k]->Write("",TObject::kOverwrite);
-	}
-      for(int j=0; j<gNTrgSetup-1; j++)
-	{
-	  for(int k=0; k<nCentBins; k++)
-	    {
-	      hJpsiEff2[j][k]->SetTitle("");
-	      hJpsiEff2[j][k]->Write("",TObject::kOverwrite);
-	    }
-	}
-      fout->Close();
-
-      fout =  TFile::Open(Form("Rootfiles/%s.Npart.pt%1.1f.pt%1.1f.root",run_type,pt1_cut,pt2_cut),"update"); 
-      for(int i=0; i<2; i++)
-	{
-	  hJpsiEffCent[i]->Write("",TObject::kOverwrite);
-	}
-    }
-  
 }
 
 //================================================
 void MtdAccepLoss(const int savePlot, const int saveHisto)
 {
-  const int nHistos = 4;
+  const int nHistos = 9;
   TH1F *hInJpsiPt;
   TH1F *hOutJpsiPt[nHistos];
 
@@ -558,7 +175,7 @@ void MtdAccepLoss(const int savePlot, const int saveHisto)
     {
       int backleg = i/5 + 1;
       int module = i%5 + 1;
-      TF1 *func  = (TF1*)fRespEff->Get(Form("fSclPtTmpBkl%d_Mod%d",i/5,i%5));
+      TF1 *func  = (TF1*)fRespEff->Get(Form("fSclPtMtdEffBkl%d_Mod%d",i/5,i%5));
       hRespEff[i] = new TH1F(Form("MtdRespEffvsPt_Bkl%d_Mod%d",backleg,module),Form("MtdRespEffvsPt_Bkl%d_Mod%d",backleg,module),1500,0,30);
       for(int bin=1; bin<=hRespEff[i]->GetNbinsX(); bin++)
         {
@@ -571,7 +188,7 @@ void MtdAccepLoss(const int savePlot, const int saveHisto)
   const int nExpr = 5e8;
   for(int i=0; i<nExpr; i++)
     {
-      double mc_pt  =  myRandom->Uniform(0,20);
+      double mc_pt  =  myRandom->Uniform(0.15,20);
       double weight = hMcJpsiPt->GetBinContent(hMcJpsiPt->FindFixBin(mc_pt));
       double mc_phi = myRandom->Uniform(-1*pi, pi);
       double mc_y   = myRandom->Uniform(-0.5, 0.5);
@@ -625,36 +242,66 @@ void MtdAccepLoss(const int savePlot, const int saveHisto)
 
       hOutJpsiPt[0]->Fill(mc_pt,weight);
 
-      if( !(backleg1==8 || backleg1==19 || (backleg1==15&&module1==4)) &&
-	  !(backleg2==8 || backleg2==19 || (backleg2==15&&module2==4)))
+      if( (backleg1==24 && ((module1<=3&&cell1>=10) || (module1>3&&cell1<=1)) ) || 
+	  (backleg2==24 && ((module2<=3&&cell2>=10) || (module2>3&&cell1<=2)) ) ) continue;
+
+      if( (backleg1==8 && ((module1<=3&&cell1<=2) || (module1>3&&cell1>=9)) ) || 
+	  (backleg2==8 && ((module2<=3&&cell2<=2) || (module2>3&&cell1>=9)) ) ) continue;
+
+      if ( (backleg1==15&&module1==4) || (backleg2==15&&module2==4) ) continue;
+
+
+      if( !(backleg1==8 || backleg1==19 || (backleg1==17&&module1==3&&cell1==7)) &&
+	  !(backleg2==8 || backleg2==19 || (backleg2==17&&module2==3&&cell2==7)))
 	{
 	  hOutJpsiPt[1]->Fill(mc_pt,weight);
+	  hOutJpsiPt[3]->Fill(mc_pt,weight);
 	}
 
-
-      if( !(backleg1==8 || (backleg1==15&&module1==4)) &&
-	  !(backleg2==8 || (backleg2==15&&module2==4)))
+      if( !(backleg1==8 || backleg1==19 || backleg1==17) &&
+	  !(backleg2==8 || backleg2==19 || backleg2==17))
 	{
 	  hOutJpsiPt[2]->Fill(mc_pt,weight);
 	}
 
-      if( !( (backleg1==8&&module1<=2) || (backleg1==15&&module1==4)) &&
-	  !( (backleg2==8&&module2<=2) || (backleg2==15&&module2==4)))
+
+      if( !(backleg1==8 || (backleg1>=11&&backleg1<=14) || (backleg1==17&&module1==3&&cell1==7)) &&
+	  !(backleg2==8 || (backleg2>=11&&backleg2<=14) || (backleg2==17&&module2==3&&cell2==7)))
 	{
-	  hOutJpsiPt[3]->Fill(mc_pt,weight);
+	  hOutJpsiPt[4]->Fill(mc_pt,weight);
 	}
+
+
+      if( !(backleg1==8 || (backleg1==17&&module1==3&&cell1==7) ) &&
+	  !(backleg2==8 || (backleg2==17&&module2==3&&cell2==7)) )
+	{
+	  hOutJpsiPt[5]->Fill(mc_pt,weight);
+	}
+
+      if( !(backleg1==17&&module1==3&&cell1==7) &&
+	  !(backleg2==17&&module2==3&&cell2==7))
+	{
+	  hOutJpsiPt[6]->Fill(mc_pt,weight);
+	}
+
+      if( !(backleg1>=15&&backleg1<=17) &&
+	  !(backleg2>=15&&backleg2<=17))
+	{
+	  hOutJpsiPt[7]->Fill(mc_pt,weight);
+	}
+      hOutJpsiPt[8]->Fill(mc_pt,weight);
     }
 
 
-  const char *runName[nHistos-1] = {"Run<15098067","15098068<=Run<15106131","Run>=15106131"};
+  int runRange[nHistos] = {15074104, 15077035, 15078021, 15098066, 15099002, 15106130, 15131038, 15132019, 15167014};
   TH1F *hAcc[nHistos-1];
   for(int i=0; i<nHistos-1; i++)
     {
-      hAcc[i] = (TH1F*)hOutJpsiPt[i+1]->Clone(Form("hAccepLoss_%d",i));
+      hAcc[i] = (TH1F*)hOutJpsiPt[i+1]->Clone(Form("hAccepLoss_RunRange%d",i));
       hAcc[i]->Divide(hOutJpsiPt[0]);
       hAcc[i]->SetMarkerStyle(21);
       hAcc[i]->GetYaxis()->SetRangeUser(0.85,1.05);
-      TCanvas *c = draw1D(hAcc[i],Form("%s: MTD acceptance loss for J/#Psi (%s)",run_type,runName[i]));
+      TCanvas *c = draw1D(hAcc[i],Form("%s: MTD acceptance loss for J/#Psi (%d-%d)",run_type,runRange[i]+1,runRange[i+1]));
       if(savePlot)
 	c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_AccepCor/JpsiEff_Acc%d.pdf",run_type,i));
     }

@@ -28,15 +28,15 @@ void ana_SigExt()
 
   
   //prod_pt();
-  Run14_signal();
-  //prod_npart();
+  //Run14_signal();
+  prod_npart();
   //Run14_npart();
   //getJpsiWidthEmbed();
 }
 
 
 //================================================
-void getJpsiWidthEmbed(int savePlot = 1, int saveHisto = 1)
+void getJpsiWidthEmbed(int savePlot = 0, int saveHisto = 0)
 {
   // re-assign global constants
   const int nPtBins         = nPtBins_pt;
@@ -141,6 +141,10 @@ void getJpsiWidthEmbed(int savePlot = 1, int saveHisto = 1)
 	      if(i<3) cFit[k][i]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_SigExt/ToyMC_FitJpsiInvMassVsPt_cent%s_%s.pdf",run_type,cent_Title[k],sysName_scan[i]));
 	      else    cFit[k][i]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_SigExt/Embed_FitJpsiInvMassVsPt_cent%s.pdf",run_type,cent_Title[k]));
 	    }
+	  if(gSaveAN && k==0 && i==0)
+	    {
+	      cFit[k][i]->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch3_MomSmear_FitInvMassVsPt.pdf")); 
+	    }
 	}
     }
 
@@ -172,32 +176,33 @@ void getJpsiWidthEmbed(int savePlot = 1, int saveHisto = 1)
     }
   TCanvas *c = drawHistos(list,"ToyMC_JpsiWidthVsPt_CompCent",Form("%s: Jpsi width extracted from simulation",run_type),kFALSE,0,30,kTRUE,0,0.14,kFALSE,kTRUE,legName2,kTRUE,"Toy MC (default)",0.2,0.5,0.6,0.85,kTRUE);
   if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_SigExt/ToyMC_JpsiWidthVsPt_centComp.pdf",run_type));
+  if(gSaveAN)  c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch3_MomSmear_JpsiWidthVsPt.pdf")); 
   list->Clear();
 
 
   // Jpsi width vs. npart
-  TH1F* hInvMassIntegrTmp[nPtBins_npart][nCentBins-1][3];
-  TF1 *funcInvMassIntegrTmp[nPtBins_npart][nCentBins-1][3];
+  TH1F* hInvMassIntegrTmp[nPtBins_npart][nCentBins][3];
+  TF1 *funcInvMassIntegrTmp[nPtBins_npart][nCentBins][3];
   TH1F *hSigmaIntegrTmp[nPtBins_npart][3];
   for(int j=0; j<nPtBins_npart; j++)
     {
       for(int i=0; i<3; i++)
 	{
 	  hSigmaIntegrTmp[j][i] = new TH1F(Form("SmearEmb_JpsiWidthIntegrTmp_Pt%s_%s",pt_Name_npart[j],sysName_scan[i]), "Width of J/psi peak", nCentBins-1, 0, nCentBins-1);
-	  for(int k=0; k<nCentBins-1; k++)
+	  for(int k=0; k<nCentBins; k++)
 	    {
-	      hSigmaIntegrTmp[j][i]->GetXaxis()->SetBinLabel(k+1, Form("%s%%",cent_Name[k+1]));
-	      hInvMassIntegrTmp[j][k][i] = (TH1F*)hMassVsPtEmbed[k+1][i]->ProjectionY(Form("SmearEmb_JpsiInvMass_cent%s_Pt%s_%s_tmp",cent_Title[k+1],pt_Name_npart[j],sysName_scan[i]));
+	      if(k>0) hSigmaIntegrTmp[j][i]->GetXaxis()->SetBinLabel(k, Form("%s%%",cent_Name[k]));
+	      hInvMassIntegrTmp[j][k][i] = (TH1F*)hMassVsPtEmbed[k][i]->ProjectionY(Form("SmearEmb_JpsiInvMass_cent%s_Pt%s_%s_tmp",cent_Title[k],pt_Name_npart[j],sysName_scan[i]));
 	      hInvMassIntegrTmp[j][k][i]->Reset("AC");
-	      int low_bin = hMassVsPtEmbed[k+1][i]->GetXaxis()->FindFixBin(ptBins_low_npart[j]+1e-4);
-	      int up_bin = hMassVsPtEmbed[k+1][i]->GetXaxis()->FindFixBin(ptBins_high_npart[j]-1e-4);
+	      int low_bin = hMassVsPtEmbed[k][i]->GetXaxis()->FindFixBin(ptBins_low_npart[j]+1e-4);
+	      int up_bin = hMassVsPtEmbed[k][i]->GetXaxis()->FindFixBin(ptBins_high_npart[j]-1e-4);
 	      for(int bin=low_bin; bin<=up_bin; bin++)
 		{
-		  TH1F *htmp = (TH1F*)hMassVsPtEmbed[k+1][i]->ProjectionY(Form("Projy3_bin%d_%s_%d_%d",bin,sysName_scan[i],j,k),bin,bin);
-		  double scale = funcInputJpsi->Integral(hMassVsPtEmbed[k+1][i]->GetXaxis()->GetBinLowEdge(bin),
-							 hMassVsPtEmbed[k+1][i]->GetXaxis()->GetBinUpEdge(bin));
+		  TH1F *htmp = (TH1F*)hMassVsPtEmbed[k][i]->ProjectionY(Form("Projy3_bin%d_%s_%d_%d",bin,sysName_scan[i],j,k),bin,bin);
+		  double scale = funcInputJpsi->Integral(hMassVsPtEmbed[k][i]->GetXaxis()->GetBinLowEdge(bin),
+							 hMassVsPtEmbed[k][i]->GetXaxis()->GetBinUpEdge(bin));
 
-		  double jbin = hInputJpsi->FindFixBin(hMassVsPtEmbed[k+1][i]->GetXaxis()->GetBinCenter(bin));
+		  double jbin = hInputJpsi->FindFixBin(hMassVsPtEmbed[k][i]->GetXaxis()->GetBinCenter(bin));
 		  double scale2 = hInputJpsi->GetBinContent(jbin)/funcInputJpsi->Integral(hInputJpsi->GetXaxis()->GetBinLowEdge(jbin),
 											  hInputJpsi->GetXaxis()->GetBinUpEdge(jbin));
 		  hInvMassIntegrTmp[j][k][i]->Add(htmp, scale*scale2); 
@@ -208,9 +213,9 @@ void getJpsiWidthEmbed(int savePlot = 1, int saveHisto = 1)
 	      TH1F *hplot = (TH1F*)hInvMassIntegrTmp[j][k][i]->Clone(Form("%s_plot",hInvMassIntegrTmp[j][k][i]->GetName()));
 	      funcInvMassIntegrTmp[j][k][i] = new TF1(Form("func_%s",hInvMassIntegrTmp[j][k][i]->GetName()), "gaus", 2.95, 3.25);
 	      hplot->Fit(funcInvMassIntegrTmp[j][k][i], "IR0Q");
-	      hSigmaIntegrTmp[j][i]->SetBinContent(k+1, funcInvMassIntegrTmp[j][k][i]->GetParameter(2));
-	      hSigmaIntegrTmp[j][i]->SetBinError(k+1, funcInvMassIntegrTmp[j][k][i]->GetParError(2));
-	      printf("[i] cent %s, pt > %1.0f, #sigma = %4.4f\n",cent_Name[k+1], ptBins_low_npart[j], funcInvMassIntegrTmp[j][k][i]->GetParameter(2));
+	      hSigmaIntegrTmp[j][i]->SetBinContent(k, funcInvMassIntegrTmp[j][k][i]->GetParameter(2));
+	      hSigmaIntegrTmp[j][i]->SetBinError(k, funcInvMassIntegrTmp[j][k][i]->GetParError(2));
+	      printf("[i] cent %s, pt > %1.0f, #sigma = %4.4f\n",cent_Name[k], ptBins_low_npart[j], funcInvMassIntegrTmp[j][k][i]->GetParameter(2));
 	    }
 	  hSigmaIntegrTmp[j][i]->SetMarkerStyle(20);
 	  hSigmaIntegrTmp[j][i]->SetMarkerColor(color[i]);
@@ -233,6 +238,7 @@ void getJpsiWidthEmbed(int savePlot = 1, int saveHisto = 1)
 	{
 	  hSigmaIntegr[j][i] = new TH1F(Form("SmearEmb_JpsiWidthIntegr_Pt%s_%s",pt_Name_npart[j],sysName_scan[i]), "Width of J/psi peak", nCentBins_npart[j], 0, nCentBins_npart[j]);
 	  hMeanIntegr[j][i] = new TH1F(Form("SmearEmb_JpsiMeanIntegr_Pt%s_%s",pt_Name_npart[j],sysName_scan[i]), "Mean of J/psi peak", nCentBins_npart[j], 0, nCentBins_npart[j]);
+	  hSigmaIntegr[j][i]->SetBinContent(0, hSigmaIntegrTmp[j][i]->GetBinContent(0));
 	  for(int k=0; k<kNCent-1; k++)
 	    {
 	      hSigmaIntegr[j][i]->GetXaxis()->SetBinLabel(k+1, Form("%s%%",cent_Name_npart[k+j*kNCent]));
@@ -423,7 +429,7 @@ void prod_pt()
 }
 
 //===============================================
-void Run14_signal(const int isetup = 0, const int icent = 0, const int isys = 0, int savePlot = 0, int saveHisto = 0, int saveHistoResScan = 0)
+void Run14_signal(const int isetup = 0, const int icent = 1, const int isys = 0, int savePlot = 0, int saveHisto = 0, int saveHistoResScan = 0)
 {
   // re-assign global constants
   const int nPtBins         = nPtBins_pt;
@@ -460,15 +466,17 @@ void Run14_signal(const int isetup = 0, const int icent = 0, const int isys = 0,
   const char* sysType[3] = {"def","min","max"};
   TH1F *hEmbJpsiWidth[3];
   TH1F *hEmbJpsiInvMass[nPtBins][3];
+  TString centTitle = Form("%s",cent_Title[icent]);
+  if(nCentBins==1) centTitle = "4060";
   for(int i=0; i<3; i++)
     {
-      hEmbJpsiWidth[i] = (TH1F*)fscan->Get(Form("SmearEmb_JpsiWidth_cent%s_%s",cent_Title[icent],sysType[i]));
+      hEmbJpsiWidth[i] = (TH1F*)fscan->Get(Form("SmearEmb_JpsiWidth_cent%s_%s",centTitle.Data(),sysType[i]));
       for(int j=0; j<nPtBins; j++)
 	{
-	  hEmbJpsiInvMass[j][i] = (TH1F*)fscan->Get(Form("SmearEmb_JpsiInvMass_cent%s_Pt%s_%s",cent_Title[icent],pt_Name[j],sysType[i]));
+	  hEmbJpsiInvMass[j][i] = (TH1F*)fscan->Get(Form("SmearEmb_JpsiInvMass_cent%s_Pt%s_%s",centTitle.Data(),pt_Name[j],sysType[i]));
 	}
     }
-  TH1F *hEmbJpsiMean = (TH1F*)fscan->Get(Form("SmearEmb_JpsiMean_cent%s_def",cent_Title[icent]));
+  TH1F *hEmbJpsiMean = (TH1F*)fscan->Get(Form("SmearEmb_JpsiMean_cent%s_def",centTitle.Data()));
 
 
   printf("\n===== Running configuration =====\n");
@@ -581,7 +589,7 @@ void Run14_signal(const int isetup = 0, const int icent = 0, const int isys = 0,
 	  hMixScale[i]->Draw();
 	  funcScale[i]->SetLineColor(2);
 	  funcScale[i]->Draw("sames");
-	  TPaveText *t = GetTitleText(Form("%1.1f < p_{T} < %1.1f GeV/c (%s%%)",ptBins_low[i],ptBins_high[i],cent_Name[icent]),0.06);
+	  TPaveText *t = GetTitleText(Form("%s (%s%%)",pt_Title_pt[i],cent_Name[icent]),0.06);
 	  t->Draw();
 	  t = GetPaveText(0.16,0.3,0.7,0.85,0.05);
 	  t->SetTextFont(62);
@@ -600,6 +608,10 @@ void Run14_signal(const int isetup = 0, const int icent = 0, const int isys = 0,
   if(savePlot && isys==0) 
     {
       cScaling->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_SigExt/%s%sBkg.FitSEtoME_%s.pdf",run_type,run_cfg_name.Data(),sys_title[isys],suf_title.Data()));
+    }
+  if(gSaveAN && isetup==0 && icent==0 && isys==0)
+    {
+      cScaling->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch3_FitSEtoME_LS.pdf"));
     }
 
   TList *list = new TList;
@@ -635,7 +647,7 @@ void Run14_signal(const int isetup = 0, const int icent = 0, const int isys = 0,
 	  hAcc[i]->GetXaxis()->SetRangeUser(2,4);
 	  hAcc[i]->GetYaxis()->SetRangeUser(0.9,1.1);
 	  hAcc[i]->Draw("PE");
-	  TPaveText *t = GetTitleText(Form("%1.1f < p_{T} < %1.1f GeV/c (%s%%)",ptBins_low[i],ptBins_high[i],cent_Name[icent]),0.06);
+	  TPaveText *t = GetTitleText(Form("%s (%s%%)",pt_Title_pt[i],cent_Name[icent]),0.06);
 	  t->Draw();
 	  TLine *line = GetLine(2,1,4,1,1);
 	  line->Draw();
@@ -650,6 +662,10 @@ void Run14_signal(const int isetup = 0, const int icent = 0, const int isys = 0,
   if(savePlot && isys==0) 
     {
       cAcc->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_SigExt/%s%sBkg.Mix_Acceptance_%s.pdf",run_type,run_cfg_name.Data(),sys_title[isys],suf_title.Data()));
+    }
+  if(gSaveAN && isetup==0 && icent==0 && isys==0)
+    {
+      cAcc->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch3_ME_Acceptance.pdf"));
     }
 
   // jpsi signal
@@ -690,7 +706,7 @@ void Run14_signal(const int isetup = 0, const int icent = 0, const int isys = 0,
 	  hSeUL[i]->Draw();
 	  hSeLS[i]->Draw("sames HIST");
 	  hMixBkg[i]->Draw("sames HIST");
-	  TPaveText *t = GetTitleText(Form("%1.1f < p_{T} < %1.1f GeV/c (%s%%)",ptBins_low[i],ptBins_high[i],cent_Name[icent]),0.06);
+	  TPaveText *t = GetTitleText(Form("%s (%s%%)",pt_Title_pt[i],cent_Name[icent]),0.06);
 	  t->Draw();
 	}
     }
@@ -706,6 +722,10 @@ void Run14_signal(const int isetup = 0, const int icent = 0, const int isys = 0,
   if(savePlot && isys==0) 
     {
       cSignal->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_SigExt/%s%sSig.ULvsLS_%s.pdf",run_type,run_cfg_name.Data(),sys_title[isys],suf_title.Data()));
+    }
+  if(gSaveAN && isetup==0 && icent==0 && isys==0)
+    {
+      cSignal->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch3_InvMass_ULvsLS.pdf"));
     }
 
   // Fit residual
@@ -965,7 +985,7 @@ void Run14_signal(const int isetup = 0, const int icent = 0, const int isys = 0,
       funcBkg[i]->SetLineColor(4);
       funcBkg[i]->SetLineStyle(2);
       funcBkg[i]->Draw("sames");
-      TPaveText *t = GetTitleText(Form("%1.1f < p_{T} < %1.1f GeV/c (%s%%)",ptBins_low[i],ptBins_high[i],cent_Name[icent]),0.05);
+      TPaveText *t = GetTitleText(Form("%s (%s%%)",pt_Title_pt[i],cent_Name[icent]),0.05);
       t->Draw();
       TLine *line = GetLine(low_bin_mass,hSignal[i]->GetMinimum()*1.5,low_bin_mass,hSignal[i]->GetMaximum()*0.3,1);
       line->Draw();
@@ -996,6 +1016,11 @@ void Run14_signal(const int isetup = 0, const int icent = 0, const int isys = 0,
       cFit1->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_SigExt/%s%sSig.Fit_All_%s.pdf",run_type,run_cfg_name.Data(),sys_title[isys],suf_title.Data()));
       cFit->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_SigExt/%s%sSig.Fit_Jpsi_%s.pdf",run_type,run_cfg_name.Data(),sys_title[isys],suf_title.Data()));
     }
+  if(gSaveAN && isetup==0 && isys==0)
+    {
+      cFit->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch3_FitJpsiSig_%s.pdf",cent_Title[icent]));
+    }
+
   double meanFit_max = 15;
   if(icent==2) meanFit_max = 10;
   if(icent==3) meanFit_max = 10;
@@ -1195,6 +1220,7 @@ void Run14_npart(const int isys = 0, int savePlot = 0, int saveHisto = 0)
     }  
   int nxpad = 4, nypad = 2;
 
+
   // mixed event scaling
   TList *list = new TList;
   TString legName[2] = {"Fitting","Bin Counting"};
@@ -1265,7 +1291,7 @@ void Run14_npart(const int isys = 0, int savePlot = 0, int saveHisto = 0)
 	      hMixScale[i][k][t]->Draw();
 	      funcScale[i][k][t]->SetLineColor(2);
 	      funcScale[i][k][t]->Draw("sames");
-	      TPaveText *text = GetTitleText(Form("p_{T} > %1.1f GeV/c (%s%%)",ptBins_low[i],cent_Name[i*kNCent+k]),0.05);
+	      TPaveText *text = GetTitleText(Form("%s (%s%%)",pt_Title_npart[i],cent_Name[i*kNCent+k]),0.05);
 	      text->Draw();
 	      text = GetPaveText(0.16,0.3,0.7,0.85,0.05);
 	      text->SetTextFont(62);
@@ -1312,21 +1338,37 @@ void Run14_npart(const int isys = 0, int savePlot = 0, int saveHisto = 0)
 	  for(int k=0; k<nCentBins[i]; k++)
 	    {
 	      hMixBkg[i][k][t] = (TH1F*)hMixUL[i][k]->Clone(Form("MixBkg_cent%s%s",cent_Name[i*kNCent+k],tmpName.Data()));
-	      hMixBkg[i][k][t]->Scale(hBinCountScaleFactor[i][t]->GetBinContent(k+1));
-	      hSeUL[i][k][t]->Rebin(g_bin_width[i]/hSeUL[i][k][t]->GetBinWidth(1));
+
+	      // scale mix event background
+	      int low_bin = hMixBkg[i][k][t]->FindFixBin(2.3);
+	      int up_bin  = hMixBkg[i][k][t]->FindFixBin(4.2);
+	      for(int ibin=low_bin; ibin<=up_bin; ibin++)
+	      	{
+	      	  double mass = hMixBkg[i][k][t]->GetBinCenter(ibin);
+	      	  double scale = funcScale[i][k][t]->Eval(mass);
+	      	  hMixBkg[i][k][t]->SetBinContent(ibin, scale * hMixBkg[i][k][t]->GetBinContent(ibin));
+	      	  hMixBkg[i][k][t]->SetBinError(ibin, scale * hMixBkg[i][k][t]->GetBinError(ibin));
+	      	}
+	      double g_bin_width_tmp = g_bin_width[i];
+	      if(i==1 && k==nCentBins[i]-1) 
+		{
+		  g_bin_width_tmp = 0.1;
+		  if(isys==4) g_bin_width_tmp = 0.08;
+		}
+	      hSeUL[i][k][t]->Rebin(g_bin_width_tmp/hSeUL[i][k][t]->GetBinWidth(1));
 	      hSeUL[i][k][t]->SetTitle("");
 	      hSeUL[i][k][t]->SetMarkerStyle(21);
 	      hSeUL[i][k][t]->SetMarkerColor(2);
 	      hSeUL[i][k][t]->SetLineColor(2);
 	      hSeUL[i][k][t]->GetXaxis()->SetRangeUser(2.5,4);
-	      hSeLS[i][k][t]->Rebin(g_bin_width[i]/hSeLS[i][k][t]->GetBinWidth(1));
+	      hSeLS[i][k][t]->Rebin(g_bin_width_tmp/hSeLS[i][k][t]->GetBinWidth(1));
 	      hMixBkg[i][k][t]->SetLineColor(4);
-	      hMixBkg[i][k][t]->Rebin(g_bin_width[i]/hMixBkg[i][k][t]->GetBinWidth(1));
+	      hMixBkg[i][k][t]->Rebin(g_bin_width_tmp/hMixBkg[i][k][t]->GetBinWidth(1));
 	      cSignal->cd(nCentBins[i]-k);
 	      hSeUL[i][k][t]->Draw("PE");
 	      hSeLS[i][k][t]->Draw("sames HIST");
 	      hMixBkg[i][k][t]->Draw("sames HIST");
-	      text = GetTitleText(Form("p_{T} > %1.0f GeV/c (%s%%)",ptBins_low[i],cent_Name[i*kNCent+k]),0.06);
+	      text = GetTitleText(Form("%s (%s%%)",pt_Title_npart[i],cent_Name[i*kNCent+k]),0.06);
 	      text->Draw();
 	      hSignal[i][k][t] = (TH1F*)hSeUL[i][k][t]->Clone(Form("JpsiSignal_cent%s%s",cent_Name[i*kNCent+k],tmpName.Data()));
 	      for(int bin=1; bin<=hSignal[i][k][t]->GetNbinsX(); bin++)
@@ -1621,7 +1663,7 @@ void Run14_npart(const int isys = 0, int savePlot = 0, int saveHisto = 0)
 		}
 	      funcBkg[i][k][t]->SetLineColor(4);
 	      funcBkg[i][k][t]->Draw("sames");
-	      text = GetTitleText(Form("p_{T} > %1.1f GeV/c (%s%%)",ptBins_low[i],cent_Name[i*kNCent+k]),0.06);
+	      text = GetTitleText(Form("%s (%s%%)",pt_Title_npart[i],cent_Name[i*kNCent+k]),0.06);
 	      text->Draw();
 	      TLine *line = GetLine(low_bin_mass,hSignal[i][k][t]->GetMinimum()*1.5,low_bin_mass,hSignal[i][k][t]->GetMaximum()*0.3,1);
 	      line->Draw();
@@ -1648,11 +1690,15 @@ void Run14_npart(const int isys = 0, int savePlot = 0, int saveHisto = 0)
 	  text->Draw();
 	  if(savePlot) 
 	    cFit->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_SigExt/Npart.%s%sSig.Fit_Jpsi_%s.pdf",run_type,run_cfg_name.Data(),sys_title[isys],tmpName.Data()));
+	  if(gSaveAN && isys==0)
+	    {
+	      cFit->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch3_FitJpsiSig_Pt%1.0f.pdf",ptBins_low[i]));
+	    }
 	}
       hMean[i][0]->SetMarkerStyle(21);
       hMean[i][0]->GetYaxis()->SetRangeUser(3.08-0.02*i,3.12+0.02*i);
       hMean[i][0]->Fit(funcMean[i][0],"IR0Q");
-      c = draw1D(hMean[i][0],Form("Mean of Gaussian fit to Jpsi signal (p_{T} > %1.0f GeV/c);;mean",ptBins_low[i]));
+      c = draw1D(hMean[i][0],Form("Mean of Gaussian fit to Jpsi signal (%s);;mean",pt_Title_npart[i]));
       funcMean[i][0]->SetLineColor(4);
       funcMean[i][0]->SetLineStyle(2);
       funcMean[i][0]->Draw("sames");
@@ -1664,7 +1710,7 @@ void Run14_npart(const int isys = 0, int savePlot = 0, int saveHisto = 0)
       hSigma[i][0]->SetMarkerStyle(21);
       hSigma[i][0]->GetYaxis()->SetRangeUser(0,0.1);
       hSigma[i][0]->Fit(funcSigma[i][0],"IR0Q");
-      c = draw1D(hSigma[i][0],Form("Sigma of Gaussian fit to Jpsi signal (p_{T} > %1.0f GeV/c);;#sigma",ptBins_low[i]));
+      c = draw1D(hSigma[i][0],Form("Sigma of Gaussian fit to Jpsi signal (%s);;#sigma",pt_Title_npart[i]));
       funcSigma[i][0]->SetLineColor(4);
       funcSigma[i][0]->SetLineStyle(2);
       funcSigma[i][0]->Draw("sames");

@@ -13,9 +13,63 @@ const char *cent_Title[nCentBins] = {"0060","0020","2040","4060"};
 //================================================
 void projection()
 {  
-  jpsi();
+  isobar();
+  //jpsi();
   //upsilon();
   //efficiency();
+}
+
+//================================================
+void isobar(const bool savePlot = 1)
+{
+  // estimate the J/psi measurement precision for isobar collisions
+  // based on 2014 40-50% Au+Au events
+  // Au+Au    40-50%  1690+/-100
+  // isobar   0-80%   2000 - 4000
+
+  gStyle->SetOptStat(0);
+  TFile *fin = TFile::Open("Rootfiles/Run14_AuAu200.JpsiYield.pt1.5.pt1.3.root","read");
+  TH1F *hJpsiYield = (TH1F*)fin->Get("Jpsi_FitYield_cent4050_weight");
+  TGraphErrors *gJpsiError[3];
+  const int nPoints = 7;
+  double pt[nPoints] = {0.5, 1.5, 2.5, 3.5, 4.5, 5.5, 7};
+  double pt_err[nPoints] = {0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 1};
+  for(int i=0; i<3; i++)
+    {
+      gJpsiError[i] = new TGraphErrors(nPoints);
+      for(int ipoint=0; ipoint<nPoints; ipoint++)
+	{
+	  double x = pt[ipoint];
+	  double xerr = pt_err[ipoint];
+	  if(i>0) xerr = 0;
+	  double yerr = hJpsiYield->GetBinError(ipoint+1)/hJpsiYield->GetBinContent(ipoint+1);
+	  if(i==1) yerr = yerr/sqrt(2000./1690);
+	  if(i==2) yerr = yerr/sqrt(4000./1690);
+	  gJpsiError[i]->SetPoint(ipoint, x+0.1*i, 1);
+	  gJpsiError[i]->SetPointError(ipoint, xerr, yerr);
+	}
+      gJpsiError[i]->SetMarkerStyle(20+i);
+      if(i==2) gJpsiError[i]->SetMarkerStyle(25);
+      gJpsiError[i]->SetMarkerColor(color[i]);
+      gJpsiError[i]->SetMarkerSize(1.5);
+      gJpsiError[i]->SetLineColor(color[i]);
+    }
+  TH1F *hplot = new TH1F("hplot","Projection of J/#Psi measurement precision in isobar collisions;p_{T} [GeV/c];Stat. err.",100,0,10);
+  hplot->GetXaxis()->SetRangeUser(0,8);
+  hplot->GetYaxis()->SetRangeUser(0.7, 1.4);
+  c = draw1D(hplot);
+  for(int i=0; i<3; i++)
+    gJpsiError[i]->Draw("samesPEZ");
+  TLegend *leg = new TLegend(0.15,0.68,0.3,0.88);
+  leg->SetBorderSize(0);
+  leg->SetFillColor(0);
+  leg->SetTextSize(0.035);
+  leg->SetHeader("N_{coll} ~ 120");
+  leg->AddEntry(gJpsiError[0],"Run14 Au+Au @ 200 GeV, 40-50%","P");
+  leg->AddEntry(gJpsiError[1],"Run18 isobar @ 200 GeV, 0-80%, projection 1","P");
+  leg->AddEntry(gJpsiError[2],"Run18 isobar @ 200 GeV, 0-80%, projection 2","P");
+  leg->Draw();
+  if(savePlot) c->SaveAs("/Users/admin/Desktop/MTD/Work/Trigger/IsoProjection0080.pdf");
 }
 
 //================================================

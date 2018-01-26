@@ -1,23 +1,23 @@
 TFile *f;
 const int year = YEAR;
-// const int nSys = 12;
-// const TString sysName[nSys] = {"default",
-// 			       "dcaUp","dcaDown","NHitsUp","NDedxUp",
-// 			       "dcaUp_NHitsUp", "dcaUp_NDedxUp", "dcaUp_NHitsUp_NDedxUp",
-// 			       "dcaDown_NHitsUp", "dcaDown_NDedxUp", "dcaDown_NHitsUp_NDedxUp",
-// 			       "NHitsUp_NDedxUp"};
-// const TString outName = "TpcTracking";
-// const int nSysMarker = 5;
-
-const int nSys = 27;
+const int nSys = 12;
 const TString sysName[nSys] = {"default",
-			       "dzUp","dzDown","dyUp","dyDown","nSigPiUp","nSigPiDown",
-			       "dzUp_dyUp","dzUp_dyDown","dzUp_nSigPiUp","dzUp_nSigPiDown","dzUp_dyUp_nSigPiUp","dzUp_dyUp_nSigPiDown","dzUp_dyDown_nSigPiUp","dzUp_dyDown_nSigPiDown",
-			       "dzDown_dyUp","dzDown_dyDown","dzDown_nSigPiUp","dzDown_nSigPiDown","dzDown_dyUp_nSigPiUp","dzDown_dyUp_nSigPiDown","dzDown_dyDown_nSigPiUp","dzDown_dyDown_nSigPiDown",
-			       "dyUp_nSigPiUp","dyUp_nSigPiDown",
-			       "dyDown_nSigPiUp","dyDown_nSigPiDown"};
-const TString outName = "MuonPid";
-const int nSysMarker = 7;
+			       "dcaUp","dcaDown","NHitsUp","NDedxUp",
+			       "dcaUp_NHitsUp", "dcaUp_NDedxUp", "dcaUp_NHitsUp_NDedxUp",
+			       "dcaDown_NHitsUp", "dcaDown_NDedxUp", "dcaDown_NHitsUp_NDedxUp",
+			       "NHitsUp_NDedxUp"};
+const TString outName = "TpcTracking";
+const int nSysMarker = 5;
+
+// const int nSys = 27;
+// const TString sysName[nSys] = {"default",
+// 			       "dzUp","dzDown","dyUp","dyDown","nSigPiUp","nSigPiDown",
+// 			       "dzUp_dyUp","dzUp_dyDown","dzUp_nSigPiUp","dzUp_nSigPiDown","dzUp_dyUp_nSigPiUp","dzUp_dyUp_nSigPiDown","dzUp_dyDown_nSigPiUp","dzUp_dyDown_nSigPiDown",
+// 			       "dzDown_dyUp","dzDown_dyDown","dzDown_nSigPiUp","dzDown_nSigPiDown","dzDown_dyUp_nSigPiUp","dzDown_dyUp_nSigPiDown","dzDown_dyDown_nSigPiUp","dzDown_dyDown_nSigPiDown",
+// 			       "dyUp_nSigPiUp","dyUp_nSigPiDown",
+// 			       "dyDown_nSigPiUp","dyDown_nSigPiDown"};
+// const TString outName = "MuonPid";
+// const int nSysMarker = 7;
 
 const int color[30] = {1, 2, 4, 6, 8, 1, 2, 4, 6, 8, 1, 2, 4, 6, 8, 1, 2, 4, 6, 8, 1, 2, 4, 6, 8, 1, 2, 4, 6, 8};
 const char* typeName[2] = {"UL", "LS"};
@@ -39,7 +39,7 @@ void sys_TpcAndPid()
 }
 
 //================================================
-void anaSys(const int savePlot = 1, const int saveHisto = 1)
+void anaSys(const int savePlot = 0, const int saveHisto = 0)
 {
   const int uncerMode = 0; // 0 - max; 1 - rms
   const double min_mass = 3.0, max_mass = 3.2;
@@ -79,7 +79,11 @@ void anaSys(const int savePlot = 1, const int saveHisto = 1)
 
   // get the Jpsi width from embedding
   TFile *fscan = TFile::Open(Form("Rootfiles/%s.TrkResScan.root",run_type),"read");
-  TH1F *hEmbJpsiWidth = (TH1F*)fscan->Get("SmearEmb_JpsiWidth_def");
+  TH1F *hEmbJpsiWidth[nCentBins_pt];
+  for(int k=0; k<nCentBins_pt; k++)
+    {
+      hEmbJpsiWidth[k] = (TH1F*)fscan->Get(Form("SmearEmb_JpsiWidth_cent%s_def",cent_Title_pt[k]));
+    }
   TCanvas *cFit[nCentBins_pt];
   TCanvas *cFitSys[nbins];
   for(Int_t i=0; i<nbins; i++)
@@ -138,7 +142,7 @@ void anaSys(const int savePlot = 1, const int saveHisto = 1)
 		{
 		  if(ipar==0) funcUL[s][k][i]->SetParameter(ipar, 100);
 		  else if(ipar==1) funcUL[s][k][i]->FixParameter(ipar, 3.096);
-		  else if(ipar==2) funcUL[s][k][i]->FixParameter(2, hEmbJpsiWidth->GetBinContent(i+1));
+		  else if(ipar==2) funcUL[s][k][i]->FixParameter(2, hEmbJpsiWidth[k]->GetBinContent(i+1));
 		  else             funcUL[s][k][i]->SetParameter(ipar, funcLS->GetParameter(ipar-3));
 		}
 	      hInvMassVsPt[s][k][i][0]->Add(hInvMassVsPt[s][k][i][1], -1);
@@ -211,6 +215,12 @@ void anaSys(const int savePlot = 1, const int saveHisto = 1)
 	  cFitSys[i]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/sys_TpcAndPid/%s_InvMassVsSys_Pt%1.0f-%1.0f_cent%s.pdf",run_type,outName.Data(),xbins[i],xbins[i+1],cent_Title_pt[0]));
 	}
     }
+  if(gSaveAN)
+    {
+      cFit[0]->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch5_Sys%s_FitInvMass_cent%s.pdf",outName.Data(),cent_Title_pt[0]));
+      cFitSys[0]->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch5_Sys%s_FitInvMass_Pt0.pdf",outName.Data()));
+      cFitSys[7]->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch5_Sys%s_FitInvMass_Pt7.pdf",outName.Data()));
+    }
 
   TLegend *leg1[2];
   for(int i=0; i<2; i++)
@@ -255,6 +265,10 @@ void anaSys(const int savePlot = 1, const int saveHisto = 1)
   system->Draw();
   if(savePlot)
     cJpsiCountVsPt->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/sys_TpcAndPid/%s_JpsiCountVsPt.pdf",run_type,outName.Data()));
+  if(gSaveAN)
+    {
+      cJpsiCountVsPt->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch5_Sys%s_JpsiCountVsPt.pdf",outName.Data()));
+    }
 
   // Get efficiency from embedding
   TCanvas *cJpsiEffVsPt = new TCanvas("cJpsiEffVsPt", "cJpsiEffVsPt", 1100, 700);
@@ -284,6 +298,11 @@ void anaSys(const int savePlot = 1, const int saveHisto = 1)
   system->Draw();
   if(savePlot)
     cJpsiEffVsPt->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/sys_TpcAndPid/%s_JpsiEffVsPt.pdf",run_type,outName.Data()));
+  if(gSaveAN)
+    {
+      cJpsiEffVsPt->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch5_Sys%s_JpsiEffVsPt.pdf",outName.Data()));
+    }
+
 
   // correct J/psi counts to derive uncertainty
   TCanvas *cJpsiSysVsPt = new TCanvas("cJpsiSysVsPt", "cJpsiSysVsPt", 1100, 700);
@@ -352,6 +371,7 @@ void anaSys(const int savePlot = 1, const int saveHisto = 1)
 		{
 		  hFinalSysVsPt[k]->SetBinContent(i+1, max+1);
 		  if(i>=7) hFinalSysVsPt[k]->SetBinContent(i+1, hFinalSysVsPt[k]->GetBinContent(7));
+		  if(outName=="MuonPid" && i>=3) hFinalSysVsPt[k]->SetBinContent(i+1, hFinalSysVsPt[k]->GetBinContent(3));
 		}
 	      else
 		{
@@ -442,6 +462,10 @@ void anaSys(const int savePlot = 1, const int saveHisto = 1)
     }
   leg->Draw();
   if(savePlot) cJpsiSysVsPt->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/sys_TpcAndPid/%s_FinalSysVsPt.pdf",run_type,outName.Data()));
+  if(gSaveAN)
+    {
+      cJpsiSysVsPt->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch5_Sys%sVsPt.pdf",outName.Data()));
+    }
   if(saveHisto)
     {
       fsys->cd();
@@ -486,7 +510,11 @@ void anaSys(const int savePlot = 1, const int saveHisto = 1)
 
   // get the Jpsi width from embedding
   TFile *fscan = TFile::Open(Form("Rootfiles/%s.TrkResScan.root",run_type),"read");
-  TH1F *hEmbJpsiWidth = (TH1F*)fscan->Get("SmearEmb_JpsiWidthIntegr_def");
+  TH1F *hEmbJpsiWidthCent[nPtBins_npart];
+  for(int i=0; i<nPtBins_npart; i++)
+    {
+      hEmbJpsiWidthCent[i] = (TH1F*)fscan->Get(Form("SmearEmb_JpsiWidthIntegr_Pt%s_def",pt_Name_npart[i]));
+    }
   TCanvas *cFitCent[nPtBins_npart];
   TCanvas *cFitSysCent = new TCanvas(Form("cFitSysCent"), Form("cFitSysCent"), 1100, 700);
   if(nSysUsed==12)  cFitSysCent->Divide(4,3);
@@ -517,6 +545,7 @@ void anaSys(const int savePlot = 1, const int saveHisto = 1)
 		  if(outName=="MuonPid") 
 		    {
 		      if(i!=-0) hInvMassVsCent[s][i][k][j]->Rebin(2);
+		      //hInvMassVsCent[s][i][k][j]->Rebin(2);
 		    }
 		  hInvMassVsCent[s][i][k][j]->GetXaxis()->SetRangeUser(2.6,4);
 		}
@@ -526,13 +555,13 @@ void anaSys(const int savePlot = 1, const int saveHisto = 1)
 		  if(i==0) {fit_min = 2.6; fit_max = 4; }
 		}
 
-	      int nPar = 4;
-	      if(i==1) nPar = 1;
+	      int nPar = 1;
+	      if(i==0 && k<5) nPar = 4;
 	      TF1 *funcLS = 0x0;
 	      if(nPar==4) funcLS = new TF1(Form("%s_func",hInvMassVsCent[s][i][k][1]->GetName()), "pol3", fit_min, fit_max);
 	      if(nPar==2) funcLS = new TF1(Form("%s_func",hInvMassVsCent[s][i][k][1]->GetName()), "pol1", fit_min, fit_max);
 	      if(nPar==1) funcLS = new TF1(Form("%s_func",hInvMassVsCent[s][i][k][1]->GetName()), "pol0", fit_min, fit_max);
-	      hInvMassVsCent[s][i][k][1]->Fit(funcLS,"IR0Q");
+	      //hInvMassVsCent[s][i][k][1]->Fit(funcLS,"IR0Q");
 
 	      if(nPar==4) funcCentUL[s][i][k] = new TF1(Form("%s_func",hInvMassVsCent[s][i][k][0]->GetName()), "gausn(0)+pol3(3)", fit_min, fit_max);
 	      if(nPar==2) funcCentUL[s][i][k] = new TF1(Form("%s_func",hInvMassVsCent[s][i][k][0]->GetName()), "gausn(0)+pol1(3)", fit_min, fit_max);
@@ -541,8 +570,8 @@ void anaSys(const int savePlot = 1, const int saveHisto = 1)
 		{
 		  if(ipar==0) funcCentUL[s][i][k]->SetParameter(ipar, 100);
 		  else if(ipar==1) funcCentUL[s][i][k]->FixParameter(ipar, 3.096);
-		  else if(ipar==2) funcCentUL[s][i][k]->FixParameter(2, hEmbJpsiWidth->GetBinContent(i+1));
-		  else             funcCentUL[s][i][k]->SetParameter(ipar, funcLS->GetParameter(ipar-3));
+		  else if(ipar==2) funcCentUL[s][i][k]->FixParameter(2, hEmbJpsiWidthCent[i]->GetBinContent(k));
+		  else  funcCentUL[s][i][k]->SetParameter(ipar, funcCentUL[0][i][k]->GetParameter(ipar-3));
 		}
 	      hInvMassVsCent[s][i][k][0]->Add(hInvMassVsCent[s][i][k][1], -1);
 	      hInvMassVsCent[s][i][k][0]->Fit(funcCentUL[s][i][k],"IR0Q");
@@ -656,6 +685,7 @@ void anaSys(const int savePlot = 1, const int saveHisto = 1)
 	  hJpsiEffVsCent[s][i]->SetMarkerStyle(s+20);
 	  hJpsiEffVsCent[s][i]->SetMarkerColor(color[s]);
 	  hJpsiEffVsCent[s][i]->SetLineColor(color[s]);
+	  //if(i==0) hJpsiEffVsCent[s][i]->SetBinContent(9, hJpsiEffVsCent[s][i]->GetBinContent(8));
 	  if(outName=="TpcTracking") hJpsiEffVsCent[s][i]->GetYaxis()->SetRangeUser(0.06,0.14);
 	  if(outName=="MuonPid")     hJpsiEffVsCent[s][i]->GetYaxis()->SetRangeUser(0.005,0.03);
 	  for(int k=0; k<nCentBins_npart[i]; k++)
@@ -792,6 +822,11 @@ void anaSys(const int savePlot = 1, const int saveHisto = 1)
   leg->AddEntry(hEstSysVsCent[0],"Individual bins");
   leg->Draw();
   if(savePlot) cJpsiSysVsCent->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/sys_TpcAndPid/%s_FinalSysVsCent.pdf",run_type,outName.Data()));
+  if(gSaveAN)
+    {
+      cJpsiSysVsCent->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch5_Sys%sVsCent.pdf",outName.Data()));
+    }
+
   if(saveHisto)
     {
       fsys->cd();

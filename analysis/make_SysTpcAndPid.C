@@ -46,12 +46,15 @@ const int nCentBins_npart[nPtBins_npart] = {9,8};
 const char *cent_Name_npart[18] = {"0-80","0-10","10-20","20-30","30-40","40-50","50-60","60-70","70-80","0-80","0-10","10-20","20-30","30-40","40-50","50-60","60-80","60-70"};
 const char *cent_Title_npart[18] = {"0080","0010","1020","2030","3040","4050","5060","6070","7080","0080","0010","1020","2030","3040","4050","5060","6080","6070"};
 const TString sysType = "TpcTracking";
-const int nSys = 12;
-const TString sysName[nSys] = {"default",
-			       "dcaUp","dcaDown","NHitsUp","NDedxUp",
-			       "dcaUp_NHitsUp", "dcaUp_NDedxUp", "dcaUp_NHitsUp_NDedxUp",
-			       "dcaDown_NHitsUp", "dcaDown_NDedxUp", "dcaDown_NHitsUp_NDedxUp",
-			       "NHitsUp_NDedxUp"};
+// const int nSys = 12;
+// const TString sysName[nSys] = {"default",
+// 			       "dcaUp","dcaDown","NHitsUp","NDedxUp",
+// 			       "dcaUp_NHitsUp", "dcaUp_NDedxUp", "dcaUp_NHitsUp_NDedxUp",
+// 			       "dcaDown_NHitsUp", "dcaDown_NDedxUp", "dcaDown_NHitsUp_NDedxUp",
+// 			       "NHitsUp_NDedxUp"};
+const int nSys = 5;
+const TString sysName[nSys] = {"default", "dcaUp","dcaDown","NHitsUp","NDedxUp",};
+
 // const TString sysType = "MuonPid";
 // const int nSys = 27;
 // const TString sysName[nSys] = {"default",
@@ -80,7 +83,7 @@ void make_SysTpcAndPid()
 
   myRandom = new TRandom3();
   myRandom->SetSeed(0);
-  getJpsiEff(1,1);
+  getJpsiEff(1,0);
 }
 //================================================
 void getJpsiEff(const int savePlot, const int saveHisto)
@@ -116,7 +119,7 @@ void getJpsiEff(const int savePlot, const int saveHisto)
   for(int k=0; k<nCentBins; k++)
     {
       c = new TCanvas(Form("TpcTrkEff_cent%s",cent_Title[k]),Form("TpcTrkEff_cent%s",cent_Title[k]),1100,700);
-      if(sysType=="TpcTracking") c->Divide(4,3);
+      if(sysType=="TpcTracking") c->Divide(3,2);
       if(sysType=="MuonPid") c->Divide(7,4);
       for(int s=0; s<nSys; s++)
 	{
@@ -164,6 +167,7 @@ void getJpsiEff(const int savePlot, const int saveHisto)
       leg0->Draw();
       if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/sys_TpcAndPid/%s_FitTrkEffVsPtEmb_cent%s.pdf",run_type,sysType.Data(),cent_Title[k]));
     }
+  return;
 
   // get J/psi efficiency 
   const int nExpr = 1e6;

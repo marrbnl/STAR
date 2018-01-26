@@ -44,7 +44,8 @@ void qa_Match()
   //DeltaY();
   //qualityCuts();
   //yzDistribution();
-  eLoss();
+  //eLoss();
+  magneticField();
 }
 
 //================================================
@@ -636,7 +637,7 @@ void Track(const Int_t save = 0)
 
 
 //================================================
-void eLoss(const Int_t save = 0)
+void eLoss(const Int_t save = 0, const int saveAN = 1)
 {
   TCanvas *c = new TCanvas("energy_loss","energy_loss",800,600);
   TF1 *fEloss = new TF1("f2","[0]*exp(-pow([1]/x,[2]))",1.,20);
@@ -678,4 +679,33 @@ void eLoss(const Int_t save = 0)
       c->SaveAs(Form("~/Work/STAR/analysis/Plots/qa_Match/EnergyLoss.png"));
       c->SaveAs("/Users/admin/Dropbox/STAR/MTD/figures/EnergyLoss.pdf");
     }
+
+  if(saveAN)
+    c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch2_EnergyLoss.pdf"));
+}
+
+//================================================
+void magneticField(const Int_t save = 0, const int saveAN = 1)
+{
+  f = TFile::Open("output/jpsi.test.histos.root");
+
+  TH2F *hMag = (TH2F*)f->Get("hMagneticMap");
+  hMag->RebinX(2);
+  hMag->RebinY(2);
+  hMag->SetZTitle("B (T)");
+  hMag->SetTitleOffset(1.2,"Z");
+  TCanvas *c = new TCanvas("MagneticMap","MagneticMap",880,800);
+  TPaveText *t1 = GetTitleText(hMag->GetTitle());
+  hMag->SetTitle("");
+  hMag->GetYaxis()->SetTitleOffset(1.4);
+  hMag->Draw("colz");
+  t1->Draw();
+  SetPadMargin(gPad,0.12,0.12,0.15,0.12);
+  if(save) 
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_Projection/MagneticFieldMap.png",run_type));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_Projection/MagneticFieldMap.pdf",run_type));
+    }
+  if(saveAN)
+    c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch2_MagneticField.pdf"));
 }

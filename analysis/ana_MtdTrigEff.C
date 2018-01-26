@@ -12,9 +12,9 @@ void ana_MtdTrigEff()
   gStyle->SetStatW(0.2);                
   gStyle->SetStatH(0.2);
 
-  getTrigEff();
+  //getTrigEff();
   //anaTrigEff();
-  //sysTrigEff();
+  sysTrigEff();
  
   //compareTacDiff();
   //lumiDepend();
@@ -81,6 +81,10 @@ void anaTrigEff(const int savePlot = 0, const int saveHisto = 0)
       leg->Draw();
       if(savePlot)
 	c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdTrigEff/%s_TacDiffEffWithFit_%s.pdf",run_type,run_type,lumi_name[l]));
+      if(gSaveAN)
+	{
+	  c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_EffTirg_FitEff_%s.pdf",lumi_name[l]));
+	}
     }
   if(saveHisto)
     {
@@ -93,7 +97,7 @@ void anaTrigEff(const int savePlot = 0, const int saveHisto = 0)
 }
 
 //================================================
-void sysTrigEff(const int savePlot = 0, const int saveHisto = 0)
+void sysTrigEff(const int savePlot = 1, const int saveHisto = 1)
 {
   if(year==2014)
     {
@@ -225,7 +229,7 @@ void sysTrigEff(const int savePlot = 0, const int saveHisto = 0)
 		{
 		  minTacDiff += mean - hMuonTacDiffMean[0]->GetBinContent(bin_index+1);
 		}
-	      if(s==0 || s==1)cout << lumi_name[l] << ": " << s << "  " << pt << "  " << mean << "  " << pp_res << "  " << AA_res << ":  " << min_TacDiffCut[l] << " -> " << minTacDiff << endl;
+	      //cout << lumi_name[l] << ": " << s << "  " << pt << "  " << mean << "  " << pp_res << "  " << AA_res << ":  " << min_TacDiffCut[l] << " -> " << minTacDiff << endl;
 
 	      TH1F *hppAuTac = hppTacDiff[bin];
 	      TF1  *hppAuTacFit = hppTacDiffFit[bin];
@@ -242,11 +246,13 @@ void sysTrigEff(const int savePlot = 0, const int saveHisto = 0)
 	      acc_err_arr[bin] = sqrt(pow(acc_err_arr[bin],2)+pow(hppAuTac->GetBinError(low_bin)*fraction,2));
 	      if(acc_arr[bin]>all_arr[bin]) acc_arr[bin] = all_arr[bin];
 
-	      // all_arr[bin]  = hppAuTacFit->Integral(760, max_TacDiffCut[l]);
-	      // all_err_arr[bin] = 0.1;
-	      // acc_arr[bin]  = hppAuTacFit->Integral(minTacDiff, max_TacDiffCut[l]);
-	      // acc_err_arr[bin] = 0.1;
-	      
+	      if(year==2014)
+		{
+	      // recaculate central value using fitted function to avoid statistical fluctuation
+		  all_arr[bin]  = hppAuTacFit->Integral(760, max_TacDiffCut[l]);
+		  acc_arr[bin]  = hppAuTacFit->Integral(minTacDiff, max_TacDiffCut[l]);
+		  
+		}
 	    }
 	  gTacDiffEff[l][s] = GetEfficiencyCurve(nbins, pt_arr, all_arr, all_err_arr, acc_arr, acc_err_arr);
 	  gTacDiffEff[l][s]->SetName(Form("%s_gTacDiffEffSys%d_%s",run_type,s,lumi_name[l]));
@@ -303,17 +309,24 @@ void sysTrigEff(const int savePlot = 0, const int saveHisto = 0)
 	  gTacEffSysLimit[l][i]->SetMarkerStyle(29);
 	  gTacEffSysLimit[l][i]->SetMarkerColor(2);
 	}
-      cEff[l]->cd();
-      for(int i=0; i<2; i++)
+      if(year==2014)
 	{
-	  funcSysSys[l][i]->SetLineStyle(2);
-	  funcSysSys[l][i]->SetLineColor(4);
-	  funcSysSys[l][i]->Draw("sames");
+	  cEff[l]->cd();
+	  for(int i=0; i<2; i++)
+	    {
+	      funcSysSys[l][i]->SetLineStyle(2);
+	      funcSysSys[l][i]->SetLineColor(4);
+	      funcSysSys[l][i]->Draw("sames");
+	    }
 	}
      if(savePlot)
 	cEff[l]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdTrigEff/Sys.%s_TacDiffEffSysSys_%s.pdf",run_type,run_type,lumi_name[l]));
+     if(gSaveAN)
+       {
+	 cEff[l]->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch5_EffTrig_Sys1_%s.pdf",lumi_name[l]));
+       }
     }
-
+ 
   // part II: statisitcal error
   TF1 *funcSysStat[nLumi][3];
   gStyle->SetOptFit(0);
@@ -457,6 +470,10 @@ void sysTrigEff(const int savePlot = 0, const int saveHisto = 0)
       leg->AddEntry(gSysStat[l][2],"Upper limit","PL");
       leg->Draw();
       if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdTrigEff/Sys.%s_TacDiffEff_RndmLimits_%s.pdf",run_type,run_type,lumi_name[l]));
+      if(gSaveAN)
+	{
+	  c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch5_EffTrig_Sys2_%s.pdf",lumi_name[l]));
+	}
     }
 
   // combine the systematic uncertainty
@@ -527,6 +544,10 @@ void sysTrigEff(const int savePlot = 0, const int saveHisto = 0)
       leg->Draw();
       if(savePlot)
 	c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdTrigEff/Sys.%s_TacDiffEffWithSys_%s.pdf",run_type,run_type,lumi_name[l]));
+      if(gSaveAN)
+	{
+	  c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch5_EffTrig_SysAll_%s.pdf",lumi_name[l]));
+	}
     }
 
   TF1 *funcEffFinal = new TF1(Form("%s_gTacDiffEffFinal_prod",run_type),"[0]-exp(-1*[1]*(x-[2]))",1.2,10);
@@ -540,8 +561,8 @@ void sysTrigEff(const int savePlot = 0, const int saveHisto = 0)
   if(run_type=="Run14_AuAu200")
     {
       // Get the average efficiency
-      // Statistical weight: prod_mid/high (73.4%); prod_/low (26.6%)
-      const double weight[nLumi] = {0.734, 0.266};
+      // MB statistics weight: prod_mid/high (80.75%); prod_/low (19.25%)
+      const double weight[nLumi] = {0.8075, 0.1925};
       TF1 *hprodlow = 0x0, *hprodhigh = 0x0, *havg = 0x0;
       for(int i=0; i<3; i++)
 	{
@@ -593,6 +614,10 @@ void sysTrigEff(const int savePlot = 0, const int saveHisto = 0)
       leg->Draw();
       if(savePlot)
 	c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdTrigEff/Sys.%s_AvgTacDiffEffWithSys.pdf",run_type,run_type));
+      if(gSaveAN)
+	{
+	  c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch5_EffTrig_SysFinal.pdf"));
+	}
     }
 
   if(saveHisto)
@@ -608,13 +633,17 @@ void sysTrigEff(const int savePlot = 0, const int saveHisto = 0)
 	{
 	  funcEffSysFinal[i]->Write("",TObject::kOverwrite);
 	}
+      funcTacEff[0]->SetName(Form("%s_Muon_TacDiffEff_prod_high",run_type));
+      funcTacEff[0]->Write("",TObject::kOverwrite);
+      funcTacEff[1]->SetName(Form("%s_Muon_TacDiffEff_prod_low",run_type));
+      funcTacEff[1]->Write("",TObject::kOverwrite);
       fout->Close();
     }
   
 }
 
 //================================================
-void getTrigEff(const int savePlot = 0, const int saveHisto = 0)
+void getTrigEff(const int savePlot = 1, const int saveHisto = 1)
 {
   // The MTD trigger efficiency is calculated using Run15 pp 200 GeV data
   // as the baseline
@@ -665,7 +694,7 @@ void getTrigEff(const int savePlot = 0, const int saveHisto = 0)
   const int nPtBins = nbins -1;
   const double xPtBins[nPtBins+1] = {1.3, 1.5, 2.0, 2.5, 3.0, 5.0, 10.0}; 
 
-  // distributions from pp and pAuAu events
+  // distributions from pp and p/AuAu events
   // 0 - pp; 1 - pAu/AuAu
   const char* ref_data_name = "Run15_pp200";
   const int nData = 2;
@@ -737,7 +766,11 @@ void getTrigEff(const int savePlot = 0, const int saveHisto = 0)
     }
   c->cd(1);
   leg->Draw();
-  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdTrigEff/%s_Comp_MultVsTrigUnit.pdf",data_name.Data(),config));
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdTrigEff/%sComp_MultVsTrigUnit.pdf",data_name.Data(),config));
+  if(gSaveAN)
+    {
+      c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_EffTirg_LSMultVsTrigUnit.pdf"));
+    }
 
   // compare line-up
   for(int i=0; i<nData; i++)
@@ -768,6 +801,10 @@ void getTrigEff(const int savePlot = 0, const int saveHisto = 0)
       t1->Draw();
       if(savePlot)
 	c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdTrigEff/%s%s_LSBkg_TacDiffMeanVsTrigUnit.pdf",data_name.Data(),config,legName[i]));
+      if(gSaveAN)
+	{
+	  c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_EffTirg_LSTacDiffMeanVsTrigUnit_%s.pdf",legName[i]));
+	}
     }
 
   if(data_name=="Run15_pAu200")
@@ -820,7 +857,7 @@ void getTrigEff(const int savePlot = 0, const int saveHisto = 0)
 	  c->cd(29);
 	  leg->Draw();
 	  if(savePlot) 
-	    c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdTrigEff/%s_CompTacDiff_PtBin%d.pdf",data_name.Data(),config,bin));
+	    c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdTrigEff/%sCompTacDiff_PtBin%d.pdf",data_name.Data(),config,bin));
 	}
     }
 
@@ -903,6 +940,10 @@ void getTrigEff(const int savePlot = 0, const int saveHisto = 0)
   c->cd(2);
   leg->Draw();
   if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdTrigEff/%sCompTacDiffCombined.pdf",data_name.Data(),config));
+  if(gSaveAN)
+    {
+      c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_EffTirg_TacDiffDis.pdf"));
+    }
 
   // Fit the TacSum distributions
   TF1 *funcMuonTacDiffRebin[nData][nbins-1];
@@ -954,6 +995,10 @@ void getTrigEff(const int savePlot = 0, const int saveHisto = 0)
       t1->Draw();
       if(savePlot) 
 	c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdTrigEff/%sFitTacDiff_%s.pdf",data_name.Data(),config,legName[i]));
+      if(gSaveAN)
+	{
+	  c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_EffTirg_FitTacDiffDis_%s.pdf",legName[i]));
+	}
     }
 
   TF1 *funcMuonTacDiffSigma[nData];
@@ -985,6 +1030,10 @@ void getTrigEff(const int savePlot = 0, const int saveHisto = 0)
       (TVirtualFitter::GetFitter())->GetConfidenceIntervals(hCLfuncMuonTacDiffSigma[i], 0.68);
     }
   if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdTrigEff/%sCompTacDiffSigma.pdf",data_name.Data(),config));
+  if(gSaveAN)
+    {
+      c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_EffTirg_CompTacDiffSigma.pdf"));
+    }
 
   c = new TCanvas("Comp_TacDiffMean", "Comp_TacDiffMean", 800, 600);
   TLegend *leg = new TLegend(0.5,0.25,0.7,0.45);
@@ -1011,6 +1060,10 @@ void getTrigEff(const int savePlot = 0, const int saveHisto = 0)
   t1->Draw();
   if(savePlot) 
     c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdTrigEff/%sCompTacDiffMean.pdf",data_name.Data(),config));
+ if(gSaveAN)
+    {
+      c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_EffTirg_CompTacDiffMean.pdf"));
+    }
 
   // Fit the shifted distribution from pp collisions
   TF1  *hMuonTacDiffCombinedFit[nbins];
@@ -1032,7 +1085,7 @@ void getTrigEff(const int savePlot = 0, const int saveHisto = 0)
       else if(iFuncType==1)
 	{
 	  hMuonTacDiffCombinedFit[bin] = new TF1(Form("%s_funcMuonTacDiffCombined_PtBin%d",legName[0],bin),CrystalBall,min_fit,max_fit,5);
-	  hMuonTacDiffCombinedFit[bin]->SetParameters(1,min_TacDiffCut[0]+10,8,5,0.2);
+	  hMuonTacDiffCombinedFit[bin]->SetParameters(1,min_TacDiffCut[0]+10,8,1,0.2);
 	}
       hFitPtr[bin] = hfit->Fit(hMuonTacDiffCombinedFit[bin],"I0RS");
       c->cd(bin+1);
@@ -1049,6 +1102,10 @@ void getTrigEff(const int savePlot = 0, const int saveHisto = 0)
       hMuonTacDiffCombinedFit[bin]->Draw("sames");
     }   
   if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdTrigEff/%sFitTacDiffComb_%s.pdf",data_name.Data(),config,legName[0]));
+  if(gSaveAN)
+    {
+      c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_EffTirg_FitTacDiffComb.pdf"));
+    }
 
   TGraphAsymmErrors* gTacDiffEffComb[nLumi][2]; // 0 - bin counting; 1 - fitting;
   double pt_arr[nbins-1], all_arr[nbins-1], all_err_arr[nbins-1], acc_arr[nbins-1], acc_err_arr[nbins-1];
@@ -1209,6 +1266,10 @@ void getTrigEff(const int savePlot = 0, const int saveHisto = 0)
       leg->Draw();
       if(savePlot) 
 	c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdTrigEff/%sTacDiffEffAuAuReso_%s.pdf",data_name.Data(),config,lumi_name[l]));
+      if(gSaveAN)
+	{
+	  c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_EffTirg_AuAuReso_%s.pdf",lumi_name[l]));
+	}
     }
   
   // final efficiency
@@ -1238,6 +1299,10 @@ void getTrigEff(const int savePlot = 0, const int saveHisto = 0)
       leg->Draw();
       if(savePlot) 
 	c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdTrigEff/%sTacDiffEffFinal_BinCountVsFit_%s.pdf",data_name.Data(),config,lumi_name[l]));
+      if(gSaveAN)
+	{
+	  c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_EffTirg_FinalEff_%s.pdf",lumi_name[l]));
+	}
     }
 
   // save histograms
@@ -1582,7 +1647,7 @@ void lumiDepend(const int savePlot = 0)
 }
 
 //================================================
-void trigElecEff(const int savePlot = 1, const int saveHisto = 1)
+void trigElecEff(const int savePlot = 0, const int saveHisto = 0)
 {
   if(year==2014)
     {
@@ -1640,7 +1705,7 @@ void trigElecEff(const int savePlot = 1, const int saveHisto = 1)
   TCanvas *c = drawHistos(list,"MuonPtEff_Dtof",Form("%s: trigger electronics efficiency;p_{T} (GeV/c)",run_type),true,0,10,true,0.8,1.05,kFALSE,true,legName1,true,"",0.4,0.65,0.2,0.45,kTRUE);
   list->Clear();
   if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdTrigEff/MtdTrigElecEff_CompareDtof.pdf",run_type));
-
+  if(gSaveAN) c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_EffTrigElec_vs_PID.pdf"));
  
   // Efficiency vs. centrality
   // use dtof < 1 ns cut
@@ -1687,6 +1752,7 @@ void trigElecEff(const int savePlot = 1, const int saveHisto = 1)
   TCanvas *c = drawHistos(list,"MuonPtEff_Cent",Form("%s: trigger electronics efficiency;p_{T} (GeV/c)",run_type),true,0,10,true,0.8,1.05,kFALSE,true,legName2,true,"",0.4,0.65,0.2,0.45,kTRUE);
   list->Clear();
   if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdTrigEff/MtdTrigElecEff_CompareCent.pdf",run_type));
+  if(gSaveAN) c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_EffTrigElec_vs_cent.pdf"));
 
   // Efficiency vs. TPC vz
   // use dtof < 1 ns cut and 0-60%
@@ -1738,6 +1804,7 @@ void trigElecEff(const int savePlot = 1, const int saveHisto = 1)
   TCanvas *c = drawHistos(list,"MuonPtEff_TpcVz",Form("%s: trigger electronics efficiency;p_{T} (GeV/c)",run_type),true,0,10,true,0.8,1.05,kFALSE,true,legName3,true,"",0.4,0.65,0.2,0.45,kTRUE);
   list->Clear();
   if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdTrigEff/MtdTrigElecEff_CompareTpcVz.pdf",run_type));
+  if(gSaveAN) c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_EffTrigElec_vs_vz.pdf"));
   hnTrigEff->GetAxis(5)->SetRange(0,-1);
 
   // Final efficiency: dtof < 1 ns, 0-60%, |tpcVz| < 100 cm
@@ -1751,6 +1818,7 @@ void trigElecEff(const int savePlot = 1, const int saveHisto = 1)
   func->SetLineStyle(2);
   func->Draw("sames");
   if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdTrigEff/MtdTrigElecEff_Fit.pdf",run_type));
+  if(gSaveAN) c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_EffTrigElecFit.pdf"));
   
   if(saveHisto)
     {

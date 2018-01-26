@@ -1,45 +1,68 @@
 TFile *f;
-const Bool_t iPico = 1;
-const int year = 2015;
-TString run_cfg_name;
+const int year = YEAR;
 
 //================================================
 void qa_vertex()
 {
-  gStyle->SetOptStat(1);
+  gStyle->SetOptStat(0);
   gStyle->SetOptFit(1);
   gStyle->SetStatY(0.9);                
   gStyle->SetStatX(0.9);  
 
-  TString fileName;
+  f = TFile::Open(Form("./output/%s.jpsi.root",run_type),"read");
 
-  if(year==2013)
-    {
-      run_type = "Run13_pp500";
-      if(iPico) fileName = Form("Pico.Run13.pp500.jpsi.%sroot",run_config);
-      else      fileName = Form("Run13.pp500.jpsi.%sroot",run_config);
-    }
-  else if(year==2014)
-    {
-      run_type = "Run14_AuAu200";
-      if(iPico) fileName = Form("Pico.Run14.AuAu200.jpsi.%sroot",run_config);
-      else      fileName = Form("Run14.AuAu200.jpsi.%sroot",run_config);
-    }
-  else if(year==2015)
-    {
-      run_type = "Run15_pAu200";
-      fileName = Form("Run15.pAu200.QA.root",run_config);
-    }
-
-  f = TFile::Open(Form("./output/%s",fileName.Data()),"read");
-
-  run_cfg_name = run_config;
-  if(iPico) run_cfg_name = Form("Pico.%s",run_cfg_name.Data());
-
+  qa();
   //vtxCuts();
   //cuts();
-  //qa();
-  vtxSelection();
+  //vtxSelection();
+}
+
+//================================================
+void qa(const Int_t save = 1, const int saveAN = 1)
+{
+  const char *hName[] = {"mhTpcVyVx_di_mu","mhTpcVyVxWithCut_di_mu","mhTpcVz_di_mu","mhTpcVzWithCut_di_mu",
+			 "mhVzDiffVsTpcVz_di_mu","mhDiffVzWithCut_di_mu"};
+  const char *hTitle[] = {"y vs. x of primary vertex (w/o vertex cut)","y vs. x of primary vertex (w/ vertex cut)",
+			  "z distribution of primary vertex (w/o vertex cut)", "z distribution of primary vertex (w/ vertex cut)",
+			  "correlation of vz between VPD and TPC (w/o vertex cut)", "#Deltavz distribution of primary vertex (w/ vertex cut)"};
+  const char *xTitle[] = {"vx (cm)", "vx (cm)", "vz_{TPC} (cm)", "vz_{TPC} (cm)", "vz_{TPC} (cm)", "vz_{TPC}-vz_{VPD} (cm)"};
+  const char *yTitle[] = {"vy (cm)", "vy (cm)", "", "", "vz_{TPC}-vz_{VPD} (cm)", ""};
+
+  for(Int_t i=0; i<6; i++)
+    {
+      TH1 *h = (TH1*)f->Get(Form("%s",hName[i]));
+      h->SetTitle(Form("%s: %s;%s;%s",run_type,hTitle[i],xTitle[i],yTitle[i]));
+      if(!h->IsA()->InheritsFrom("TH2")) 
+	{
+	  if(i==5) h->GetXaxis()->SetRangeUser(-5,5);
+	  Bool_t logy = kTRUE;
+	  if(hName[i]=="mhVpdVz")
+	    logy = kFALSE;
+	  c = draw1D(h,"",logy,kFALSE);
+	}
+      else
+	{
+	  TH2F *h2 = (TH2F*)h;
+	  if(i==0 || i==1 || i==4)
+	    {
+	      h2->RebinX(2);
+	      h2->RebinY(2);
+	    }
+	  c = draw2D(h2,"");
+	}
+
+      TString outname = hName[i];
+      outname.ReplaceAll("mh","");
+      outname.ReplaceAll("_di_mu","");
+      if(save) 
+	{
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_vertex/%s.pdf",run_type,outname.Data()));
+	}
+      if(saveAN)
+	{
+	  c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Chp1_%s.pdf",outname.Data()));
+	}
+    }
 }
 
 //================================================
@@ -255,43 +278,6 @@ void cuts(const Int_t save = 0)
     }
 }
 
-
-//================================================
-void qa(const Int_t save = 1)
-{
-  const char *hName[] = {"mhNPrimVtx","mhTpcVx","mhTpcVy","mhTpcVr",
-			 "mhTpcVxVz","mhTpcVyVz","mhVpdVz","mhVzDiffVsTpcVz"};
-
-  for(Int_t i=0; i<8; i++)
-    {
-      TH1 *h = (TH1*)f->Get(Form("%s_%s",hName[i],trigName[kTrigType]));
-      if(!h->IsA()->InheritsFrom("TH2")) 
-	{
-	  Bool_t logy = kTRUE;
-	  if(run_type == "Run13_pp500")
-	    {
-	      if(hName[i]=="mhNPrimVtx")
-		h->GetXaxis()->SetRangeUser(0,20);
-	    }
-	  if(hName[i]=="mhVpdVz")
-	    logy = kFALSE;
-	  c = draw1D(h,"",logy,kFALSE);
-	}
-      else
-	{
-	  TH2F *h2 = (TH2F*)h;
-	  c = draw2D(h2,"");
-	}
-
-      TString outname = hName[i];
-      outname.ReplaceAll("mh","");
-      if(save) 
-	{
-	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_vertex/%s%s_%s.pdf",run_type,run_cfg_name.Data(),outname.Data(),trigName[kTrigType]));
-	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/qa_vertex/%s%s_%s.png",run_type,run_cfg_name.Data(),outname.Data(),trigName[kTrigType]));
-	}
-    }
-}
 
 //================================================
 void ranking(const Int_t save = 1)

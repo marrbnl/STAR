@@ -104,8 +104,9 @@ void Run16nSigmaPiEff(const bool savePlot = 0, const bool saveHisto = 0)
 }
 
 //================================================
-void DyDzCut(const bool savePlot = 0, const bool saveHisto = 0)
+void DyDzCut(const bool savePlot = 0, const bool saveHisto = 0, const bool saveAN = 1)
 {
+  gStyle->SetOptStat(1);
   gStyle->SetOptFit(1);
   gStyle->SetStatY(0.9);                
   gStyle->SetStatX(0.9);  
@@ -127,10 +128,11 @@ void DyDzCut(const bool savePlot = 0, const bool saveHisto = 0)
 	  hFitSigma[j][i]->SetMarkerColor(j+1);
 	  hFitSigma[j][i]->SetLineColor(j+1);
 	}
-
+      hFitSigma[1][i]->SetMarkerColor(1);
+      hFitSigma[1][i]->SetLineColor(1);
       hFitSigma[0][i]->GetYaxis()->SetRangeUser(0,15);
-      c = draw1D(hFitSigma[0][i],Form("Width of %s distribution for muons;p_{T} (GeV/c);#sigma",title[i]));
-      hFitSigma[1][i]->Draw("sames");
+      c = draw1D(hFitSigma[1][i],Form("Width of %s distribution for muons;p_{T} (GeV/c);#sigma",title[i]));
+      //hFitSigma[1][i]->Draw("sames");
 
       func[i] = new TF1(Form("%s_JpsiMuon_%s_FitSigmaVsPt",data_name[1],name[i]),"[0]+[1]*exp([2]/x)",1,10);
       func[i]->SetParameters(-32.6793, 32.6034, 0.444217);
@@ -143,12 +145,15 @@ void DyDzCut(const bool savePlot = 0, const bool saveHisto = 0)
       leg->SetFillColor(0);
       leg->SetTextSize(0.04);
       leg->SetHeader(run_type);
-      leg->AddEntry(hFitSigma[0][i],"Data","P");
+      //leg->AddEntry(hFitSigma[0][i],"Data","P");
       leg->AddEntry(hFitSigma[1][i],"Embedding","P");
-      leg->AddEntry(func[i],"Fit to embedding: [0]+[1]*exp([2]/x)","L");
+      //leg->AddEntry(func[i],"Fit to embedding: [0]+[1]*exp([2]/x)","L");
+      leg->AddEntry(func[i],Form("Fit to embedding: %2.2f+%2.2f*exp(%2.2f/x)",func[i]->GetParameter(0), func[i]->GetParameter(1), func[i]->GetParameter(2)),"L");
       leg->Draw();
       if(savePlot)
  	c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_DataVsEmbe/Embed_JpsiMuon_%s_FitSigmaVsPt.pdf",run_type,name[i]));
+      if(saveAN)
+	c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Chp2_Fit%sSigmaVsPt.pdf",name[i]));
     }
 
   if(saveHisto)
@@ -161,7 +166,7 @@ void DyDzCut(const bool savePlot = 0, const bool saveHisto = 0)
 }
 
 //================================================
-void dataVsEmbed(const bool savePlot = 1)
+void dataVsEmbed(const bool savePlot = 0, const bool saveAN = 1)
 {
   TFile *fin = TFile::Open(Form("Rootfiles/%s.PIDcuts.root",run_type),"read");
 
@@ -218,7 +223,7 @@ void dataVsEmbed(const bool savePlot = 1)
 	  TLine *line = GetLine(max,low,max,up,4);
 	  line->Draw();
 
-          TPaveText *t1 = GetTitleText(Form("J/#psi #mu: %1.1f < p_{T} < %1.1f",muonPtBins[bin-1],muonPtBins[bin]),0.06);
+          TPaveText *t1 = GetTitleText(Form("J/#psi #mu: %1.1f < p_{T} < %1.1f GeV/c",muonPtBins[bin-1],muonPtBins[bin]),0.06);
           t1->Draw();
 	}
       c->cd(1);
@@ -234,7 +239,10 @@ void dataVsEmbed(const bool savePlot = 1)
 
       if(savePlot)
 	c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_DataVsEmbed/DataVsEmbed_%s_InPtBins.pdf",run_type,name[i]));
+      if(saveAN)
+	c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch2_Comp%s_InPtBins.pdf",name[i]));
     }
+  return;
 
   //==============================================
   // Compare mean and sigma
@@ -575,7 +583,7 @@ void makeEmbed(const bool savePlot = 0, const bool saveHisto = 1)
 
 
 //================================================
-void makeData(const int savePlot = 1, const int saveHisto = 1)
+void makeData(const int savePlot = 0, const int saveHisto = 0)
 {
   TFile *fdata = 0x0;
   //if(year==2014) fdata = TFile::Open("./output/Pico.Run14.AuAu200.jpsi.root","read");

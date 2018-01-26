@@ -10,12 +10,68 @@ void ana_RefMult()
   gStyle->SetStatW(0.2);                
   gStyle->SetStatH(0.2);
 
+  //correctRefMultRun14();
   run14CentCalib();
   //Run16vs14();
 }
 
 //================================================
-void run14CentCalib(const int savePlot = 1)
+void correctRefMultRun14(const int savePlot = 1)
+{
+  const char* trigger = "mb";
+  //const char* trigger = "di_mu";
+  const char* lumi[2] = {"prod_mid/low","prod_high"};
+
+  TFile *fin = NULL;
+  if(trigger=="mb") fin = TFile::Open("output/Run14_AuAu200.MB.RunDepQA.root", "read");
+  if(trigger=="di_mu") fin = TFile::Open("output/Run14_AuAu200.RunDepQA.root", "read");
+  THnSparseF *hnRefMult = (THnSparseF*)fin->Get(Form("mhQagRefMultCorr_%s",trigger));
+  
+  TH1F *hRefMult[2][2];
+  for(int i=0; i<2; i++)
+    {
+      if(i==0) hnRefMult->GetAxis(2)->SetRange(1,3);
+      else     hnRefMult->GetAxis(2)->SetRange(4,4);
+      for(int j=0; j<2; j++)
+	{
+	  hnRefMult->GetAxis(1)->SetRange(j+1, j+1);
+	  hRefMult[i][j] = (TH1F*)hnRefMult->Projection(0);
+	  hRefMult[i][j]->SetName(Form("hRefMult_Lumi%d_Run%d",i+1,j+1));
+	  hnRefMult->GetAxis(1)->SetRange(0, -1);
+	}
+      hnRefMult->GetAxis(2)->SetRange(0, -1);
+    }
+
+  TString legName[2] = {"Run < 15161050", "Run > 15161050"};
+  TLegend *leg;
+  for(int i=0; i<2; i++)
+    {    
+      if(trigger=="mb")    leg = new TLegend(0.15,0.3,0.3,0.5);
+      if(trigger=="di_mu") leg = new TLegend(0.15,0.7,0.3,0.85);
+      leg->SetBorderSize(0);
+      leg->SetFillColor(0);
+      leg->SetTextSize(0.04);
+      for(int j=0; j<2; j++)
+	{
+	  if(trigger=="mb") hRefMult[i][j]->Rebin(10);
+	  hRefMult[i][j]->Sumw2();
+	  hRefMult[i][j]->Scale(1./hRefMult[i][j]->GetEntries());
+	  hRefMult[i][j]->SetMarkerStyle(21+j*3);
+	  hRefMult[i][j]->SetMarkerColor(j+1);
+	  hRefMult[i][j]->SetLineColor(j+1);
+	  leg->AddEntry(hRefMult[i][j], legName[j], "P");
+	}
+      c = draw1D(hRefMult[i][0],Form("%s: gRefMultCorr distribution (%s, %s)",run_type,trigger,lumi[i]));
+      if(trigger=="mb") gPad->SetLogy();
+      hRefMult[i][1]->Draw("sames");
+      leg->Draw();
+      if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/Comp_gRefMult_Lumi%d_%s.pdf",run_type,i,trigger));
+    }
+
+}
+
+//================================================
+void run14CentCalib(const int savePlot = 0)
 {
   // centrality calibration
   TFile *fcalib = TFile::Open("Rootfiles/run14.PicoTree.May20_ReDo_VPDNoVtx_MTD.root","read");

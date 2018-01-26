@@ -29,8 +29,8 @@ void ana_JpsiYield()
   printf("acc di-muon events: %4.4e\n",hStat->GetBinContent(10));
   printf("HFT di-muon events: %4.2f%%\n",hStat->GetBinContent(15)/hStat->GetBinContent(10)*100);
 
-  //yieldVsPt();
-  yieldVsNpart();
+  yieldVsPt();
+  //yieldVsNpart();
   //yieldVsLumi();
   //fitYield();
   //pt2scan();
@@ -39,7 +39,7 @@ void ana_JpsiYield()
 
 
 //================================================
-void fitYield(int icent = 0, int savePlot = 1, int saveHisto = 1)
+void fitYield(int icent = 0, int savePlot = 0, int saveHisto = 0)
 {
   const int nCentBins       = nCentBins_pt; 
   const int* centBins_low   = centBins_low_pt;
@@ -63,7 +63,7 @@ void fitYield(int icent = 0, int savePlot = 1, int saveHisto = 1)
     }
   TF1 *funcJpsi = new TF1(Form("Fit_%s_tmp",hJpsiYield->GetName()),"exp([0]+[1]*x)",0,15);
   hInvJsiYield->Fit(funcJpsi,"IR0");
-  hInvJsiYield->SetTitle(Form("%s: raw invariant J/psi yield;p_{T} (GeV/c);dN/p_{T}dp_{T}",run_type));
+  hInvJsiYield->SetTitle(Form("%s: raw invariant J/psi yield (%s%%);p_{T} (GeV/c);dN/p_{T}dp_{T}",run_type,cent_Name[icent]));
   hInvJsiYield->SetMarkerStyle(21);
   c = draw1D(hInvJsiYield);
   gPad->SetLogy();
@@ -73,8 +73,12 @@ void fitYield(int icent = 0, int savePlot = 1, int saveHisto = 1)
     {
       c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiRes/Fit_JpsiFitYield_cent%s.pdf",run_type,cent_Title[icent]));
     }
+  if(gSaveAN)
+    {
+      c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch3_FitJpsiYield.pdf"));
+    }
   
-  hJpsiYield->SetTitle(Form("%s: raw J/psi yield;p_{T} (GeV/c);dN/dp_{T}",run_type));
+  hJpsiYield->SetTitle(Form("%s: raw J/psi yield (%s%%);p_{T} (GeV/c);dN/dp_{T}",run_type,cent_Name[icent]));
   hJpsiYield->SetMarkerStyle(21);
   c = draw1D(hJpsiYield);
   TF1 *funcInputJpsi = new TF1(Form("Fit_%s",hJpsiYield->GetName()),"exp([0]+[1]*x)*x",0,20);
@@ -91,7 +95,7 @@ void fitYield(int icent = 0, int savePlot = 1, int saveHisto = 1)
 }
 
 //================================================
-void yieldVsPt(int savePlot = 1)
+void yieldVsPt(int savePlot = 0)
 {
   gStyle->SetOptFit(0);
   const int nPtBins         = nPtBins_pt;
@@ -167,6 +171,10 @@ void yieldVsPt(int savePlot = 1)
     {
       c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiYield/%sJpsiYieldVsPt.pdf",run_type,run_cfg_name.Data()));
     }
+  if(gSaveAN)
+    {
+      c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch3_JpsiYieldVsPt.pdf"));
+    }
 
   TH1F *hSignif[nCentBins][2];
   for(int i=0; i<nCentBins; i++)
@@ -195,6 +203,13 @@ void yieldVsPt(int savePlot = 1)
       if(savePlot) 
 	{
 	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiYield/%sJpsiSignifVsPt_%s.pdf",run_type,run_cfg_name.Data(),name[j]));
+	}
+      if(j==0)
+	{
+	  if(gSaveAN)
+	    {
+	      c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch3_JpsiSignifVsPt.pdf"));
+	    }
 	}
     }
 
@@ -233,6 +248,10 @@ void yieldVsPt(int savePlot = 1)
     {
       c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiYield/%sJpsiMeanVsPt.pdf",run_type,run_cfg_name.Data()));
     }
+  if(gSaveAN)
+    {
+      c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch3_JpsiMeanVsPt.pdf"));
+    }
 
   list->Clear();
   for(int i=0; i<nCentBins; i++)
@@ -256,6 +275,10 @@ void yieldVsPt(int savePlot = 1)
   if(savePlot) 
     {
       c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiYield/%sJpsiSigmaVsPt.pdf",run_type,run_cfg_name.Data()));
+    }
+  if(gSaveAN)
+    {
+      c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch3_JpsiSigmaVsPt.pdf"));
     }
 
   list->Clear();
@@ -281,10 +304,14 @@ void yieldVsPt(int savePlot = 1)
     {
       c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiYield/%sJpsiChi2VsPt.pdf",run_type,run_cfg_name.Data()));
     }
+  if(gSaveAN)
+    {
+      c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch3_JpsiChi2VsPt.pdf"));
+    }
 }
 
 //================================================
-void yieldVsNpart(int savePlot = 1)
+void yieldVsNpart(int savePlot = 0)
 {
   const int nPtBins         = nPtBins_npart;
   const double* ptBins_low  = ptBins_low_npart;
@@ -323,6 +350,10 @@ void yieldVsNpart(int savePlot = 1)
       if(savePlot) 
 	{
 	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiYield/%sJpsiYieldVsCent_pt%s.pdf",run_type,run_cfg_name.Data(),pt_Name[i]));
+	}
+      if(gSaveAN)
+	{
+	  c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch3_JpsiYieldVsCent_Pt%1.0f.pdf",ptBins_low[i]));
 	}
     }
 
@@ -363,6 +394,10 @@ void yieldVsNpart(int savePlot = 1)
       if(savePlot) 
 	{
 	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiYield/%sJpsiChi2VsCent_pt%s_Fitting.pdf",run_type,run_cfg_name.Data(),pt_Name[i]));
+	}
+      if(gSaveAN)
+	{
+	  c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch3_JpsiChi2VsCent_Pt%1.0f.pdf",ptBins_low[i]));
 	}
     }
 }

@@ -1,3 +1,4 @@
+#include <cstring>
 #include "TStyle.h"
 #include "TROOT.h"
 #include "TDatime.h"
@@ -21,7 +22,7 @@
 #include <cmath>
 using namespace std;
 
-#define YEAR 2015
+#define YEAR 2014
 #if (YEAR==2014)
 const char *run_type = "Run14_AuAu200";
 #elif (YEAR==2013)
@@ -42,7 +43,8 @@ const double part_mass[nPart] = {3.097, 9.46, 10.023, 10.355};
 
 TRandom3 *myRandom;
 void anaSys(const char* type, const int saveHisto = 0);
-void plotSys(const char* type, const int savePlot = 0, const int saveHisto = 0);
+void plotSys(const char* type, const int savePlot = 0, const int saveHisto = 0, const int saveAN = 0);
+void mtdTrigEff(const int saveHisto = 0);
 void makeHisto(TString name, const double mass, const int nExpr = 1e4);
 void toyMC(const double mass, const int nExpr, const int debug = 0);
 
@@ -86,31 +88,32 @@ void sys_ToyMC()
   TDatime *clock = new TDatime();
   myRandom->SetSeed(clock->GetTime());
 
-  //const char* type = "MtdTrigEff";
-  const char* type = "Dtof";
+  const char* type = "MtdTrigEff";
+  //const char* type = "Dtof";
   //anaSys(type, 1);
-  plotSys(type, 1, 1);
+  //plotSys(type, 1, 1, 0);
+  mtdTrigEff(1);
 }
 
 //================================================
-void plotSys(const char* type, const int savePlot, const int saveHisto)
+void plotSys(const char* type, const int savePlot, const int saveHisto, const int saveAN)
 {
-  char* name_lumi, *title_lumi, *name_eff, *title_eff;
-  if(type=="MtdTrigEff")
+  char name_lumi[256], title_lumi[256], name_eff[256], title_eff[256];
+  if(strcmp(type,"MtdTrigEff")==0)
     {
-      name_lumi  = "";
-      title_lumi = "";  
-      name_eff   = "TacDiffEff";
-      title_eff  = "MTD trigger efficiency";
+      sprintf(name_lumi, "");
+      sprintf(title_lumi, "");
+      sprintf(name_eff, "TacDiffEff");
+      sprintf(title_eff, "MTD trigger efficiency");
     }
 
-  if(type=="Dtof")
+  if(strcmp(type,"Dtof")==0)
     {
-      name_lumi  = "";
-      title_lumi = "";  
-      if(year==2014) name_eff   = "Dtof0.75Eff";
-      if(year==2015) name_eff   = "Dtof1.00Eff";
-      title_eff  = "#Deltatof cut efficiency";
+      sprintf(name_lumi, "");
+      sprintf(title_lumi, "");
+      if(year==2014) sprintf(name_eff, "Dtof0.75Eff");
+      if(year==2015) sprintf(name_eff, "Dtof1.00Eff");
+      sprintf(title_eff, "#Deltatof cut efficiency");
     }
 
   // const char* name_lumi = "";
@@ -126,12 +129,12 @@ void plotSys(const char* type, const int savePlot, const int saveHisto)
   TH1F *hEffSysVsCent[nPart];  
 
   TFile *fin = 0x0;
-  if(type=="MtdTrigEff")
+  if(strcmp(type,"MtdTrigEff")==0)
     {
       if(saveHisto) fin = TFile::Open(Form("Rootfiles/%s.Sys.MtdTrigEff.root",run_type),"update");
       else          fin = TFile::Open(Form("Rootfiles/%s.Sys.MtdTrigEff.root",run_type),"read");
     }
-  if(type=="Dtof")
+  if(strcmp(type,"Dtof")==0)
     {
       if(saveHisto) fin = TFile::Open(Form("Rootfiles/%s.DtofEff.root",run_type),"update");
       else          fin = TFile::Open(Form("Rootfiles/%s.DtofEff.root",run_type),"read");
@@ -141,17 +144,17 @@ void plotSys(const char* type, const int savePlot, const int saveHisto)
     {
       for(int s=0; s<3; s++)
 	{
-	  if(type=="MtdTrigEff")
+	  if(strcmp(type,"MtdTrigEff")==0)
 	    {
 	      hEffVsPt[i][s] = (TH1F*)fin->Get(Form("%s_%sEffVsPt_%s%s",run_type,part_name[i],name_eff,sys_name[s]));
 	    }
-	  if(type=="Dtof")
+	  if(strcmp(type,"Dtof")==0)
 	    {
 	      char *tmp_name = Form("%s",sys_name[s]);
 	      if(s==0) 
 		{
-		  if(year==2014) tmp_name = "_FitFunc";
-		  if(year==2015) tmp_name = "_Syscenter";
+		  if(year==2014) tmp_name = Form("_FitFunc");
+		  if(year==2015) tmp_name = Form("_Syscenter");
 		}
 	      hEffVsPt[i][s] = (TH1F*)fin->Get(Form("TagAndProbe_%sEffVsPt_%s%s",part_name[i],name_eff,tmp_name));
 	    }
@@ -170,17 +173,17 @@ void plotSys(const char* type, const int savePlot, const int saveHisto)
 
       for(int s=0; s<3; s++)
 	{
-	  if(type=="MtdTrigEff")
+	  if(strcmp(type,"MtdTrigEff")==0)
 	    {
 	      hEffVsCent[i][s] = (TH1F*)fin->Get(Form("%s_%sEffVsCent_%s%s",run_type,part_name[i],name_eff,sys_name[s]));
 	    }
-	  if(type=="Dtof")
+	  if(strcmp(type,"Dtof")==0)
 	    {
 	      char *tmp_name = Form("%s",sys_name[s]);
 	      if(s==0) 
 		{
-		  if(year==2014) tmp_name = "_FitFunc";
-		  if(year==2015) tmp_name = "_Syscenter";
+		  if(year==2014) tmp_name = Form("_FitFunc");
+		  if(year==2015) tmp_name = Form("_Syscenter");
 		}
 	      hEffVsCent[i][s] = (TH1F*)fin->Get(Form("TagAndProbe_%sEffVsCent_%s%s",part_name[i],name_eff,tmp_name));
 	    }
@@ -199,12 +202,11 @@ void plotSys(const char* type, const int savePlot, const int saveHisto)
     }
 
   TCanvas *c1[nPart]; 
+  TCanvas *c2[nPart]; 
+  char outName[256];
   for(int i=0; i<nPart; i++)
     {
-      c1[i]= new TCanvas(Form("%s_%s_SysVsPt",part_name[i],name_eff),Form("%s_%s_SysVsPt",part_name[i],name_eff),1100,500);
-      c1[i]->Divide(2,1);
-
-      c1[i]->cd(1);
+      c1[i]= new TCanvas(Form("%s_%s_SysVsPt",part_name[i],name_eff),Form("%s_%s_SysVsPt",part_name[i],name_eff),800,600);
       SetPadMargin(gPad, 0.13, 0.13);
       ScaleHistoTitle(hEffSysVsPt[i],0.05,1,0.04,0.05,1.2,0.04,42);
       hEffSysVsPt[i]->SetTitle(";p_{T} (GeV/c);Sys. Uncert.");
@@ -214,8 +216,25 @@ void plotSys(const char* type, const int savePlot, const int saveHisto)
       hEffSysVsPt[i]->Draw();
       TPaveText *t1 = GetTitleText(Form("%s: uncertainty for %s",part_title[i],title_eff),0.05,42);
       t1->Draw();
+      if(savePlot) 
+	{
+	  sprintf(outName, "~/Work/STAR/analysis/Plots/%s/ana_%s/Sys.%s_%sVsPt.pdf",run_type,type,part_name[i],name_eff);
+	  c1[i]->SaveAs(outName);
+	}
+      if(saveAN && i<2) 
+	{
+	  if(strcmp(type,"MtdTrigEff")==0) 
+	    {
+	      sprintf(outName, "~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch5_%sDtofEffSys.pdf",part_name[i]);
+	    }
+	  if(strcmp(type,"Dtof")==0) 
+	    {
+	      sprintf(outName, "~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch5_%sMtdTrigEffSys.pdf",part_name[i]);
+	    }
+	  c1[i]->SaveAs(outName);
+	}
 
-      c1[i]->cd(2);
+      c2[i]= new TCanvas(Form("%s_%s_SysVsCent",part_name[i],name_eff),Form("%s_%s_SysVsCent",part_name[i],name_eff),800,600);
       SetPadMargin(gPad, 0.13, 0.13);
       ScaleHistoTitle(hEffSysVsCent[i],0.05,1,0.04,0.05,1.2,0.04,42);
       hEffSysVsCent[i]->GetXaxis()->SetBinLabel(1, "p_{T} > 0 GeV/c");
@@ -227,7 +246,11 @@ void plotSys(const char* type, const int savePlot, const int saveHisto)
       hEffSysVsCent[i]->SetMarkerStyle(20);
       hEffSysVsCent[i]->Draw();
       t1->Draw();
-      if(savePlot) c1[i]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_%s/Sys.%s_%s.pdf",run_type,type,part_name[i],name_eff));
+      if(savePlot) 
+	{
+	  sprintf(outName, "~/Work/STAR/analysis/Plots/%s/ana_%s/Sys.%s_%sVsCent.pdf",run_type,type,part_name[i],name_eff);
+	  c2[i]->SaveAs(outName);
+	}
     }
 
   if(saveHisto)
@@ -260,7 +283,7 @@ void anaSys(const char* type, const int saveHisto)
   // hMuonPtEff[2] = (TF1*)fMuonEff->Get("DataJpsiMuon_DtofEff46_BinCount_FitFunc_Sysdown");
 
   TFile *fdata = 0x0;
-  if(type=="MtdTrigEff")
+  if(strcmp(type,"MtdTrigEff")==0)
     {
       if(saveHisto) fdata = TFile::Open(Form("Rootfiles/%s.Sys.MtdTrigEff.root",run_type),"update");
       else          fdata = TFile::Open(Form("Rootfiles/%s.Sys.MtdTrigEff.root",run_type),"read");
@@ -268,7 +291,7 @@ void anaSys(const char* type, const int saveHisto)
       hMuonPtEff[1] = (TF1*)fdata->Get(Form("%s_Muon_TacDiffEff_Sysup",run_type));
       hMuonPtEff[2] = (TF1*)fdata->Get(Form("%s_Muon_TacDiffEff_Sysdown",run_type));
     }
-  if(type=="Dtof")
+  if(strcmp(type,"Dtof")==0)
     {
       double dtofCut = 0.75;
       if(year==2015)
@@ -284,6 +307,45 @@ void anaSys(const char* type, const int saveHisto)
     }
 
   for(int i=0; i<4; i++)
+    {
+      makeHisto(part_name[i],part_mass[i],1e7);
+      
+      if(saveHisto)
+	{
+	  fdata->cd();
+	  for(int e=0; e<3; e++)
+	    {
+	      hOutJpsiPt[e]->Write("",TObject::kOverwrite);
+	      hOutJpsiCent[e]->Write("",TObject::kOverwrite);
+	    }
+	}
+    }
+}
+
+//================================================
+void mtdTrigEff(const int saveHisto)
+{
+  // track momentum resolution
+  TFile *fRes = TFile::Open(Form("Rootfiles/Run14_AuAu200.TrkEff.root"),"read");
+  hTpcTrackRes = (TH2F*)fRes->Get("PrimTrkRes_vs_TruePt_cent0080");
+  int nHistos = hTpcTrackRes->GetNbinsX();
+  for(int i=0; i<nHistos; i++)
+    {
+      hTrkResBin[i] = (TH1F*)hTpcTrackRes->ProjectionY(Form("hTrkRes_Bin%d",i+1),i+1,i+1);
+    }
+
+  TFile *fdata = 0x0;
+  if(saveHisto) fdata = TFile::Open(Form("Rootfiles/%s.Sys.MtdTrigEff.root",run_type),"update");
+  else          fdata = TFile::Open(Form("Rootfiles/%s.Sys.MtdTrigEff.root",run_type),"read");
+  hMuonPtEff[0] = (TF1*)fdata->Get(Form("%s_Muon_TacDiffEff",run_type));
+  hMuonPtEff[1] = (TF1*)fdata->Get(Form("%s_Muon_TacDiffEff_prod_low",run_type));
+  hMuonPtEff[2] = (TF1*)fdata->Get(Form("%s_Muon_TacDiffEff_prod_high",run_type));
+  for(int e=0; e<3; e++)
+    {
+      hMuonPtEff[e]->SetName(Form("%s_TrigStudy",hMuonPtEff[e]->GetName()));
+      cout <<  hMuonPtEff[e]->GetName() << endl;
+    }
+  for(int i=0; i<1; i++)
     {
       makeHisto(part_name[i],part_mass[i],1e7);
       

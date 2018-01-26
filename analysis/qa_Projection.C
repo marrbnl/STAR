@@ -18,13 +18,13 @@ void qa_Projection()
   if(cut_name.Contains("Global"))
     trk_index = 1;
 
-  //f = TFile::Open(Form("~/Work/STAR/analysis/output/jpsi.AuAu200.Run14.Match.%s.root",run_config),"read");
-  f = TFile::Open("/Users/admin/Work/STAR/analysis/output/Run13.pp500.jpsi.CutRanking.root","read");
+  f = TFile::Open(Form("~/Work/STAR/analysis/output/jpsi.AuAu200.Run14.Match.%s.root",),"read");
+  //f = TFile::Open("/Users/admin/Work/STAR/analysis/output/Run13.pp500.jpsi.CutRanking.root","read");
 
-  makeHisto();
+  //makeHisto();
   //trackYZ();
   //trackProjection();
- //EnergyLoss();
+ EnergyLoss();
   //magneticField();
 }
 

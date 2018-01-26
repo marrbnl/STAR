@@ -11,8 +11,8 @@ void ana_MtdRespEff()
   gStyle->SetStatH(0.2);
 
   //ana_cosmicRay();
-  embedVsCosmic();
-  //systematics();
+  //embedVsCosmic();
+  systematics();
 }
 
 //================================================
@@ -23,11 +23,10 @@ void systematics(const int savePlot = 1, const int saveHisto = 1)
   const char* part_name = "Jpsi";
   const char* part_title = "J/psi";
 
-  const int year = 2014;
   if(year==2013)
     {
-      const int nPtBins = 6;
-      double xPtBins[7] = {0,1,2,3,4,6,8};
+      const int nPtBins = 5;
+      double xPtBins[6] = {0,1.5,3,5,7,9};
       run_type = "Run13_pp500";
     }
   else if(year==2014)
@@ -96,6 +95,11 @@ void systematics(const int savePlot = 1, const int saveHisto = 1)
       double init_mean = hJpsiEffPtBin[i][0]->GetMean();
       double init_rms  = hJpsiEffPtBin[i][0]->GetRMS();
       funcJpsiEffPtBin[i] = new TF1(Form("funcJpsiEffPtBin%d",i+1),"gaus",init_mean-3*init_rms,init_mean+3*init_rms);
+      if(year==2013)
+	{
+	  if(i<2) hJpsiEffPtBin[i][0]->Rebin(8);
+	  else if(i!=nPtBins-1) hJpsiEffPtBin[i][0]->Rebin(2);
+	}
       if(year==2014)
 	{
 	  if(i<2) hJpsiEffPtBin[i][0]->Rebin(4);
@@ -115,7 +119,7 @@ void systematics(const int savePlot = 1, const int saveHisto = 1)
 	{
 	  hSysMtdRespEff[0][0]->SetBinContent(i+1,1);
 	  hSysMtdRespEff[0][0]->SetBinError(i+1,sigma/mean);
-	  TPaveText *t1 = GetTitleText(Form("%1.0f < p_{T} < %1.0f GeV/c",xPtBins[i],xPtBins[i+1]),0.07);
+	  TPaveText *t1 = GetTitleText(Form("%1.1f < p_{T} < %1.1f GeV/c",xPtBins[i],xPtBins[i+1]),0.07);
 	  t1->Draw();
 	}
       else
@@ -169,7 +173,7 @@ void systematics(const int savePlot = 1, const int saveHisto = 1)
 	}
       hSysMtdRespEff[i][2]->SetMarkerStyle(21);
       if(year==2013) hSysMtdRespEff[i][2]->GetYaxis()->SetRangeUser(0.85,1.15);
-      if(year==2014) hSysMtdRespEff[i][2]->GetYaxis()->SetRangeUser(0.95,1.05);
+      if(year==2014) hSysMtdRespEff[i][2]->GetYaxis()->SetRangeUser(0.9,1.1);
       if(year==2015) hSysMtdRespEff[i][2]->GetYaxis()->SetRangeUser(0.95,1.05);
       if(i==1)
 	{
@@ -198,6 +202,11 @@ void systematics(const int savePlot = 1, const int saveHisto = 1)
 	  if(i==0) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/Jpsi_MtdRespEffSysAll.pdf",run_type));
 	  if(i==1) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/Npart.Jpsi_MtdRespEffSysAll.pdf",run_type));
 	}
+      if(gSaveAN)
+	{
+	  if(i==0) c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch5_SysRespVsPt.pdf"));
+	  if(i==1) c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch5_SysRespVsCent.pdf"));
+	}
     }
 
   if(saveHisto)
@@ -214,7 +223,7 @@ void systematics(const int savePlot = 1, const int saveHisto = 1)
 }
 
 //================================================
-void embedVsCosmic(const int savePlot = 1, const int saveHisto = 1)
+void embedVsCosmic(const int savePlot = 0, const int saveHisto = 0)
 {
   // fit response efficiency in embedding
   TFile *femb = TFile::Open(Form("output/%s.Embed.Jpsi.root",run_type),"read");
@@ -272,6 +281,13 @@ void embedVsCosmic(const int savePlot = 1, const int saveHisto = 1)
 	  cEff[i]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/Embed.MtdRespEff_BL%d-%d.pdf",run_type, i*5+1, i*5+5));
 	}
     }
+  if(gSaveAN)
+    {
+      for(int i=0; i<6; i++)
+	{
+	  cEff[i]->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_EffResp_EmbEff_BL%d_%d.pdf",i*5+1, i*5+5));
+	}
+    }
 
   TH1F *hplot = new TH1F("hplot",Form("%s: MTD response efficiency from embedding;p_{T} (GeV/c);Eff",run_type),100,0,10);
   c = draw1D(hplot);
@@ -327,6 +343,11 @@ void embedVsCosmic(const int savePlot = 1, const int saveHisto = 1)
   TLine *line = GetLine(1.3, 0.1, 1.3, 1.1, 2, 2, 1);
   line->Draw();
   if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/Embed.MtdRespEff_to_cosmic.pdf",run_type));
+  if(gSaveAN)
+    {
+      c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_EffResp_EmbVsCosmic.pdf"));
+    }
+
   if(saveHisto)
     {
       fdata->cd();
@@ -342,22 +363,25 @@ void embedVsCosmic(const int savePlot = 1, const int saveHisto = 1)
 }
 
 //================================================
-void ana_cosmicRay(const int savePlot = 0)
+void ana_cosmicRay(const int savePlot = 1)
 {
-  const int nBL = 13;
+  const int mode = 0; // 0 - Takahito; 1 - Rongrong
+  const int nBL = 30;
   TCanvas *cBL[nBL];
   TH1F *hCosmic[nBL][5];
   TF1 *hFitCosmic[nBL][5];
   TF1 *hFitTemplate[nBL][5];
   TH1F *hFitError[nBL][5];
-  TF1 *hRatio[nBL][5];
+  TH1F *hRatio[nBL][5];
 
+  const double xmin = 1.2, xmax = 10;
+  //const double xmin = 1.2, xmax = 2;
   TFile *fRespEff = TFile::Open(Form("Rootfiles/Run%dResponseEffViaPtTemplate.root",year-2000),"read");
-  TH1F *hplot = new TH1F("hplot","",100,0,10);
+  TH1F *hplot = new TH1F("hplot","",200,0,20);
   for(int i=0; i<nBL; i++)
     {
       int nMod = 5;
-      int bl = i+10;
+      int bl = i+1;
       if(bl>11 && bl<21) 
 	{
 	  cBL[i] = new TCanvas(Form("BL%d",bl),Form("BL%d",bl),1100,700);
@@ -373,15 +397,50 @@ void ana_cosmicRay(const int savePlot = 0)
       
       for(int j=0; j<5; j++)
 	{
-	  hRatio[i][j] = new TF1(Form("hRatio_%d_%d",bl,j+1),"([0]/(x-[1])+[2])/(([3]/(x-[4])+[5])*[6])");
-	  hFitCosmic[i][j] = (TF1*)fRespEff->Get(Form("fPtMtdEffBkl%d_Mod%d",bl-1,j));
-	  hFitTemplate[i][j] = (TF1*)fRespEff->Get(Form("fSclPtTmpBkl%d_Mod%d",bl-1,j));
-	  hFitError[i][j] = (TH1F*)fRespEff->Get(Form("MtdRespEffCosmic_BL%d_Mod%d",bl,j+1));
+	  TH1F *htmp = (TH1F*)fRespEff->Get(Form("hPtMtdEffBkl%d_Mod%d",bl-1,j));
+	  htmp->GetXaxis()->SetRangeUser(0,20);
+	  hCosmic[i][j] = (TH1F*)htmp->Clone(Form("hPtMtdEffBkl%d_Mod%d_clone",bl-1,j));
+	  hCosmic[i][j]->Reset();
+	  for(int bin=1; bin<=hCosmic[i][j]->GetNbinsX(); bin++)
+	    {
+	      hCosmic[i][j]->SetBinContent(bin, htmp->GetBinContent(bin));
+	      hCosmic[i][j]->SetBinError(bin, htmp->GetBinError(bin));
+	    }
+	  hFitTemplate[i][j] = (TF1*)fRespEff->Get(Form("fSclPtMtdEffBkl%d_Mod%d",bl-1,j));
+	  if(mode==0)
+	    {
+	      if(bl>9 && bl<23)
+		{
+		  hFitCosmic[i][j] = (TF1*)fRespEff->Get(Form("fPtMtdEffBkl%d_Mod%d",bl-1,j));
+		  hFitError[i][j] = (TH1F*)fRespEff->Get(Form("MtdRespEffCosmic_BL%d_Mod%d",bl,j+1));
+		}
+	      else
+		{
+		  hFitCosmic[i][j] = (TF1*)fRespEff->Get(Form("fHighPtBkl%d_Mod%d",bl-1,j));
+		  hFitError[i][j] = (TH1F*)hCosmic[i][j]->Clone(Form("MtdRespEffCosmic_BL%d_Mod%d",bl,j+1));
+		  hFitError[i][j]->Reset();
+		  for(int bin=1; bin<=hFitError[i][j]->GetNbinsX(); bin++)
+		    {
+		      hFitError[i][j]->SetBinContent(bin, hFitCosmic[i][j]->GetParameter(0));
+		      hFitError[i][j]->SetBinError(bin, hFitCosmic[i][j]->GetParError(0));
+		    }
+		}
+	    }
+	  else if(mode==1)
+	    {
+	      TF1 *functmp = (TF1*)fRespEff->Get(Form("fPtMtdEffBkl%d_Mod%d",bl-1,j));
+	      hFitCosmic[i][j] = new TF1(Form("fPtMtdEffBkl%d_Mod%d_2",bl-1,j), "[0]/([1]*(x-[2]))+[3]/([4]*(x-[5]))+[6]",1.3,20);
+	      hFitCosmic[i][j]->SetParameters(functmp->GetParameters());
+
+	      hFitError[i][j] = new TH1F(Form("MtdRespEffCosmic_BL%d_Mod%d",bl,j+1), "", hCosmic[i][j]->GetNbinsX(), hCosmic[i][j]->GetXaxis()->GetXbins()->GetArray());
+	      hCosmic[i][j]->Fit(hFitCosmic[i][j], "R0Q");
+	      (TVirtualFitter::GetFitter())->GetConfidenceIntervals(hFitError[i][j], 0.68);
+	    }
 	  for(int bin=1; bin<=hFitError[i][j]->GetNbinsX(); bin++)
 	    {
 	      hFitError[i][j]->SetBinError(bin, 2*hFitError[i][j]->GetBinError(bin));
 	    }
-	  hCosmic[i][j] = (TH1F*)fRespEff->Get(Form("hPtMtdEffBkl%d_Mod%d",bl-1,j));
+
 	  int index = j;
 	  if(bl>11 && bl<21)
 	    {
@@ -393,17 +452,30 @@ void ana_cosmicRay(const int savePlot = 0)
 	  cBL[i]->cd(index+1);
 	  gPad->SetBottomMargin(0.12);
 	  gPad->SetLeftMargin(0.12);
-	  ScaleHistoTitle(hFitError[i][j],0.05,1,0.04,0.05,1.1,0.04,62);
-	  hFitError[i][j]->SetTitle(";p_{T} (GeV/c);MTD response efficiency");
-	  hFitError[i][j]->GetXaxis()->SetRangeUser(1.3,4);
-	  hFitError[i][j]->GetYaxis()->SetRangeUser(0.2, 1.1);
-	  if(bl==19) hFitError[i][j]->GetYaxis()->SetRangeUser(0, 0.7);
+	  hplot->SetTitle(";p_{T} (GeV/c);MTD response efficiency");
+	  ScaleHistoTitle(hplot,0.05,1,0.04,0.05,1.2,0.04,62);
+	  hplot->GetXaxis()->SetRangeUser(xmin, xmax);
+	  hplot->GetYaxis()->SetRangeUser(0.2, 1.1);
+	  if(year==2014 && bl==19) hplot->GetYaxis()->SetRangeUser(0, 0.7);
+	  if(year==2013)
+	    {
+	      hplot->GetYaxis()->SetRangeUser(0, hFitCosmic[i][j]->GetParameter(0)+0.2);
+	      if(bl==10 || bl==22) hplot->GetYaxis()->SetRangeUser(0, 1);
+	    }
+	  hplot->DrawCopy();
 	  hFitError[i][j]->SetFillStyle(3001);
 	  hFitError[i][j]->SetFillColor(kBlue);
 	  hFitError[i][j]->SetLineStyle(2);
-	  hFitError[i][j]->Draw("e5");
-	  hCosmic[i][j]->Draw("sames");
-	  //hFitCosmic[i][j]->Draw("sames");
+	  hFitError[i][j]->SetMarkerSize(0);
+	  hFitError[i][j]->Draw("sames e5");
+	  hCosmic[i][j]->Draw("sames PE");
+	  hFitCosmic[i][j]->SetLineColor(4);
+	  hFitCosmic[i][j]->SetLineStyle(2);
+	  hFitCosmic[i][j]->SetLineWidth(2);
+	  hFitCosmic[i][j]->Draw("sames");
+	  hFitTemplate[i][j]->SetLineColor(6);
+	  hFitTemplate[i][j]->SetLineStyle(2);
+	  hFitTemplate[i][j]->SetLineWidth(2);
 	  hFitTemplate[i][j]->Draw("sames");
 	  TPaveText *t1 = GetTitleText(Form("Bkl=%d, Mod=%d",bl,j+1),0.06);
 	  t1->Draw();
@@ -415,27 +487,62 @@ void ana_cosmicRay(const int savePlot = 0)
 	  leg->AddEntry(hFitCosmic[i][j],"Fit to cosmic","L");
 	  leg->AddEntry(hFitTemplate[i][j],"Template","L");
 	  leg->Draw();
-	  for(int ipar=0; ipar<7; ipar++)
+
+	  TH1F *hRelFitErr = (TH1F*)hFitError[i][j]->Clone(Form("%s_rel",hFitError[i][j]->GetName()));
+	  for(int bin=1; bin<=hRelFitErr->GetNbinsX(); bin++)
 	    {
-	      if(ipar<3) hRatio[i][j]->SetParameter(ipar, hFitCosmic[i][j]->GetParameter(ipar));
-	      else       hRatio[i][j]->SetParameter(ipar, hFitTemplate[i][j]->GetParameter(ipar-3));
+	      double pt = hRelFitErr->GetBinCenter(bin);
+	      hRelFitErr->SetBinContent(bin, 1);
+	      if(pt<1.3)
+		{
+		  hRelFitErr->SetBinError(bin,0);
+		}
+	      else
+		{
+		  hRelFitErr->SetBinError(bin, hFitError[i][j]->GetBinError(bin)/hFitError[i][j]->GetBinContent(bin));
+		}
 	    }
+	  TH1F *hDataRatio = (TH1F*)hCosmic[i][j]->Clone(Form("%s_ratio",hCosmic[i][j]->GetName()));
+	  hDataRatio->Reset();
+	  hDataRatio->SetMarkerStyle(20);
+	  for(int bin=1; bin<=hDataRatio->GetNbinsX(); bin++)
+	    {
+	      double pt = hCosmic[i][j]->GetBinCenter(bin);
+	      hDataRatio->SetBinContent(bin, hCosmic[i][j]->GetBinContent(bin)/hFitCosmic[i][j]->Eval(pt));
+	      hDataRatio->SetBinError(bin, hCosmic[i][j]->GetBinError(bin)/hFitCosmic[i][j]->Eval(pt));
+	    }
+
 	  cBL[i]->cd(index+nMod+1);
 	  gPad->SetBottomMargin(0.12);
 	  gPad->SetLeftMargin(0.12);
-	  hplot->SetTitle(";p_{T} (GeV/c);Cosmic/Template");
-	  ScaleHistoTitle(hplot,0.05,1,0.04,0.05,1,0.04,62);
-	  hplot->GetXaxis()->SetRangeUser(1.3,4);
+	  hplot->SetTitle(";p_{T} (GeV/c);Ratio to cosmic fit");
 	  hplot->GetYaxis()->SetRangeUser(0.8,1.2);
-	  hplot->Draw("HIST");
-	  hRatio[i][j]->SetRange(1.3,4);
-	  hRatio[i][j]->Draw("sames");
-	  TLine *line = new TLine(1.3,1,4,1);
-	  line->SetLineColor(2);
-	  line->SetLineStyle(2);
+	  hplot->DrawCopy("HIST");
+	  TLine *line = GetLine(xmin, 1, xmax, 1, 4);
 	  line->Draw();
+	  hRelFitErr->Draw("sames e5");
+	  hDataRatio->Draw("sames PE");
+	  hRatio[i][j] = new TH1F(Form("hRatio_%d_%d",bl,j+1),"",1000,0,25);
+	  for(int bin=1; bin<=hRatio[i][j]->GetNbinsX(); bin++)
+	    {
+	      double pt = hRatio[i][j]->GetBinCenter(bin);
+	      if(pt<1.3)  hRatio[i][j]->SetBinContent(bin, 1);
+	      else hRatio[i][j]->SetBinContent(bin, hFitTemplate[i][j]->Eval(pt)/hFitCosmic[i][j]->Eval(pt));
+	    }
+	  hRatio[i][j]->SetLineWidth(2);
+	  hRatio[i][j]->SetLineStyle(2);
+	  hRatio[i][j]->SetLineColor(6);
+	  hRatio[i][j]->Draw("sames HIST");
 	}
-      if(savePlot) cBL[i]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/BL%d_TemplateVsCosmic.pdf",run_type,bl));
+      if(savePlot)
+	{
+	  cBL[i]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/BL%d_TemplateVsCosmic.pdf",run_type,bl));
+	  cBL[i]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/BL%d_TemplateVsCosmic.png",run_type,bl));
+	}
+      if(gSaveAN && (bl==1||bl==17))
+	{
+	  cBL[i]->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_EffResp_FitCosmic_BL%d.pdf",bl));
+	}
     }
 
 }

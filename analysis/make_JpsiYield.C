@@ -135,7 +135,9 @@ void make_histo_pt()
     }
 
   TString fileName = Form("Rootfiles/%s.Jpsi.pt%1.1f.pt%1.1f.%sroot",run_type,pt1_cut,pt2_cut,run_config);
-  TFile *fout = TFile::Open(fileName,"recreate");
+  TFile *fout = NULL;
+  if(nCentBins_pt==5) fout = TFile::Open(fileName,"recreate");
+  else  fout = TFile::Open(fileName,"update");
   const char* pair_name[2] = {"UL","LS"};
   for(int w=0; w<2; w++) 
     {
@@ -192,7 +194,7 @@ void make_histo_npart()
 
   const char *hName[3] = {"hJpsiInfo","hBkgLSPos","hBkgLSNeg"};
   THnSparseF *hnInvMass[2][3] = {0x0};
-  TH1F *hInvMass[2][5][kNCent][nPtBins][3] = {0x0};
+  TH1F *hInvMass[2][5][kNCent+1][nPtBins][3] = {0x0};
   
   // same event
   char name[512];
@@ -209,9 +211,10 @@ void make_histo_npart()
 	  for(Int_t i=0; i<nPtBins; i++) // pt bins
 	    {
 	      hnInvMass[w][j]->GetAxis(1)->SetRangeUser(ptBinsLow[i]+0.01,ptBinsHigh[i]-0.01);
-	      for(int k=0; k<nCentBins[i]; k++) // centrality bins
+	      for(int k=0; k<nCentBins[i]+1; k++) // centrality bins
 		{
-		  hnInvMass[w][j]->GetAxis(4)->SetRange(centBinsLow[i*kNCent+k],centBinsHigh[i*kNCent+k]);
+		  if(k<nCentBins[i]) hnInvMass[w][j]->GetAxis(4)->SetRange(centBinsLow[i*kNCent+k],centBinsHigh[i*kNCent+k]);
+		  else hnInvMass[w][j]->GetAxis(4)->SetRange(1,16);
 		  for(int t=0; t<gNTrgSetup; t++) // trigger setup
 		    {
 		      if(t>0) hnInvMass[w][j]->GetAxis(5)->SetRange(t,t);
@@ -235,7 +238,7 @@ void make_histo_npart()
 	{
 	  for(Int_t i=0; i<nPtBins; i++)
 	    {
-	      for(int k=0; k<nCentBins[i]; k++)
+	      for(int k=0; k<nCentBins[i]+1; k++)
 		{
 		  if(hInvMass[w][t][k][i][1])
 		    hInvMass[w][t][k][i][1]->Add(hInvMass[w][t][k][i][2]);
@@ -252,7 +255,7 @@ void make_histo_npart()
       fmix = TFile::Open(Form("Output/%s",mixName),"read");
 
       cout << "Mix file: " << fmix->GetName() << endl;
-      TH1F *hMixInvMass[kNCent][nPtBins][3];
+      TH1F *hMixInvMass[kNCent+1][nPtBins][3];
       printf("INFO: using Shuai's mixed events\n");
       TH3D *hMixMmumuvsPtCen[3];
       hMixMmumuvsPtCen[0] = (TH3D*)fmix->Get("hMixULMmumuvsPtCen");
@@ -264,9 +267,11 @@ void make_histo_npart()
 	    {
 	      int ybin_min = hMixMmumuvsPtCen[j]->GetYaxis()->FindFixBin(ptBinsLow[i]+1e-4);
 	      int ybin_max = hMixMmumuvsPtCen[j]->GetYaxis()->FindFixBin(ptBinsHigh[i]-1e-4);
-	      for(int k=0; k<nCentBins[i]; k++)
+	      for(int k=0; k<nCentBins[i]+1; k++)
 		{
-		  TH1F *htmp = (TH1F*)hMixMmumuvsPtCen[j]->ProjectionZ(Form("mix_%s_%s_InvMass_jpsi_PtBin%d_CentBin%d_tmp",hName[j],trigName[kTrigType],i,k),centBinsLow[i*kNCent+k],centBinsHigh[i*kNCent+k],ybin_min,ybin_max);
+		  TH1F *htmp = 0x0;
+		  if(k<nCentBins[i]) htmp = (TH1F*)hMixMmumuvsPtCen[j]->ProjectionZ(Form("mix_%s_%s_InvMass_jpsi_PtBin%d_CentBin%d_tmp",hName[j],trigName[kTrigType],i,k),centBinsLow[i*kNCent+k],centBinsHigh[i*kNCent+k],ybin_min,ybin_max);
+		  else htmp = (TH1F*)hMixMmumuvsPtCen[j]->ProjectionZ(Form("mix_%s_%s_InvMass_jpsi_PtBin%d_CentBin%d_tmp",hName[j],trigName[kTrigType],i,k),1,16,ybin_min,ybin_max);
 		  hMixInvMass[k][i][j] = new TH1F(Form("mix_%s_%s_InvMass_jpsi_PtBin%d_CentBin%d",hName[j],trigName[kTrigType],i,k),htmp->GetTitle(),1400,0,14);
 		  for(int bin=1; bin<=htmp->GetNbinsX(); bin++)
 		    {
@@ -278,7 +283,7 @@ void make_histo_npart()
 	}
       for(Int_t i=0; i<nPtBins; i++)
 	{
-	  for(int k=0; k<nCentBins[i]; k++)
+	  for(int k=0; k<nCentBins[i]+1; k++)
 	    {
               hMixInvMass[k][i][1]->Add(hMixInvMass[k][i][2]);
             }
@@ -294,14 +299,15 @@ void make_histo_npart()
 	{
 	  for(Int_t i=0; i<nPtBins; i++)
 	    {
-	      for(int k=0; k<nCentBins[i]; k++)
+	      for(int k=0; k<nCentBins[i]+1; k++)
 		{
 		  if(hInvMass[w][t][k][i][0])
 		    {
 		      for(int j=0; j<2; j++)
 			{
 			  hInvMass[w][t][k][i][j]->SetTitle("");
-			  hInvMass[w][t][k][i][j]->Write(Form("InvMass_%s_pt%s_cent%s%s%s",pair_name[j],ptName[i],centName[i*kNCent+k],gWeightName[w],gTrgSetupName[t]),TObject::kOverwrite);
+			  if(k<nCentBins[i]) hInvMass[w][t][k][i][j]->Write(Form("InvMass_%s_pt%s_cent%s%s%s",pair_name[j],ptName[i],centName[i*kNCent+k],gWeightName[w],gTrgSetupName[t]),TObject::kOverwrite);
+			  else hInvMass[w][t][k][i][j]->Write(Form("InvMass_%s_pt%s_cent0-80%s%s",pair_name[j],ptName[i],gWeightName[w],gTrgSetupName[t]),TObject::kOverwrite);
 			}
 		    }
 		}
@@ -314,12 +320,13 @@ void make_histo_npart()
     {
       for(Int_t i=0; i<nPtBins; i++)
 	{
-	  for(int k=0; k<nCentBins[i]; k++)
+	  for(int k=0; k<nCentBins[i]+1; k++)
 	    {
 	      for(int j=0; j<2; j++)
 		{
 		  hMixInvMass[k][i][j]->SetTitle("");
-		  hMixInvMass[k][i][j]->Write(Form("Mix_InvMass_%s_pt%s_cent%s",pair_name[j],ptName[i],centName[i*kNCent+k]),TObject::kOverwrite);
+		  if(k<nCentBins[i]) hMixInvMass[k][i][j]->Write(Form("Mix_InvMass_%s_pt%s_cent%s",pair_name[j],ptName[i],centName[i*kNCent+k]),TObject::kOverwrite);
+		  else hMixInvMass[k][i][j]->Write(Form("Mix_InvMass_%s_pt%s_cent0-80",pair_name[j],ptName[i]),TObject::kOverwrite);
 		}
 	    }
 	}

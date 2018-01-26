@@ -11,17 +11,30 @@ void ana_JpsiXsec()
   gStyle->SetStatH(0.2);
 
 
-  //xsec_Run14();
+  xsec_Run14();
   //compare();
   //trgSetup();
-  shiftDataPoint();
+  //shiftDataPoint();
 }
 
 //================================================
 void trgSetup(const bool savePlot = 0)
 {
+  //==============================================
+  // Cross section vs. pT
+  //==============================================
+  const int nPtBins         = nPtBins_pt;
+  const double* ptBins_low  = ptBins_low_pt;
+  const double* ptBins_high = ptBins_high_pt;
+  const char** pt_Name      = pt_Name_pt;
+  const int nCentBins       = nCentBins_pt; 
+  const int* centBins_low   = centBins_low_pt;
+  const int* centBins_high  = centBins_high_pt;
+  const char** cent_Name    = cent_Name_pt;
+  const char** cent_Title   = cent_Title_pt;
+
   // Get the dimuon events number
-  TFile *fdata = TFile::Open(Form("./output/Pico.Run14.AuAu200.jpsi.%sroot",run_config),"read");
+  TFile *fdata = TFile::Open(Form("./output/Run14_AuAu200.jpsi.%sroot",run_config),"read");
   TH1F *hStat = (TH1F*)fdata->Get("hEventStat");
   printf("all         events: %4.4e\n",hStat->GetBinContent(1));
   printf("all di-muon events: %4.4e\n",hStat->GetBinContent(3));
@@ -31,6 +44,13 @@ void trgSetup(const bool savePlot = 0)
   // Effective number of MB events
   printf("+++++++++++++++++++++++++++++++++\n");
   double mb_events[nCentBins][gNTrgSetup];
+  for(int i=0; i<nCentBins; i++)
+    {
+      for(int j=0; j<gNTrgSetup; j++)
+	{
+	  mb_events[i][j] = 0;
+	}
+    }
   TFile *fLumi = TFile::Open(Form("Rootfiles/Run14_AuAu200.Luminosity.root"),"read");
   TH1F *hEvtRun = (TH1F*)fdata->Get("mhEvtRun_di_mu");
   TH1F *hEvtRunAcc = (TH1F*)fdata->Get("mhEvtRunAcc_di_mu");
@@ -60,7 +80,6 @@ void trgSetup(const bool savePlot = 0)
 	    }
 	  double eq_mb = hEqMbEvents[i]->GetBinContent(hEqMbEvents[i]->FindFixBin(run));
 	  mb_events[i][0] += nEventsRun/rf/nEventsTaken * eq_mb;
-
 	}
       printf("Effective # of MB events for %s%%: %4.4e\n",cent_Name[i],mb_events[i][0]);
     }
@@ -71,10 +90,10 @@ void trgSetup(const bool savePlot = 0)
       ifstream fruns;
       fruns.open(Form("Rootfiles/Luminosity/%s/AuAu_200_production%s_2014.list",run_type,trgSetupName[j-1]));
       int runnumber;
-      while(!fruns.eof())
+      while(fruns >> runnumber)
 	{
-	  fruns >> runnumber;
 	  int bin = hEvtRunAcc->FindBin(runnumber);
+	  if(bin<1 || bin>hEvtRunAcc->GetNbinsX()) continue;
 	  if(hEvtRunAcc->GetBinContent(bin)<=0) continue;
 	  double nEventsTaken = hNeventsTake->GetBinContent(hNeventsTake->FindFixBin(runnumber));
 	  if(nEventsTaken==0) 
@@ -95,70 +114,82 @@ void trgSetup(const bool savePlot = 0)
 	      mb_events[i][j] += nEventsRun/rf/nEventsTaken * eq_mb;
 	    }
 	}
-      printf("[i] # of events for %d: %1.0f\n",j,mb_events[0][j]);
+      printf("[i] # of events for %d: %1.0f, %4.2f%%\n",j,mb_events[0][j],mb_events[0][j]/mb_events[0][0]*100);
     }
   printf("[i]Check %1.0f =? %1.0f\n",mb_events[0][0],mb_events[0][1]+mb_events[0][2]+mb_events[0][3]+mb_events[0][4]);
   printf("+++++++++++++++++++++++++++++++++\n");
   // =============================================
-  
 
   // =============================================
   // MTD acceptance loss
-  double evtCount[4] = {0,0,0,0};
+  const int nRunRange = 8;
+  double evtCount[nRunRange+1];
+  for(int i=0; i<nRunRange+1; i++) evtCount[i] = 0;
+  int runRange[nRunRange+1] = {15074104, 15077035, 15078021, 15098066, 15099002, 15106130, 15131038, 15132019, 15167014};
   for(int bin=1; bin<=hEvtRunAcc->GetNbinsX(); bin++)
     {
       if(hEvtRunAcc->GetBinContent(bin)<=0) continue;
       double run = hEvtRunAcc->GetBinCenter(bin);
       double evt = hEvtRunAcc->GetBinContent(bin);
-      if(run<15098067) evtCount[0] += evt;
-      else if(run<15106131) evtCount[1] += evt;
-      else evtCount[2] += evt;
-      evtCount[3] += evt;
+      for(int i=0; i<nRunRange; i++)
+	{
+	  if(run>runRange[i] && run<=runRange[i+1]) evtCount[i] += evt;
+	}
+      evtCount[nRunRange] += evt;
     }
   TList *list = new TList;
-  TString legName[4] = {"Run < 15098067","15098068 <= Run < 15106131","Run >= 15106131","Average correction factor"};
+  TString legName[nRunRange+1];
+  legName[nRunRange] = "Average correction factor";
   TFile *fAcc = TFile::Open(Form("Rootfiles/%s.AcceptanceLoss.root",run_type),"read");
-  TH1F *hAccLoss[3];
-  for(int i=0; i<3; i++)
+  TH1F *hAccLoss[nRunRange];
+  for(int i=0; i<nRunRange; i++)
     {
-      hAccLoss[i] = (TH1F*)fAcc->Get(Form("hAccepLoss_%d",i));
+      hAccLoss[i] = (TH1F*)fAcc->Get(Form("hAccepLoss_RunRange%d",i));
     }
   TH1F *hAccCorr = (TH1F*)hAccLoss[0]->Clone("hAccCorr");
   hAccCorr->Reset();
-  for(int i=0; i<3; i++)
+  int colors[10] = {1, 2, 4, 6, 1, 2, 4, 6, 1, 2};
+  for(int i=0; i<nRunRange; i++)
     {
-      hAccCorr->Add(hAccLoss[i],evtCount[i]/evtCount[3]);
+      hAccCorr->Add(hAccLoss[i],evtCount[i]/evtCount[nRunRange]);
       list->Add(hAccLoss[i]);
-      legName[i] = Form("%s: %2.1f%%",legName[i].Data(),evtCount[i]/evtCount[3]*100);
+      hAccLoss[i]->SetMarkerStyle(20+i);
+      hAccLoss[i]->SetMarkerColor(colors[i]);
+      hAccLoss[i]->SetLineColor(colors[i]);
+      legName[i] = Form("Run (%d,%d]: %2.1f%%",runRange[i],runRange[i+1],evtCount[i]/evtCount[nRunRange]*100);
     }
   list->Add(hAccCorr);
-  c = drawHistos(list,"MTD_Acceptance","Correction for MTD acceptance loss",kFALSE,0,30,true,0.8,1.02,kFALSE,kTRUE,legName,kTRUE,"",0.35,0.75,0.18,0.45,kTRUE);
-  if(savePlot)
-    {
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiXsec/MTD_AccepLoss.pdf",run_type));
-    }
+  c = drawHistos(list,"MTD_Acceptance","Correction for MTD acceptance loss",kFALSE,0,30,true,0.5,1.02,kFALSE,kTRUE,legName,kTRUE,"",0.35,0.75,0.15,0.45,kTRUE,0.04,0.04,false,1,false,false);
   // =============================================
   //
   //
 
   // Jpsi efficiency
-  TFile *fEff = TFile::Open(Form("Rootfiles/Run14_AuAu200.JpsiEff.pt%1.1f.pt%1.1f.root",pt1_cut,pt2_cut),"read");
+  // additional correction for trigger efficiency is needed
+  TFile *fTrigEff = TFile::Open(Form("Rootfiles/Run14_AuAu200.Sys.MtdTrigEff.root"),"read");
+  TH1F *hJpsiTrigEff[3];
+  hJpsiTrigEff[0] = (TH1F*)fTrigEff->Get("Run14_AuAu200_JpsiEffVsPt_TacDiffEff_TrigStudy");
+  hJpsiTrigEff[1] = (TH1F*)fTrigEff->Get("Run14_AuAu200_JpsiEffVsPt_TacDiffEff_prod_low_TrigStudy");
+  hJpsiTrigEff[2] = (TH1F*)fTrigEff->Get("Run14_AuAu200_JpsiEffVsPt_TacDiffEff_prod_high_TrigStudy");
+  hJpsiTrigEff[1]->Divide(hJpsiTrigEff[0]);
+  hJpsiTrigEff[2]->Divide(hJpsiTrigEff[0]);
+
+
+  TFile *fEff = TFile::Open(Form("Rootfiles/Run14_AuAu200.EmbJpsiEff.pt%1.1f.pt%1.1f.root",pt1_cut,pt2_cut),"read");
   TH1F *hJpsiEff[nCentBins][gNTrgSetup];
   for(int k=0; k<nCentBins; k++)
     {
       for(int j=0; j<gNTrgSetup; j++)
 	{
-	  if(j==0) hJpsiEff[k][j] = (TH1F*)fEff->Get(Form("JpsiPtEff_cent0020_corr"));
-	  else     hJpsiEff[k][j] = (TH1F*)fEff->Get(Form("JpsiPtEff_Final_cent0020%s_w_rebin",gTrgSetupName[j]));
-	  hJpsiEff[k][j]->SetName(Form("JpsiPtEff_cent%s%s",cent_Title[k],gTrgSetupTitle[j]));
-	  TH1F *hCorr = (TH1F*)fEff->Get(Form("hJpsiEffCorr_cent%s%s",cent_Title[k],gTrgSetupTitle[j]));
-	  hJpsiEff[k][j]->Multiply(hCorr);
+	  hJpsiEff[k][j] = (TH1F*)fEff->Get(Form("JpsiEffVsPt_cent%s%s_final",cent_Title[k],gTrgSetupTitle[j]));
+	  if(j>=1 && j<=3) hJpsiEff[k][j]->Multiply(hJpsiTrigEff[1]);
+	  if(j==4) hJpsiEff[k][j]->Multiply(hJpsiTrigEff[2]);
 	}
     }
   
 
   // Jpsi raw counts
-  char * yieldName = Form("Pico.Run14.AuAu200.jpsi.%spt%1.1f.pt%1.1f.yield.root",run_config,pt1_cut,pt2_cut);
+  char * yieldName = Form("Run14_AuAu200.JpsiYield.%spt%1.1f.pt%1.1f.root",run_config,pt1_cut,pt2_cut);
   TFile *fYield = TFile::Open(Form("Rootfiles/%s",yieldName),"read");
   cout << yieldName << endl;
   TH1F *hJpsiCounts[nCentBins][gNTrgSetup];
@@ -166,7 +197,7 @@ void trgSetup(const bool savePlot = 0)
     {
       for(int j=0; j<gNTrgSetup; j++)
 	{
-	  hJpsiCounts[k][j] = (TH1F*)fYield->Get(Form("Jpsi_BinCountYield_cent%s_weight%s",cent_Title[k],gTrgSetupName[j]));
+	  hJpsiCounts[k][j] = (TH1F*)fYield->Get(Form("Jpsi_FitYield_cent%s_weight%s",cent_Title[k],gTrgSetupName[j]));
 	}
     }
 
@@ -185,16 +216,20 @@ void trgSetup(const bool savePlot = 0)
 	    {
 	      double bin_width = hJpsiInvYield[k][j]->GetBinWidth(bin); // dpT
 	      double bin_center = hJpsiInvYield[k][j]->GetBinCenter(bin); // pT 
+	      if(bin==1)
+		{
+		  bin_width = 0.85;
+		  bin_center = 0.575;
+		}
 	      hJpsiInvYield[k][j]->SetBinContent(bin,hJpsiInvYield[k][j]->GetBinContent(bin)/bin_width/bin_center);
 	      hJpsiInvYield[k][j]->SetBinError(bin,hJpsiInvYield[k][j]->GetBinError(bin)/bin_width/bin_center);
 	    }
 	  hJpsiInvYield[k][j]->Scale(1./mb_events[k][j]); // N_evt
 	  hJpsiInvYield[k][j]->Scale(1./(2*pi)); // 2pi
-	  hJpsiInvYield[k][j]->Scale(1./1.6); // dy
 	  hJpsiInvYield[k][j]->SetMarkerStyle(21);
 	  hJpsiInvYield[k][j]->SetMarkerColor(color[j]);
 	  hJpsiInvYield[k][j]->SetLineColor(color[j]);
-	  hJpsiInvYield[k][j]->SetMarkerSize(1.5);
+	  hJpsiInvYield[k][j]->SetMarkerSize(1.2);
 
 	  hJpsiInvRatio[k][j] = (TH1F*)hJpsiInvYield[k][j]->Clone(Form("Jpsi_InvYieldRatio_cent%s%s",cent_Title[k],gTrgSetupTitle[j]));
 	  hJpsiInvRatio[k][j]->Divide(hJpsiInvYield[k][0]);
@@ -207,11 +242,11 @@ void trgSetup(const bool savePlot = 0)
     }
 
   TCanvas *c = new TCanvas("Comp_JetXsec","Comp_JetXsec",1100,700);
-  c->Divide(2,2);
+  c->Divide(3,2);
   TH1F *hAuAu = new TH1F("AuAu200_Jpsi",";p_{T} (GeV/c);d^{2}N/(2#pip_{T}dp_{T}dy) [(GeV/c)^{2}]",15,0,15);
   hAuAu->GetYaxis()->SetRangeUser(1e-11,1e-4);
-  ScaleHistoTitle(hAuAu,0.06,1,0.05,0.06,1,0.05,62);
-  TLegend *leg = new TLegend(0.45,0.7,0.8,0.95);
+  ScaleHistoTitle(hAuAu,0.055,1,0.045,0.055,1.4,0.045,62);
+  TLegend *leg = new TLegend(0.1,0.6,0.4,0.95);
   leg->SetBorderSize(0);
   leg->SetFillColor(0);
   leg->SetTextSize(0.05); 
@@ -220,26 +255,28 @@ void trgSetup(const bool savePlot = 0)
       c->cd(k+1);
       gPad->SetLogy();
       SetPadMargin(gPad,0.15,0.15,0.05,0.02);
+      if(k==2 || k==3) hAuAu->GetXaxis()->SetRangeUser(0,10);
+      if(k==4) hAuAu->GetXaxis()->SetRangeUser(0,6);
       hAuAu->DrawCopy();
       for(int j=0; j<gNTrgSetup; j++)
 	{
 	  hJpsiInvYield[k][j]->Draw("sames");
 	  if(k==0) leg->AddEntry(hJpsiInvYield[k][j],Form("Run14_AuAu200%s",gTrgSetupTitle[j]),"P");
 	}
-      TPaveText *t1 = GetPaveText(0.2,0.3,0.2,0.3,0.06,62);
+      TPaveText *t1 = GetPaveText(0.25,0.35,0.2,0.3,0.06,62);
       t1->AddText(Form("%s%%",cent_Name[k]));
       t1->Draw();
     }
-  c->cd(1);
+  c->cd(6);
   leg->Draw();
-  if(savePlot)
-    c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiXsec/%sJpsiInvYield_TrgSetupComp.pdf",run_type,run_config));
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiXsec/%sJpsiInvYield_TrgSetupComp.pdf",run_type,run_config));
+
 
   TCanvas *c = new TCanvas("Ratio_JetXsec","Ratio_JetXsec",1100,700);
-  c->Divide(2,2);
+  c->Divide(3,2);
   hAuAu->SetYTitle("Ratio to combined");
-  hAuAu->GetYaxis()->SetRangeUser(0,3.5);
-  TLegend *leg = new TLegend(0.45,0.7,0.8,0.95);
+  hAuAu->GetYaxis()->SetRangeUser(0,2.5);
+  TLegend *leg = new TLegend(0.1,0.6,0.4,0.95);
   leg->SetBorderSize(0);
   leg->SetFillColor(0);
   leg->SetTextSize(0.05); 
@@ -247,17 +284,20 @@ void trgSetup(const bool savePlot = 0)
     {
       c->cd(k+1);
       SetPadMargin(gPad,0.15,0.15,0.05,0.02);
+      if(k==0 || k==1) hAuAu->GetXaxis()->SetRangeUser(0,15);
+      if(k==2 || k==3) hAuAu->GetXaxis()->SetRangeUser(0,10);
+      if(k==4) hAuAu->GetXaxis()->SetRangeUser(0,6);
       hAuAu->DrawCopy();
       for(int j=1; j<gNTrgSetup; j++)
 	{
 	  hJpsiInvRatio[k][j]->Draw("sames");
 	  if(k==0) leg->AddEntry(hJpsiInvRatio[k][j],Form("Run14_AuAu200%s",gTrgSetupTitle[j]),"P");
 	}
-      TPaveText *t1 = GetPaveText(0.2,0.3,0.8,0.9,0.06,62);
+      TPaveText *t1 = GetPaveText(0.25,0.35,0.8,0.9,0.06,62);
       t1->AddText(Form("%s%%",cent_Name[k]));
       t1->Draw();
     }
-  c->cd(1);
+  c->cd(6);
   leg->Draw();
   if(savePlot)
     c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiXsec/%sJpsiInvYield_TrgSetupRatio.pdf",run_type,run_config));
@@ -265,7 +305,7 @@ void trgSetup(const bool savePlot = 0)
 }
 
 //================================================
-void xsec_Run14(const bool savePlot = 1, const bool saveHisto = 1)
+void xsec_Run14(const bool savePlot = 0, const bool saveHisto = 0)
 {
 
   //==============================================
@@ -334,38 +374,51 @@ void xsec_Run14(const bool savePlot = 1, const bool saveHisto = 1)
 
   // =============================================
   // MTD acceptance loss
-  double evtCount[4] = {0,0,0,0};
+  const int nRunRange = 8;
+  double evtCount[nRunRange+1];
+  for(int i=0; i<nRunRange+1; i++) evtCount[i] = 0;
+  int runRange[nRunRange+1] = {15074104, 15077035, 15078021, 15098066, 15099002, 15106130, 15131038, 15132019, 15167014};
   for(int bin=1; bin<=hEvtRunAcc->GetNbinsX(); bin++)
     {
       if(hEvtRunAcc->GetBinContent(bin)<=0) continue;
       double run = hEvtRunAcc->GetBinCenter(bin);
       double evt = hEvtRunAcc->GetBinContent(bin);
-      if(run<15098067) evtCount[0] += evt;
-      else if(run<15106131) evtCount[1] += evt;
-      else evtCount[2] += evt;
-      evtCount[3] += evt;
+      for(int i=0; i<nRunRange; i++)
+	{
+	  if(run>runRange[i] && run<=runRange[i+1]) evtCount[i] += evt;
+	}
+      evtCount[nRunRange] += evt;
     }
   TList *list = new TList;
-  TString legName[4] = {"Run < 15098067","15098068 <= Run < 15106131","Run >= 15106131","Average correction factor"};
+  TString legName[nRunRange+1];
+  legName[nRunRange] = "Average correction factor";
   TFile *fAcc = TFile::Open(Form("Rootfiles/%s.AcceptanceLoss.root",run_type),"read");
-  TH1F *hAccLoss[3];
-  for(int i=0; i<3; i++)
+  TH1F *hAccLoss[nRunRange];
+  for(int i=0; i<nRunRange; i++)
     {
-      hAccLoss[i] = (TH1F*)fAcc->Get(Form("hAccepLoss_%d",i));
+      hAccLoss[i] = (TH1F*)fAcc->Get(Form("hAccepLoss_RunRange%d",i));
     }
   TH1F *hAccCorr = (TH1F*)hAccLoss[0]->Clone("hAccCorr");
   hAccCorr->Reset();
-  for(int i=0; i<3; i++)
+  int colors[10] = {1, 2, 4, 6, 1, 2, 4, 6, 1, 2};
+  for(int i=0; i<nRunRange; i++)
     {
-      hAccCorr->Add(hAccLoss[i],evtCount[i]/evtCount[3]);
+      hAccCorr->Add(hAccLoss[i],evtCount[i]/evtCount[nRunRange]);
       list->Add(hAccLoss[i]);
-      legName[i] = Form("%s: %2.1f%%",legName[i].Data(),evtCount[i]/evtCount[3]*100);
+      hAccLoss[i]->SetMarkerStyle(20+i);
+      hAccLoss[i]->SetMarkerColor(colors[i]);
+      hAccLoss[i]->SetLineColor(colors[i]);
+      legName[i] = Form("Run (%d,%d]: %2.1f%%",runRange[i],runRange[i+1],evtCount[i]/evtCount[nRunRange]*100);
     }
   list->Add(hAccCorr);
-  c = drawHistos(list,"MTD_Acceptance","Correction for MTD acceptance loss",kFALSE,0,30,true,0.8,1.02,kFALSE,kTRUE,legName,kTRUE,"",0.35,0.75,0.18,0.45,kTRUE);
+  c = drawHistos(list,"MTD_Acceptance","Correction for MTD acceptance loss",kFALSE,0,30,true,0.5,1.02,kFALSE,kTRUE,legName,kTRUE,"",0.35,0.75,0.15,0.45,kTRUE,0.04,0.04,false,1,false,false);
   if(savePlot)
     {
       c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiXsec/MTD_AccepLoss.pdf",run_type));
+    }
+  if(gSaveAN)
+    {
+      c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_MtdAccLossAvg.pdf"));
     }
   // =============================================
   //
@@ -402,13 +455,17 @@ void xsec_Run14(const bool savePlot = 1, const bool saveHisto = 1)
 	{
 	  double bin_width = hJpsiInvYield[k]->GetBinWidth(bin); // dpT
 	  double bin_center = hJpsiInvYield[k]->GetBinCenter(bin); // pT 
+	  if(bin==1)
+	    {
+	      bin_width = 0.85;
+	      bin_center = 0.575;
+	    }
 	  hJpsiInvYield[k]->SetBinContent(bin,hJpsiInvYield[k]->GetBinContent(bin)/bin_width/bin_center);
 	  hJpsiInvYield[k]->SetBinError(bin,hJpsiInvYield[k]->GetBinError(bin)/bin_width/bin_center);
 	}
 
       hJpsiInvYield[k]->Scale(1./mb_events[k]); // N_evt
       hJpsiInvYield[k]->Scale(1./(2*pi)); // 2pi
-      //hJpsiInvYield[k]->Scale(1./1.6); // dy
       hJpsiInvYield[k]->SetMarkerStyle(21);
       hJpsiInvYield[k]->SetMarkerColor(2);
       hJpsiInvYield[k]->SetLineColor(2);
@@ -758,7 +815,7 @@ void xsec_Run14(const bool savePlot = 1, const bool saveHisto = 1)
       hJpsiRaaVsCent[i]->SetMarkerSize(1.5);
       hJpsiRaaVsCent[i]->GetYaxis()->SetRangeUser(0,1.2);
       hJpsiRaaVsCent[i]->GetXaxis()->SetLabelSize(0.05);
-      TCanvas *c = draw1D(hJpsiRaaVsCent[i],Form("%s: J/#Psi R_{AA} vs. centrality for p_{T} > %1.0f GeV/c;;R_{AA}",run_type,ptBins_low_npart[i]));
+      TCanvas *c = draw1D(hJpsiRaaVsCent[i],Form("%s: J/#Psi R_{AA} vs. centrality for %s;;R_{AA}",run_type,pt_Title_npart[i]));
       if(savePlot)
 	{
 	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiXsec/%sJpsiRaaVsCent_Pt%1.0f.pdf",run_type,run_config,ptBins_low_npart[i]));
@@ -799,6 +856,192 @@ void xsec_Run14(const bool savePlot = 1, const bool saveHisto = 1)
     }
 }
 
+//===============================================
+void shiftDataPoint(const bool savePlot = 0, const bool saveHisto = 0)
+{
+  //==============================================
+  // Cross section vs. pT
+  //==============================================
+  const int nPtBins         = nPtBins_pt;
+  const double* ptBins_low  = ptBins_low_pt;
+  const double* ptBins_high = ptBins_high_pt;
+  const char** pt_Name      = pt_Name_pt;
+  const int nCentBins       = nCentBins_pt; 
+  const int* centBins_low   = centBins_low_pt;
+  const int* centBins_high  = centBins_high_pt;
+  const char** cent_Name    = cent_Name_pt;
+  const char** cent_Title   = cent_Title_pt;
+
+  char *filename = Form("Run14_AuAu200.JpsiXsec.%spt%1.1f.pt%1.1f.root",run_config,pt1_cut,pt2_cut);
+  TFile *fin = 0x0;
+  if(saveHisto) fin = TFile::Open(Form("Rootfiles/%s",filename),"update");
+  else          fin = TFile::Open(Form("Rootfiles/%s",filename),"read");
+ 
+  TH1F *hJpsiYield[nCentBins];
+  for(int k=0; k<nCentBins; k++)
+    {
+      hJpsiYield[k] = (TH1F*)fin->Get(Form("Jpsi_InvYieldVsPt_cent%s",cent_Title[k]));
+    }
+
+  // add uncertainty from signal extraction to the statistical error
+  TFile *ferr = TFile::Open(Form("Rootfiles/%s.Sys.JpsiYield.root",run_type));
+  TH1F *hJpsiSigExtErr[nCentBins];
+  for(int k=0; k<nCentBins; k++)
+    {
+      hJpsiSigExtErr[k] = (TH1F*)ferr->Get(Form("Sys_signalExt_%s",cent_Title[k]));
+      for(int bin=1; bin<=hJpsiYield[k]->GetNbinsX(); bin++)
+	{
+	  double err1 = hJpsiYield[k]->GetBinError(bin)/hJpsiYield[k]->GetBinContent(bin);
+	  double err2 = fabs(1-hJpsiSigExtErr[k]->GetBinContent(bin));
+	  double err = sqrt(err1*err1 + err2*err2);
+	  hJpsiYield[k]->SetBinContent(bin, hJpsiYield[k]->GetBinContent(bin)*hJpsiYield[k]->GetBinCenter(bin));
+	  hJpsiYield[k]->SetBinError(bin, err*hJpsiYield[k]->GetBinContent(bin));
+	}
+    }
+
+  TF1 *funcYield[nCentBins];
+  TH1F *hJpsiPtPos[nCentBins];
+  TCanvas *cFit = new TCanvas("FitYield","FitYield",1100,700);
+  cFit->Divide(3,2);
+  for(int k=0; k<nCentBins; k++)
+    {
+      double max_pt = 15;
+      if(k==2 || k==3) max_pt = 10;
+      if(k==4) max_pt = 6;
+      funcYield[k] = new TF1(Form("Fit_%s",hJpsiYield[k]->GetName()), "[0]*pow(1+(x+(x*x))/([1]*[2]),-[1])*x", 0,max_pt);
+      if(k==4) funcYield[k]->SetRange(1,max_pt);
+      funcYield[k]->SetParameter(1, 5);
+      funcYield[k]->SetParameter(2, 1);
+      hJpsiYield[k]->Fit(funcYield[k], "R0Q");
+      cFit->cd(k+1);
+      gPad->SetLogy();
+      hJpsiYield[k]->SetMarkerStyle(24);
+      hJpsiYield[k]->GetYaxis()->SetRangeUser(1e-11, 1e-4);
+      hJpsiYield[k]->GetXaxis()->SetRangeUser(0, max_pt);
+      hJpsiYield[k]->SetTitle(";p_{T} (GeV/c);d^{2}N/dp_{T}d#eta");
+      hJpsiYield[k]->Draw("PE");
+      funcYield[k]->SetLineStyle(2);
+      funcYield[k]->Draw("sames");
+      TPaveText *t1 = GetTitleText(Form("%s%%: J/psi yield distribution",cent_Name[k]),0.045);
+      t1->Draw();      
+	  
+      hJpsiPtPos[k] = (TH1F*)hJpsiYield[k]->Clone(Form("hJpsiPtPos_cent%s",cent_Title[k]));
+      hJpsiPtPos[k]->Reset();
+      for(int bin=1; bin<=hJpsiYield[k]->GetNbinsX(); bin++)
+	{
+	  double min_pt = hJpsiYield[k]->GetXaxis()->GetBinLowEdge(bin);
+	  double max_pt = hJpsiYield[k]->GetXaxis()->GetBinUpEdge(bin);
+	  double y_data = hJpsiYield[k]->GetBinContent(bin);
+	  double y_fit = funcYield[k]->Integral(min_pt, max_pt)/(max_pt-min_pt);
+	  double x_est = funcYield[k]->GetX(y_fit,min_pt,max_pt);
+	  //printf("[i] bin %d, yield = %4.4e, func x = %4.4f y = %4.4e y1 = %4.4e\n",bin,y,x_est,funcYield->Eval(x_est),funcInvYield[k][i]->Eval(x_est));
+	  hJpsiPtPos[k]->SetBinContent(bin, x_est);
+	  hJpsiPtPos[k]->SetBinError(bin, 1e-10);
+	  printf("[i] centrality %s%%, bin [%1.0f,%1.0f], y_data = %4.2e, y_fit = %4.2e, pt = %4.2f\n",cent_Name[k],min_pt,max_pt,y_data,y_fit,x_est);
+	}
+    }
+  if(savePlot) cFit->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiXsec/%sFitJpsiPtPos.pdf",run_type,run_config));
+  if(gSaveAN)
+    {
+      cFit->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch6_FitJpsiInvYield.pdf"));
+    }
+
+  TList *list = new TList;
+  TString legName[nCentBins];
+  for(int k=0; k<nCentBins; k++)
+    {
+      list->Add(hJpsiPtPos[k]);
+      legName[k] = Form("%s%%",cent_Name[k]);
+    }
+  c = drawHistos(list,"PtPos_cent",Form("%s: estimated p_{T} position;p_{T} (GeV/c);p_{T} position",run_type),false,2.0,3.8,true,0,15,kFALSE,kTRUE,legName,true,"",0.15,0.3,0.6,0.85,kTRUE,0.04,0.04); 
+  TLine *line = GetLine(0,0,15,15,1);
+  line->Draw();
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiXsec/%sJpsiPtPos.pdf",run_type,run_config));
+  if(gSaveAN)
+    {
+      c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch6_JpsiPtPos.pdf"));
+    }
+
+  if(saveHisto)
+    {
+      fin->cd();
+      for(int k=0; k<nCentBins; k++)
+	{
+	  funcYield[k]->Write(Form("func_JpsiYieldVsPt_cent%s",cent_Title[k]),TObject::kOverwrite);
+	  hJpsiPtPos[k]->Write("",TObject::kOverwrite);
+	}
+    }
+  
+
+}
+
+//================================================
+void compare(const bool savePlot = 1)
+{
+  // const int nFile = 2;
+  // const char *name[nFile] = {"Pico.Run14.AuAu200.jpsi.dtof1.root","Pico.Run14.AuAu200.jpsi.LooseCut.root"};
+  // const TString legName[nFile] = {"dtof < 1 ns","Loose cut"};
+  // const char *save_name = "dtof1VsLooseCut";
+
+  const int nFile = 2;
+  const char *name[nFile] = {"Pico.Run14.AuAu200.jpsi.dtof1.Xsec.root","Pico.Run14.AuAu200.jpsi.dtof1.Xsec.pt1.5.pt1.5.root"};
+  const TString legName[nFile] = {"p_{T,1} > 1.5, p_{T,2} > 1 GeV/c","p_{T,1}, p_{T,2} > 1.5 GeV/c"};
+  const char *save_name = "1GeVvs1.5GeV";
+
+  TFile *f[nFile];
+  TH1F *hYield[nCentBins][nFile];
+  for(int i=0; i<nFile; i++)
+    {
+      f[i] = TFile::Open(Form("Rootfiles/%s",name[i]),"read");
+      for(int k=0; k<nCentBins; k++)
+	{
+	  hYield[k][i] = (TH1F*)f[i]->Get(Form("Jpsi_InvYield_cent%s",cent_Title[k]));
+	  hYield[k][i]->SetName(Form("%s_%d",hYield[k][i]->GetName(),i));
+	  hYield[k][i]->SetMarkerStyle(21+i*4);
+	  hYield[k][i]->SetMarkerColor(1+i);
+	  hYield[k][i]->SetLineColor(1+i);
+	}
+    }
+
+  TCanvas *c = new TCanvas("AuAu200_Jpsi","AuAu200_Jpsi",1100,700);
+  c->Divide(2,2);
+  TH1F *hAuAu = new TH1F("AuAu200_Jpsi",";p_{T} (GeV/c);d^{2}N/(2#pip_{T}dp_{T}dy) [(GeV/c)^{2}]",10,0,10);
+  hAuAu->GetYaxis()->SetRangeUser(1e-10,1e-4);
+  ScaleHistoTitle(hAuAu,0.06,1,0.05,0.06,1,0.05,62);
+  for(int k=0; k<nCentBins; k++)
+    {
+      c->cd(k+1);
+      gPad->SetLogy();
+      SetPadMargin(gPad,0.15,0.15,0.05,0.02);
+      hAuAu->Draw();
+      hYield[k][0]->Draw("sames");
+      hYield[k][1]->Draw("sames");
+
+      TPaveText *t1 = GetPaveText(0.7,0.8,0.8,0.85,0.06,62);
+      t1->AddText(Form("%s%%",cent_Name[k]));
+      t1->Draw();
+    }
+
+  c->cd(1);
+  TLegend *leg = new TLegend(0.18,0.2,0.42,0.48);
+  leg->SetBorderSize(0);
+  leg->SetFillColor(0);
+  leg->SetTextSize(0.05);
+  for(int i=0; i<nFile; i++)
+    {
+      leg->AddEntry(hYield[0][i],legName[i].Data(),"P");
+    }
+  leg->Draw();
+
+  if(savePlot)
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiXsec/CompareXsec_%s.pdf",run_type,save_name));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiXsec/CompareXsec_%s.png",run_type,save_name));
+    }
+}
+
+
+/*
 //===============================================
 void shiftDataPoint(const bool savePlot = 0, const bool saveHisto = 0)
 {
@@ -937,69 +1180,5 @@ void shiftDataPoint(const bool savePlot = 0, const bool saveHisto = 0)
     }
 
 }
-
-//================================================
-void compare(const bool savePlot = 1)
-{
-  // const int nFile = 2;
-  // const char *name[nFile] = {"Pico.Run14.AuAu200.jpsi.dtof1.root","Pico.Run14.AuAu200.jpsi.LooseCut.root"};
-  // const TString legName[nFile] = {"dtof < 1 ns","Loose cut"};
-  // const char *save_name = "dtof1VsLooseCut";
-
-  const int nFile = 2;
-  const char *name[nFile] = {"Pico.Run14.AuAu200.jpsi.dtof1.Xsec.root","Pico.Run14.AuAu200.jpsi.dtof1.Xsec.pt1.5.pt1.5.root"};
-  const TString legName[nFile] = {"p_{T,1} > 1.5, p_{T,2} > 1 GeV/c","p_{T,1}, p_{T,2} > 1.5 GeV/c"};
-  const char *save_name = "1GeVvs1.5GeV";
-
-  TFile *f[nFile];
-  TH1F *hYield[nCentBins][nFile];
-  for(int i=0; i<nFile; i++)
-    {
-      f[i] = TFile::Open(Form("Rootfiles/%s",name[i]),"read");
-      for(int k=0; k<nCentBins; k++)
-	{
-	  hYield[k][i] = (TH1F*)f[i]->Get(Form("Jpsi_InvYield_cent%s",cent_Title[k]));
-	  hYield[k][i]->SetName(Form("%s_%d",hYield[k][i]->GetName(),i));
-	  hYield[k][i]->SetMarkerStyle(21+i*4);
-	  hYield[k][i]->SetMarkerColor(1+i);
-	  hYield[k][i]->SetLineColor(1+i);
-	}
-    }
-
-  TCanvas *c = new TCanvas("AuAu200_Jpsi","AuAu200_Jpsi",1100,700);
-  c->Divide(2,2);
-  TH1F *hAuAu = new TH1F("AuAu200_Jpsi",";p_{T} (GeV/c);d^{2}N/(2#pip_{T}dp_{T}dy) [(GeV/c)^{2}]",10,0,10);
-  hAuAu->GetYaxis()->SetRangeUser(1e-10,1e-4);
-  ScaleHistoTitle(hAuAu,0.06,1,0.05,0.06,1,0.05,62);
-  for(int k=0; k<nCentBins; k++)
-    {
-      c->cd(k+1);
-      gPad->SetLogy();
-      SetPadMargin(gPad,0.15,0.15,0.05,0.02);
-      hAuAu->Draw();
-      hYield[k][0]->Draw("sames");
-      hYield[k][1]->Draw("sames");
-
-      TPaveText *t1 = GetPaveText(0.7,0.8,0.8,0.85,0.06,62);
-      t1->AddText(Form("%s%%",cent_Name[k]));
-      t1->Draw();
-    }
-
-  c->cd(1);
-  TLegend *leg = new TLegend(0.18,0.2,0.42,0.48);
-  leg->SetBorderSize(0);
-  leg->SetFillColor(0);
-  leg->SetTextSize(0.05);
-  for(int i=0; i<nFile; i++)
-    {
-      leg->AddEntry(hYield[0][i],legName[i].Data(),"P");
-    }
-  leg->Draw();
-
-  if(savePlot)
-    {
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiXsec/CompareXsec_%s.pdf",run_type,save_name));
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiXsec/CompareXsec_%s.png",run_type,save_name));
-    }
-}
+ */
 
