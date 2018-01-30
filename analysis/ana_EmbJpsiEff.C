@@ -12,9 +12,9 @@ void ana_EmbJpsiEff()
   gStyle->SetStatW(0.2);                
   gStyle->SetStatH(0.2);
 
-  getJpsiWeight(1,1);
+  //getJpsiWeight(1,1);
   //embJpsiEff();
-  //compare();
+  compare();
 
   //ploEff();
   //plotEmbedEff();
@@ -682,6 +682,9 @@ void getJpsiWeight(const int savePlot = 0, const int saveHisto = 0)
     }
 
   // Get the # of UL-LS pairs from data
+  TFile *fscan = TFile::Open(Form("Rootfiles/%s.TrkResScan.root",run_type),"read");
+  TH1F *hEmbJpsiWidth = (TH1F*)fscan->Get(Form("SmearEmb_JpsiWidthIntegr_Pt0-15_def"));
+
   TFile *fin;
   if(saveHisto)   fin = TFile::Open(Form("Rootfiles/%s.EmbJpsiEff.pt%1.1f.pt%1.1f.root",run_type,pt1_cut,pt2_cut),"update");
   else            fin = TFile::Open(Form("Rootfiles/%s.EmbJpsiEff.pt%1.1f.pt%1.1f.root",run_type,pt1_cut,pt2_cut),"read");
@@ -696,8 +699,9 @@ void getJpsiWeight(const int savePlot = 0, const int saveHisto = 0)
 	{
 	  hJpsiCount[t][p]  = new TH1F(Form("Data_JpsiCount_Zdc%d-%d%s",p*10,p*10+10,gTrgSetupName[t]),";;Count",kNCent,0,kNCent);
 	  if(t==0 && (p==1 || p==4) )
+	  //if(1)
 	    {
-	      c = new TCanvas(Form("ULvsLS_ZDC%d",p),Form("ULvsLS_ZDC%d-%d",p*10,p*10+10),1100,700);
+	      c = new TCanvas(Form("ULvsLS_ZDC%d%s",p,gTrgSetupName[t]),Form("ULvsLS_ZDC%d-%d%s",p*10,p*10+10,gTrgSetupName[t]),1100,700);
 	      c->Divide(4,2);
 	    }
 	  for(int j=0; j<kNCent; j++)
@@ -734,7 +738,45 @@ void getJpsiWeight(const int savePlot = 0, const int saveHisto = 0)
 		    }
 		}
 	      double scale = nCount[0]/nCount[1];
-	      hJpsiInvMass[1][j][t][p]->Scale(scale);
+	      //hJpsiInvMass[1][j][t][p]->Scale(scale);
+
+	      c->cd(j+1);
+	      hJpsiInvMass[0][j][t][p]->Add(hJpsiInvMass[1][j][t][p], -1);
+	      hJpsiInvMass[0][j][t][p]->Rebin(5);
+	      hJpsiInvMass[0][j][t][p]->GetXaxis()->SetRangeUser(2.5,4);
+	      hJpsiInvMass[0][j][t][p]->SetMarkerStyle(21);
+	      hJpsiInvMass[0][j][t][p]->SetMaximum(1.3*hJpsiInvMass[0][j][t][p]->GetMaximum());
+
+	      TF1 *func = new TF1(Form("func_%s",hJpsiInvMass[0][j][t][p]->GetName()), "gausn(0)+pol1(3)", 1.5, 4);
+	      func->FixParameter(1, 3.096);
+	      func->FixParameter(2, hEmbJpsiWidth->GetBinContent(j+1));
+	      hJpsiInvMass[0][j][t][p]->Fit(func, "IR0Q");
+	      func->SetLineColor(2);
+	      func->SetLineStyle(2);
+
+	      if(t==0 && (p==1 || p==4))
+		{
+		  hJpsiInvMass[0][j][t][p]->Draw("P");
+		  func->Draw("sames");
+		
+	      // hJpsiInvMass[1][j][t][p]->Rebin(5);
+	      // hJpsiInvMass[1][j][t][p]->SetLineColor(4);
+	      // hJpsiInvMass[1][j][t][p]->Draw("samesHIST");
+	      TPaveText *t1 = GetTitleText(Form("%s%%, %d < ZDC < %d kHz",cent_Name[j],p*10,p*10+10),0.06);
+	      t1->Draw();
+		}
+	      if(func->GetParameter(0)>0 && func->GetParameter(0)<1e3)
+		{
+		  hJpsiCount[t][p]->SetBinContent(j+1, func->GetParameter(0)/hJpsiInvMass[0][j][t][p]->GetBinWidth(1));
+		  hJpsiCount[t][p]->SetBinError(j+1, func->GetParError(0)/hJpsiInvMass[0][j][t][p]->GetBinWidth(1));
+		}
+	      else
+		{
+		  hJpsiCount[t][p]->SetBinContent(j+1, 0);
+		  hJpsiCount[t][p]->SetBinError(j+1, 0);
+		}
+
+	      /*
 	      low_bin = hJpsiInvMass[0][j][t][p]->FindFixBin(3.0);
 	      high_bin = hJpsiInvMass[0][j][t][p]->FindFixBin(3.2);
 	      double nUL, nULerr, nLS, nLSerr;
@@ -773,6 +815,7 @@ void getJpsiWeight(const int savePlot = 0, const int saveHisto = 0)
 		      t1->Draw();
 		    }
 		}
+	      */
 	    }
 	  if(t==0 && (p==1 || p==4) )
 	    {
@@ -785,7 +828,7 @@ void getJpsiWeight(const int savePlot = 0, const int saveHisto = 0)
 	    }
 	}
     }
-
+  //xreturn;
 
   // plot nJpsi vs. centrality vs. ZDC
   double xmin = 0.15, xmax = 0.45, ymin = 0.65, ymax = 0.88;

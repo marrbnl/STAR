@@ -17,7 +17,7 @@ void sys_JpsiYield()
 }
 
 //================================================
-void YieldVsPt(int savePlot = 0, int saveHisto = 0)
+void YieldVsPt(int savePlot = 1, int saveHisto = 1)
 {
  // re-assign global constants
   const int nPtBins         = nPtBins_pt;

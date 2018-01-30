@@ -429,7 +429,7 @@ void prod_pt()
 }
 
 //===============================================
-void Run14_signal(const int isetup = 0, const int icent = 1, const int isys = 0, int savePlot = 0, int saveHisto = 0, int saveHistoResScan = 0)
+void Run14_signal(const int isetup = 0, const int icent = 1, const int isys = 0, int savePlot = 0, int saveHisto = 1, int saveHistoResScan = 0)
 {
   // re-assign global constants
   const int nPtBins         = nPtBins_pt;
@@ -1195,7 +1195,7 @@ void Run14_npart(const int isys = 0, int savePlot = 0, int saveHisto = 0)
   // get histograms
   if(isys==0)
     {
-      const int nSetup = gNTrgSetup;
+      const int nSetup = 1;
     }
   else
     {
@@ -1246,7 +1246,7 @@ void Run14_npart(const int isys = 0, int savePlot = 0, int saveHisto = 0)
 	  for(int k=0; k<nCentBins[i]; k++)
 	    {
 	      hMixScale[i][k][t] = (TH1F*)hSeLS[i][k][t]->Clone(Form("%s_MixScale",hSeLS[i][k][t]->GetName()));
-	      hMixScale[i][k][t]->Rebin(2);
+	      hMixScale[i][k][t]->Rebin(10);
 	      TH1F *htmp = (TH1F*)hMixLS[i][k]->Clone(Form("%s_%d_clone",hMixLS[i][k]->GetName(),t));
 	      htmp->Rebin(int(hMixScale[i][k][t]->GetBinWidth(1)/hMixLS[i][k]->GetBinWidth(1)));
 	      hMixScale[i][k][t]->Divide(htmp);
@@ -1501,7 +1501,7 @@ void Run14_npart(const int isys = 0, int savePlot = 0, int saveHisto = 0)
 	    {
 	      TString funcForm;
 	      int nPar;
-	      if(i==0 && k<5)
+	      if(i==0 && k<2)
 		{
 		  funcForm = g_func1;
 		  nPar = g_func1_npar;
