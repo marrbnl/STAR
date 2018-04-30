@@ -5,7 +5,7 @@ TFile *f = 0x0;
 void ana_Dtof()
 {
   gStyle->SetOptStat(0);
-  gStyle->SetOptFit(1);
+  gStyle->SetOptFit(0);
   gStyle->SetStatY(0.9);                
   gStyle->SetStatX(0.98);  
   gStyle->SetStatW(0.2);                
@@ -16,70 +16,67 @@ void ana_Dtof()
   //JpsiMuon();
 }
 
+
+
 //================================================
-void TagAndProbe(const int savePlot = 1, const int saveHisto = 0)
+void TagAndProbe(const int savePlot = 1, const int saveHisto = 1)
 {
-  // const int year = 2014;
-  // const char* run_type = "Run14_AuAu200";
-  // const double dtofCut = 0.75;
+  const int year = 2014;
+  const char* run_type = "Run14_AuAu200";
+  const double dtofCut = 0.75;
 
-  const int year = 2015;
-  const char* run_type = "Run15_pAu200";
-  const double dtofCut = 1;
+  // const int year = 2015;
+  // const char* run_type = "Run15_pp200";
+  // const double dtofCut = 1;
 
-  const int nbins = 6;
-  const double xbins[nbins+1] = {1.3,1.5,2.0,2.5,3.0,5.0,10.0};
+  if(year==2014)
+    {
+      const int nbins = 6;
+      const double xbins[nbins+1] = {1.3,1.5,2.0,2.5,3.0,5.0,10.0};
+    }
+  if(year==2015)
+    {
+      const int nbins = 8;
+      const double xbins[nbins+1] = {1.3,1.4,1.6,1.8,2.0,2.5,3.0,5.0,10.0};
+    }
 
-  if(year==2014) f = TFile::Open("Output/Run14_AuAu200.jpsi.root","read");
-  if(year==2015) f = TFile::Open(Form("Output/%s.jpsi.root",run_type),"read");
+  if(year==2014)
+    {
+      f = TFile::Open(Form("Output/%s.TaP.root",run_type),"read");
+    }
+  else
+    {
+      f = TFile::Open(Form("Output/%s.jpsi.root",run_type),"read");
+    }
   THnSparseF *hnDtof = (THnSparseF*)f->Get("mhTaP_dtof_di_mu");
-  THnSparseF *hnDtofAcc = NULL;
-  if(year==2015) 
+  // apply nSigmaPi, dz and dy cuts on probed muon
+  hnDtof->GetAxis(4)->SetRange(2,2);
+  hnDtof->GetAxis(5)->SetRange(2,2);
+  hnDtof->GetAxis(6)->SetRange(2,2);
+    
+  // invariant mass distribution
+  const char *pairType[2] = {"UL", "LS"};
+  TH2F *hInvMassVsPt[2][2];
+  for(int i=0; i<2; i++)
     {
-      hnDtofAcc = (THnSparseF*)f->Get("mhTaP_dtof_Acc_di_mu");
-    }
+      hnDtof->GetAxis(3)->SetRange(i+1,i+1);
+      hInvMassVsPt[0][i] = (TH2F*)hnDtof->Projection(0,1);
+      hInvMassVsPt[0][i]->SetName(Form("mhTaP_dtof_di_mu_All_%s",pairType[i]));
 
-  // unlike-sign distribution
-  hnDtof->GetAxis(3)->SetRange(1,1);
-  if(hnDtofAcc) hnDtofAcc->GetAxis(3)->SetRange(1,1);
-  TH2F *hInvMassVsPt[2];
-  hInvMassVsPt[0] = (TH2F*)hnDtof->Projection(0,1);
-  hInvMassVsPt[0]->SetName("mhTaP_dtof_di_mu_All");
-  if(year==2014) 
-    {
-      hnDtof->GetAxis(2)->SetRangeUser(-100, dtofCut-1e-4);
-      hInvMassVsPt[1] = (TH2F*)hnDtof->Projection(0,1);
-    }
-  if(year==2015) 
-    {
-      hnDtofAcc->GetAxis(2)->SetRangeUser(-1*dtofCut+1e-4, dtofCut-1e-4);
-      hInvMassVsPt[1] = (TH2F*)hnDtofAcc->Projection(0,1);
-    }
-  hInvMassVsPt[1]->SetName("mhTaP_dtof_di_mu_Acc");
+      // cut on dTOF variables
+      if(year==2014) hnDtof->GetAxis(2)->SetRangeUser(-100, dtofCut-1e-4);
+      if(year==2015) hnDtof->GetAxis(2)->SetRangeUser(-1*dtofCut+1e-4, dtofCut-1e-4);
+      
+      hInvMassVsPt[1][i] = (TH2F*)hnDtof->Projection(0,1);
+      hInvMassVsPt[1][i]->SetName(Form("mhTaP_dtof_di_mu_Acc_%s",pairType[i]));
 
-  // like-sign distribution
-  hnDtof->GetAxis(3)->SetRange(2,2);
-  if(hnDtofAcc) hnDtofAcc->GetAxis(3)->SetRange(2,2);
-  TH2F *hInvMassVsPtLS[2];
-  hInvMassVsPtLS[0] = (TH2F*)hnDtof->Projection(0,1);
-  hInvMassVsPtLS[0]->SetName("mhTaP_dtof_di_mu_All_LS");
-  if(year==2014) 
-    {
-      hnDtof->GetAxis(2)->SetRangeUser(-100, dtofCut-1e-4);
-      hInvMassVsPtLS[1] = (TH2F*)hnDtof->Projection(0,1);
+      hnDtof->GetAxis(2)->SetRange(0,-1);
+      hnDtof->GetAxis(3)->SetRange(0,-1);
     }
-  if(year==2015) 
-    {
-      hnDtofAcc->GetAxis(2)->SetRangeUser(-1*dtofCut+1e-4, dtofCut-1e-4);
-      hInvMassVsPtLS[1] = (TH2F*)hnDtofAcc->Projection(0,1);
-    }
-  hInvMassVsPtLS[1]->SetName("mhTaP_dtof_di_mu_Acc_LS");
-  hnDtof->GetAxis(3)->SetRange(0,-1);
-  if(hnDtofAcc) hnDtofAcc->GetAxis(3)->SetRange(0,-1);
 
   // Get the mean pT
   TH1F *hMeanPt = new TH1F("hMeanPt", "Mean p_{T} of muons", nbins, 0, nbins);
-  TH1F *hMuonPt = (TH1F*)hInvMassVsPt[1]->ProjectionX("hMuonPt");
+  TH1F *hMuonPt = (TH1F*)hInvMassVsPt[1][0]->ProjectionX("hMuonPt");
   for(int bin=1; bin<=nbins; bin++)
     {
       hMuonPt->GetXaxis()->SetRangeUser(xbins[bin-1]+1e-4, xbins[bin]-1e-4);
@@ -91,8 +88,8 @@ void TagAndProbe(const int savePlot = 1, const int saveHisto = 0)
   // Fit to invariant mass
   //==============================================
   TString hTitle[2] = {"All", Form("#Deltatof<%2.2fns",dtofCut)};
-  //if(year==2015) hTitle[1] = Form("|#Deltatof|<%2.0fns",dtofCut);
-  if(year==2015) hTitle[1] = Form("Muon PID cuts");
+  if(year==2015) hTitle[1] = Form("|#Deltatof|<%2.0fns",dtofCut);
+  //if(year==2015) hTitle[1] = Form("Muon PID cuts");
   const TString hName[2] = {"All","Acc"};
   TH1F *hInvMass[2][nbins];
   TF1 *funcInvMass[2][nbins];
@@ -102,51 +99,75 @@ void TagAndProbe(const int savePlot = 1, const int saveHisto = 0)
     {
       hJpsiCounts[i] = new TH1F(Form("hJpsiCounts_%d",i), "# of J/psi", nbins, xbins);
       TCanvas *c = new TCanvas(Form("FitInvMass_%d",i), Form("FitInvMass_%d",i), 1100, 700);
-      c->Divide(3,2);
+      c->Divide(nbins/2,2);
       for(int j=0; j<nbins; j++)
 	{
-	  int low_bin = hInvMassVsPt[i]->GetXaxis()->FindFixBin(xbins[j]+1e-4);
-	  int up_bin  = hInvMassVsPt[i]->GetXaxis()->FindFixBin(xbins[j+1]-1e-4);
-	  hInvMass[i][j] = (TH1F*)hInvMassVsPt[i]->ProjectionY(Form("hInvMass_bin%d_%d",j+1,i),low_bin, up_bin);
+	  int low_bin = hInvMassVsPt[i][0]->GetXaxis()->FindFixBin(xbins[j]+1e-4);
+	  int up_bin  = hInvMassVsPt[i][0]->GetXaxis()->FindFixBin(xbins[j+1]-1e-4);
+	  hInvMass[i][j] = (TH1F*)hInvMassVsPt[i][0]->ProjectionY(Form("hInvMass_bin%d_%d",j+1,i),low_bin, up_bin);
 	  hInvMass[i][j]->SetTitle("");
 	  hInvMass[i][j]->Sumw2();
-	  TH1F *hLS = (TH1F*)hInvMassVsPtLS[i]->ProjectionY(Form("hInvMass_bin%d_%d_UL",j+1,i),low_bin, up_bin);
+	  TH1F *hLS = (TH1F*)hInvMassVsPt[i][1]->ProjectionY(Form("hInvMass_bin%d_%d_UL",j+1,i),low_bin, up_bin);
 	  hLS->Sumw2();
-	  hInvMass[i][j]->Add(hLS, -1);
+	  if(year>2014) hInvMass[i][j]->Add(hLS, -1);
 
 	  if(year==2014)
 	    {
-	      if(j<3) hInvMass[i][j]->Rebin(2);
+	      if(j<2) hInvMass[i][j]->Rebin(2);
+	      else if(j<3) hInvMass[i][j]->Rebin(3);
 	      else    hInvMass[i][j]->Rebin(5);
 	    }
 	  if(year==2015)
 	    {
 	      if(j<3) hInvMass[i][j]->Rebin(3);
-	      else if(j<5)  hInvMass[i][j]->Rebin(5);
-	      else hInvMass[i][j]->Rebin(10);
+	      else if(j<5)  hInvMass[i][j]->Rebin(3);
+	      else hInvMass[i][j]->Rebin(5);
 	    }
 
 	  if(year==2014) 
 	    {
-	      funcInvMass[i][j] = new TF1(Form("func_%s",hInvMass[i][j]->GetName()),"gausn(0)+pol3(3)",2.6,3.8);
+	      funcInvMass[i][j] = new TF1(Form("func_%s",hInvMass[i][j]->GetName()),"gausn(0)+pol3(3)",2.5,3.6);
 	      if(j==0) funcInvMass[i][j]->SetRange(2.85, 3.4);
-	      if(j==2) funcInvMass[i][j]->SetRange(2.5, 3.3);
+	      if(j==2) funcInvMass[i][j]->SetRange(2.8, 3.4);
+	      funcInvMass[i][j]->SetParameter(0, 30);
+	      funcInvMass[i][j]->FixParameter(1, 3.096);
+	      funcInvMass[i][j]->SetParameter(2, 0.05);
+	      if(j==0)
+		{
+		  funcInvMass[i][j]->SetParameter(0, 70);
+		  funcInvMass[i][j]->SetParameter(2, 0.04);
+		  funcInvMass[i][j]->SetParameter(3, 1e5);
+		  funcInvMass[i][j]->SetParameter(4, -5e4);
+		  funcInvMass[i][j]->SetParameter(5, 2e4);
+		  funcInvMass[i][j]->SetParameter(6, 5e3);
+		}
 	    }
-	  if(year==2015) funcInvMass[i][j] = new TF1(Form("func_%s",hInvMass[i][j]->GetName()),"gausn(0)+pol1(3)",2.5,4.0);
-	  funcInvMass[i][j]->SetParameter(0, hInvMass[i][j]->GetMaximum());
-	  funcInvMass[i][j]->SetParameter(1, 3.096);
-	  funcInvMass[i][j]->SetParameter(2, 0.1);
+	  if(year==2015) 
+	    {
+	      funcInvMass[i][j] = new TF1(Form("func_%s",hInvMass[i][j]->GetName()),"gausn(0)+pol1(3)",2.5,4.0);
+	      funcInvMass[i][j]->SetParameter(0, hInvMass[i][j]->GetMaximum());
+	      funcInvMass[i][j]->SetParameter(1, 3.096);
+	      //funcInvMass[i][j]->SetParameter(2, 0.1);
+	    }
 	  if(i==1)
 	    {
 	      funcInvMass[i][j]->SetParameters(funcInvMass[0][j]->GetParameters());
-	      funcInvMass[i][j]->SetParameter(1, funcInvMass[0][j]->GetParameter(1));
-	      funcInvMass[i][j]->SetParameter(2, funcInvMass[0][j]->GetParameter(2));
+	      funcInvMass[i][j]->FixParameter(1, funcInvMass[0][j]->GetParameter(1));
+	      funcInvMass[i][j]->FixParameter(2, funcInvMass[0][j]->GetParameter(2));
 	    }
 
-	  hInvMass[i][j]->GetXaxis()->SetRangeUser(2.5, 4.0);
+	  if(year==2014)
+	    {
+	      if(j<2) hInvMass[i][j]->GetXaxis()->SetRangeUser(2.8, 3.5);
+	      else    hInvMass[i][j]->GetXaxis()->SetRangeUser(2.5, 4.0);
+	    }
+	  if(year==2015) 
+	    {
+	      hInvMass[i][j]->GetXaxis()->SetRangeUser(2.5, 4.0);
+	    }
 	  hInvMass[i][j]->Fit(funcInvMass[i][j], "IR0S");
 	  c->cd(j+1);
-	  hInvMass[i][j]->SetMaximum(1.5*hInvMass[i][j]->GetMaximum());
+	  hInvMass[i][j]->SetMaximum(1.2*hInvMass[i][j]->GetMaximum());
 	  hInvMass[i][j]->SetMarkerStyle(24);
 	  hInvMass[i][j]->Draw();
 	  funcInvMass[i][j]->SetLineStyle(2);
@@ -168,6 +189,10 @@ void TagAndProbe(const int savePlot = 1, const int saveHisto = 0)
 	  double bin_width = hInvMass[i][j]->GetBinWidth(1);
 	  hJpsiCounts[i]->SetBinContent(j+1, fabs(funcInvMass[i][j]->GetParameter(0))/bin_width);
 	  hJpsiCounts[i]->SetBinError(j+1, fabs(funcInvMass[i][j]->GetParError(0))/bin_width);
+	  t1 = GetPaveText(0.5,0.75,0.75,0.88,0.05);
+	  t1->AddText(Form("#chi^{2}/NDF = %3.1f/%d",funcInvMass[i][j]->GetChisquare(), funcInvMass[i][j]->GetNDF()));
+	  t1->AddText(Form("# of J/psi = %1.0f#pm%1.0f",hJpsiCounts[i]->GetBinContent(j+1),hJpsiCounts[i]->GetBinError(j+1)));
+	  t1->Draw();
 	}
       if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Dtof/TagAndProbe_FitInvMass_%s.pdf",run_type,hName[i].Data()));
       if(gSaveAN)  c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_DtofEff_FitInvMass_%s.pdf",hName[i].Data()));
@@ -192,20 +217,9 @@ void TagAndProbe(const int savePlot = 1, const int saveHisto = 0)
     }
   for(int bin=1; bin<=nbins; bin++)
     {
-      if(hJpsiCountsClone[1]->GetBinContent(bin)>=hJpsiCountsClone[0]->GetBinContent(bin))
+      if(hJpsiCountsClone[1]->GetBinContent(bin)>hJpsiCountsClone[0]->GetBinContent(bin))
 	{
 	  hJpsiCountsClone[1]->SetBinContent(bin, hJpsiCountsClone[0]->GetBinContent(bin));
-	}
-    }
-  
-  TH1F *hRatio = hJpsiCounts[1]->Clone(Form("hRatio"));
-  hRatio->Divide(hJpsiCounts[0]);
-  for(int bin=1; bin<nbins; bin++)
-    {
-      if(hRatio->GetBinContent(bin)>1)
-	{
-	  double err = hJpsiCounts[0]->GetBinError(bin)/hJpsiCounts[0]->GetBinContent(bin);
-	  hRatio->SetBinError(bin, err*hRatio->GetBinContent(bin));
 	}
     }
 
@@ -217,10 +231,11 @@ void TagAndProbe(const int savePlot = 1, const int saveHisto = 0)
     {
       gEff->GetPoint(ipoint,x,y);
       double err = gEff->GetErrorYhigh(ipoint) > gEff->GetErrorYlow(ipoint) ? gEff->GetErrorYhigh(ipoint) : gEff->GetErrorYlow(ipoint);
-      if(y>=1)
+      if(hJpsiCountsClone[1]->GetBinContent(ipoint+1)>hJpsiCountsClone[0]->GetBinContent(ipoint+1))
 	{
-	  y = hRatio->GetBinContent(ipoint+1);
-	  err = hRatio->GetBinError(ipoint+1);
+	  y = getEffAboveOne(hJpsiCountsClone[1]->GetBinContent(ipoint+1), hJpsiCountsClone[1]->GetBinError(ipoint+1),
+			     hJpsiCountsClone[0]->GetBinContent(ipoint+1), hJpsiCountsClone[0]->GetBinError(ipoint+1),
+			     err);
 	}
       gDtofEff->SetPoint(ipoint, hMeanPt->GetBinContent(ipoint+1), y);
       gDtofEff->SetPointError(ipoint, hMeanPt->GetBinError(ipoint+1), err);
@@ -236,6 +251,14 @@ void TagAndProbe(const int savePlot = 1, const int saveHisto = 0)
   funcDtofEff->SetLineColor(2);
   funcDtofEff->SetLineStyle(2);
 
+
+  /*
+  double x,y;
+  TFile *fout = TFile::Open(Form("Rootfiles/%s.DtofEff.root",run_type),"read");
+  TGraphErrors *gDtofEff = (TGraphErrors*)fout->Get("TagAndProbe_Muon_Dtof0.75Eff");
+  TF1 *funcDtofEff = (TF1*)fout->Get("TagAndProbe_Muon_Dtof0.75Eff_FitFunc");
+  */
+
   TH1F *hplot = new TH1F("hplot",Form(";p_{T,#mu} (GeV/c);Eff."), 100, 0, 10);
   //==============================================
   // systematic uncertainty
@@ -248,6 +271,8 @@ void TagAndProbe(const int savePlot = 1, const int saveHisto = 0)
   TGraphErrors *gEffRndm[nexpr];
   double *ex = gDtofEff->GetEX();
   double *ey = gDtofEff->GetEY();
+  const int nIter = 1;
+  double y1;
   for(int j = 0; j < nexpr; j++)
     {
       int npoint = gDtofEff->GetN();
@@ -256,8 +281,12 @@ void TagAndProbe(const int savePlot = 1, const int saveHisto = 0)
       for(int ipoint=0; ipoint<npoint; ipoint++)
 	{
 	  gDtofEff->GetPoint(ipoint,x,y);
-	  y = rndm->Gaus(y, ey[ipoint]);
-	  gEffRndm[j]->SetPoint(ipoint,x,y);
+	  for(int iter=0; iter<nIter; iter++)
+	    {
+	      y1 = rndm->Gaus(y, ey[ipoint]);
+	      if(y1<1) break;
+	    }
+	  gEffRndm[j]->SetPoint(ipoint,x,y1);
 	  gEffRndm[j]->SetPointError(ipoint,ex[ipoint],ey[ipoint]);	 
 	}
     }
@@ -364,6 +393,7 @@ void TagAndProbe(const int savePlot = 1, const int saveHisto = 0)
       funcLimits[t]->SetLineColor(gLimits[t]->GetMarkerColor());
       if(t>0) funcLimits[t]->SetLineStyle(2);
       funcLimits[t]->DrawCopy("sames");
+      printf("%s: eff = %4.2f%%\n",limit_name[t],funcLimits[t]->Eval(10)*100);
     }
   leg->AddEntry(gLimits[0],"Central value","PL");
   leg->AddEntry(gLimits[1],"Lower limit","PL");
@@ -383,17 +413,18 @@ void TagAndProbe(const int savePlot = 1, const int saveHisto = 0)
     }
   if(year==2015)
     {
-      hplot->GetYaxis()->SetRangeUser(0.5, 1.1);
-      //c = draw1D(hplot,Form("%s: efficiency for |#Deltatof| < %2.0f ns cut",run_type,dtofCut));
-      c = draw1D(hplot,Form("%s: efficiency for muon PID cuts",run_type));
+      hplot->GetYaxis()->SetRangeUser(0.9, 1.02);
+      c = draw1D(hplot,Form("%s: efficiency for |#Deltatof| < %2.0f ns cut",run_type,dtofCut));
+      //c = draw1D(hplot,Form("%s: efficiency for muon PID cuts",run_type));
     }
   gPad->SetGrid(0,1);
   gDtofEff->SetMarkerStyle(21);
   gDtofEff->SetMarkerSize(1.5);
   gDtofEff->Draw("samesPEZ");
+  printf("Default: eff = %4.2f%%\n",funcDtofEff->Eval(10)*100);
   if(year==2014) funcDtofEff->Draw("sames");
-  //if(year==2015) funcLimits[0]->Draw("sames");
-  if(year==2015) funcDtofEff->Draw("sames");
+  if(year==2015) funcLimits[0]->Draw("sames");
+  //if(year==2015) funcDtofEff->Draw("sames");
   TLegend *leg = new TLegend(0.2,0.3,0.35,0.45);
   leg->SetBorderSize(0);
   leg->SetFillColor(0);
@@ -401,8 +432,8 @@ void TagAndProbe(const int savePlot = 1, const int saveHisto = 0)
   leg->SetHeader("Tag-and-probe");
   leg->AddEntry(gDtofEff,"Data","p");
   if(year==2014) leg->AddEntry(funcDtofEff,"Fit to data","L");
-  if(year==2015) leg->AddEntry(funcDtofEff,"Fit to data","L");
-  //if(year==2015) leg->AddEntry(funcLimits[0],"Mean of randomization","L");
+  //if(year==2015) leg->AddEntry(funcDtofEff,"Fit to data","L");
+  if(year==2015) leg->AddEntry(funcLimits[0],"Mean of randomization","L");
   leg->Draw();
   if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Dtof/TagAndProbe_DtofEff%2.2f.pdf",run_type,dtofCut));
   funcLimits[1]->DrawCopy("sames");

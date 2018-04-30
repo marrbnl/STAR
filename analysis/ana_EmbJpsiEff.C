@@ -13,8 +13,8 @@ void ana_EmbJpsiEff()
   gStyle->SetStatH(0.2);
 
   //getJpsiWeight(1,1);
-  //embJpsiEff();
-  compare();
+  embJpsiEff();
+  //compare();
 
   //ploEff();
   //plotEmbedEff();
@@ -24,7 +24,7 @@ void ana_EmbJpsiEff()
 
 
 //================================================
-void compare(const int savePlot = 0)
+void compare(const int savePlot = 1)
 {
   TFile *fin[2];
   fin[0] = TFile::Open(Form("Rootfiles/%s.EmbJpsiEff.pt%1.1f.pt%1.1f.root",run_type,pt1_cut,pt2_cut),"read");
@@ -170,8 +170,6 @@ void embJpsiEff(const int savePlot = 1, const int saveHisto = 1)
   if(saveHisto)   fin = TFile::Open(Form("Rootfiles/%s.EmbJpsiEff.pt%1.1f.pt%1.1f.root",run_type,pt1_cut,pt2_cut),"update");
   else            fin = TFile::Open(Form("Rootfiles/%s.EmbJpsiEff.pt%1.1f.pt%1.1f.root",run_type,pt1_cut,pt2_cut),"read");
 
-  TFile *finOld = TFile::Open(Form("Rootfiles/bk.%s.EmbJpsiEff.pt%1.1f.pt%1.1f.root",run_type,pt1_cut,pt2_cut),"read");
-
   // Jpsi efficiency vs. pT
   const int nPtBins         = nPtBins_pt;
   const double* ptBins_low  = ptBins_low_pt;
@@ -189,6 +187,7 @@ void embJpsiEff(const int savePlot = 1, const int saveHisto = 1)
   for(int i=0; i<nbins; i++)
     xbins[i] = ptBins_low[i+1];
   xbins[nbins] = ptBins_high[nbins];
+  xbins[0] = 0.15;
 
   TList *list = new TList;
   TString legName_cent[nCentBins];
@@ -226,7 +225,6 @@ void embJpsiEff(const int savePlot = 1, const int saveHisto = 1)
       c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_EffTotal_JpsiEffVsPt_AllTypes.pdf"));
     }
   list->Clear();
-
 
   //==============================================
   // weight input spectrum shape
@@ -505,7 +503,7 @@ void embJpsiEff(const int savePlot = 1, const int saveHisto = 1)
       legName_lumi[t] = Form("%s%s",run_type,gTrgSetupTitle[t]);
       list->Add(hJpsiEffVsPtFinal[t][0]);
     }
-  c = drawHistos(list,"JpsiEffFinal_vs_pt_InLumiBin",Form("%s: combined efficiency for J/#psi;p_{T} (GeV/c);Efficiency",run_type),true,0,15,true,5e-4,5e-2,true,kTRUE,legName_lumi,true,"",0.5,0.7,0.2,0.45,kTRUE);
+  c = drawHistos(list,"JpsiEffFinal_vs_pt_InLumiBin",Form("%s: combined efficiency for J/#psi;p_{T} (GeV/c);Efficiency",run_type),true,0.15,15,true,5e-4,5e-2,true,kTRUE,legName_lumi,true,"",0.5,0.7,0.2,0.45,kTRUE);
   if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbJpsiEff/JpsiEffFinal_vs_Pt_Lumi.pdf",run_type));
   list->Clear();
 
@@ -515,7 +513,7 @@ void embJpsiEff(const int savePlot = 1, const int saveHisto = 1)
     {
       list->Add(hJpsiEffVsPtFinal[0][k]);
     }
-  c = drawHistos(list,"JpsiEffFinal_vs_pt_InCentBin",Form("%s: combined efficiency for J/#psi;p_{T} (GeV/c);Efficiency",run_type),true,0,15,true,5e-4,5e-2,true,kTRUE,legName_cent,true,"",0.5,0.7,0.2,0.45,kTRUE);
+  c = drawHistos(list,"JpsiEffFinal_vs_pt_InCentBin",Form("%s: combined efficiency for J/#psi;p_{T} (GeV/c);Efficiency",run_type),true,0.15,15,true,5e-4,5e-2,true,kTRUE,legName_cent,true,"",0.5,0.7,0.2,0.45,kTRUE);
   if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbJpsiEff/JpsiEffFinal_vs_Pt.pdf",run_type));
   if(gSaveAN)
     {
@@ -608,9 +606,10 @@ void embJpsiEff(const int savePlot = 1, const int saveHisto = 1)
       hJpsiEffVsCentFinal[0][i]->SetMarkerStyle(20);
       hJpsiEffVsCentFinal[0][i]->SetMarkerSize(1.5);
       hJpsiEffVsCentFinal[0][i]->GetXaxis()->SetLabelSize(0.05);
+
       if(i==0) hJpsiEffVsCentFinal[0][i]->GetYaxis()->SetRangeUser(0, 0.01);
       else     hJpsiEffVsCentFinal[0][i]->GetYaxis()->SetRangeUser(0, 0.02);
-      c = draw1D(hJpsiEffVsCentFinal[0][i], Form("%s: combined efficiency for J/#psi (p_{T} > %1.0f GeV/c);;Efficiency",run_type,ptBins_low_npart[i]));
+      c = draw1D(hJpsiEffVsCentFinal[0][i], Form("%s: combined efficiency for J/#psi (%s);;Efficiency",run_type,pt_Title_npart[i]));
       if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbJpsiEff/JpsiEffFinal_vs_Cent_Pt%1.0f.pdf",run_type,ptBins_low_npart[i]));
       if(gSaveAN)
 	{

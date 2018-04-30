@@ -22,7 +22,7 @@ void sys_All()
 
 
 //================================================
-void mergeSystematics(int savePlot = 0, int saveHisto = 0)
+void mergeSystematics(int savePlot = 1, int saveHisto = 1)
 {
   TFile *fout = 0x0;
   if(saveHisto) fout = TFile::Open(Form("Rootfiles/%s.Sys.JpsiXsec.root",run_type),"update");
@@ -117,7 +117,7 @@ void mergeSystematics(int savePlot = 0, int saveHisto = 0)
 	  if(s==0) hJpsiSysVsCent[i][s]->DrawCopy();
 	  else     hJpsiSysVsCent[i][s]->DrawCopy("sames");
 	}
-      t1 = GetTitleText(Form("%s: systematic uncertainty of J/psi (p_{T} > %1.0f GeV/c)",run_type,ptBins_low_npart[i]),0.04);
+      t1 = GetTitleText(Form("%s: systematic uncertainty of J/psi (%s)",run_type,pt_Title_npart[i]),0.04);
       t1->Draw();
       for(int j=0; j<2; j++)
 	{

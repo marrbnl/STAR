@@ -29,9 +29,9 @@ void ana_SigExt()
   
   //prod_pt();
   //Run14_signal();
-  prod_npart();
+  //prod_npart();
   //Run14_npart();
-  //getJpsiWidthEmbed();
+  getJpsiWidthEmbed();
 }
 
 
@@ -160,15 +160,19 @@ void getJpsiWidthEmbed(int savePlot = 0, int saveHisto = 0)
   list->Clear();
   //return;
 
+  TFile *fdata = TFile::Open(Form("Rootfiles/%s.TrkResScan.input.root",run_type),"read");
+  TH1F *hDataSigma[nCentBins];
   TString legName2[nCentBins];
   for(int k=0; k<nCentBins; k++)
     {
+      hDataSigma[k] = (TH1F*)fdata->Get(Form("Jpsi_FitSigma_cent%s_weight",cent_Title[k]));
       for(int bin=1; bin<=hInvMassSigma[k][0]->GetNbinsX(); bin++)
 	{
 	  double error1 = fabs(hInvMassSigma[k][0]->GetBinContent(bin)-hInvMassSigma[k][1]->GetBinContent(bin));
 	  double error2 = fabs(hInvMassSigma[k][0]->GetBinContent(bin)-hInvMassSigma[k][2]->GetBinContent(bin));
 	  double error = error1 > error2 ? error1 : error2;
 	  hInvMassSigma[k][0]->SetBinError(bin, error);
+	  printf("[i] %s: pt = %4.2f, width = %4.4f, data = %4.4f,diff=%4.2f\n",cent_Name[k],hInvMassSigma[k][0]->GetBinCenter(bin),hInvMassSigma[k][0]->GetBinContent(bin),hDataSigma[k]->GetBinContent(bin),fabs(hInvMassSigma[k][0]->GetBinContent(bin)-hDataSigma[k]->GetBinContent(bin))/hDataSigma[k]->GetBinError(bin));
 	}
       TH1F *hplot = (TH1F*)hInvMassSigma[k][0]->Clone(Form("%s_plot2",hInvMassSigma[k][0]));
       legName2[k] = Form("%s%%",cent_Name[k]);
@@ -215,7 +219,7 @@ void getJpsiWidthEmbed(int savePlot = 0, int saveHisto = 0)
 	      hplot->Fit(funcInvMassIntegrTmp[j][k][i], "IR0Q");
 	      hSigmaIntegrTmp[j][i]->SetBinContent(k, funcInvMassIntegrTmp[j][k][i]->GetParameter(2));
 	      hSigmaIntegrTmp[j][i]->SetBinError(k, funcInvMassIntegrTmp[j][k][i]->GetParError(2));
-	      printf("[i] cent %s, pt > %1.0f, #sigma = %4.4f\n",cent_Name[k], ptBins_low_npart[j], funcInvMassIntegrTmp[j][k][i]->GetParameter(2));
+	      //printf("[i] cent %s, pt > %1.0f, #sigma = %4.4f\n",cent_Name[k], ptBins_low_npart[j], funcInvMassIntegrTmp[j][k][i]->GetParameter(2));
 	    }
 	  hSigmaIntegrTmp[j][i]->SetMarkerStyle(20);
 	  hSigmaIntegrTmp[j][i]->SetMarkerColor(color[i]);
@@ -429,7 +433,7 @@ void prod_pt()
 }
 
 //===============================================
-void Run14_signal(const int isetup = 0, const int icent = 1, const int isys = 0, int savePlot = 0, int saveHisto = 1, int saveHistoResScan = 0)
+void Run14_signal(const int isetup = 0, const int icent = 2, const int isys = 0, int savePlot = 0, int saveHisto = 0, int saveHistoResScan = 0)
 {
   // re-assign global constants
   const int nPtBins         = nPtBins_pt;
@@ -447,6 +451,7 @@ void Run14_signal(const int isetup = 0, const int icent = 1, const int isys = 0,
   for(int i=0; i<nbins; i++)
     xbins[i] = ptBins_low[i+1];
   xbins[nbins] = ptBins_high[nbins];
+  xbins[0] = 0.15;
 
   // prepare name and title
   const int nSys = 13;
@@ -1195,7 +1200,7 @@ void Run14_npart(const int isys = 0, int savePlot = 0, int saveHisto = 0)
   // get histograms
   if(isys==0)
     {
-      const int nSetup = 1;
+      const int nSetup = 5;
     }
   else
     {
@@ -1474,7 +1479,7 @@ void Run14_npart(const int isys = 0, int savePlot = 0, int saveHisto = 0)
   TF1 *funcBkg[nPtBins][kNCent][nSetup];
   for(int i=0; i<nPtBins; i++)
     {
-      for(int t=0; t<1; t++)
+      for(int t=0; t<nSetup; t++)
 	{
 	  TString tmpName = Form("pt%s%s%s%s",pt_Name[i],gWeightName[gApplyWeight],gTrgSetupName[t],sys_name[isys]);
 	  hMean[i][t] = new TH1F(Form("Jpsi_FitMean_%s",tmpName.Data()),"Mean of Jpsi peak",nCentBins[i],0,nCentBins[i]);

@@ -20,9 +20,9 @@ void make_MtdTrigEff()
 
 
 //================================================
-void makeHistos(const int savePlot = 1, const int saveHisto = 1)
+void makeHistos(const int savePlot = 0, const int saveHisto = 0)
 {
-  const int year = 2015;
+  const int year = 20152;
 
   if(year==2014)
     {
@@ -59,8 +59,10 @@ void makeHistos(const int savePlot = 1, const int saveHisto = 1)
       const char* config = "";
       const char *data_name = "Run16_AuAu200";
       const char *data_title  = "Run16 Au+Au @ 200 GeV";
-      const int nBinsTacDiff = 19;
-      const double xBinsTacDiff[nBinsTacDiff+1] = {920,930,935,940,945,950,951,955,960,965,970,975,980,985,990,995,1000,1005,1010,1015};
+      const int nBinsTacDiff = 25;
+      const double xBinsTacDiff[nBinsTacDiff+1] = {920,930,935,940,945,950,951,952,954,956,958,960,962,964,966,968,970,975,980,985,990,995,1000,1005,1010,1015};
+      const double fit_min = 951;
+      const double fit_max = 975;
     }
 
   const char* type_name[3] = {"Muon","UL", "LS"};
@@ -289,6 +291,7 @@ void makeHistos(const int savePlot = 1, const int saveHisto = 1)
 	  htmp->Rebin(4);
 	  if(year==2014) htmp->GetXaxis()->SetRangeUser(760,860);
 	  if(year==2015 || year==20152) htmp->GetXaxis()->SetRangeUser(860,980);
+	  if(year==2016) htmp->GetXaxis()->SetRangeUser(920,1020);
 	  htmp->SetMaximum(10*htmp->GetMaximum());
 	  htmp->SetTitle(";#DeltaTacSum;Counts");
 	  if(k==0) htmp->Draw();
@@ -389,6 +392,20 @@ void makeHistos(const int savePlot = 1, const int saveHisto = 1)
 		      funcTacDiffTrigUnit[i][bin][j]->SetRange(fit_min, fit_max-10);
 		    }
 		}
+	      if(year==2016)
+		{
+		  if(j==0 || j==2 || j==3 || j==15 || j==16 || j==18)
+		    {
+		      if(bin==1) funcTacDiffTrigUnit[i][bin][j]->SetRange(fit_min, 962);
+		      else if(bin<nbins-1)   funcTacDiffTrigUnit[i][bin][j]->SetRange(fit_min, 964);
+		      else funcTacDiffTrigUnit[i][bin][j]->SetRange(fit_min, 968);
+		    }
+		  if(j==17)
+		    {
+		      if(bin<nbins-1) funcTacDiffTrigUnit[i][bin][j]->SetRange(fit_min, 962);
+		      else funcTacDiffTrigUnit[i][bin][j]->SetRange(fit_min, 968);
+		    }
+		}
 	    }
 	}
       for(int bin=0; bin<nbins; bin++)
@@ -423,6 +440,7 @@ void makeHistos(const int savePlot = 1, const int saveHisto = 1)
 	      hTacDiffMeanVsPt[i][j]->SetBinContent(bin, funcTacDiffTrigUnit[i][bin][j]->GetParameter(1));
 	      hTacDiffMeanVsPt[i][j]->SetBinError(bin, funcTacDiffTrigUnit[i][bin][j]->GetParError(1));
 	      ScaleHistoTitle(hFit, 0.08, 0.85, 0.06, 0.08, 1, 0.06);
+	      if(year==2014) hFit->GetXaxis()->SetRangeUser(780, 825);
 	      hFit->SetTitle("");
 	      hFit->Draw("samesPE");
 	      funcTacDiffTrigUnit[i][bin][j]->SetLineColor(4);
@@ -448,7 +466,7 @@ void makeHistos(const int savePlot = 1, const int saveHisto = 1)
 	    }
 	}
     }
-
+  
   //==============================================
   //  compare <TacDiff> vs. TrigUnit
   //==============================================
@@ -467,6 +485,7 @@ void makeHistos(const int savePlot = 1, const int saveHisto = 1)
 	  if(year==2014) htmp->GetYaxis()->SetRangeUser(788,805);
 	  if(year==2015) htmp->GetYaxis()->SetRangeUser(900, 920);
 	  if(year==20152) htmp->GetYaxis()->SetRangeUser(915, 935);
+	  if(year==2016) htmp->GetYaxis()->SetRangeUser(950, 970);
 	  htmp->SetTitle(";TrigUnit;<#DeltaTacSum>");
 	  ScaleHistoTitle(htmp, 0.05, 0.9, 0.045, 0.05, 1.2, 0.04);
 	  if(i==1) htmp->Draw();
@@ -506,11 +525,16 @@ void makeHistos(const int savePlot = 1, const int saveHisto = 1)
 	{
 	  hTacDiffMeanVsPt[2][j]->GetYaxis()->SetRangeUser(915, 935);
 	}
+      else if(year==2016)
+	{
+	  hTacDiffMeanVsPt[2][j]->GetYaxis()->SetRangeUser(950, 970);
+	}
       hTacDiffMeanVsPt[2][j]->SetMarkerStyle(25);
       funcTacDiffMeanVsPtLS[j] = new TF1(Form("funcTacDiffMeanVsPtLS_TrigUnit%d",j+1), "[0]-exp(-1*[1]*(x-[2]))",1.3,10);
       if(year==2014) funcTacDiffMeanVsPtLS[j]->SetParameters(800,2,0.5);
       else if(year==2015) funcTacDiffMeanVsPtLS[j]->SetParameters(915,2,0.5);
       else if(year==20152) funcTacDiffMeanVsPtLS[j]->SetParameters(930,2,0.5);
+      else if(year==2016) funcTacDiffMeanVsPtLS[j]->SetParameters(960,10,2);
       hTacDiffMeanVsPt[2][j]->Fit(funcTacDiffMeanVsPtLS[j],"IR0Q");
       hTacDiffMeanVsPt[2][j]->SetTitle("");
       hTacDiffMeanVsPt[2][j]->Draw();

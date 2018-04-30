@@ -12,8 +12,8 @@ void sys_JpsiYield()
   gStyle->SetStatW(0.2);                
   gStyle->SetStatH(0.2);
 
-  YieldVsPt();
-  //YieldVsNpart();
+  //YieldVsPt();
+  YieldVsNpart();
 }
 
 //================================================
@@ -36,6 +36,7 @@ void YieldVsPt(int savePlot = 1, int saveHisto = 1)
   for(int i=0; i<nbins; i++)
     xbins[i] = ptBins_low[i+1];
   xbins[nbins] = ptBins_high[nbins];
+  xbins[0] = 0.15;
 
   TH1F *hSys[nCentBins];
   TH1F *hMax[nCentBins][2];
@@ -103,8 +104,8 @@ void YieldVsPt(int savePlot = 1, int saveHisto = 1)
 	    }
 	  htmp->GetYaxis()->SetRangeUser(0.6,1.4);
 	  htmp->SetTitle(";p_{T} (GeV/c);Relative difference");
-	  if(i==2 || i==3) htmp->GetXaxis()->SetRangeUser(0,9);
-	  if(i==4) htmp->GetXaxis()->SetRangeUser(0,6);
+	  if(i==2 || i==3) htmp->GetXaxis()->SetRangeUser(0.15,9);
+	  if(i==4) htmp->GetXaxis()->SetRangeUser(0.15,6);
 	  c->cd(i+2);
 	  SetPadMargin(gPad,0.15,0.15,0.05,0.1);
 	  ScaleHistoTitle(htmp,0.05,1,0.04,0.05,1,0.04,62);
@@ -215,7 +216,7 @@ void YieldVsPt(int savePlot = 1, int saveHisto = 1)
 
 
 //================================================
-void YieldVsNpart(int savePlot = 0, int saveHisto = 0)
+void YieldVsNpart(int savePlot = 1, int saveHisto = 1)
 {
  // re-assign global constants
   const int nPtBins         = nPtBins_npart;
@@ -287,7 +288,7 @@ void YieldVsNpart(int savePlot = 0, int saveHisto = 0)
 	  ScaleHistoTitle(htmp,0.04,1,0.045,0.04,1,0.035,62);
 	  if(j==0) htmp->Draw("P");
 	  else htmp->Draw("P sames");
-	  TPaveText *t1 = GetTitleText(Form("%s: signal extraction uncertainty (p_{T} > %1.0f GeV/c)",run_type,ptBins_low[i]));
+	  TPaveText *t1 = GetTitleText(Form("%s: signal extraction uncertainty (%s)",run_type,pt_Title_npart[i]));
 	  t1->Draw();
 	  for(int k=0; k<nCentBins[i]; k++)
 	    {

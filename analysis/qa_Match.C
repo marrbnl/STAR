@@ -692,6 +692,13 @@ void magneticField(const Int_t save = 0, const int saveAN = 1)
   TH2F *hMag = (TH2F*)f->Get("hMagneticMap");
   hMag->RebinX(2);
   hMag->RebinY(2);
+  for(int ibin=1; ibin<=hMag->GetNbinsX(); ibin++)
+    {
+      for(int jbin=1; jbin<=hMag->GetNbinsY(); jbin++)
+	{
+	  hMag->SetBinContent(ibin, jbin, hMag->GetBinContent(ibin, jbin)/4);
+	}
+    }
   hMag->SetZTitle("B (T)");
   hMag->SetTitleOffset(1.2,"Z");
   TCanvas *c = new TCanvas("MagneticMap","MagneticMap",880,800);

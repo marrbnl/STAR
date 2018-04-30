@@ -42,9 +42,9 @@ void ana_EmbTrkEff()
   printf("# of events: %4.4e\n",hStat->GetBinContent(3));
 
   //efficiency(outName, 1, 1);
-  resolution(outName, 1, 1);
+  //resolution(outName, 1, 1);
   //effVsZdc(1,1);
-  //effVsCent(1);
+  effVsCent(0);
   //effVsEta();
   //TrkEff3D(outName, outPDF);
 }
@@ -89,6 +89,7 @@ void effVsZdc(const int savePlot = 0, const int saveHisto = 0)
 	    }
 	}
     }
+
   TH1F *hTrkEffAll = (TH1F*)hMcTrkPtInZdcAll[1]->Clone("TpcTrkEff");
   hTrkEffAll->Divide(hMcTrkPtInZdcAll[0]);
   TF1 *funcTrkEffAll = new TF1("func_TpcTrkEff","[0]-exp([1]*(x-[2]))",0.4,20);
@@ -148,6 +149,14 @@ void effVsZdc(const int savePlot = 0, const int saveHisto = 0)
 	      funcTrkEff[j][k]->SetParameter(0, funcTrkEff[j][4]->GetParameter(0));
 	      funcTrkEff[j][k]->SetParError(0, funcTrkEff[j][4]->GetParError(0));
 	    }
+	  if(k==kNCent-1)
+	    {
+	      // increase the efficiency in 70-80% compared to 60-70%
+	      if(j<5) funcTrkEff[j][k]->SetParameter(0, funcTrkEff[j][k]->GetParameter(0)+0.036);
+	      else    funcTrkEff[j][k]->SetParameter(0, funcTrkEff[j][k]->GetParameter(0)+0.024);
+	      funcTrkEff[j][k]->SetParError(0, funcTrkEff[j][k]->GetParError(0));
+	    }
+	  printf("[i] cent %d, zdc %d, eff = %f\n",k,j,funcTrkEff[j][k]->GetParameter(0));
 	}
       c->cd(1);
       TLegend *leg0 = new TLegend(0.2,0.4,0.7,0.8);
@@ -281,14 +290,15 @@ void effVsCent(const int savePlot = 0)
 	      if(i==3)
 		{
 		  h2Corr[i][j]->SetTitle(";;ZDCx (kHz)");
-		  h2Corr[i][j]->GetYaxis()->SetRangeUser(0, 120);
+		  if(j<3) h2Corr[i][j]->GetYaxis()->SetRangeUser(20, 60);
+		  else h2Corr[i][j]->GetYaxis()->SetRangeUser(60, 90);
 		}
 	      for(int bin=1; bin<=h2Corr[i][j]->GetNbinsX(); bin++)
 		{
 		  h2Corr[i][j]->GetXaxis()->SetBinLabel(bin, Form("%d-%d%%",80-bin*5,85-bin*5));
 		}
 	      h2Corr[i][j]->GetXaxis()->SetLabelSize(0.055);
-	      h2Corr[i][j]->GetXaxis()->SetRangeUser(6, 16);
+	      h2Corr[i][j]->GetXaxis()->SetRangeUser(0, 16);
 	      h2Corr[i][j]->GetYaxis()->SetTitleOffset(1.2);
 	      h2Corr[i][j]->Draw("colz");
 	      TProfile *pro = (TProfile*)h2Corr[i][j]->ProfileX(Form("%s_pro",h2Corr[i][j]->GetName()));
@@ -385,15 +395,16 @@ void effVsCent(const int savePlot = 0)
   if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbTrkEff/McTpcPtEff_in_Lumi.pdf",run_type));
 
   // efficiency vs luminosity
-  const double pt_cut = 2;
+  const double pt_cut = 0;
   TH1F *hTpcEffVsLumi[gNTrgSetup][nCentBins];
   for(int j=0; j<gNTrgSetup; j++)
     {
       for(int k=0; k<nCentBins; k++)
 	{
 	  int bin_cut = hMcTrkPtVsZdc[1][j][k]->GetYaxis()->FindFixBin(pt_cut);
-	  hTpcEffVsLumi[j][k] = (TH1F*)hMcTrkPtVsZdc[1][j][k]->ProjectionX(Form("TpcEffVsLumi_cent%s%s",cent_Title[k],gTrgSetupTitle[j]),bin_cut,-1);
-	  TH1F *htmp = (TH1F*)hMcTrkPtVsZdc[0][j][k]->ProjectionX(Form("htmp_cent%s%s",cent_Title[k],gTrgSetupTitle[j]),bin_cut,-1);
+	  int bin_up = hMcTrkPtVsZdc[1][j][k]->GetNbinsY();
+	  hTpcEffVsLumi[j][k] = (TH1F*)hMcTrkPtVsZdc[1][j][k]->ProjectionX(Form("TpcEffVsLumi_cent%s%s",cent_Title[k],gTrgSetupTitle[j]),bin_cut,bin_up);
+	  TH1F *htmp = (TH1F*)hMcTrkPtVsZdc[0][j][k]->ProjectionX(Form("htmp_cent%s%s",cent_Title[k],gTrgSetupTitle[j]),bin_cut,bin_up);
 	  hTpcEffVsLumi[j][k]->Divide(htmp);
 	}
     }
@@ -451,6 +462,7 @@ void effVsCent(const int savePlot = 0)
     {
       c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_EffTpc_EffVsCent.pdf"));
     }
+  return;
 
   // other efficiencies
   const char *trkEffTitle[4] = {"Tpc tracking","MTD matching","muon PID","MTD trigger"};
@@ -570,11 +582,12 @@ void efficiency(TString inName, const bool savePlot = 1, const bool saveHisto = 
 	      hMcTrkPt[k][i][j] = (TH1F*)hMcTrkPtEtaPhi[k][i][j]->ProjectionX(Form("McTrkPt%s%s_%s",det_name[i],charge_name[j],cent_Title[k]),low_ybin,high_ybin,0,-1);
 	      
 	      int low_xbin = hMcTrkPtEtaPhi[k][i][j]->GetXaxis()->FindFixBin(1.5);
-	      hMcTrkEta[k][i][j] = (TH1F*)hMcTrkPtEtaPhi[k][i][j]->ProjectionY(Form("McTrkEta%s%s_%s",det_name[i],charge_name[j],cent_Title[k]),low_xbin,-1,0,-1);
+	      int high_xbin = hMcTrkPtEtaPhi[k][i][j]->GetXaxis()->FindFixBin(15);
+	      hMcTrkEta[k][i][j] = (TH1F*)hMcTrkPtEtaPhi[k][i][j]->ProjectionY(Form("McTrkEta%s%s_%s",det_name[i],charge_name[j],cent_Title[k]),low_xbin,high_xbin,0,-1);
 	      hMcTrkEtaEff[k][i][j] = (TH1F*)hMcTrkEta[k][i][j]->Clone(Form("%s_Eff",hMcTrkEta[k][i][j]->GetName()));
 	      hMcTrkEtaEff[k][i][j]->Divide(hMcTrkEta[k][0][j]);
 
-	      hMcTrkPhi[k][i][j] = (TH1F*)hMcTrkPtEtaPhi[k][i][j]->ProjectionZ(Form("McTrkPhi%s%s_%s",det_name[i],charge_name[j],cent_Title[k]),low_xbin,-1,low_ybin,high_ybin);
+	      hMcTrkPhi[k][i][j] = (TH1F*)hMcTrkPtEtaPhi[k][i][j]->ProjectionZ(Form("McTrkPhi%s%s_%s",det_name[i],charge_name[j],cent_Title[k]),low_xbin,high_xbin,low_ybin,high_ybin);
 	      hMcTrkPhiEff[k][i][j] = (TH1F*)hMcTrkPhi[k][i][j]->Clone(Form("%s_Eff",hMcTrkPhi[k][i][j]->GetName()));
 	      hMcTrkPhiEff[k][i][j]->Divide(hMcTrkPhi[k][0][j]);
 	     
@@ -894,10 +907,13 @@ void resolution(TString inName, const bool savePlot = 0, const bool saveHisto = 
       TPaveText *t1 = GetTitleText(Form("p_{T} resolution of primary tracks (%s%%)",cent_Name[k]),0.05);
       funcRes[k]->SetLineColor(2);
 
-      if(k<8) c1->cd(k+1);
-      hFit->Draw("P");
-      funcRes[k]->Draw("same");
-      t1->Draw();
+      if(k<8) 
+	{
+	  c1->cd(k+1);
+	  hFit->Draw("P");
+	  funcRes[k]->Draw("same");
+	  t1->Draw();
+	}
 
       if(k==0)    
 	{
@@ -925,6 +941,7 @@ void resolution(TString inName, const bool savePlot = 0, const bool saveHisto = 
     {
       c1->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch3_MomSmear_FitTrkPtRes.pdf"));
     }
+  return;
 
   TString legName_cent[7];
   bool drawLegend = true;
@@ -1084,8 +1101,9 @@ void TrkEff3D(TString inName, TString outPDFName, const bool savePlot = 1, const
 	      hMcTrkPtEtaPhi[k][i][j]->GetXaxis()->SetRange(0,-1);
 
 	      int low_xbin = hMcTrkPtEtaPhi[k][i][j]->GetXaxis()->FindFixBin(1.5);
-	      hMcTrkEta[k][i][j] = (TH1F*)hMcTrkPtEtaPhi[k][i][j]->ProjectionY(Form("McTrkEta%s%s_%d",det_name[i],charge_name[j],k),low_xbin,-1,0,-1);
-	      hMcTrkPhi[k][i][j] = (TH1F*)hMcTrkPtEtaPhi[k][i][j]->ProjectionZ(Form("McTrkPhi%s%s_%d",det_name[i],charge_name[j],k),low_xbin,-1,low_ybin,high_ybin);
+	      int high_xbin = hMcTrkPtEtaPhi[k][i][j]->GetXaxis()->FindFixBin(15);
+	      hMcTrkEta[k][i][j] = (TH1F*)hMcTrkPtEtaPhi[k][i][j]->ProjectionY(Form("McTrkEta%s%s_%d",det_name[i],charge_name[j],k),low_xbin,high_xbin,0,-1);
+	      hMcTrkPhi[k][i][j] = (TH1F*)hMcTrkPtEtaPhi[k][i][j]->ProjectionZ(Form("McTrkPhi%s%s_%d",det_name[i],charge_name[j],k),low_xbin,high_xbin,low_ybin,high_ybin);
 	      hMcTrkEtaEff[k][i][j] = (TH1F*)hMcTrkEta[k][i][j]->Clone(Form("%s_Eff",hMcTrkEta[k][i][j]->GetName()));
 	      hMcTrkEtaEff[k][i][j]->Divide(hMcTrkEta[k][0][j]);
 	      hMcTrkEtaEff[k][i][j]->SetMarkerStyle(style[j]);

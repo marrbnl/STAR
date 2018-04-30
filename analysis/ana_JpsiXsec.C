@@ -11,10 +11,10 @@ void ana_JpsiXsec()
   gStyle->SetStatH(0.2);
 
 
-  xsec_Run14();
+  //xsec_Run14();
   //compare();
   //trgSetup();
-  //shiftDataPoint();
+  shiftDataPoint();
 }
 
 //================================================
@@ -270,6 +270,10 @@ void trgSetup(const bool savePlot = 0)
   c->cd(6);
   leg->Draw();
   if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiXsec/%sJpsiInvYield_TrgSetupComp.pdf",run_type,run_config));
+  if(gSaveAN)
+    {
+      c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch6_InvYield_CompLumi.pdf"));
+    }
 
 
   TCanvas *c = new TCanvas("Ratio_JetXsec","Ratio_JetXsec",1100,700);
@@ -284,9 +288,9 @@ void trgSetup(const bool savePlot = 0)
     {
       c->cd(k+1);
       SetPadMargin(gPad,0.15,0.15,0.05,0.02);
-      if(k==0 || k==1) hAuAu->GetXaxis()->SetRangeUser(0,15);
-      if(k==2 || k==3) hAuAu->GetXaxis()->SetRangeUser(0,10);
-      if(k==4) hAuAu->GetXaxis()->SetRangeUser(0,6);
+      if(k==0 || k==1) hAuAu->GetXaxis()->SetRangeUser(0.15,15);
+      if(k==2 || k==3) hAuAu->GetXaxis()->SetRangeUser(0.15,10);
+      if(k==4) hAuAu->GetXaxis()->SetRangeUser(0.15,6);
       hAuAu->DrawCopy();
       for(int j=1; j<gNTrgSetup; j++)
 	{
@@ -301,11 +305,15 @@ void trgSetup(const bool savePlot = 0)
   leg->Draw();
   if(savePlot)
     c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiXsec/%sJpsiInvYield_TrgSetupRatio.pdf",run_type,run_config));
+  if(gSaveAN)
+    {
+      c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch6_InvYield_RatioLumi.pdf"));
+    }
 
 }
 
 //================================================
-void xsec_Run14(const bool savePlot = 0, const bool saveHisto = 0)
+void xsec_Run14(const bool savePlot = 1, const bool saveHisto = 1)
 {
 
   //==============================================
@@ -374,10 +382,10 @@ void xsec_Run14(const bool savePlot = 0, const bool saveHisto = 0)
 
   // =============================================
   // MTD acceptance loss
-  const int nRunRange = 8;
+  const int nRunRange = 7;
   double evtCount[nRunRange+1];
   for(int i=0; i<nRunRange+1; i++) evtCount[i] = 0;
-  int runRange[nRunRange+1] = {15074104, 15077035, 15078021, 15098066, 15099002, 15106130, 15131038, 15132019, 15167014};
+  int runRange[nRunRange+1] = {15074104, 15078034, 15098066, 15099003, 15106130, 15131036, 15132019, 15167014};
   for(int bin=1; bin<=hEvtRunAcc->GetNbinsX(); bin++)
     {
       if(hEvtRunAcc->GetBinContent(bin)<=0) continue;
@@ -396,7 +404,7 @@ void xsec_Run14(const bool savePlot = 0, const bool saveHisto = 0)
   TH1F *hAccLoss[nRunRange];
   for(int i=0; i<nRunRange; i++)
     {
-      hAccLoss[i] = (TH1F*)fAcc->Get(Form("hAccepLoss_RunRange%d",i));
+      hAccLoss[i] = (TH1F*)fAcc->Get(Form("hAccepLoss_RunRange%d",i+1));
     }
   TH1F *hAccCorr = (TH1F*)hAccLoss[0]->Clone("hAccCorr");
   hAccCorr->Reset();
@@ -430,6 +438,11 @@ void xsec_Run14(const bool savePlot = 0, const bool saveHisto = 0)
   for(int k=0; k<nCentBins; k++)
     {
       hJpsiEff[k] = (TH1F*)fEff->Get(Form("JpsiEffVsPt_cent%s_final",cent_Title[k]));
+      printf("cent %s\n",cent_Title[k]);
+      for(int bin=1; bin<=hJpsiEff[k]->GetNbinsX(); bin++)
+	{
+	  printf("[i] pt = %4.2f, eff = %4.5f\n",hJpsiEff[k]->GetBinCenter(bin),hJpsiEff[k]->GetBinContent(bin));
+	}
     }
   
 
@@ -501,7 +514,7 @@ void xsec_Run14(const bool savePlot = 0, const bool saveHisto = 0)
 
   TCanvas *c = new TCanvas("AuAu200_Jpsi","AuAu200_Jpsi",1100,700);
   c->Divide(3,2);
-  TH1F *hAuAu = new TH1F("AuAu200_Jpsi",";p_{T} (GeV/c);d^{2}N/(2#pip_{T}dp_{T}dy) [(GeV/c)^{2}]",15,0,15);
+  TH1F *hAuAu = new TH1F("AuAu200_Jpsi",";p_{T} (GeV/c);d^{2}N/(2#pip_{T}dp_{T}dy) [(GeV/c)^{2}]",15,0.15,15);
   hAuAu->GetYaxis()->SetRangeUser(1e-11,1e-4);
   hAuAu->GetYaxis()->SetNdivisions(505);
   ScaleHistoTitle(hAuAu,0.06,1,0.05,0.06,1.2,0.05,62);
@@ -594,7 +607,7 @@ void xsec_Run14(const bool savePlot = 0, const bool saveHisto = 0)
  
       // final
       hRatio->SetTitle(";p_{T} (GeV/c);Ratio to TBW");
-      hRatio->GetXaxis()->SetRangeUser(0,10);
+      hRatio->GetXaxis()->SetRangeUser(0.15,10);
       hRatio->GetYaxis()->SetRangeUser(0,2);
       ScaleHistoTitle(hRatio,0.06,1,0.05,0.06,1,0.05,62);
       hRatio->Draw();
@@ -677,8 +690,8 @@ void xsec_Run14(const bool savePlot = 0, const bool saveHisto = 0)
 	}
 
       c->cd(k+1);
-      if(k==2 || k==3) hJpsiRaa[k]->GetXaxis()->SetRangeUser(0,10);
-      if(k==4) hJpsiRaa[k]->GetXaxis()->SetRangeUser(0,6);
+      if(k==2 || k==3) hJpsiRaa[k]->GetXaxis()->SetRangeUser(0.15,10);
+      if(k==4) hJpsiRaa[k]->GetXaxis()->SetRangeUser(0.15,6);
       hJpsiRaa[k]->GetYaxis()->SetRangeUser(0,1.5);
       hJpsiRaa[k]->SetTitle(";p_{T} (GeV/c);R_{AA}");
       hJpsiRaa[k]->Draw();
@@ -757,6 +770,10 @@ void xsec_Run14(const bool savePlot = 0, const bool saveHisto = 0)
       TPaveText *t1 = GetTitleText(Form("J/psi R_{AA} in %s%%",cent_Name[kcent]),0.06);
       t1->Draw();
     }
+  if(savePlot)
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiXsec/%sJpsiRaaVsPt_CompRef.pdf",run_type,run_config));
+    }
 
   //==============================================
   // Cross section vs. centrality
@@ -825,6 +842,10 @@ void xsec_Run14(const bool savePlot = 0, const bool saveHisto = 0)
     {
       int numCentBins = nCentBins_npart[i];
       hJpsiEff_npart[i] = (TH1F*)fEff->Get(Form("JpsiEffVsCent_Pt%1.0f_final",ptBins_low_npart[i]));
+      for(int bin=1; bin<=numCentBins; bin++)
+	{
+	  printf("[i] Eff for pt > %1.0f, cent %s: %8.4f%%\n",ptBins_low_npart[i],cent_Name_npart[bin-1],hJpsiEff_npart[i]->GetBinContent(bin)*100);
+	}
       hJpsiCounts_npart[i] = (TH1F*)fYield->Get(Form("Jpsi_FitYield_pt%s_weight",pt_Name_npart[i]));
       TH1F *htmpYield = (TH1F*)hJpsiCounts_npart[i]->Clone(Form("%s_clone",hJpsiCounts_npart[i]->GetName()));
       htmpYield->Divide(hJpsiEff_npart[i]);
@@ -925,7 +946,7 @@ void xsec_Run14(const bool savePlot = 0, const bool saveHisto = 0)
 }
 
 //===============================================
-void shiftDataPoint(const bool savePlot = 0, const bool saveHisto = 0)
+void shiftDataPoint(const bool savePlot = 1, const bool saveHisto = 1)
 {
   //==============================================
   // Cross section vs. pT
@@ -978,14 +999,14 @@ void shiftDataPoint(const bool savePlot = 0, const bool saveHisto = 0)
       if(k==4) max_pt = 6;
       funcYield[k] = new TF1(Form("Fit_%s",hJpsiYield[k]->GetName()), "[0]*pow(1+(x+(x*x))/([1]*[2]),-[1])*x", 0,max_pt);
       funcYield[k]->SetParameter(1, 6);
-      funcYield[k]->SetParameter(2, 3);
-      if(k==2) funcYield[k]->SetParameter(1, 10);
+      funcYield[k]->SetParameter(2, 2);
+      //if(k==2) funcYield[k]->SetParameter(1, 10);
       hJpsiYield[k]->Fit(funcYield[k], "R0Q");
       cFit->cd(k+1);
       gPad->SetLogy();
       hJpsiYield[k]->SetMarkerStyle(24);
       hJpsiYield[k]->GetYaxis()->SetRangeUser(1e-11, 1e-4);
-      hJpsiYield[k]->GetXaxis()->SetRangeUser(0, max_pt);
+      hJpsiYield[k]->GetXaxis()->SetRangeUser(0.15, max_pt);
       hJpsiYield[k]->SetTitle(";p_{T} (GeV/c);d^{2}N/dp_{T}d#eta");
       hJpsiYield[k]->Draw("PE");
       funcYield[k]->SetLineStyle(2);

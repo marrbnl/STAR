@@ -29,8 +29,8 @@ void ana_JpsiYield()
   printf("acc di-muon events: %4.4e\n",hStat->GetBinContent(10));
   printf("HFT di-muon events: %4.2f%%\n",hStat->GetBinContent(15)/hStat->GetBinContent(10)*100);
 
-  yieldVsPt();
-  //yieldVsNpart();
+  //yieldVsPt();
+  yieldVsNpart();
   //yieldVsLumi();
   //fitYield();
   //pt2scan();
@@ -343,7 +343,7 @@ void yieldVsNpart(int savePlot = 0)
       leg = new TLegend(0.2,0.25,0.4,0.4);
       leg->SetBorderSize(0);
       leg->SetFillColor(0);
-      leg->SetHeader(Form("p_{T} > %1.0f GeV/c",ptBins_low[i]));
+      leg->SetHeader(pt_Title_npart[i]);
       leg->AddEntry(hFitYield[i],"Fitting","P");
       leg->AddEntry(hBinCountYield[i],"Bin counting","P");
       leg->Draw();
@@ -390,7 +390,7 @@ void yieldVsNpart(int savePlot = 0)
       hChi2[i]->SetLineColor(i+1);
       hChi2[i]->SetMarkerSize(1.2);
       hChi2[i]->GetXaxis()->SetLabelSize(0.045);
-      c = draw1D(hChi2[i],Form("%s: chi2/NDF of J/psi signal fitting (p_{T} > %1.0f GeV/c)",run_type,ptBins_low[i]));
+      c = draw1D(hChi2[i],Form("%s: chi2/NDF of J/psi signal fitting (%s)",run_type,pt_Title_npart[i]));
       if(savePlot) 
 	{
 	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiYield/%sJpsiChi2VsCent_pt%s_Fitting.pdf",run_type,run_cfg_name.Data(),pt_Name[i]));

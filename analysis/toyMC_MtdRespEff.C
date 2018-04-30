@@ -20,7 +20,7 @@
 #include <cmath>
 using namespace std;
 
-#define YEAR 2013
+#define YEAR 2016
 
 #if (YEAR==2013)
 char *run_type = "Run13_pp500";
@@ -28,6 +28,8 @@ char *run_type = "Run13_pp500";
 const char *run_type = "Run14_AuAu200";
 #elif (YEAR==2015)
 const char *run_type = "Run15_pp200";
+#elif (YEAR==2016)
+const char *run_type = "Run16_AuAu200";
 #endif
 
 // const char* part_name = "Ups1S";
@@ -209,35 +211,29 @@ void makeHisto(const int savePlot, const int saveHisto)
   // module wise response efficiency
   TH1F *hRespEff[150];
   TF1  *funcRespEff[150];
-  TFile *fRespEff = TFile::Open(Form("Rootfiles/Run%dResponseEffViaPtTemplate.root",year-2000),"read");
+  //TFile *fRespEff = TFile::Open(Form("Rootfiles/Run%dResponseEffViaPtTemplate.root",year-2000),"read");
+  TFile *fRespEff = 0x0;
+  if(saveHisto) fRespEff = TFile::Open(Form("Rootfiles/%s.MtdRespEff.root",run_type),"update");
+  else          fRespEff = TFile::Open(Form("Rootfiles/%s.MtdRespEff.root",run_type),"read");
   for(int i=0; i<150; i++)
     {
-      int backleg = i/5 + 1;
-      int module = i%5 + 1;
-      TF1 *func  = (TF1*)fRespEff->Get(Form("fSclPtMtdEffBkl%d_Mod%d",i/5,i%5));
-      TF1 *func1 = (TF1*)fRespEff->Get(Form("fPtMtdEffBkl%d_Mod%d",i/5,i%5));
-      hRespEff[i] = new TH1F(Form("MtdRespEffvsPt_Bkl%d_Mod%d",backleg,module),Form("MtdRespEffvsPt_Bkl%d_Mod%d",backleg,module),1000,0,20);
+      int bl = i/5 + 1;
+      int mod = i%5 + 1;
+      TF1 *func  = (TF1*)fRespEff->Get(Form("Cosmic_TempRespEff_BL%d_Mod%d",bl,mod));
+      TF1 *func1 = (TF1*)fRespEff->Get(Form("Cosmic_FitRespEff_BL%d_Mod%d",bl,mod));
+      hRespEff[i] = new TH1F(Form("MtdRespEffvsPt_Bkl%d_Mod%d",bl,mod),Form("MtdRespEffvsPt_Bkl%d_Mod%d",bl,mod),1000,0,20);
       for(int bin=1; bin<=hRespEff[i]->GetNbinsX(); bin++)
 	{
-	  double x = hRespEff[i]->GetBinCenter(bin);
-	  if(year==2013)
+	  double x = hRespEff[i]->GetBinCenter(bin);		      
+	  if(bl>9 && bl<23) 
+	    {
+	      hRespEff[i]->SetBinContent(bin,func1->Eval(x));
+	      funcRespEff[i] = (TF1*)func1->Clone(Form("funcMtdRespEffvsPt_Bkl%d_Mod%d",bl,mod));
+	    }
+	  else                  
 	    {
 	      hRespEff[i]->SetBinContent(bin,func->Eval(x));
-	      hRespEff[i]->SetBinError(bin,1e-10);
-	      funcRespEff[i] = (TF1*)func->Clone(Form("funcMtdRespEffvsPt_Bkl%d_Mod%d",backleg,module));
-	    }
-	  else
-	    {		      
-	      if(backleg>9 && backleg<23) 
-		{
-		  hRespEff[i]->SetBinContent(bin,func1->Eval(x));
-		  funcRespEff[i] = (TF1*)func1->Clone(Form("funcMtdRespEffvsPt_Bkl%d_Mod%d",backleg,module));
-		}
-	      else                  
-		{
-		  hRespEff[i]->SetBinContent(bin,func->Eval(x));
-		  funcRespEff[i] = (TF1*)func->Clone(Form("funcMtdRespEffvsPt_Bkl%d_Mod%d",backleg,module));
-		}
+	      funcRespEff[i] = (TF1*)func->Clone(Form("funcMtdRespEffvsPt_Bkl%d_Mod%d",bl,mod));
 	    }
 	}
     }
@@ -263,7 +259,7 @@ void makeHisto(const int savePlot, const int saveHisto)
       hJpsiEff->SetMarkerStyle(21);
       hJpsiEff->GetYaxis()->SetRangeUser(0,1);
       c = draw1D(hJpsiEff,Form("MTD response efficiency for %s",part_title));
-      if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/ToyMC_%sEffVsPt.pdf",run_type,part_name));
+      if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/ToyMC_%s_EffVsPt.pdf",run_type,part_name));
 
       TH1F *hMuonEff = (TH1F*)hMuonMap->Clone("hMuonEff");
       hMuonEff->Sumw2();
@@ -289,22 +285,6 @@ void makeHisto(const int savePlot, const int saveHisto)
       leg->AddEntry(hMuonMapTriggered,"Di-muon trigger","L");
       leg->Draw();
       if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/ToyMC_MuonMultip.pdf",run_type));
-
-      if(saveHisto)
-	{
-	  TFile *fout = TFile::Open(Form("Rootfiles/%s.MtdRespEff.root",run_type),"update");
-	  if(name.Contains("Jpsi"))
-	    {
-	      for(int i=0; i<150; i++)
-		{
-		  hRespEff[i]->Write("",TObject::kOverwrite);
-		  funcRespEff[i]->Write("",TObject::kOverwrite);
-		}
-	      hMuonMap->Write("",TObject::kOverwrite);
-	      hMuonMapTriggered->Write("",TObject::kOverwrite);
-	    }
-	  hJpsiEff->Write("",TObject::kOverwrite);
-	}
     }
   else if(mode==1)
     {
@@ -314,29 +294,19 @@ void makeHisto(const int savePlot, const int saveHisto)
       TH1F *hSclFacErr[150];
       for(int i=0; i<150; i++)
 	{
-	  int bl = i/5+1;
-	  hSclFacErr[i] = (TH1F*)hRespEff[i]->Clone(Form("hSclFacErr_BL%d_Mod%d",i/5+1, i%5+1));
-	  if(bl>9 && bl<23) 
+	  int bl = i/5+1;						
+	  int mod = i%5 + 1;
+	  hSclFacErr[i] = (TH1F*)hRespEff[i]->Clone(Form("hSclFacErr_BL%d_Mod%d", bl, mod));
+	  TH1F *hFitError = 0x0;
+	  if(bl>9 && bl<23) hFitError = (TH1F*)fRespEff->Get(Form("Cosmic_FitRespEff_BL%d_Mod%d_Err", bl, mod));
+	  else hFitError = (TH1F*)fRespEff->Get(Form("Cosmic_FitRespEff_BL%d_Mod%d_HighPt_Err", bl, mod));
+
+	  for(int bin=1; bin<=hSclFacErr[i]->GetNbinsX(); bin++)
 	    {
-	      TH1F *hFitError = (TH1F*)fRespEff->Get(Form("MtdRespEffCosmic_BL%d_Mod%d",i/5+1, i%5+1));
-	      for(int bin=1; bin<=hSclFacErr[i]->GetNbinsX(); bin++)
-		{
-		  double x = hSclFacErr[i]->GetBinCenter(bin);
-		  double jbin = hFitError->FindFixBin(x);
-		  double scale = hFitError->GetBinError(jbin)/hFitError->GetBinContent(jbin)*2;
-		  //if(year==2013) scale *= 0.5;
-		  hSclFacErr[i]->SetBinError(bin, hSclFacErr[i]->GetBinContent(bin)*scale);
-		}
-	    }
-	  else
-	    {
-	      TF1 *funcFitError = (TF1*)fRespEff->Get(Form("fHighPtBkl%d_Mod%d",bl-1,i%5));
-	      for(int bin=1; bin<=hSclFacErr[i]->GetNbinsX(); bin++)
-		{
-		  double scale = funcFitError->GetParError(0)/funcFitError->GetParameter(0)*2;
-		  //if(year==2013) scale *= 0.5;
-		  hSclFacErr[i]->SetBinError(bin, hSclFacErr[i]->GetBinContent(bin)*scale);
-		}
+	      double x = hSclFacErr[i]->GetBinCenter(bin);
+	      double jbin = hFitError->FindFixBin(x);
+	      double scale = hFitError->GetBinError(jbin)/hFitError->GetBinContent(jbin);
+	      hSclFacErr[i]->SetBinError(bin, hSclFacErr[i]->GetBinContent(bin)*scale);
 	    }
 	}
 
@@ -366,7 +336,7 @@ void makeHisto(const int savePlot, const int saveHisto)
 		{
 		  double eff = hRespEffTmp[i]->GetBinContent(bin);
 		  double err = hRespEffTmp[i]->GetBinError(bin);
-		  double eff_new = myRandom->Gaus(eff, err * 2);
+		  double eff_new = myRandom->Gaus(eff, err);
 		  hRespEffTmp[i]->SetBinContent(bin, eff_new);
 		}
 	    }
@@ -436,8 +406,8 @@ void makeHisto(const int savePlot, const int saveHisto)
 	      if(bl<=9 || bl>=23) continue;
 	      if(!isInMtd(bl,mod,0)) continue;
 	      nMods ++;
-	      TF1 *func1 = (TF1*)fRespEff->Get(Form("fPtMtdEffBkl%d_Mod%d",i/5,i%5));
-	      TF1 *func2 = (TF1*)fRespEff->Get(Form("fSclPtMtdEffBkl%d_Mod%d",i/5,i%5));
+	      TF1 *func1 = (TF1*)fRespEff->Get(Form("Cosmic_FitRespEff_BL%d_Mod%d",bl,mod));
+	      TF1 *func2  = (TF1*)fRespEff->Get(Form("Cosmic_TempRespEff_BL%d_Mod%d",bl,mod));
 	      for(int bin=1; bin<=hRatioMod[i]->GetNbinsX(); bin++)
 		{
 		  double x = hRatioMod[i]->GetBinCenter(bin);
@@ -465,7 +435,7 @@ void makeHisto(const int savePlot, const int saveHisto)
       hRatio->GetXaxis()->SetRangeUser(1.3,10);
       hRatio->GetYaxis()->SetRangeUser(0.9,1.1);
       TCanvas *c1 = draw1D(hRatio,"Average difference to Template for bottom backlegs;p_{T} (GeV/c);Cosmic/Template");
-      if(savePlot) c1->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/RatioToTemplate_BottomBL.pdf",run_type));
+      if(savePlot) c1->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/ToyMC_RatioToTemplate_BottomBL.pdf",run_type));
 
 
       const int nIter = 2;
@@ -484,23 +454,18 @@ void makeHisto(const int savePlot, const int saveHisto)
 	  hSysAccJpsiPt[ih]->Sumw2();
 	  for(int i=0; i<150; i++)
 	    {
+	      int bl = i/5 + 1;
+	      int mod = i%5 +1;
 	      hRespEffTmp[i] = new TH1F(Form("hRespEffTmp_%d_%d",i,ih),"",1000,0,20);
-	      TF1 *func1 = (TF1*)fRespEff->Get(Form("fPtMtdEffBkl%d_Mod%d",i/5,i%5));
-	      TF1 *func2 = (TF1*)fRespEff->Get(Form("fSclPtMtdEffBkl%d_Mod%d",i/5,i%5));
+	      TF1 *func1 = (TF1*)fRespEff->Get(Form("Cosmic_FitRespEff_BL%d_Mod%d",bl,mod));
+	      TF1 *func2  = (TF1*)fRespEff->Get(Form("Cosmic_TempRespEff_BL%d_Mod%d",bl,mod));
 	      for(int bin=1; bin<=hRespEffTmp[i]->GetNbinsX(); bin++)
 		{
 		  double x = hRespEffTmp[i]->GetBinCenter(bin);
 		  double ratio = 1;
 		  if(ih==1) ratio = hRatio->GetBinContent(hRatio->FindFixBin(x));
-		  if(year==2013)
-		    {
-		      hRespEffTmp[i]->SetBinContent(bin,func2->Eval(x)*ratio);
-		    }
-		  else
-		    {
-		      if(i/5>=9 && i/5<=21) hRespEffTmp[i]->SetBinContent(bin,func1->Eval(x));
-		      else                  hRespEffTmp[i]->SetBinContent(bin,func2->Eval(x)*ratio);
-		    }
+		  if(bl>9 && bl<23) hRespEffTmp[i]->SetBinContent(bin,func1->Eval(x));
+		  else              hRespEffTmp[i]->SetBinContent(bin,func2->Eval(x)*ratio);
 		  hRespEffTmp[i]->SetBinError(bin,1e-10);
 		}
 	      //printf("BL = %d, Mod = %d, err = %4.4f, scale = %4.4f\n",i/5+1,i%5+1,error,scale);
@@ -680,6 +645,12 @@ bool isInMtd(const int backleg, const int module, int cell)
 	return false;
     }
   else if(year==2015)
+    {
+      if((backleg==9 || backleg==23) ||
+	 (backleg>=12 && backleg<=20 && (module==1 || module==5)))
+	return false;
+    }
+  else if(year==2016)
     {
       if((backleg==9 || backleg==23) ||
 	 (backleg>=12 && backleg<=20 && (module==1 || module==5)))

@@ -55,7 +55,7 @@ const double gMtdRadius                = 403; // Minimum radius of MTD system ex
 
 TRandom3 *myRandom;
 void MtdAccepLoss(const int savePlot = 0, const int saveHisto = 0);
-void makeMtdAcc(const int savePlot = 0);
+void makeMtdAcc(const int savePlot = 0, const int saveAN = 0);
 
 TLorentzVector myBoost(TLorentzVector parent, TLorentzVector daughter);
 TLorentzVector twoBodyDecay(TLorentzVector parent, double dmass);
@@ -110,11 +110,11 @@ void ana_AccepCor()
 
 
   MtdAccepLoss(1,1);
-  //makeMtdAcc(0);
+  //makeMtdAcc(0, 1);
 }
 
 //================================================
-void makeMtdAcc(const int savePlot)
+void makeMtdAcc(const int savePlot, const int saveAN)
 {
   TFile *fdata = TFile::Open(Form("output/%s.jpsi.root",run_type));
   THnSparseF *mhMtdRunStatus = (THnSparseF*)fdata->Get("mhMtdRunStatus_di_mu");
@@ -123,27 +123,28 @@ void makeMtdAcc(const int savePlot)
   int runRange[10];
   if(year==2014)
     {
-      nRange = 8;
-      runRange[0] = 15074104;
-      runRange[1] = 15077035;
-      runRange[2] = 15078021;
-      runRange[3] = 15098066;
-      runRange[4] = 15099002;
-      runRange[5] = 15106130;
-      runRange[6] = 15131038;
-      runRange[7] = 15132019;
-      runRange[8] = 15167014;
+      nRange = 7;
+      runRange[0] = 15074103;
+      runRange[1] = 15078034;
+      runRange[2] = 15098066;
+      runRange[3] = 15099003;
+      runRange[4] = 15106130;
+      runRange[5] = 15131036;
+      runRange[6] = 15132019;
+      runRange[7] = 15167014;
     }
   
   for(int i=0; i<nRange; i++)
     {
-      mhMtdRunStatus->GetAxis(2)->SetRange(i+1, i+1);
+      mhMtdRunStatus->GetAxis(2)->SetRange(i+2, i+2);
       hMtdMap[i] = (TH2F*)mhMtdRunStatus->Projection(1,0);
       hMtdMap[i]->SetName(Form("hMtdMap_RunRange%d",i+1));
       hMtdMap[i]->GetYaxis()->SetRangeUser(0,59);
       TCanvas *c = draw2D(hMtdMap[i],Form("%s: run %d - %d",run_type,runRange[i]+1,runRange[i+1])); 
       if(savePlot)
 	c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_AccepCor/MtdAcceptanceLoss_RunRange%d.pdf",run_type,i));
+      if(saveAN)
+	c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_MtdAccLoss%d.pdf",i+2));
     }
 
 }
@@ -160,6 +161,7 @@ void MtdAccepLoss(const int savePlot, const int saveHisto)
   for(int i=0; i<nbins; i++)
     xbins[i] = ptBins_low[i+1];
   xbins[nbins] = ptBins_high[nbins];
+  xbins[0] = 0.15;
 
   hInJpsiPt = new TH1F(Form("hInJpsiPt"),"p_{T} distribution of input J/#Psi;p_{T} (GeV/c)",nbins,xbins);
   hInJpsiPt->Sumw2();
@@ -242,11 +244,11 @@ void MtdAccepLoss(const int savePlot, const int saveHisto)
 
       hOutJpsiPt[0]->Fill(mc_pt,weight);
 
-      if( (backleg1==24 && ((module1<=3&&cell1>=10) || (module1>3&&cell1<=1)) ) || 
-	  (backleg2==24 && ((module2<=3&&cell2>=10) || (module2>3&&cell1<=2)) ) ) continue;
+      if( (backleg1==24 && ((module1<=3&&cell1<=1) || (module1>3&&cell1>=10)) ) || 
+	  (backleg2==24 && ((module2<=3&&cell2<=1) || (module2>3&&cell1>=10)) ) ) continue;
 
-      if( (backleg1==8 && ((module1<=3&&cell1<=2) || (module1>3&&cell1>=9)) ) || 
-	  (backleg2==8 && ((module2<=3&&cell2<=2) || (module2>3&&cell1>=9)) ) ) continue;
+      if( (backleg1==8 && ((module1<=3&&cell1>=9) || (module1>3&&cell1<=2)) ) || 
+	  (backleg2==8 && ((module2<=3&&cell2>=9) || (module2>3&&cell1<=2)) ) ) continue;
 
       if ( (backleg1==15&&module1==4) || (backleg2==15&&module2==4) ) continue;
 

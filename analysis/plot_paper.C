@@ -2,22 +2,241 @@ const char *run_type = "Run14_AuAu200";
 TString run_cfg_name = "paper";
 const double luminosity = 14.2;
 const double ppInelastic = 42.; // mb
-const double ppInelasticErr = 3.; // mb
+const double ppInelasticErr = 3; // mb
+const char* model_name[4] = {"TAMU", "Tsinghua", "SHM", "Co-mover"};
 
 //================================================
 void plot_paper()
 {  
-  //rawSignal();
+  //rawSignal(0,1,1);
   //efficiency();
-  //xsec();
-  nPart();
+  //xsec(0,0);
+  nPart(0,0);
+  //v2();
   //ppRef();
   //ppRef2();
   //makeModel();
 }
 
+
 //================================================
-void makeModel(const bool savePlot = 0, const bool saveHisto = 0)
+void v2(const bool savePlot = 1, const bool saveHisto = 0)
+{
+  gStyle->SetOptStat(0);
+
+  //A. Get Experimental Data
+
+  //A-1. STAR Run10 Jpsi->ee Final (0-80%) 
+  //PRL 111, 052301 (2013)
+  double pt[4] = {1.01, 2.91, 4.98, 7.16};
+  double pt_err[4] = {0, 0, 0, 0};
+  double pt_sys[4] = {0.1, 0.1, 0.1, 0.1};
+  double v2[4] = {0.05, 0.01, 0.05, 0.08};
+  double v2_err[4] = {0.03, 0.04, 0.04, 0.05};
+  double v2_sys[4] = {0.02, 0.01, 0.02, 0.01};
+  double nonflow[4] = {0.01, 0.02, 0.04, 0.1};
+
+  TGraphErrors *gr1 = new TGraphErrors(4, pt, v2, pt_err, v2_err);
+  gr1->SetMarkerStyle(20);
+  gr1->SetMarkerColor(1);
+  gr1->SetMarkerSize(1.5);
+  gr1->SetLineColor(1);
+  gr1->SetLineWidth(1.);
+
+  TBox *box[4];
+  for(int i=0; i<4; i++)
+    {
+      box[i] = new TBox(pt[i]-0.1, v2[i], pt[i]+0.1, v2[i]-nonflow[i]);
+      box[i]->SetLineColor(kGray);
+      box[i]->SetFillColor(kGray);
+      box[i]->SetLineWidth(2.);
+      box[i]->SetFillStyle(1);
+    }
+  double boxtshift = 4.7;
+  double boxvshift = 0.198;
+
+  TBox *boxLabel = new TBox(0.0+boxtshift, 0.00+boxvshift, 0.3+boxtshift, 0.02+boxvshift);
+  boxLabel->SetLineColor(1);
+  boxLabel->SetFillColor(1);
+  boxLabel->SetLineWidth(1);
+  boxLabel->SetFillStyle(0);
+
+  TGraph* bracketUp[4];
+  TGraph* bracketDown[4];
+  for(int i=0; i<4; i++)
+    {
+      double bracketUpX[4] = {pt[i]-0.15, pt[i]-0.1, pt[i]+0.1, pt[i]+0.15};
+      double v2Up = v2[i]+v2_sys[i];
+      double bracketUpY[4] = {v2Up-0.004, v2Up, v2Up, v2Up-0.004};
+      bracketUp[i] = new TGraph(4, bracketUpX, bracketUpY);
+      bracketUp[i]->SetLineColor(1);
+      bracketUp[i]->SetLineWidth(2.);
+      double bracketDownX[4] = {pt[i]-0.15, pt[i]-0.1, pt[i]+0.1, pt[i]+0.15};
+      double v2Down = v2[i]-v2_sys[i];
+      double bracketDownY[4] = {v2Down+(float)0.004, v2Down, v2Down, v2Down+(float)0.004};
+      bracketDown[i] = new TGraph(4, bracketDownX, bracketDownY);
+      bracketDown[i]->SetLineColor(1);
+      bracketDown[i]->SetLineWidth(2.);
+    }
+
+  TGraphErrors *gr1_sys = new TGraphErrors(4, pt, v2, pt_sys, v2_sys);
+  gr1_sys->SetFillStyle(0);
+  gr1_sys->SetMarkerSize(0);
+  gr1_sys->SetMarkerColor(gr1->GetMarkerColor());
+  gr1_sys->SetLineColor(gr1->GetMarkerColor());
+
+  TGraphErrors *gNonFlow = new TGraphErrors(4);
+  for(int i=0; i<4; i++)
+    {
+      gNonFlow->SetPoint(i, pt[i], nonflow[i]/2);
+      gNonFlow->SetPointError(i, 0.1, nonflow[i]/2);
+    }
+  gNonFlow->SetFillStyle(1001);
+  gNonFlow->SetFillColor(kGray);
+  gNonFlow->SetLineColor(kGray);
+
+
+  //A-2. STAR Run14 Jpsi->ee Prelim(Will be final soon)
+  const int coloruu = 2;
+  double pt_mtd[3] = {1.03, 3.2, 6.49};
+  double ptError_mtd[3] = {0,0,0};
+  double v2_mtd[3] = {-0.0316427, 0.0539167, 0.0878805};
+  double v2StatErr_mtd[3] = {0.105994 , 0.0898011, 0.0901608};
+  double v2SysErr_mtd[3] = {0.0411273, 0.0502348, 0.0168495};
+  double ptSysErr_mtd[3] = {0.1,0.1,0.1};
+
+  TGraphErrors *gr2 = new TGraphErrors(3, pt_mtd, v2_mtd, ptError_mtd, v2StatErr_mtd);
+  gr2->SetMarkerStyle(29);
+  gr2->SetMarkerColor(coloruu);
+  gr2->SetMarkerSize(2.5);
+  gr2->SetLineColor(coloruu);
+  gr2->SetLineWidth(1);
+
+  TGraphErrors *gr2_sys = new TGraphErrors(3, pt_mtd, v2_mtd, ptSysErr_mtd, v2SysErr_mtd);
+  gr2_sys->SetMarkerColor(coloruu);
+  gr2_sys->SetMarkerSize(0);
+  gr2_sys->SetLineColor(coloruu);
+  gr2_sys->SetFillStyle(0);
+  gr2_sys->SetFillColor(coloruu);
+
+  TGraph* bracketuuUp[4];
+  TGraph* bracketuuDown[4];
+
+  for(int i=0; i<3; i++)
+    {
+      double bracketUpX[4] = {pt_mtd[i]-0.15, pt_mtd[i]-0.1, pt_mtd[i]+0.1, pt_mtd[i]+0.15};
+      double v2Up = v2_mtd[i]+v2SysErr_mtd[i];
+      double bracketUpY[4] = {v2Up-0.004, v2Up, v2Up, v2Up-0.004};
+      bracketuuUp[i] = new TGraph(4, bracketUpX, bracketUpY);
+      bracketuuUp[i]->SetLineColor(coloruu);
+      bracketuuUp[i]->SetLineWidth(2.);
+
+      double bracketDownX[4] = {pt_mtd[i]-0.15, pt_mtd[i]-0.1, pt_mtd[i]+0.1, pt_mtd[i]+0.15};
+      double v2Down = v2_mtd[i]-v2SysErr_mtd[i];
+      double bracketDownY[4] = {v2Down+0.004, v2Down, v2Down, v2Down+0.004};
+      bracketuuDown[i] = new TGraph(4, bracketDownX, bracketDownY);
+      bracketuuDown[i]->SetLineColor(coloruu);
+      bracketuuDown[i]->SetLineWidth(2.);
+    }
+
+  // B. Theory
+  TFile *fmodel = TFile::Open("Rootfiles/Paper/models/AuAu200.models.root","read");
+  TGraphErrors *gV2VsPtModel[2];
+  gV2VsPtModel[0] = (TGraphErrors*)fmodel->Get("gV2VsPt_cent0080_TAMU");
+  gV2VsPtModel[0]->SetFillStyle(3244);
+  gV2VsPtModel[0]->SetFillColor(kGray+2);
+  gV2VsPtModel[1] = (TGraphErrors*)fmodel->Get("gV2VsPt_cent0080_Tsinghua");
+  gV2VsPtModel[1]->SetLineStyle(7);
+  gV2VsPtModel[1]->SetLineWidth(2);
+  gV2VsPtModel[1]->SetLineColor(kViolet);
+
+  //C. Plot cosmetics
+  TPaveText *t1 = GetPaveText(0.25,0.4,0.9,0.95,0.045,62);
+  t1->AddText("Au+Au @ 200 GeV 0-80 %");
+
+  TLegend* leg1 = new TLegend(0.15, 0.7, 0.3, 0.88);
+  leg1->SetTextFont(62);
+  leg1->SetTextSize(0.04);
+  leg1->SetFillStyle(0);
+  leg1->SetBorderSize(0);
+  leg1->AddEntry(gr2,"J/#psi#rightarrow#mu^{+}#mu^{-}, |y| < 0.5","P");
+  leg1->AddEntry(gr1,"J/#psi#rightarrowe^{+}e^{-}, |y| < 1 (PRL 111 (2013) 52301)","P");
+  leg1->AddEntry(gNonFlow,"Non-Flow estimation","F");
+
+  TLegend* legt = new TLegend(0.55,0.2,0.8,0.35);
+  legt->SetTextFont(62);
+  legt->SetTextSize(0.04);
+  legt->SetFillStyle(0);
+  legt->SetBorderSize(0);
+  legt->AddEntry(gV2VsPtModel[1],"TM I: Tsinghua","L");
+  legt->AddEntry(gV2VsPtModel[0],"TM II: TAMU","F");
+
+
+  //D. Plot Jpsi v2 vs pt
+  TH1F *hv2Draw = new TH1F("hv2Draw",";p_{T} (GeV/c);v_{2}               ",10,0,8);
+  hv2Draw->GetYaxis()->SetRangeUser(-0.20-1e-4,0.35+1e-4);
+  hv2Draw->SetLineColor(1);
+  ScaleHistoTitle(hv2Draw,28,1,24,28,0.8,24,63);
+
+  TCanvas *c1 = new TCanvas("v2_combined","v2_combined",700,500);
+  c1->cd();
+  SetPadMargin(gPad,0.13,0.1,0.05,0.02);
+  hv2Draw->Draw();
+  gNonFlow->Draw("samesE3");
+
+  // theory 
+  gV2VsPtModel[0]->Draw("samesE4");
+  gV2VsPtModel[1]->Draw("samesL");
+  
+  // STAR data
+
+  gr1_sys->Draw("samesE5");
+  gr1->Draw("psamez");
+  for(int i=0; i<4; i++)
+    {
+      //box[i]->Draw("fsame");
+    }
+
+  for(int i=0; i<4; i++)
+    {
+      //bracketUp[i]->Draw("lsame");
+      //bracketDown[i]->Draw("lsame");
+    }
+
+
+  for(int i=0; i<3; i++)
+    {
+      //bracketuuUp[i]->Draw("lsame");
+      //bracketuuDown[i]->Draw("lsame");
+    }
+  gr2_sys->Draw("samesE5");
+  gr2->Draw("samesPEz");
+
+
+  // legend etc.
+  //boxLabel->Draw("fsame");
+  t1->Draw("same");
+  leg1->Draw("same");
+  legt->Draw("same");
+
+  if(savePlot)
+    {
+      c1->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/JpsiV2_uu_Run14_model.pdf",run_type,run_cfg_name.Data()));
+      c1->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/JpsiV2_uu_Run14_model.png",run_type,run_cfg_name.Data()));
+      c1->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/JpsiV2_uu_Run14_model.jpg",run_type,run_cfg_name.Data()));
+      c1->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/JpsiV2_uu_Run14_model.eps",run_type,run_cfg_name.Data()));
+    }
+
+  if(gSavePaper)
+    {
+      c1->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Paper/%s/Figure_JpsiV2.pdf",gPaperVersion));
+    }
+
+
+}
+
+//================================================
+void makeModel(const bool savePlot = 1, const bool saveHisto = 1)
 {
   gStyle->SetOptStat(0);
   const int nCentBins = 6;
@@ -27,7 +246,6 @@ void makeModel(const bool savePlot = 0, const bool saveHisto = 0)
   const double ptBins_low[nPtBins]  = {0,5};
 
   const int nModel = 3;
-  const char* model_name[4] = {"TAMU", "Tsinghua", "SHM", "Co-mover"};
   const int color[4] = {1, 2, 4, 6};
   TGraphErrors *gRaaVsPt[nModel][nCentBins];
   TGraphErrors *gRaaVsNpart[nModel][nPtBins];
@@ -181,7 +399,7 @@ void makeModel(const bool savePlot = 0, const bool saveHisto = 0)
       file.getline(tmp_str,256);
       cout << tmp_str << endl;
     }
-  gV2VsPt[1] = new TGraphErrors(15);
+  gV2VsPt[1] = new TGraphErrors(14);
   gV2VsPt[1]->SetName(Form("gV2VsPt_cent0080_%s",model_name[1]));
   for(int i=0; i<14; i++)
     {
@@ -365,7 +583,7 @@ void makeModel(const bool savePlot = 0, const bool saveHisto = 0)
 }
 
 //================================================
-void efficiency(const bool savePlot = 0, const bool saveHisto = 0)
+void efficiency(const bool savePlot = 1, const bool saveHisto = 1)
 {
   gStyle->SetOptStat(0);
 
@@ -434,6 +652,20 @@ void efficiency(const bool savePlot = 0, const bool saveHisto = 0)
 	}
     }
 
+  // nsigmaPi, dy and dz efficiency
+  TFile *femb = TFile::Open("output/Run14_AuAu200.Embed.Jpsi.root","read");
+  TH1F *hTrkPt[4];
+  hTrkPt[0] = (TH1F*)femb->Get("mhTrkPtDis_Tpc_di_mu");
+  hTrkPt[1] = (TH1F*)femb->Get("mhTrkPtDis_NsigmaPi_di_mu");
+  hTrkPt[2] = (TH1F*)femb->Get("mhTrkPtDis_MtdMth_di_mu");
+  hTrkPt[3] = (TH1F*)femb->Get("mhTrkPtDis_DyDz_di_mu");
+  for(int i=0; i<4; i++)
+    {
+      hTrkPt[i]->Sumw2();
+    }
+  hTrkPt[1]->Divide(hTrkPt[0]);
+  hTrkPt[3]->Divide(hTrkPt[2]);
+  
   TCanvas *cEff = new TCanvas("MtdEff", "MtdEff", 600, 700);
   TPad *pads[2];
   pads[0] = GetSinglePad("pad_0", 0.01, 0.98, 0.54, 0.99);
@@ -455,7 +687,7 @@ void efficiency(const bool savePlot = 0, const bool saveHisto = 0)
   leg->SetBorderSize(0);
   leg->SetFillColor(0);
   leg->SetTextFont(63);
-  leg->SetTextSize(22);;
+  leg->SetTextSize(20);;
   leg->AddEntry(gTrigEffSys,"MTD trigger efficiency","FL");
   leg->Draw();
   cEff->Update();
@@ -467,6 +699,16 @@ void efficiency(const bool savePlot = 0, const bool saveHisto = 0)
   SetPadMargin(gPad,0.18,0.12,0.01,0.01);
   ScaleHistoTitle(hplot,22,2.5,20,22,1.6,20,63);
   hplot->DrawCopy();
+
+  fucnDtof->Draw("sames"); // dtof efficiency
+  hTrkPt[1]->SetMarkerStyle(20);
+  hTrkPt[1]->SetMarkerColor(4);
+  hTrkPt[1]->SetLineColor(4);
+  hTrkPt[1]->Draw("samesPE"); // nSigmaPi efficiency
+  hTrkPt[3]->SetMarkerStyle(25);
+  hTrkPt[3]->SetMarkerColor(6);
+  hTrkPt[3]->SetLineColor(6);
+  hTrkPt[3]->Draw("samesPE"); // dy,dz efficiency
   for(int i=0; i<2; i++)
     {
       gPidEffSys[i]->SetFillStyle(1001);
@@ -475,12 +717,15 @@ void efficiency(const bool savePlot = 0, const bool saveHisto = 0)
       gPidEffSys[i]->SetLineWidth(3);
       gPidEffSys[i]->Draw("samesE2L");
     }
-  TLegend *leg = new TLegend(0.5,0.3,0.75,0.4);
+  TLegend *leg = new TLegend(0.45,0.22,0.7,0.55);
   leg->SetBorderSize(0);
   leg->SetFillColor(0);
   leg->SetTextFont(63);
-  leg->SetTextSize(22);;
-  leg->AddEntry(gPidEffSys[0],"Muon PID efficiency","FL");
+  leg->SetTextSize(20);;
+  leg->AddEntry(hTrkPt[1],"n#sigma_{#pi} cut","P");
+  leg->AddEntry(hTrkPt[3],"#Deltay & #Deltaz cut","P");
+  leg->AddEntry(fucnDtof,"#Deltatof cut (after other PID cuts)","L");
+  leg->AddEntry(gPidEffSys[0],"Total muon PID efficiency","FL");
   leg->Draw();
   cEff->cd();
   cEff->Update();
@@ -509,7 +754,7 @@ void efficiency(const bool savePlot = 0, const bool saveHisto = 0)
 //================================================
 void nPart(const bool savePlot = 0, const bool saveHisto = 0)
 {
- // re-assign global constants
+  // re-assign global constants
   const int nPtBins         = nPtBins_npart;
   const double* ptBins_low  = ptBins_low_npart;
   const double* ptBins_high = ptBins_high_npart;
@@ -530,6 +775,7 @@ void nPart(const bool savePlot = 0, const bool saveHisto = 0)
   const double npartErr[kNCent] = {5.2, 7.7, 9.5, 10.7, 11.1, 10.5, 8.5, 3.6};
 
   const double ncoll2[7] =    {21.57, 62.18, 120.06, 216.45, 366.44, 593.67, 941.24}; 
+  const double ncollErr2[7] = {8.04, 16.85, 23.36, 29.20, 32.33, 30.18, 26.27};
   const double npart2[7] =    {21.04, 47.79, 76.88, 116.74, 169.04, 237.27, 325.48}; 
   
   double npart_y[kNCent];
@@ -541,16 +787,16 @@ void nPart(const bool savePlot = 0, const bool saveHisto = 0)
     }
 
   TGraphErrors *gPubNpartErr = new TGraphErrors(kNCent, npart, npart_y, npartErr, ncoll_relerr);
-  gPubNpartErr->SetFillColor(kGreen-10);
-  gPubNpartErr->SetLineColor(kGreen-10);
+  gPubNpartErr->SetFillColor(kBlue-10);
+  gPubNpartErr->SetLineColor(kBlue-10);
 
   // plotting template
-  TH1F *hRaaVsNpart = new TH1F("hRaaVsNpart",";N_{part};R_{AA}",100,-100,370);
+  TH1F *hRaaVsNpart = new TH1F("hRaaVsNpart",";N_{part};J/#psi R_{AA}",100,-100,370);
   ScaleHistoTitle(hRaaVsNpart,28,1,24,28,1,24,63);
   hRaaVsNpart->GetYaxis()->SetRangeUser(0,2);
   hRaaVsNpart->GetYaxis()->CenterTitle();
 
- // MTD results
+  // MTD results
   TFile *fout = 0x0;
   if(saveHisto) fout = TFile::Open(Form("Rootfiles/Paper.%s.Jpsi.root",run_type),"update");
   else fout = TFile::Open(Form("Rootfiles/Paper.%s.Jpsi.root",run_type),"read");
@@ -602,9 +848,10 @@ void nPart(const bool savePlot = 0, const bool saveHisto = 0)
 	}
       double gSys_h = TMath::Sqrt(ppInelasticErr/ppInelastic*ppInelasticErr/ppInelastic + pp_err_h*pp_err_h/pp_yield/pp_yield);
       double gSys_l = TMath::Sqrt(ppInelasticErr/ppInelastic*ppInelasticErr/ppInelastic + pp_err_l*pp_err_l/pp_yield/pp_yield);
-      globalSys[i] = new TBox(360,1-gSys_l,365,1+gSys_h);
+      globalSys[i] = new TBox(365,1-gSys_l,370,1+gSys_h);
       globalSys[i]->SetLineWidth(2.);
       globalSys[i]->SetFillStyle(1001);
+      cout << "Global err = " << gSys_h << "  " << gSys_l << endl;
     }
 
   //==============================================
@@ -644,92 +891,17 @@ void nPart(const bool savePlot = 0, const bool saveHisto = 0)
   //==============================================
   // theory
   //==============================================
+  TFile *fmodel = TFile::Open("Rootfiles/Paper/models/AuAu200.models.root","read");
   // tsinghua group
-
-  char tmp[256];
-  double dtmp;
-  ifstream ifin;
-  ifin.open("Rootfiles/Published/Jpsi_Raa_200/model/data_and_figures_from_Yunpeng/data_pt_5-10_GeV.txt");
-  ifin.getline(tmp,256);
-  ifin.getline(tmp,256);
-  double raa_5_tsu[11];
-  double npart_tsu[11];
-  for(int i=0; i<11; i++)
+  TGraphErrors *gRaaVsCentModel[3][2];
+  for(int i=0; i<nPtBins; i++)
     {
-      ifin >> npart_tsu[i] >> raa_5_tsu[i];
+      for(int j=0; j<3; j++)
+	{
+	  if(i==1 && j==2) continue;
+	  gRaaVsCentModel[j][i] = (TGraphErrors*)fmodel->Get(Form("gRaaVsNpart_Pt%1.0f_%s",ptBins_low[i],model_name[j]));
+	}
     }
-  ifin.close();
-  TGraph *gTsuRaaVsNpartRHIC[2];
-  gTsuRaaVsNpartRHIC[0] = new TGraph("Rootfiles/Published/Zebo/QWG2013/Jpsi_Cent/Jpsi_Zhuang_RHIC_mid.dat");
-  gTsuRaaVsNpartRHIC[0]->SetName("gTsuRaaVsNpartRHIC_LowPt");
-  gTsuRaaVsNpartRHIC[1] = new TGraph(11,npart_tsu,raa_5_tsu);
-  gTsuRaaVsNpartRHIC[1]->SetName("gTsuRaaVsNpartRHIC_HighPt");
-
-  TGraphErrors *gTsuRaaVsNpartLHC[2];
-  ifin.open("Rootfiles/Published/Model/Jpsi_Raa/Mid_Y_RAA_Npart.dat");
-  double tsu_lhc_lowPt_npart[26];
-  double tsu_lhc_lowPt_npart_err[26];
-  double tsu_lhc_lowPt_raa[26];
-  double tsu_lhc_lowPt_raa_err[26];
-  double tsu_lhc_lowPt_raa_low[26];
-  double tsu_lhc_lowPt_raa_high[26];
-  for(int i=0; i<11; i++)
-    {
-      ifin.getline(tmp,256);
-    }
-  for(int i=0; i<26; i++)
-    {
-      ifin >> tsu_lhc_lowPt_npart[i] >> dtmp >> dtmp >> tsu_lhc_lowPt_raa_low[i] >> dtmp >> tsu_lhc_lowPt_raa_high[i];
-      tsu_lhc_lowPt_npart_err[i] = 0;
-      tsu_lhc_lowPt_raa[i] = (tsu_lhc_lowPt_raa_low[i] + tsu_lhc_lowPt_raa_high[i])/2;
-      tsu_lhc_lowPt_raa_err[i] = (tsu_lhc_lowPt_raa_high[i] - tsu_lhc_lowPt_raa_low[i])/2;
-    }
-  ifin.close();
-  gTsuRaaVsNpartLHC[0] = new TGraphErrors(26, tsu_lhc_lowPt_npart, tsu_lhc_lowPt_raa, tsu_lhc_lowPt_npart_err, tsu_lhc_lowPt_raa_err);
-  gTsuRaaVsNpartLHC[0]->SetName("gTsuRaaVsNpartLHC_LowPt");
-
-  //ifin.open("Rootfiles/Published/Model/Jpsi_Raa/Mid_Y_RAA_Npart_highpt.dat");
-  ifin.open("Rootfiles/Published/Model/Jpsi_Raa/cms_raa_npart");
-  double tsu_lhc_highPt_npart[24];
-  double tsu_lhc_highPt_npart_err[24];
-  double tsu_lhc_highPt_raa[24];
-  double tsu_lhc_highPt_raa_err[24];
-  for(int i=0; i<4; i++)
-    {
-      ifin.getline(tmp,256);
-    }
-  for(int i=0; i<24; i++)
-    {
-      ifin >> tsu_lhc_highPt_npart[i] >> tsu_lhc_highPt_raa[i];
-      tsu_lhc_highPt_npart_err[i] = 0;
-      tsu_lhc_highPt_raa_err[i] = 0;
-      tsu_lhc_highPt_raa[i] = tsu_lhc_highPt_raa[i]*1.2;
-    }
-  ifin.close();
-  gTsuRaaVsNpartLHC[1] = new TGraphErrors(24, tsu_lhc_highPt_npart, tsu_lhc_highPt_raa, tsu_lhc_highPt_npart_err, tsu_lhc_highPt_raa_err);
-  gTsuRaaVsNpartLHC[0]->SetName("gTsuRaaVsNpartLHC_HighPt");
-  
-  // tamu group
-  TGraph *gTamuRaaVsNpartRHIC[2], *gTamuRaaVsNpartLHC[2];
-  ifin.open("Rootfiles/Published/Jpsi_Raa_200/model/data_from_Xingbo/raa_centra_rhic_pt4.5to10_tozebo_110513.dat");
-  double raa_5_tamu[15];
-  double npart_tamu[15];
-  for(int i=0; i<15; i++)
-    {
-      ifin >> npart_tamu[i] >> raa_5_tamu[i];
-    }
-  ifin.close();
-  gTamuRaaVsNpartRHIC[1] = new TGraph(15,npart_tamu,raa_5_tamu);
-  gTamuRaaVsNpartRHIC[1]->SetName("gTamuRaaVsNpartRHIC_HighPt");
-
-  TFile *ftamu = TFile::Open("Rootfiles/2016sQM/raa200theory1.root","read");
-  TGraph *gtmp = (TGraph*)ftamu->Get("gr1");
-  gTamuRaaVsNpartRHIC[0] = new TGraph(gtmp->GetN(), gtmp->GetX(), gtmp->GetY());
-  gTamuRaaVsNpartRHIC[0]->SetName("gTamuRaaVsNpartRHIC_LowPt");
-
-  gTamuRaaVsNpartLHC[0] = new TGraph("Rootfiles/Published/Zebo/QWG2013/Jpsi_Cent/Jpsi_Rapp_mid.dat");
-  gTamuRaaVsNpartLHC[1] = new TGraph("Rootfiles/Published/Zebo/QWG2013/Jpsi_Cent/Jpsi_Rapp_LHC_mid_highPt.dat");
-
   
   //==============================================
   // Final figures
@@ -747,83 +919,21 @@ void nPart(const bool savePlot = 0, const bool saveHisto = 0)
       TLine *line = GetLine(x_min,1,x_max,1,1);
       line->Draw();
 
-      gTamuRaaVsNpartLHC[i]->SetFillStyle(1001);
-      gTamuRaaVsNpartLHC[i]->SetFillColor(kCyan-9);
-      gTamuRaaVsNpartLHC[i]->SetLineColor(kCyan-9);
-      gTamuRaaVsNpartLHC[i]->SetLineWidth(1);
-      gTamuRaaVsNpartLHC[i]->SetLineStyle(1);
 
-      gTsuRaaVsNpartLHC[i]->SetFillStyle(1001);
-      gTsuRaaVsNpartLHC[i]->SetFillColor(kViolet-9);
-      gTsuRaaVsNpartLHC[i]->SetLineColor(kViolet-9);
-      gTsuRaaVsNpartLHC[i]->SetLineWidth(1);
-      gTsuRaaVsNpartLHC[i]->SetLineStyle(1);
-
-      if(i==1)
-	{
-	  gTamuRaaVsNpartLHC[1]->SetLineColor(marker_color[1]);
-	  gTamuRaaVsNpartLHC[1]->SetLineWidth(2);
-	  gTamuRaaVsNpartLHC[1]->SetLineStyle(7);
-	  gTsuRaaVsNpartLHC[1]->SetLineWidth(2);
-	  gTsuRaaVsNpartLHC[1]->SetLineColor(marker_color[1]);
-	  gTsuRaaVsNpartLHC[1]->SetLineStyle(1);
-	}
-
-      gTamuRaaVsNpartRHIC[i]->SetLineColor(2);
-      gTamuRaaVsNpartRHIC[i]->SetLineStyle(7);
-      gTamuRaaVsNpartRHIC[i]->SetLineWidth(2);
-
-      gTsuRaaVsNpartRHIC[i]->SetLineColor(2);
-      gTsuRaaVsNpartRHIC[i]->SetLineStyle(1);
-      gTsuRaaVsNpartRHIC[i]->SetLineWidth(2);
-
+      gRaaVsCentModel[0][i]->Draw("samesE4");
+      gRaaVsCentModel[0][i]->SetFillStyle(3444);
+      gRaaVsCentModel[0][i]->SetFillColor(kGray+2);
+      gRaaVsCentModel[1][i]->SetLineStyle(1);
+      gRaaVsCentModel[1][i]->SetLineWidth(2);
+      gRaaVsCentModel[1][i]->SetLineColor(kViolet);
+      gRaaVsCentModel[1][i]->Draw("samesL");
       if(i==0)
 	{
-	  gTamuRaaVsNpartLHC[i]->Draw("fsames");
-	  gTsuRaaVsNpartLHC[i]->Draw("samesE4");
+	  gRaaVsCentModel[2][i]->SetLineStyle(7);
+	  gRaaVsCentModel[2][i]->SetLineColor(kGreen+2);
+	  gRaaVsCentModel[2][i]->SetLineWidth(2);
+	  gRaaVsCentModel[2][i]->Draw("samesL");
 	}
-      else
-	{
-	  gTamuRaaVsNpartLHC[i]->Draw("lsames");
-	  gTsuRaaVsNpartLHC[i]->Draw("lsames");
-	}
-      gTamuRaaVsNpartRHIC[i]->Draw("lsames");
-      gTsuRaaVsNpartRHIC[i]->Draw("lsames");
-
-
-  
-      TPaveText *tmodel2 = GetPaveText(0.213,0.35,0.64,0.74);
-      tmodel2->SetTextFont(62);
-      tmodel2->SetTextAlign(11);
-      tmodel2->SetTextSize(0.035);
-      tmodel2->AddText("Tsinghua Model");
-      tmodel2->AddText("TAMU Model");
-      tmodel2->Draw();
-
-      TLegend *leg41 = new TLegend(0.42,0.65,0.6,0.75);
-      leg41->SetBorderSize(0);
-      leg41->SetFillColor(0);
-      leg41->SetTextFont(62);
-      leg41->SetTextSize(0.035);
-      leg41->AddEntry(gTsuRaaVsNpartRHIC[i],"RHIC","L");
-      leg41->AddEntry(gTamuRaaVsNpartRHIC[i],"RHIC","L");
-      leg41->Draw();
-      TLegend *leg42 = new TLegend(0.55,0.65,0.7,0.75);
-      leg42->SetBorderSize(0);
-      leg42->SetFillColor(0);
-      leg42->SetTextFont(62);
-      leg42->SetTextSize(0.035);
-      if(i==0)
-	{
-	  leg42->AddEntry(gTsuRaaVsNpartLHC[i],"LHC","F");
-	  leg42->AddEntry(gTamuRaaVsNpartLHC[i],"LHC","F");
-	}
-      else
-	{
-	  leg42->AddEntry(gTsuRaaVsNpartLHC[i],"LHC","L");
-	  leg42->AddEntry(gTamuRaaVsNpartLHC[i],"LHC","L");
-	}
-      leg42->Draw();
 
       // LHC
       grLhcRaaVsCent[i]->SetMarkerStyle(21);
@@ -834,8 +944,8 @@ void nPart(const bool savePlot = 0, const bool saveHisto = 0)
       grLhcRaaVsCentSys[i]->SetLineColor(marker_color[1]);
       grLhcRaaVsCentSys[i]->SetFillStyle(0);
       TBox *bLhc;
-      if(i==0) bLhc = new TBox(365,1-0.13,370,1+0.13);
-      else     bLhc = new TBox(365,1-0.078,370,1+0.078);
+      if(i==0) bLhc = new TBox(360,1-0.13,365,1+0.13);
+      else     bLhc = new TBox(360,1-0.078,365,1+0.078);
       bLhc->SetLineColor(marker_color[1]);
       bLhc->SetFillColor(marker_color[1]);
       bLhc->SetFillStyle(1001);
@@ -862,6 +972,28 @@ void nPart(const bool savePlot = 0, const bool saveHisto = 0)
       bStar->SetFillStyle(1001);
       bStar->Draw("fsame");
 
+
+      TLegend *leg41 = new TLegend(0.3,0.67,0.5,0.8);
+      leg41->SetBorderSize(0);
+      leg41->SetFillColor(0);
+      leg41->SetTextFont(62);
+      leg41->SetTextSize(0.035);
+      leg41->SetHeader(Form("p_{T} > %1.0f GeV/c",ptBins_low[i]));
+      leg41->AddEntry(gRaaVsCentModel[1][i],"TM I: Tsinghua","L");
+      leg41->AddEntry(gRaaVsCentModel[0][i],"TM II: TAMU","F");
+      leg41->Draw();
+
+      if(i==0)
+	{
+	  TLegend *leg42 = new TLegend(0.55,0.71,0.8,0.76);
+	  leg42->SetBorderSize(0);
+	  leg42->SetFillColor(0);
+	  leg42->SetTextFont(62);
+	  leg42->SetTextSize(0.035);
+	  leg42->AddEntry(gRaaVsCentModel[2][i],"SHM","L");
+	  leg42->Draw();
+	}
+
       TLegend *leg_ncoll_2 = new TLegend(0.15,0.17,0.35,0.22);
       leg_ncoll_2->SetBorderSize(0);
       leg_ncoll_2->SetFillColor(0);
@@ -870,20 +1002,18 @@ void nPart(const bool savePlot = 0, const bool saveHisto = 0)
       leg_ncoll_2->AddEntry(gPubNpartErr,"STAR N_{coll} uncertainty","f");
       leg_ncoll_2->Draw();
 
-      TLegend *leg3 = new TLegend(0.16,0.76,0.4,0.96);
+      TLegend *leg3 = new TLegend(0.16,0.84,0.4,0.96);
       leg3->SetBorderSize(0);
       leg3->SetFillColor(0);
       leg3->SetTextFont(62);
       leg3->SetTextSize(0.04);
       if(i==0)
 	{
-	  leg3->SetHeader("p_{T,J/#psi} > 0 GeV/c");
-	  leg3->AddEntry(grStar,"STAR: Au+Au, #sqrt{s_{NN}} = 200 GeV, J/#psi#rightarrow#mu^{+}#mu^{-}, |y| < 0.5","P");
-	  leg3->AddEntry(grLhcRaaVsCent[i],"ALICE: Pb+Pb, #sqrt{s_{NN}} = 2.76 TeV, J/#psi#rightarrowe^{+}e^{-}, |y| < 0.8","P");
+	  leg3->AddEntry(grStar,"STAR: Au+Au, #sqrt{s_{NN}} = 200 GeV, |y| < 0.5, p_{T} > 0.15 GeV/c","P");
+	  leg3->AddEntry(grLhcRaaVsCent[i],"ALICE: Pb+Pb, #sqrt{s_{NN}} = 2.76 TeV, |y| < 0.8, p_{T} > 0 GeV/c","P");
 	}
       else
 	{
-	  leg3->SetHeader("J/#psi#rightarrow#mu^{+}#mu^{-}");
 	  leg3->AddEntry(grStar,"STAR: Au+Au, #sqrt{s_{NN}} = 200 GeV, |y| < 0.5, p_{T} > 5 GeV/c","P");
 	  leg3->AddEntry(grLhcRaaVsCent[i],"CMS: Pb+Pb, #sqrt{s_{NN}} = 2.76 TeV, |y| < 1.2, p_{T} > 6.5 GeV/c","P");
 	}
@@ -905,6 +1035,74 @@ void nPart(const bool savePlot = 0, const bool saveHisto = 0)
 	}
     }
 
+  // calculate chi2/NDF bewteen data and theory
+  for(int i=0; i<nPtBins; i++)
+    {
+      printf("+++ pt%s +++ \n",pt_Name[i]);
+      for(int m=0; m<3; m++)
+	{
+	  if(i==1 && m==2) continue;
+	  for(int j=0; j<3; j++)
+	    {
+	      double chi2 = 0;
+	      int ndf = raaVsNpart[i]->GetN();
+	      for(int bin=1; bin<=ndf; bin++)
+		{
+		  raaVsNpart[i]->GetPoint(bin-1, x, y);
+		  double pt = x;
+		  double raa_data = y;
+		  double err_data = 0;
+		  if(i==0) err_data = sqrt( pow(raaVsNpart[i]->GetErrorY(bin-1), 2) + 
+					    pow(raaVsNpartSys[i]->GetErrorY(bin-1), 2) +
+					    pow(ncollErr[bin-1]/ncoll[bin-1],2));
+		  if(i==1) err_data = sqrt( pow(raaVsNpart[i]->GetErrorY(bin-1), 2) + 
+					    pow(raaVsNpartSys[i]->GetErrorY(bin-1), 2) +
+					    pow(ncollErr2[bin-1]/ncoll2[bin-1],2));
+		  if(j==1) 
+		    {
+		      raa_data = y * globalSys[i]->GetY2();
+		      err_data = err_data/y*raa_data;
+		    }
+		  if(j==2) 
+		    {
+		      raa_data = y * globalSys[i]->GetY1();
+		      err_data = err_data/y*raa_data;
+		    }
+	
+		  double *model_x = gRaaVsCentModel[m][i]->GetX();
+		  double *model_y = gRaaVsCentModel[m][i]->GetY();
+		  double *model_ey = gRaaVsCentModel[m][i]->GetEY();
+		  double raa_model, err_model;
+		  for(int ipoint=0; ipoint<gRaaVsCentModel[m][i]->GetN(); ipoint++)
+		    {
+		      if(m<2 && pt >= model_x[ipoint+1] && pt < model_x[ipoint] )
+			{
+			  raa_model = model_y[ipoint+1];
+			  err_model = model_ey[ipoint+1];
+			  break;
+			}
+		      if(m==2 && pt < model_x[ipoint+1] && pt >= model_x[ipoint] )
+			{
+			  raa_model = model_y[ipoint];
+			  err_model = model_ey[ipoint];
+			  break;
+			}
+		    }
+		  if(m==2 && bin==1)
+		    {
+		      raa_model = 1;
+		      err_model = 0;
+		    }
+		  double err_tot = sqrt(pow(err_data,2) + pow(err_model,2)); 
+		  chi2 += pow((raa_data-raa_model)/err_tot,2);
+		  //printf("pt = %4.2f, data = %4.2f #pm %4.2f, model = %4.2f #pm %4.2f\n",pt,raa_data,err_data,raa_model,err_model);
+		}
+	      printf("%s & %4.2f/%d & %4.2f \\\\ \n", model_name[m], chi2,ndf,TMath::Prob(chi2,ndf));
+	    }
+	}
+    }
+  cout << "here" << endl;
+
   if(saveHisto)
     {
       fout->cd();
@@ -917,15 +1115,6 @@ void nPart(const bool savePlot = 0, const bool saveHisto = 0)
       grLhcRaaVsCentSys[0]->Write("ALICE_JpsiRaaVsNpart_LowPt_Sys", TObject::kOverwrite);
       grLhcRaaVsCent[1]->Write("CMS_JpsiRaaVsNpart_HighPt", TObject::kOverwrite);
       grLhcRaaVsCentSys[1]->Write("CMS_JpsiRaaVsNpart_HighPt_Sys", TObject::kOverwrite);
-
-      gTsuRaaVsNpartRHIC[0]->Write("Tsinghua_RHIC_JpsiRaaVsNpart_LowPt", TObject::kOverwrite);
-      gTsuRaaVsNpartRHIC[1]->Write("Tsinghua_RHIC_JpsiRaaVsNpart_HighPt", TObject::kOverwrite);
-      gTsuRaaVsNpartLHC[0]->Write("Tsinghua_LHC_JpsiRaaVsNpart_LowPt", TObject::kOverwrite);
-      gTsuRaaVsNpartLHC[1]->Write("Tsinghua_LHC_JpsiRaaVsNpart_HighPt", TObject::kOverwrite);
-      gTamuRaaVsNpartRHIC[0]->Write("TAMU_RHIC_JpsiRaaVsNpart_LowPt", TObject::kOverwrite);
-      gTamuRaaVsNpartRHIC[1]->Write("TAMU_RHIC_JpsiRaaVsNpart_HighPt", TObject::kOverwrite); 
-      gTamuRaaVsNpartLHC[0]->Write("TAMU_LHC_JpsiRaaVsNpart_LowPt", TObject::kOverwrite);
-      gTamuRaaVsNpartLHC[1]->Write("TAMU_LHC_JpsiRaaVsNpart_HighPt", TObject::kOverwrite);
     }
 }
 
@@ -1063,6 +1252,11 @@ void xsec(const bool savePlot = 0, const bool saveHisto = 0)
       hJpsiXsecSys[k]->SetLineColor(hJpsiXsec[k]->GetLineColor());
       hJpsiXsecSys[k]->Draw("samesE5");
       hJpsiXsec[k]->Draw("samesPEZ");
+      if(k==1)
+	{
+	  hJpsiXsec[k]->GetPoint(0, x, y);
+	  printf("[i] Jpsi yield = %4.2e +/- %4.2e +/- %4.2e\n",y,hJpsiXsec[k]->GetErrorYhigh(0),hJpsiXsecSys[k]->GetErrorYhigh(0));
+	}
     }
   TLegend *leg = new TLegend(0.7,0.65,0.9,0.95);
   leg->SetBorderSize(0);
@@ -1144,13 +1338,13 @@ void xsec(const bool savePlot = 0, const bool saveHisto = 0)
 				    {0.738, 0.566, 0.540, 0.694, 1.610},
 				    {1.130, 0.586, 0.431, 0.818, 0.792}};
   double phenix_raa_err[4][nphenix] = { {0.057, 0.054, 0.067, 0.107, 0.339},
-				     {0.073, 0.074, 0.101, 0.203, 0.486},
-				     {0.111, 0.091, 0.125, 0.258, 0.848},
-				     {0.237, 0.151, 0.183, 0.485, 0.833}};
+					{0.073, 0.074, 0.101, 0.203, 0.486},
+					{0.111, 0.091, 0.125, 0.258, 0.848},
+					{0.237, 0.151, 0.183, 0.485, 0.833}};
   double phenix_raa_sys[4][nphenix] = { {0.035, 0.036, 0.031, 0.013, 0.061},
-				     {0.072, 0.081, 0.082, 0.095, 0.144},
-				     {0.107, 0.082, 0.078, 0.101, 0.234},
-				     {0.163, 0.084, 0.062, 0.118, 0.114}};
+					{0.072, 0.081, 0.082, 0.095, 0.144},
+					{0.107, 0.082, 0.078, 0.101, 0.234},
+					{0.163, 0.084, 0.062, 0.118, 0.114}};
   double phenix_gsys[4] = {0.1, 0.1, 0.13, 0.28};
   TGraphErrors *gPhenixRaaVsPt[4];
   TGraphErrors *gPhenixRaaVsPtSys[4];
@@ -1225,7 +1419,7 @@ void xsec(const bool savePlot = 0, const bool saveHisto = 0)
 	  gRaaLowPt[k]->Draw("sames PEZ");
 	  gRaaHighPt[k]->Draw("sames PEZ");
 	}
-      gPhenixRaaVsPt[k]->SetMarkerStyle(kFullCross);
+      gPhenixRaaVsPt[k]->SetMarkerStyle(kOpenCross);
       gPhenixRaaVsPt[k]->SetMarkerSize(2.2);
       gPhenixRaaVsPt[k]->SetMarkerColor(phenix_color);
       gPhenixRaaVsPt[k]->SetLineColor(phenix_color);
@@ -1261,7 +1455,7 @@ void xsec(const bool savePlot = 0, const bool saveHisto = 0)
       box_phenix->SetFillColor(gPhenixRaaVsPt[k]->GetMarkerColor());
       box_phenix->Draw();
 
-      double gerr = sqrt(pow(ncollErr[k]/ncoll[k],2)+pow(ppInelasticErr/ppInelastic,2));
+      double gerr = sqrt(pow(ncollErr[k+1]/ncoll[k+1],2)+pow(ppInelasticErr/ppInelastic,2));
       TBox *box_star = new TBox(x_max[k+1]-0.3,1-gerr,x_max[k+1]-0.5,1+gerr);
       box_star->SetFillStyle(1001);
       box_star->SetFillColor(kRed);
@@ -1299,10 +1493,12 @@ void xsec(const bool savePlot = 0, const bool saveHisto = 0)
   for(int k=0; k<nCentBins; k++)
     {
       gRaaVsPtModel[0][k] = (TGraphErrors*)fmodel->Get(Form("gRaaVsPt_cent%s_TAMU",cent_Title[k]));
+      gRaaVsPtModel[0][k]->SetFillStyle(3644);
+      gRaaVsPtModel[0][k]->SetFillColor(kGray+2);
       gRaaVsPtModel[1][k] = (TGraphErrors*)fmodel->Get(Form("gRaaVsPt_cent%s_Tsinghua",cent_Title[k]));
       gRaaVsPtModel[1][k]->SetLineWidth(2);
-      gRaaVsPtModel[1][k]->SetLineColor(1);
-      gRaaVsPtModel[1][k]->SetLineStyle(7);
+      gRaaVsPtModel[1][k]->SetLineColor(kViolet);
+      gRaaVsPtModel[1][k]->SetLineStyle(1);
     }
 
   TCanvas *c = new TCanvas("Raa_Jpsi_dimuon","Raa_Jpsi_dimuon",1200,700);
@@ -1339,8 +1535,8 @@ void xsec(const bool savePlot = 0, const bool saveHisto = 0)
 
       if(k==0)
 	{
-	  gCmsRaaVsPt->SetMarkerStyle(21);
-	  gCmsRaaVsPt->SetMarkerSize(1.8);
+	  gCmsRaaVsPt->SetMarkerStyle(27);
+	  gCmsRaaVsPt->SetMarkerSize(2.5);
 	  gCmsRaaVsPt->SetMarkerColor(4);
 	  gCmsRaaVsPt->SetLineColor(4);
 	  gCmsRaaVsPtSys->SetFillStyle(0);
@@ -1358,10 +1554,17 @@ void xsec(const bool savePlot = 0, const bool saveHisto = 0)
 	  gAliceRaaVsPt->Draw("samesPEZ");
 	}
 
-      if(k==1)
+      else
 	{
-	  gPhenixRaaVsPtSys[0]->Draw("sameE5");
-	  gPhenixRaaVsPt[0]->Draw("sames PEZ");
+	  if(k<4)
+	    {
+	      gRaaLowPtSys[k-1]->Draw("sameE5");
+	      gRaaHighPtSys[k-1]->Draw("sameE5");
+	      gRaaLowPt[k-1]->Draw("sames PEZ");
+	      gRaaHighPt[k-1]->Draw("sames PEZ");
+	    }
+	  gPhenixRaaVsPtSys[k-1]->Draw("sameE5");
+	  gPhenixRaaVsPt[k-1]->Draw("sames PEZ");
 	}
 
       hJpsiRaa[k]->SetMarkerStyle(29);
@@ -1382,21 +1585,19 @@ void xsec(const bool savePlot = 0, const bool saveHisto = 0)
       hJpsiRaaSys[k]->Draw("sameE5");
       hJpsiRaa[k]->Draw("samesPEZ");
 
-      if(k==0) centLabel[k] = GetPaveText(0.17,0.22,0.9,0.95);
-      else if(k==3) centLabel[k] = GetPaveText(0.27,0.32,0.9,0.95);
+      if(k==0 || k==3) centLabel[k] = GetPaveText(0.27,0.32,0.9,0.95);
       else centLabel[k] = GetPaveText(0.19,0.24,0.9,0.95);
       centLabel[k]->SetTextFont(63);
       centLabel[k]->SetTextSize(22);
-      if(k==0) centLabel[k]->AddText(Form("(%s)",alphabet[k]));
-      else     centLabel[k]->AddText(Form("(%s) %s%%",alphabet[k],cent_Name[k]));
+      centLabel[k]->AddText(Form("(%s) %s%%",alphabet[k],cent_Name[k]));
       centLabel[k]->Draw();
 
       // Global systematics
       double gerr = sqrt(pow(ncollErr[k]/ncoll[k],2)+pow(ppInelasticErr/ppInelastic,2));
       double x_pos = 14.25;
       if(k==2 || k==3) x_pos = 10.5;
-      if(k==4) x_pos = 7.5;
-      box_ncoll[k] = new TBox(x_pos,1-gerr,x_pos+0.25,1+gerr);
+      if(k==4) x_pos = 7.75;
+      box_ncoll[k] = new TBox(x_pos,1-gerr,x_pos+0.25*x_max[k]/x_max[0],1+gerr);
       box_ncoll[k]->SetFillStyle(1001);
       box_ncoll[k]->SetFillColor(kRed-7);
       box_ncoll[k]->Draw();
@@ -1414,9 +1615,9 @@ void xsec(const bool savePlot = 0, const bool saveHisto = 0)
 	  box_cms->Draw();
 	}
 
-      if(k==1)
+      else
 	{
-	  TBox *box_phenix = new TBox(x_pos-0.25,1-phenix_gsys[0],x_pos,1+phenix_gsys[0]);
+	  TBox *box_phenix = new TBox(x_pos-0.25*x_max[k]/x_max[0],1-phenix_gsys[k-1],x_pos,1+phenix_gsys[k-1]);
 	  box_phenix->SetFillStyle(1001);
 	  box_phenix->SetFillColor(gPhenixRaaVsPt[0]->GetMarkerColor());
 	  box_phenix->Draw();
@@ -1424,30 +1625,40 @@ void xsec(const bool savePlot = 0, const bool saveHisto = 0)
     }
   c->cd();
   pads[0]->cd();
-  TLegend *leg = new TLegend(0.25,0.7,0.5,0.95);
+  TLegend *leg = new TLegend(0.15,0.7,0.45,0.85);
   leg->SetBorderSize(0);
   leg->SetFillColor(0);
   leg->SetTextFont(63);
-  leg->SetTextSize(18);
-  leg->AddEntry(hJpsiRaa[0],"STAR: 0-80%, |y| < 0.5","P");
-  leg->AddEntry(gCmsRaaVsPt,"CMS: 0-100%, |y| < 2.4","P");
-  leg->AddEntry(gAliceRaaVsPt,"ALICE: 0-40%, |y| < 0.8","P");
+  leg->SetTextSize(16);
+  leg->AddEntry(gCmsRaaVsPt,"CMS: Pb+Pb @ 2.76 TeV, 0-100%, |y| < 2.4","P");
+  leg->AddEntry(gAliceRaaVsPt,"ALICE: Pb+Pb @ 2.76 TeV, 0-40%, |y| < 0.8","P");
   leg->Draw();
 
   pads[1]->cd();
-  TLegend *leg = new TLegend(0.1,0.8,0.5,0.85);
+  TLegend *leg = new TLegend(0.05,0.65,0.4,0.85);
+  leg->SetBorderSize(0);
+  leg->SetFillColor(0);
+  leg->SetTextFont(63);
+  leg->SetTextSize(16);
+  leg->AddEntry(gPhenixRaaVsPt[0],"PHENIX: |y| < 0.35 (PRL 98 (2007) 232301)","P");
+  leg->AddEntry(gRaaLowPt[0],"STAR: |y| < 1 (PRC 90 (2014) 024906)","P");
+  leg->AddEntry(gRaaHighPt[0],"STAR: |y| < 1 (PLB 733 (2013) 55)","P");
+  leg->Draw();
+
+  pads[4]->cd();
+  TLegend *leg = new TLegend(0.5,0.9,0.8,0.95);
   leg->SetBorderSize(0);
   leg->SetFillColor(0);
   leg->SetTextFont(63);
   leg->SetTextSize(18);
-  leg->AddEntry(gPhenixRaaVsPt[0],"PHENIX: 0-20%, |y| < 0.35","P");
+  leg->AddEntry(gPhenixRaaVsPt[3],"PHENIX: 60-92%","P");
   leg->Draw();
 
   c->cd();
   TPad *pad = GetSinglePad(Form("pad_cent6"), 0.68, 0.98, 0.01, 0.49);
   pad->Draw();
   pad->cd();
-  TLegend *leg30 = new TLegend(0.25,0.45,0.5,0.87);
+  TLegend *leg30 = new TLegend(0.25,0.45,0.7,0.87);
   leg30->SetBorderSize(0);
   leg30->SetFillColor(0);
   leg30->SetTextFont(63);
@@ -1458,7 +1669,7 @@ void xsec(const bool savePlot = 0, const bool saveHisto = 0)
   leg30->AddEntry(hJpsiRaaSys2[0],"p+p uncertainty","F");
   leg30->Draw();
 
-  TLegend *leg32 = new TLegend(0.25,0.25,0.5,0.45);
+  TLegend *leg32 = new TLegend(0.25,0.25,0.7,0.45);
   leg32->SetBorderSize(0);
   leg32->SetFillColor(0);
   leg32->SetTextFont(63);
@@ -1502,6 +1713,64 @@ void xsec(const bool savePlot = 0, const bool saveHisto = 0)
       c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Paper/%s/Figure_JpsiRaaVsPt.pdf",gPaperVersion));
     }
 
+  // calculate chi2/NDF bewteen data and theory
+  const int NDFs[nCentBins] = {9, 9, 8, 8, 6};
+  for(int k=0; k<nCentBins; k++)
+    {
+      printf("+++ centrality %s%% +++ \n",cent_Name[k]);
+      for(int i=0; i<2; i++)
+	{
+	  for(int j=0; j<3; j++)
+	    {
+	      double chi2 = 0;
+	      int ndf = 0;
+	      for(int bin=1; bin<=NDFs[k]; bin++)
+		{
+		  hJpsiRaa[k]->GetPoint(bin-1, x, y);
+		  double pt = x;
+		  if(i==1)
+		    {
+		      if(k==0 || k==1 || k==4) { if(pt>6) continue; }
+		      else { if(pt>8) continue; }
+		    }
+		  ndf++;
+		  double raa_data = y;
+		  double err_data = sqrt( pow(hJpsiRaa[k]->GetErrorYhigh(bin-1), 2) + 
+					  pow(hJpsiRaaSys[k]->GetErrorYhigh(bin-1), 2) + 
+					  pow((hJpsiRaaSys2[k]->GetErrorYhigh(bin-1)+hJpsiRaaSys2[k]->GetErrorYlow(bin-1))/2, 2) );
+		  if(j==1) 
+		    {
+		      raa_data = y * box_ncoll[k]->GetY2();
+		      err_data = err_data/y*raa_data;
+		    }
+		  if(j==2) 
+		    {
+		      raa_data = y * box_ncoll[k]->GetY1();
+		      err_data = err_data/y*raa_data;
+		    }
+	
+		  double *model_x = gRaaVsPtModel[i][k]->GetX();
+		  double *model_y = gRaaVsPtModel[i][k]->GetY();
+		  double *model_ey = gRaaVsPtModel[i][k]->GetEY();
+		  double raa_model, err_model;
+		  for(int ipoint=0; ipoint<gRaaVsPtModel[i][k]->GetN(); ipoint++)
+		    {
+		      if(pt< model_x[ipoint+1] && pt >= model_x[ipoint] )
+			{
+			  raa_model = model_y[ipoint];
+			  err_model = model_ey[ipoint];
+			  break;
+			}
+		    }
+		  double err_tot = sqrt(pow(err_data,2) + pow(err_model,2)); 
+		  chi2 += pow((raa_data-raa_model)/err_tot,2);
+		  //printf("pt = %4.2f, data = %4.2f #pm %4.2f, model = %4.2f #pm %4.2f\n",pt,raa_data,err_data,raa_model,err_model);
+		}
+	      printf("%4.2f/%d & %4.5e & \n", chi2,ndf,TMath::Prob(chi2,ndf));
+	    }
+	}
+    }
+
   if(saveHisto)
     {
       fout->cd();
@@ -1517,7 +1786,7 @@ void xsec(const bool savePlot = 0, const bool saveHisto = 0)
 }
 
 //================================================
-void rawSignal(const int icent = 0, const bool savePlot = 0, const bool saveHisto = 0)
+void rawSignal(const int icent = 0, const bool savePlot = 1, const bool saveHisto = 1)
 {
   gStyle->SetOptStat(0);
   gStyle->SetOptFit(kFALSE);
@@ -1539,7 +1808,7 @@ void rawSignal(const int icent = 0, const bool savePlot = 0, const bool saveHist
       hMeLS[i] = (TH1F*)fin->Get(Form("Mix_InvMass_LS_pt%s_cent%s",pt_Name[i],cent_Name_pt[icent]));
     }
 
- // get the Jpsi width from embedding
+  // get the Jpsi width from embedding
   TFile *fscan = TFile::Open(Form("Rootfiles/%s.TrkResScan.root",run_type),"read");
   TH1F *hEmbJpsiWidth[nPtBins];
   for(int i=0; i<nPtBins; i++)
@@ -1582,7 +1851,7 @@ void rawSignal(const int icent = 0, const bool savePlot = 0, const bool saveHist
   TGaxis::SetMaxDigits(3); 
   TH1F *hSignal[2];
   TH1F *hhSeUL, *hhSeLS, *hhMixBkg, *hhSignal;
-  double g_bin_width[nPtBins] = {0.05, 0.05};
+  double g_bin_width[nPtBins] = {0.03, 0.04};
   for(int i=0; i<nPtBins; i++)
     {
       TCanvas *c = new TCanvas(Form("Jpsi_All_pt%s",pt_Name[i]),Form("Jpsi_All_pt%s",pt_Name[i]),800,650);
@@ -1651,6 +1920,12 @@ void rawSignal(const int icent = 0, const bool savePlot = 0, const bool saveHist
       funcSignal->SetLineStyle(1);
       funcSignal->Draw("same");
 
+      TF1 *funcJpsi = new TF1(Form("Fit_Jpsi_pt%s",pt_Name[i]),"gausn",2.45,3.8);
+      for(int ipar=0; ipar<3; ipar++)
+	{
+	  funcJpsi->SetParameter(ipar, funcSignal->GetParameter(ipar));
+	}
+
       TLegend *leg = new TLegend(0.15,0.3,0.3,0.45);
       leg->SetBorderSize(0);
       leg->SetFillColor(0);
@@ -1674,15 +1949,17 @@ void rawSignal(const int icent = 0, const bool savePlot = 0, const bool saveHist
       double nJpsiAll_err = funcSignal->GetParError(0)/hhSignal->GetBinWidth(1);
       double min_mass = 3.0, max_mass = 3.2;
       double nAll = hSeUL[i]->Integral(hSeUL[i]->FindFixBin(min_mass),hSeUL[i]->FindFixBin(max_mass));
-      double nJpsiMass = funcSignal->Integral(min_mass, max_mass)/funcSignal->Integral(2.9, 3.3)*nJpsiAll;
+      double nJpsiMass = funcJpsi->Integral(min_mass, max_mass)/funcJpsi->Integral(2.5, 3.7)*nJpsiAll;
 
 
-      TPaveText *t1 = GetPaveText(0.58,0.75,0.68,0.92,0.038,62);
+      TPaveText *t1 = GetPaveText(0.58,0.75,0.62,0.92,0.038,62);
       t1->SetTextAlign(11);
       t1->AddText(Form("J/#psi #rightarrow #mu^{+} + #mu^{-}"));
-      t1->AddText(Form("|y_{J/#psi}| < 0.5, p_{T,J/#psi} > %1.0f GeV/c",ptBins_low[i]));
+      if(i==0) t1->AddText(Form("|y| < 0.5, p_{T} > 0.15 GeV/c"));
+      else     t1->AddText(Form("|y| < 0.5, p_{T} > %1.0f GeV/c",ptBins_low[i]));
       t1->AddText(Form("N_{J/#psi} = %2.0f #pm %2.0f",nJpsiAll, nJpsiAll_err));
       t1->AddText(Form("S/B = 1:%2.1f",(nAll-nJpsiMass)/nJpsiMass));
+      t1->AddText(Form("#chi^{2}/NDF = %2.1f/%d\n",funcSignal->GetChisquare(),funcSignal->GetNDF()));
       t1->Draw();
 
       TPaveText *t1 = GetPaveText(0.15,0.2,0.82,0.92,0.038,62);
@@ -1849,7 +2126,8 @@ void ppRef(const bool savePlot = 0, const bool saveHisto = 0)
 	  gPad->SetLogy();
 	  graph->GetXaxis()->SetRangeUser(0,15);
 	  graph->GetYaxis()->SetRangeUser(1e-6,10);
-	  funcJpsiXsec[i] = new TF1(Form("Func_Jpsi_xsec_%s",name[i]),"exp([0]+[1]*x+[2]*x*x)",4,15);
+	  funcJpsiXsec[i] = new TF1(Form("Func_Jpsi_xsec_%s",name[i]),"[0]*(([1]-1)*([1]-2))/(2*3.14*[1]*[2]*([1]*[2]+[3]*([1]-2)))*(1+(sqrt(x*x+[3]*[3])-[3])/([1]*[2]))**(-1*[1])",4,15);
+	  funcJpsiXsec[i]->SetParameters(1, 3, 1, 3.1);
 	  graph->Fit(funcJpsiXsec[i], "IR0Q");
 	  graph->Draw("samesPE");
 	  funcJpsiXsec[i]->Draw("sames");
@@ -2295,28 +2573,28 @@ void ppRef2(const int savePlot = 0, const int saveHisto = 1)
     }
 
   /*
-= (TH1F*)file1->Get("Runpp200_hxsec");
-  TGraphAsymmErrors *gJpsiXsecSys1 = (TGraphAsymmErrors*)file1->Get("Runpp200_xsectotsys");
-  hJpsiXsec1->SetMarkerStyle(20);
-  TCanvas *c = draw1D(hJpsiXsec1,"Run15_pp200: J/psi invariant yield;p_{T} (GeV/c);B#times#frac{d^{2}#sigma}{2#pip_{T}dp_{T}dy}",true);
-  gJpsiXsecSys1->SetMarkerColor(1);
-  gJpsiXsecSys1->SetLineColor(1);
-  gJpsiXsecSys1->SetFillStyle(0);
-  gJpsiXsecSys1->Draw("sameE5");
-  TH1F *hppRef1    = new TH1F("hpp200JpsiVsPtFinal_Run15","",nbins,xbins);
-  TGraphErrors *hppRefSys1 = new TGraphErrors(nbins);
-  hppRefSys1->SetName("hpp200JpsiVsPtFinalSys_Run15");
-  for(int ibin=1; ibin<=nbins-1; ibin++)
+    = (TH1F*)file1->Get("Runpp200_hxsec");
+    TGraphAsymmErrors *gJpsiXsecSys1 = (TGraphAsymmErrors*)file1->Get("Runpp200_xsectotsys");
+    hJpsiXsec1->SetMarkerStyle(20);
+    TCanvas *c = draw1D(hJpsiXsec1,"Run15_pp200: J/psi invariant yield;p_{T} (GeV/c);B#times#frac{d^{2}#sigma}{2#pip_{T}dp_{T}dy}",true);
+    gJpsiXsecSys1->SetMarkerColor(1);
+    gJpsiXsecSys1->SetLineColor(1);
+    gJpsiXsecSys1->SetFillStyle(0);
+    gJpsiXsecSys1->Draw("sameE5");
+    TH1F *hppRef1    = new TH1F("hpp200JpsiVsPtFinal_Run15","",nbins,xbins);
+    TGraphErrors *hppRefSys1 = new TGraphErrors(nbins);
+    hppRefSys1->SetName("hpp200JpsiVsPtFinalSys_Run15");
+    for(int ibin=1; ibin<=nbins-1; ibin++)
     {
-      hppRef1->SetBinContent(ibin, hJpsiXsec1->GetBinContent(ibin)*fraction1);
-      hppRef1->SetBinError(ibin, hJpsiXsec1->GetBinError(ibin)*fraction1);
-      hppRefSys1->SetPoint(ibin-1, hppRef1->GetBinCenter(ibin), hppRef1->GetBinContent(ibin));
-      hppRefSys1->SetPointError(ibin-1, 0.2, gJpsiXsecSys1->GetErrorYhigh(ibin-1)*fraction1);
+    hppRef1->SetBinContent(ibin, hJpsiXsec1->GetBinContent(ibin)*fraction1);
+    hppRef1->SetBinError(ibin, hJpsiXsec1->GetBinError(ibin)*fraction1);
+    hppRefSys1->SetPoint(ibin-1, hppRef1->GetBinCenter(ibin), hppRef1->GetBinContent(ibin));
+    hppRefSys1->SetPointError(ibin-1, 0.2, gJpsiXsecSys1->GetErrorYhigh(ibin-1)*fraction1);
     }
-  hppRef1->SetMarkerStyle(24);
-  hppRef1->SetMarkerColor(2);
-  hppRef1->SetLineColor(2);
-  hppRef1->Draw("sames");
+    hppRef1->SetMarkerStyle(24);
+    hppRef1->SetMarkerColor(2);
+    hppRef1->SetLineColor(2);
+    hppRef1->Draw("sames");
   */
   
 }

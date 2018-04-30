@@ -21,7 +21,7 @@
 using namespace std;
 
 #define YEAR 2014
-const bool gSaveAN = true;
+const bool gSaveAN = false;
 
 #if (YEAR==2013)
 const char *run_config = "VtxCut.";
@@ -183,7 +183,7 @@ void ana_JpsiRes()
 //================================================
 void tuneResolution(const int icent, const bool savePlot)
 {
-  const int anaType = 1; // 0 - scan; 1 - determine smear & shift; 2 - generate final smear
+  const int anaType = 3; // 0 - scan; 1 - determine smear & shift; 2 - generate final smear
   const int nShiftScan = 1;
   const double shiftStep = 0.0005;
   const int nSmearScan = 20;

@@ -2,12 +2,88 @@
 void make_input()
 {
   gStyle->SetOptStat(0);
-  //Run14AuAu200();
-  Run14AuAu200_2();
+  Run14AuAu200();
+  //Run14AuAu200_2();
+  //Run16AuAu200();
+}
+
+
+//================================================
+void Run16AuAu200(const int saveHisto = 1)
+{
+  run_type = "Run16_AuAu200";
+
+  // MTD response efficiency
+  TF1  *funcRespEffCos[30][5];
+  TF1  *funcRespEffEmb[30][5];
+  TFile *fRespEff = TFile::Open(Form("Rootfiles/%s.MtdRespEff.root",run_type),"read");
+  TFile *fEmb2014 = TFile::Open("Rootfiles/Run14_AuAu200.Input.root","read");
+  for(int i=0; i<30; i++)
+    {
+      for(int j=0; j<5; j++)
+	{
+	  int bl = i + 1;
+	  int mod = j + 1; 
+	  if(bl>9 && bl<23) 
+	    {
+	      funcRespEffCos[i][j] = (TF1*)fRespEff->Get(Form("Cosmic_FitRespEff_BL%d_Mod%d",bl,mod));
+	    }
+	  else                  
+	    {
+	      funcRespEffCos[i][j] = (TF1*)fRespEff->Get(Form("Cosmic_TempRespEff_BL%d_Mod%d",bl,mod));
+	    }
+	  funcRespEffCos[i][j]->SetName(Form("Cosmic_MtdRespEff_BL%d_Mod%d",i+1,j+1));
+	  funcRespEffEmb[i][j] = (TF1*)fEmb2014->Get(Form("Embed_MtdRespEff_BL%d_Mod%d",i+1,j+1));
+	}
+    }
+
+
+  // trigger efficiency
+  TFile *fTrig =  TFile::Open(Form("Rootfiles/%s.MtdTrigEff.root",run_type));
+  TF1 *hMuonTrigEff = (TF1*)fTrig->Get(Form("%s_gTacDiffEffFinal_prod",run_type));
+  TF1 *funcTrigElecEff = (TF1*)fTrig->Get(Form("%s_TrigElecEff_FitFunc",run_type));
+
+  TFile *fTrigSys =  TFile::Open(Form("Rootfiles/%s.Sys.MtdTrigEff.root",run_type));
+  TH1F *hTrigSys = (TH1F*)fTrigSys->Get(Form("%s_Ups1SEffVsPt_Sys_TacDiffEff",run_type));
+
+  TH1F *hplot = new TH1F("hplot",Form("%s: MTD trigger efficiency;p_{T} (GeV/c);Eff",run_type),100,0,10);
+  hplot->GetYaxis()->SetRangeUser(0,1);
+  TCanvas *c = new TCanvas("MtdTrigEff","MtdTrigEff",800,600);
+  hplot->GetYaxis()->SetRangeUser(0.5,1);
+  hplot->DrawCopy();
+  hMuonTrigEff->Draw("sames");
+  funcTrigElecEff->SetLineColor(4);
+  funcTrigElecEff->Draw("sames");
+  TLegend *leg = new TLegend(0.4,0.2,0.6,0.4);
+  leg->SetBorderSize(0);
+  leg->SetFillColor(0);
+  leg->SetTextSize(0.04);
+  leg->AddEntry(hMuonTrigEff,"Trigger efficiency","L");
+  leg->AddEntry(funcTrigElecEff, "Trigger electronics eff.", "L");
+  leg->Draw();
+
+
+  
+  // save
+  if(saveHisto)
+    {
+      TFile *fout =  TFile::Open(Form("Rootfiles/%s.Input.root",run_type),"recreate");
+      hMuonTrigEff->Write("MtdTrigEff_FitFunc");
+      funcTrigElecEff->Write("TrigElecEff_FitFunc");
+      hTrigSys->Write("MtdTrigEff_Ups1SSysVsPt");
+      for(int i=0; i<30; i++)
+	{
+	  for(int j=0; j<5; j++)
+	    {
+	      funcRespEffEmb[i][j]->Write();
+	      funcRespEffCos[i][j]->Write();
+	    }
+	}
+    } 
 }
 
 //================================================
-void Run14AuAu200(const int savePlot = 0, const int saveHisto = 0)
+void Run14AuAu200(const int savePlot = 1, const int saveHisto = 1)
 {
   TFile *fData = TFile::Open("output/Run14_AuAu200.jpsi.root","read");
   TFile *fEmb = TFile::Open(Form("./output/Run14_AuAu200.Embed.Jpsi.root"),"read");
@@ -164,19 +240,30 @@ void Run14AuAu200(const int savePlot = 0, const int saveHisto = 0)
     }
 
   // MTD response efficiency
-  TFile *fMtd =  TFile::Open(Form("Rootfiles/%s.MtdRespEff.root",run_type),"read");
+  //TFile *fMtd =  TFile::Open(Form("Rootfiles/%s.MtdRespEff.root",run_type),"read");
+  TFile *fMtd =  TFile::Open(Form("Rootfiles/Run16_AuAu200.MtdRespEff.root"),"read");
   TF1 *funcRespEffEmb[30][5];
   TF1 *funcRespEffCos[30][5];
   for(int i=0; i<30; i++)
     {
+      int bl = i+1;
       for(int j=0; j<5; j++)
 	{
-	  funcRespEffEmb[i][j] = (TF1*)fMtd->Get(Form("Embed_funcMtdRespEff_BL%d_Mod%d",i+1,j+1));
+	  funcRespEffEmb[i][j] = (TF1*)fMtd->Get(Form("Embed_FitRespEff_BL%d_Mod%d",i+1,j+1));
 	  funcRespEffEmb[i][j]->SetName(Form("Embed_MtdRespEff_BL%d_Mod%d",i+1,j+1));
-	  funcRespEffCos[i][j] = (TF1*)fMtd->Get(Form("funcMtdRespEffvsPt_Bkl%d_Mod%d",i+1,j+1));
+	  if(bl>9 && bl<23)
+	    {
+	      funcRespEffCos[i][j] = (TF1*)fMtd->Get(Form("Cosmic_FitRespEff_BL%d_Mod%d",i+1,j+1));
+	    }
+	  else
+	    {
+	      funcRespEffCos[i][j] = (TF1*)fMtd->Get(Form("Cosmic_TempRespEff_BL%d_Mod%d",i+1,j+1));
+	    }
 	  funcRespEffCos[i][j]->SetName(Form("Cosmic_MtdRespEff_BL%d_Mod%d",i+1,j+1));
 	}
     }
+
+
   TH1F *hplot = new TH1F("hplot",Form("%s: MTD response efficiency from embedding;p_{T} (GeV/c);Eff",run_type),100,0,10);
   hplot->GetYaxis()->SetRangeUser(0,1);
   TCanvas *cRespEff[6];
@@ -228,9 +315,7 @@ void Run14AuAu200(const int savePlot = 0, const int saveHisto = 0)
   leg->AddEntry(funcTrigElecEff, "Trigger electronics eff.", "L");
   leg->AddEntry(funcDtofCut, "#Deltatof cut eff.", "L");
   leg->Draw();
-
-
-  
+ 
   // save
   if(saveHisto)
     {
@@ -261,20 +346,24 @@ void Run14AuAu200_2(const int saveHisto = 1)
 {
   // MTD response efficiency
   TFile *fMtd =  TFile::Open(Form("Rootfiles/%s.MtdRespEff.root",run_type),"read");
+  cout << fMtd->GetName() << endl;
   TF1 *funcRespEffCos[30][5];
   for(int i=0; i<30; i++)
     {
+      int bl = i+1;
       for(int j=0; j<5; j++)
 	{
-	  funcRespEffCos[i][j] = (TF1*)fMtd->Get(Form("funcMtdRespEffvsPt_Bkl%d_Mod%d",i+1,j+1));
+	  if(bl>9 && bl<23)
+	    {
+	      funcRespEffCos[i][j] = (TF1*)fMtd->Get(Form("Cosmic_FitRespEff_BL%d_Mod%d",i+1,j+1));
+	    }
+	  else
+	    {
+	      funcRespEffCos[i][j] = (TF1*)fMtd->Get(Form("Cosmic_TempRespEff_BL%d_Mod%d",i+1,j+1));
+	    }
 	  funcRespEffCos[i][j]->SetName(Form("Cosmic_MtdRespEff_BL%d_Mod%d",i+1,j+1));
 	}
     }
-  
-
-  // trigger efficiency
-  TFile *fTrig =  TFile::Open(Form("Rootfiles/%s.Sys.MtdTrigEff.root",run_type));
-  TF1 *hMuonTrigEff = (TF1*)fTrig->Get("Run14_AuAu200_Muon_TacDiffEff");
 
 
   
@@ -282,7 +371,6 @@ void Run14AuAu200_2(const int saveHisto = 1)
   if(saveHisto)
     {
       TFile *fout =  TFile::Open("Rootfiles/Run14_AuAu200.Input.root","update");
-      hMuonTrigEff->Write("MtdTrigEff_FitFunc",TObject::kOverwrite);
       for(int i=0; i<30; i++)
 	{
 	  for(int j=0; j<5; j++)
