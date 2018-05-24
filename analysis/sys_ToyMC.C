@@ -355,7 +355,7 @@ void anaSys(const char* type, const int saveHisto)
 
   for(int i=0; i<4; i++)
     {
-      makeHisto(part_name[i],part_mass[i],1e7);
+      makeHisto(part_name[i],part_mass[i],1e8);
       
       if(saveHisto)
 	{

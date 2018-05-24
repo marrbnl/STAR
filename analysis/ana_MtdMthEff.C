@@ -5,8 +5,8 @@ const int nVz = 5;
 const double vzMin[nVz] = {-100, -50, -4, 40, 90};
 const double vzMax[nVz] = {-90,  -40, 4,  50, 100};
 const int nCellBin = 5;
-const int start_cell[nCellBin] = {1, 4, 5, 15, 16};
-const int end_cell[nCellBin]   = {3, 4, 14, 15, 18};
+const int start_cell[nCellBin] = {1, 3, 4, 16, 17};
+const int end_cell[nCellBin]   = {2, 3, 15, 16, 18};
 const int nEta = 8;
 const int nPhiDiffCut = 6;
 const double phiDiffCuts[nPhiDiffCut] = {0.025, 0.05, 0.1, 0.15, 0.2, 1};
@@ -16,7 +16,7 @@ const int nBtmBL = 13;
 const double ptCut = 5;
 const double vzCut = 100;
 const double etaCut = 0.4;
-const double phiDiffCut = 0.15;
+const double phiDiffCut = 0.05;
 const double pi = TMath::Pi();
 const int nPtBins = 20;
 const double xPtBins[nPtBins+1] = {0,1.3,1.4,1.5,1.6,1.7,1.8,1.9,2.0,2.2,2.4,2.6,2.8,3.0,3.5,4.0,5.0,6.0,8.0,10,15};
@@ -41,7 +41,7 @@ void ana_MtdMthEff()
 }
 
 //================================================
-void studyMthEff(const int savePlot = 0, const int saveHisto = 0)
+void studyMthEff(const int savePlot = 1, const int saveHisto = 1)
 {
   gStyle->SetOptFit(0);
   TFile *fin = TFile::Open(Form("Rootfiles/%s.MtdMthEff.root",run_type), "read");
@@ -75,6 +75,10 @@ void studyMthEff(const int savePlot = 0, const int saveHisto = 0)
     }
   if(savePlot) 
     c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdMthEff/PosVsMomPhi.pdf",run_type));
+  if(gSaveAN)
+    {
+      c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch5_MthEff_PosVsMomPhi.pdf"));
+    }
 
   // eff vs. track eta and vz
   printf("+++++ histograms vs. eta and vz +++++\n");
@@ -137,6 +141,10 @@ void studyMthEff(const int savePlot = 0, const int saveHisto = 0)
   t1->Draw();
   if(savePlot) 
     c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdMthEff/MthEff_VsVzInEtaBin.pdf",run_type));
+  if(gSaveAN)
+    {
+      c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch5_MthEff_VsVzInEtaBin.pdf"));
+    }
   printf("+++++ Done +++++\n\n");
 
   TCanvas *c = new TCanvas("MtdRespMthEff_InVzBin","MtdRespMthEff_InVzBin",1100,700);
@@ -200,6 +208,10 @@ void studyMthEff(const int savePlot = 0, const int saveHisto = 0)
     }
   if(savePlot) 
     c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdMthEff/MthRespEffVsPt_InVzBin.pdf",run_type));
+  if(gSaveAN)
+    {
+      c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch5_MthEff_InVzBin.pdf"));
+    }
 
   TCanvas *c = new TCanvas("MtdRespMthEff_InEtaBin","MtdRespMthEff_InEtaBin",1100,700);
   c->Divide(2,2);
@@ -267,6 +279,10 @@ void studyMthEff(const int savePlot = 0, const int saveHisto = 0)
     }
   if(savePlot) 
     c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdMthEff/MthRespEffVsPt_InEtaBin.pdf",run_type));
+  if(gSaveAN)
+    {
+      c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch5_MthEff_InEtaBin.pdf"));
+    }
 
   // check phiDiffCut
   TCanvas *c = new TCanvas("MtdRespMthEff_InPhiCut","MtdRespMthEff_InPhiCut",1100,700);
@@ -352,113 +368,162 @@ void studyMthEff(const int savePlot = 0, const int saveHisto = 0)
     }
   TPaveText *t1 = GetTitleText(Form("%s: ratio of MTD matching efficiency",legName[1].Data()),0.045);
   t1->Draw();
-
   if(savePlot) 
     c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdMthEff/MthRespEffVsPt_InPhiDiffCutBin.pdf",run_type));
+  if(gSaveAN)
+    {
+      c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch5_MthEff_InPhiDiffBin.pdf"));
+    }
 
-  TH2F *hCellVsPhiDiff[nBtmBL];
-  TH1F *hTrkPtVsCellInPhiDiff[nBtmBL][nPhiDiffCut];
-  TH1F *hTrkPtInCellInPhiDiffAll[nBtmBL][9][nPhiDiffCut];
-  TH1F *hTrkPtInCellInPhiDiffAcc[nBtmBL][9][nPhiDiffCut];
-  TH1F *hTrkPtInCellInPhiDiffEff[nBtmBL][9][nPhiDiffCut];
-  const int nPtBins1 = 11;
-  const double xPtBins1[nPtBins1+1] = {0,1.3,1.5,2.0,2.5,3.0,4.0,5.0,6.0,8.0,10,15};
-  TCanvas *c1 = new TCanvas("cCellVsPhiDiff","cCellVsPhiDiff",800, 600);
+  TH2F *hCellVsPhiDiff = (TH2F*)fin->Get("hCellVsPhiDiff_BtmBL_Type1");
+  c = draw2D(hCellVsPhiDiff,Form("%d: correlation between cell and #Delta#varphi (BL10-22, 2 < p_{T} < 4 GeV/c)",year));
+  if(savePlot) 
+    c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdMthEff/PhiDiffVsCell_BtmBL.pdf",run_type));
+  if(gSaveAN)
+    {
+      c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch5_MthEff_PhiDiffVsCell_BtmBL.pdf"));
+    }
+
+  TH1F *hTrkPtVsCellInPhiDiff[nPhiDiffCut];
   TCanvas *c2 = new TCanvas("cTrkPtVsCellInPhiDiff","cTrkPtVsCellInPhiDiff",800, 600);
-  TCanvas *c3 = new TCanvas("cTrkPtEffInCell","cTrkPtEffInCell",1000, 800);
-  c3->Divide(3,3);
-  for(int j=0; j<nBtmBL; j++)
+  TLegend *leg = new TLegend(0.2,0.55,0.4,0.88);
+  leg->SetBorderSize(0);
+  leg->SetFillColor(0);
+  leg->SetTextSize(0.035);
+  leg->SetHeader(Form("|#eta|<%1.1f, |DCA_{z}|<%1.0f cm, 2 < p_{T} < 4 GeV/c",etaCut,vzCut));
+  for(int k=nPhiDiffCut-1; k>-1; k--)
     {
-      int bl = j+10;
-      hCellVsPhiDiff[j] = (TH2F*)fin->Get(Form("hCellVsPhiDiff_BL%d_Type1",bl));
-      c1->cd();
-      hCellVsPhiDiff[j]->Draw("colz");
-
-      c2->cd();
-      for(int k=nPhiDiffCut-1; k>-1; k--)
+      hTrkPtVsCellInPhiDiff[k] = (TH1F*)fin->Get(Form("hTrkPtVsCell_BtmBL_PhiDiff%d_Type1",k));
+      hTrkPtVsCellInPhiDiff[k]->Sumw2();
+      hTrkPtVsCellInPhiDiff[k]->SetMarkerStyle(20+k);
+      hTrkPtVsCellInPhiDiff[k]->SetMarkerColor(colors[k]);
+      hTrkPtVsCellInPhiDiff[k]->SetLineColor(colors[k]);
+      hTrkPtVsCellInPhiDiff[k]->Scale(1./hTrkPtVsCellInPhiDiff[k]->Integral());
+      hTrkPtVsCellInPhiDiff[k]->GetYaxis()->SetRangeUser(0.03, 0.11);
+      hTrkPtVsCellInPhiDiff[k]->SetTitle();
+      if(k==nPhiDiffCut-1) 
 	{
-	  hTrkPtVsCellInPhiDiff[j][k] = (TH1F*)fin->Get(Form("hTrkPtVsCell_PhiDiff%d_BL%d_Type1",k,bl));
-	  hTrkPtVsCellInPhiDiff[j][k]->SetMarkerStyle(20+k);
-	  hTrkPtVsCellInPhiDiff[j][k]->SetMarkerColor(colors[k]);
-	  hTrkPtVsCellInPhiDiff[j][k]->SetLineColor(colors[k]);
-	  hTrkPtVsCellInPhiDiff[j][k]->Scale(1./hTrkPtVsCellInPhiDiff[j][k]->Integral());
-	  if(k==nPhiDiffCut-1) hTrkPtVsCellInPhiDiff[j][k]->Draw();
-	  else     hTrkPtVsCellInPhiDiff[j][k]->Draw("sames");
+	  hTrkPtVsCellInPhiDiff[k]->Draw("P");
+	  leg->AddEntry(hTrkPtRespInPhiDiffEff[k], Form("no |#varphi_{mom}-#varphi_{pos}| cut"), "PL");
 	}
-
-      for(int l=0; l<9; l++)
+      else     
 	{
-	  c3->cd(l+1);
-	  for(int k=nPhiDiffCut-1; k>-1; k--)
-	    {
-	      hTrkPtInCellInPhiDiffAll[j][l][k] = (TH1F*)fin->Get(Form("hTrkPtAll_BL%d_Cell%d_PhiDiff%d_Type1",bl,l,k));
-	      hTrkPtInCellInPhiDiffAll[j][l][k]->Sumw2();
-	      TH1F *hAll = (TH1F*)hTrkPtInCellInPhiDiffAll[j][l][k]->Rebin(nPtBins1, Form("%s_rebin",hTrkPtInCellInPhiDiffAll[j][l][k]->GetName()), xPtBins1);
-	      hTrkPtInCellInPhiDiffAcc[j][l][k] = (TH1F*)fin->Get(Form("hTrkPtAcc_BL%d_Cell%d_PhiDiff%d_Type1",bl,l,k));
-	      hTrkPtInCellInPhiDiffAcc[j][l][k]->Sumw2();
-	      hTrkPtInCellInPhiDiffEff[j][l][k] = (TH1F*)hTrkPtInCellInPhiDiffAcc[j][l][k]->Rebin(nPtBins1, Form("hTrkPtEff_BL%d_Cell%d_PhiDiff%d_Type1",bl,l,k), xPtBins1);
-	      hTrkPtInCellInPhiDiffEff[j][l][k]->Divide(hAll);
-	      hTrkPtInCellInPhiDiffEff[j][l][k]->SetMarkerStyle(20+k);
-	      hTrkPtInCellInPhiDiffEff[j][l][k]->SetMarkerColor(colors[k]);
-	      hTrkPtInCellInPhiDiffEff[j][l][k]->SetLineColor(colors[k]);
-	      if(k==nPhiDiffCut-1) hTrkPtInCellInPhiDiffEff[j][l][k]->Draw();
-	      else     hTrkPtInCellInPhiDiffEff[j][l][k]->Draw("sames");
-	    }
-	}   
+	  hTrkPtVsCellInPhiDiff[k]->Draw("samesP");
+	  leg->AddEntry(hTrkPtRespInPhiDiffEff[k], Form("|#varphi_{mom}-#varphi_{pos}|<%4.3f",phiDiffCuts[k]), "PL");
+	}         
+    }
+  leg->Draw();
+  TPaveText *t1 = GetTitleText(Form("%d: cell distribution in BL10-22",year),0.04);
+  t1->Draw();
+  if(savePlot) 
+    c2->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdMthEff/PhiDiff_CompCell_BtmBL.pdf",run_type));
+  if(gSaveAN)
+    {
+      c2->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch5_MthEff_CompCell_BtmBL.pdf"));
     }
 
-  // Get the pt vs. cell distribution of embedding for weighting
-  TH1F *hWeightCellEmbed = 0x0;
-  for(int bl=10; bl<=22; bl++)
+
+  TCanvas *c3 = new TCanvas("cTrkPtEffInCell","cTrkPtEffInCell",1100, 600);
+  c3->Divide(3,2);
+  TH1F *hTrkPtInCellInPhiDiffAll[nPhiDiffCut][nCellBin];
+  TH1F *hTrkPtInCellInPhiDiffAcc[nPhiDiffCut][nCellBin];
+  TH1F *hTrkPtInCellInPhiDiffEff[nPhiDiffCut][nCellBin];
+  TLegend *leg = new TLegend(0.2,0.4,0.6,0.9);
+  leg->SetBorderSize(0);
+  leg->SetFillColor(0);
+  leg->SetTextSize(0.055);
+  leg->SetHeader(Form("%d: |#eta|<%1.1f, |DCA_{z}|<%1.0f cm",year,etaCut,vzCut));
+  for(int j=0; j<nCellBin; j++)
     {
-      h1tmp = (TH1F*)fin->Get(Form("hTrkPtVsCellAll_BL%d_Type%d",bl,0));
-      if(bl==10) hWeightCellEmbed = (TH1F*)h1tmp->Clone("hWeightCellEmbed");
-      else       hWeightCellEmbed->Add(h1tmp);
+      c3->cd(j+1);
+      for(int k=0; k<nPhiDiffCut; k++)
+	{
+	  hTrkPtInCellInPhiDiffAll[k][j] = (TH1F*)fin->Get(Form("hTrkPtAll_BtmBL_Cell%d_PhiDiff%d_Type1",j,k));
+	  hTrkPtInCellInPhiDiffAcc[k][j] = (TH1F*)fin->Get(Form("hTrkPtAcc_BtmBL_Cell%d_PhiDiff%d_Type1",j,k));
+	  hTrkPtInCellInPhiDiffEff[k][j] = (TH1F*)hTrkPtInCellInPhiDiffAcc[k][j]->Clone(Form("hTrkPtEff_BtmBL_Cell%d_PhiDiff%d_Type1",j,k));
+	  hTrkPtInCellInPhiDiffEff[k][j]->Divide(hTrkPtInCellInPhiDiffAll[k][j]);
+	  hTrkPtInCellInPhiDiffEff[k][j]->SetMarkerStyle(20+k);
+	  hTrkPtInCellInPhiDiffEff[k][j]->SetMarkerColor(colors[k]);
+	  hTrkPtInCellInPhiDiffEff[k][j]->SetLineColor(colors[k]);
+	  if(j!=2) hTrkPtInCellInPhiDiffEff[k][j]->SetMaximum(1.5*hTrkPtInCellInPhiDiffEff[k][j]->GetMaximum());
+	  hTrkPtInCellInPhiDiffEff[k][j]->SetTitle("");
+	  if(k==0) hTrkPtInCellInPhiDiffEff[k][j]->Draw();
+	  else     hTrkPtInCellInPhiDiffEff[k][j]->Draw("sames");
+	  if(j==0)
+	    {
+	      if(k==nPhiDiffCut-1) 
+		{
+		  leg->AddEntry(hTrkPtInCellInPhiDiffEff[k][j], Form("no |#varphi_{mom}-#varphi_{pos}| cut"), "PL");
+		}
+	      else     
+		{
+		  leg->AddEntry(hTrkPtInCellInPhiDiffEff[k][j], Form("|#varphi_{mom}-#varphi_{pos}|<%4.3f",phiDiffCuts[k]), "PL");
+		}
+	    }
+	}
+      TPaveText *t1 = GetTitleText(Form("BL 10-22, Cell: %d -> %d",start_cell[j]-4,end_cell[j]-4),0.06);
+      t1->Draw();
     }
-  hWeightCellEmbed->Scale(1./hWeightCellEmbed->Integral());
-  hWeightCellEmbed->GetYaxis()->SetRangeUser(0.03, 0.1);
-  c = draw1D(hWeightCellEmbed);
-  TH1F *hTrkPtInPhiDiffAllWeighted[nPhiDiffCut];
-  TH1F *hTrkPtInPhiDiffAccWeighted[nPhiDiffCut];
-  TH1F *hTrkPtInPhiDiffEffWeighted[nPhiDiffCut];
+  c3->cd(6);
+  leg->Draw();
+  if(savePlot) 
+    c3->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdMthEff/PhiDiff_CompEffInCell_BtmBL.pdf",run_type));
+  if(gSaveAN)
+    {
+      c3->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch5_MthEff_CompEffInCell_BtmBL.pdf"));
+    }
+
+  TH1F *hTrkPtInPhiDiffAll[nPhiDiffCut];
+  TH1F *hTrkPtInPhiDiffAcc[nPhiDiffCut];
+  TH1F *hTrkPtInPhiDiffEff[nPhiDiffCut];
   TCanvas *c4 = new TCanvas("cTrkPtEffInCellWeighted","cTrkPtEffInCellWeighted",1100, 500);
   c4->Divide(2,1);
-  for(int k=0; k<nPhiDiffCut; k++)
+  c4->cd(1);
+  TLegend *leg = new TLegend(0.4,0.2,0.6,0.55);
+  leg->SetBorderSize(0);
+  leg->SetFillColor(0);
+  leg->SetTextSize(0.04);
+  leg->SetHeader(Form("|#eta|<%1.1f, |DCA_{z}|<%1.0f cm",etaCut,vzCut));
+  for(int k=nPhiDiffCut-1; k>-1; k--)
     {
-      hTrkPtInPhiDiffAllWeighted[k] = (TH1F*)hTrkPtInCellInPhiDiffAll[0][0][k]->Clone(Form("hTrkPtAll_PhiDiff%d_Weighted",k));
-      hTrkPtInPhiDiffAllWeighted[k]->Reset("AC");
-      hTrkPtInPhiDiffAccWeighted[k] = (TH1F*)hTrkPtInCellInPhiDiffAcc[0][0][k]->Clone(Form("hTrkPtAcc_PhiDiff%d_Weighted",k));
-      hTrkPtInPhiDiffAccWeighted[k]->Reset("AC");
-      double weight = 0;
-      for(int l=0; l<9; l++)
+      hTrkPtInPhiDiffAll[k] = (TH1F*)fin->Get(Form("hTrkPtAll_BtmBL_PhiDiff%d_Type1",k));
+      TH1F *hAll = (TH1F*)hTrkPtInPhiDiffAll[k]->Rebin(nPtBins, Form("%s_rebin",hTrkPtInPhiDiffAll[k]->GetName()), xPtBins);
+      hTrkPtInPhiDiffAcc[k] = (TH1F*)fin->Get(Form("hTrkPtAcc_BtmBL_PhiDiff%d_Type1",k));
+      hTrkPtInPhiDiffEff[k] = (TH1F*)hTrkPtInPhiDiffAcc[k]->Rebin(nPtBins, Form("hTrkPtEff_BtmBL_PhiDiff%d_Type1",k), xPtBins);
+      hTrkPtInPhiDiffEff[k]->Divide(hAll);
+      hTrkPtInPhiDiffEff[k]->SetMarkerStyle(20+k);
+      hTrkPtInPhiDiffEff[k]->SetMarkerColor(colors[k]);
+      hTrkPtInPhiDiffEff[k]->SetLineColor(colors[k]);
+      hTrkPtInPhiDiffEff[k]->SetTitle("");
+      if(k==nPhiDiffCut-1) 
 	{
-	  if(l<4) weight = hWeightCellEmbed->GetBinContent(l+1);
-	  else if(l==4) weight = hWeightCellEmbed->Integral(5,14);
-	  else weight = hWeightCellEmbed->GetBinContent(l+10);
-	  double integ = hTrkPtInCellInPhiDiffAll[0][l][k]->Integral();
-	  hTrkPtInPhiDiffAllWeighted[k]->Add(hTrkPtInCellInPhiDiffAll[0][l][k], weight/integ);
-	  hTrkPtInPhiDiffAccWeighted[k]->Add(hTrkPtInCellInPhiDiffAcc[0][l][k], weight/integ);
+	  hTrkPtInPhiDiffEff[k]->Draw();
+	  leg->AddEntry(hTrkPtRespInPhiDiffEff[k], Form("no |#varphi_{mom}-#varphi_{pos}| cut"), "PL");
 	}
-      hTrkPtInPhiDiffAllWeighted[k] = (TH1F*)hTrkPtInPhiDiffAllWeighted[k]->Rebin(nPtBins1, Form("%s_rebin",hTrkPtInPhiDiffAllWeighted[k]->GetName()), xPtBins1);
-      hTrkPtInPhiDiffAccWeighted[k] = (TH1F*)hTrkPtInPhiDiffAccWeighted[k]->Rebin(nPtBins1, Form("%s_rebin",hTrkPtInPhiDiffAccWeighted[k]->GetName()), xPtBins1);
-      hTrkPtInPhiDiffEffWeighted[k] = (TH1F*)hTrkPtInPhiDiffAccWeighted[k]->Clone(Form("hTrkPtEff_PhiDiff%d_Weighted",k));
-      hTrkPtInPhiDiffEffWeighted[k]->Divide(hTrkPtInPhiDiffAllWeighted[k]);
-      hTrkPtInPhiDiffEffWeighted[k]->SetMarkerStyle(20+k);
-      hTrkPtInPhiDiffEffWeighted[k]->SetMarkerColor(colors[k]);
-      hTrkPtInPhiDiffEffWeighted[k]->SetLineColor(colors[k]);
-      c4->cd(1);
-      if(k==0)  hTrkPtInPhiDiffEffWeighted[k]->Draw("");
-      else      hTrkPtInPhiDiffEffWeighted[k]->Draw("sames");
-    }  
+      else     
+	{
+	  hTrkPtInPhiDiffEff[k]->Draw("sames");
+	  leg->AddEntry(hTrkPtRespInPhiDiffEff[k], Form("|#varphi_{mom}-#varphi_{pos}|<%4.3f",phiDiffCuts[k]), "PL");
+	}
+    }
+  TPaveText *t1 = GetTitleText(Form("Cosmic ray: matching efficiency for BL10-22"),0.04);
+  t1->Draw();
+  leg->Draw();
+  c4->cd(2);
   for(int k=0; k<nPhiDiffCut; k++)
     {
-      TH1F *hRatio = (TH1F*)hTrkPtInPhiDiffEffWeighted[k]->Clone(Form("hRatio_PhiDiff%d",k));
-      hRatio->Divide(hTrkPtInPhiDiffEffWeighted[nPhiDiffCut-3]);
-      c4->cd(2);
+      TH1F *hRatio = (TH1F*)hTrkPtInPhiDiffEff[k]->Clone(Form("hRatio_PhiDiff%d",k));
+      hRatio->Divide(hTrkPtInPhiDiffEff[nPhiDiffCut-3]);
+      hRatio->SetYTitle("ratio");
       if(k==0) hRatio->Draw();
       else     hRatio->Draw("sames");
     }
-  return;
+  if(savePlot) 
+    c4->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdMthEff/PhiDiff_CompEff_BtmBL.pdf",run_type));
+  if(gSaveAN)
+    {
+      c4->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch5_MthEff_CompEff_BtmBL.pdf"));
+    }
 
   // compare for track phi and eta
   TH1F *hTrkPhiAll[2];
@@ -629,38 +694,6 @@ void studyMthEff(const int savePlot = 0, const int saveHisto = 0)
   if(savePlot) 
     c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdMthEff/CompMthEffVsPt_InVzBin.pdf",run_type));
 
-  // compare in center
-  TH1F *hTrkPtInCenterAll[2];
-  TH1F *hTrkPtInCenterAcc[2];
-  TH1F *hTrkPtInCenterEff[2];
-  for(int i=0; i<2; i++)
-    {
-      hTrkPtInCenterAll[i] = (TH1F*)fin->Get(Form("hTrkPtInCenterAll_pt%1.0f_Type%d",ptCut,i));
-      hTrkPtInCenterAcc[i] = (TH1F*)fin->Get(Form("hTrkPtInCenterAcc_pt%1.0f_Type%d",ptCut,i));
-      hTrkPtInCenterEff[i] = (TH1F*)hTrkPtInCenterAcc[i]->Clone(Form("hTrkPtInCenterEff_pt%1.0f_Type%d",ptCut,i));
-      hTrkPtInCenterEff[i]->Divide(hTrkPtInCenterAll[i]);
-      hTrkPtInCenterEff[i]->SetTitle("");
-      hTrkPtInCenterEff[i]->SetMarkerStyle(20+i*4);
-      hTrkPtInCenterEff[i]->SetMarkerColor(i+1);
-      hTrkPtInCenterEff[i]->SetLineColor(i+1);
-    }
-  hTrkPtInCenterEff[0]->GetXaxis()->SetRangeUser(0,15);
-  hTrkPtInCenterEff[0]->GetYaxis()->SetRangeUser(0,1);
-  c = draw1D(hTrkPtInCenterEff[0],Form("MTD matching efficiency (|v_{z}|<%1.0f cm, |#eta|<%1.1f, BL 15-17);p_{T} (GeV/c);Efficiency",vzCut,etaCut));
-  hTrkPtInCenterEff[1]->Draw("sames");
-  TLegend *leg = new TLegend(0.6,0.7,0.8,0.88);
-  leg->SetBorderSize(0);
-  leg->SetFillColor(0);
-  leg->SetTextSize(0.035);
-  leg->SetHeader(Form("Run%d",year-2000));
-  for(int i=0; i<2; i++)
-    {
-      leg->AddEntry(hTrkPhiEff[i], legName[i].Data(), "PL");
-    }
-  leg->Draw();
-  if(savePlot) 
-    c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdMthEff/CompMthEffVsPtInCenter.pdf",run_type));
-
   // compare eff vs. cell
   TH1F *hTrkPtVsCellAll[2][30]; // 0 - embed; 1 - cosmic; 2 - weighted cosmic
   TH1F *hTrkPtVsCellAcc[2][30];
@@ -792,6 +825,10 @@ void studyMthEff(const int savePlot = 0, const int saveHisto = 0)
   leg->Draw();
   if(savePlot) 
     c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdMthEff/CompMthEffVsPtInBL.pdf",run_type));
+  if(gSaveAN)
+    {
+      c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch5_MthEff_CompEffInBL.pdf"));
+    }
 
   TH1F *hTrkPtInBlEffRatio[30];
   TCanvas *c = new TCanvas("MthEffVsPtInBLRatio","MthEffVsPtInBLRatio",1100,700);
@@ -854,27 +891,39 @@ void studyMthEff(const int savePlot = 0, const int saveHisto = 0)
 	}
       if(savePlot) 
 	c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdMthEff/MthEffVsPt_InCell_BL%d.pdf",run_type,bl));
+      if(bl==11 || bl==17)
+	{
+	  if(gSaveAN)
+	    {
+	      c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch5_MthEff_CompInCell_BL%d.pdf",bl));
+	    }
+	}
     }
 
   // avergae difference between cosmic ray and embedding
   TH1F *hTrkPtBtmBlAll[2];
   TH1F *hTrkPtBtmBlAcc[2];
   TH1F *hTrkPtBtmBlEff[2];
+  TH1F *hWeightEmbedBL = new TH1F("hWeightEmbedBL","hWeightEmbedBL",13,10,22);
+  for(int j=9; j<=21; j++)
+    {
+      hWeightEmbedBL->SetBinContent(j-8, hTrkPtInBlAll[0][j]->Integral());
+    }
+  hWeightEmbedBL->Scale(1./hWeightEmbedBL->Integral());
+
   for(int i=0; i<2; i++)
     {
+      hTrkPtBtmBlAll[i] = (TH1F*)hTrkPtInBlAll[i*2][0]->Clone(Form("hTrkPtBtmBlAll_Type%d",i));
+      hTrkPtBtmBlAll[i]->Reset("AC");
+      hTrkPtBtmBlAcc[i] = (TH1F*)hTrkPtInBlAcc[i*2][0]->Clone(Form("hTrkPtBtmBlAcc_Type%d",i));
+      hTrkPtBtmBlAcc[i]->Reset("AC");
+
       for(int j=9; j<=21; j++)
 	{
-	  if(j==9)
-	    {
-	      hTrkPtBtmBlAll[i] = (TH1F*)hTrkPtInBlAll[i*2][j]->Clone(Form("hTrkPtBtmBlAll_Type%d",i));
-	      hTrkPtBtmBlAcc[i] = (TH1F*)hTrkPtInBlAcc[i*2][j]->Clone(Form("hTrkPtBtmBlAcc_Type%d",i));
-
-	    }
-	  else
-	    {
-	      hTrkPtBtmBlAll[i]->Add(hTrkPtInBlAll[i*2][j]);
-	      hTrkPtBtmBlAcc[i]->Add(hTrkPtInBlAcc[i*2][j]); 
-	    }
+	  double weight = 1;
+	  if(i==1) weight = hWeightEmbedBL->GetBinContent(j-8)/hTrkPtInBlAll[i*2][j]->Integral();
+	  hTrkPtBtmBlAll[i]->Add(hTrkPtInBlAll[i*2][j], weight);
+	  hTrkPtBtmBlAcc[i]->Add(hTrkPtInBlAcc[i*2][j], weight); 
 	}
       hTrkPtBtmBlEff[i] = (TH1F*)hTrkPtBtmBlAcc[i]->Clone(Form("hTrkPtBtmBlEff_Type%d",i));
       hTrkPtBtmBlEff[i]->Divide(hTrkPtBtmBlAll[i]);
@@ -913,6 +962,10 @@ void studyMthEff(const int savePlot = 0, const int saveHisto = 0)
   leg->Draw();
   if(savePlot) 
     c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdMthEff/FitMthEffVsPtInBtmBL.pdf",run_type));
+  if(gSaveAN)
+    {
+      c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch5_MthEff_BtmBL_CosmicVsEmbed.pdf"));
+    }
 
   TH1F *hRatio = (TH1F*)hMtdMthEffComp[0]->Clone("hratio");
   hRatio->Divide(hMtdMthEffComp[1]);
@@ -920,6 +973,10 @@ void studyMthEff(const int savePlot = 0, const int saveHisto = 0)
   c = draw1D(hRatio,"Embed/Cosmic: MTD matching efficiency ratio for BL9-21");
   if(savePlot) 
     c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdMthEff/MthEffVsPtInBtmBLRatio.pdf",run_type));
+  if(gSaveAN)
+    {
+      c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch5_MthEff_BtmBL_CosmicOverEmbed.pdf"));
+    }
   
   if(saveHisto == 1)
     {
@@ -1485,118 +1542,91 @@ void makeHisto3(const int saveHisto = 1)
   */
 
   // check the effect of phiDiffCut   
-  TH2F *hCellVsPhiDiff;
-  TH1F *hTrkPtVsCellInPhiDiff[nPhiDiffCut];
-  TH1F *hTrkPtInCellInPhiDiffAll[9][nPhiDiffCut];
-  TH1F *hTrkPtInCellInPhiDiffAcc[9][nPhiDiffCut];
-  hnMthEff[1]->GetAxis(1)->SetRange(10,22);
   hnMthEff[1]->GetAxis(4)->SetRangeUser(-1*vzCut+0.5, vzCut-0.5); // vz cut
   hnMthEff[1]->GetAxis(7)->SetRangeUser(-1*etaCut,1*etaCut); // eta cut
-      
-  // select wingle region
-  hnMthEff[1]->GetAxis(0)->SetRangeUser(2,4);
-  hnMthEff[1]->GetAxis(2)->SetRange(1,3);
-  hCellVsPhiDiff[j] = (TH2F*)hnMthEff[1]->Projection(3, 9);
-  hCellVsPhiDiff[j]->SetName(Form("hCellVsPhiDiff_BL%d_Type1",bl));
-      for(int k=0; k<nPhiDiffCut; k++)
-	{
-	  hnMthEff[1]->GetAxis(9)->SetRangeUser(-1*phiDiffCuts[k],1*phiDiffCuts[k]);
-	  hTrkPtVsCellInPhiDiff[j][k] = (TH1F*)hnMthEff[1]->Projection(3);
-	  hTrkPtVsCellInPhiDiff[j][k]->SetName(Form("hTrkPtVsCell_PhiDiff%d_BL%d_Type1",k,bl));
-	  hnMthEff[1]->GetAxis(9)->SetRange(0,-1);
-	}
-      hnMthEff[1]->GetAxis(2)->SetRange(4,5);
-      TH2F *h2tmp = (TH2F*)hnMthEff[1]->Projection(3, 9);
-      h2tmp->SetName(Form("hCellVsPhiDiff_BL%d_Type1_tmp",bl));
-      TH2F *h2tmpclone = reverseCell2D(h2tmp, 1);
-      hCellVsPhiDiff[j]->Add(h2tmpclone);
-      for(int k=0; k<nPhiDiffCut; k++)
-	{
-	  hnMthEff[1]->GetAxis(9)->SetRangeUser(-1*phiDiffCuts[k],1*phiDiffCuts[k]);
-	  TH1F *h1tmp = (TH1F*)hnMthEff[1]->Projection(3);
-	  h1tmp->SetName(Form("hTrkPtVsCell_PhiDiff%d_BL%d_Type1_tmp",k,bl));
-	  TH1F *h1tmpclone = reverseCell1D(h1tmp);
-	  hTrkPtVsCellInPhiDiff[j][k]->Add(h1tmpclone);
-	  hnMthEff[1]->GetAxis(9)->SetRange(0,-1);
-	}
-      hnMthEff[1]->GetAxis(2)->SetRange(0,-1);
-      hnMthEff[1]->GetAxis(0)->SetRange(0,-1);
-
-      // matching efficiency
-      for(int l=0; l<9; l++)
-	{
-	  for(int k=0; k<nPhiDiffCut; k++)
-	    {
-	      hnMthEff[1]->GetAxis(9)->SetRangeUser(-1*phiDiffCuts[k],1*phiDiffCuts[k]);
+  TH2F *hCellVsPhiDiff = (TH2F*)hnMthEff[1]->Projection(3, 9);
+  hCellVsPhiDiff->SetName(Form("hCellVsPhiDiff_BtmBL_Type%d",1));
+  TH1F *hTrkPtVsCellInPhiDiff[nPhiDiffCut];
+  TH3F *hTrkPtVsBlVsCellAll[nPhiDiffCut];
+  TH3F *hTrkPtVsBlVsCellAcc[nPhiDiffCut];
+  for(int k=0; k<nPhiDiffCut; k++)
+    {	      
+      hnMthEff[1]->GetAxis(9)->SetRangeUser(-1*phiDiffCuts[k],1*phiDiffCuts[k]);
+      hTrkPtVsCellInPhiDiff[k] = (TH1F*)hnMthEff[1]->Projection(3);
+      hTrkPtVsCellInPhiDiff[k]->SetName(Form("hTrkPtVsCell_BtmBL_PhiDiff%d_Type1",k));
 	      
-	      hnMthEff[1]->GetAxis(2)->SetRange(1,3);
-	      if(l<4) hnMthEff[1]->GetAxis(3)->SetRange(l+1, l+1);
-	      else if(l==4) hnMthEff[1]->GetAxis(3)->SetRange(5, 14);
-	      else hnMthEff[1]->GetAxis(3)->SetRange(l+10, l+10);
-	      hTrkPtInCellInPhiDiffAll[j][l][k] = (TH1F*)hnMthEff[1]->Projection(0);
-	      hTrkPtInCellInPhiDiffAll[j][l][k]->SetName(Form("hTrkPtAll_BL%d_Cell%d_PhiDiff%d_Type1",bl,l,k));
-	      hnMthEff[1]->GetAxis(3)->SetRange(0, -1);
-	      hnMthEff[1]->GetAxis(2)->SetRange(4,5);
-	      if(l<4) hnMthEff[1]->GetAxis(3)->SetRange(18-l, 18-l);
-	      else if(l==4) hnMthEff[1]->GetAxis(3)->SetRange(5, 14);
-	      else hnMthEff[1]->GetAxis(3)->SetRange(9-l, 9-l);
-	      TH1F *h1tmp = (TH1F*)hnMthEff[1]->Projection(0);
-	      h1tmp->SetName(Form("%s_tmp",hTrkPtInCellInPhiDiffAll[j][l][k]->GetName()));
-	      hTrkPtInCellInPhiDiffAll[j][l][k]->Add(h1tmp);
-	      hnMthEff[1]->GetAxis(3)->SetRange(0, -1);
-	      hnMthEff[1]->GetAxis(2)->SetRange(0,-1);
-
-	      hnMthEff[1]->GetAxis(5)->SetRange(2, 2);
-	      hnMthEff[1]->GetAxis(2)->SetRange(1,3);
-	      if(l<4) hnMthEff[1]->GetAxis(3)->SetRange(l+1, l+1);
-	      else if(l==4) hnMthEff[1]->GetAxis(3)->SetRange(5, 14);
-	      else hnMthEff[1]->GetAxis(3)->SetRange(l+10, l+10);
-	      hTrkPtInCellInPhiDiffAcc[j][l][k] = (TH1F*)hnMthEff[1]->Projection(0);
-	      hTrkPtInCellInPhiDiffAcc[j][l][k]->SetName(Form("hTrkPtAcc_BL%d_Cell%d_PhiDiff%d_Type1",bl,l,k));
-	      hnMthEff[1]->GetAxis(3)->SetRange(0, -1);
-	      hnMthEff[1]->GetAxis(2)->SetRange(4,5);
-	      if(l<4) hnMthEff[1]->GetAxis(3)->SetRange(18-l, 18-l);
-	      else if(l==4) hnMthEff[1]->GetAxis(3)->SetRange(5, 14);
-	      else hnMthEff[1]->GetAxis(3)->SetRange(9-l, 9-l);
-	      h1tmp = (TH1F*)hnMthEff[1]->Projection(0);
-	      h1tmp->SetName(Form("%s_tmp",hTrkPtInCellInPhiDiffAcc[j][l][k]->GetName()));
-	      hTrkPtInCellInPhiDiffAcc[j][l][k]->Add(h1tmp);
-	      hnMthEff[1]->GetAxis(3)->SetRange(0, -1);
-	      hnMthEff[1]->GetAxis(2)->SetRange(0,-1);
-
-	      hnMthEff[1]->GetAxis(5)->SetRange(0,-1);
-	      hnMthEff[1]->GetAxis(9)->SetRange(0,-1);
-	    }
-	  hnMthEff[1]->GetAxis(3)->SetRange(0,-1);
-	}
-      hnMthEff[1]->GetAxis(1)->SetRange(0,-1);  
-      hnMthEff[1]->GetAxis(4)->SetRange(0, -1);
-      hnMthEff[1]->GetAxis(7)->SetRange(0, -1); 
+      hTrkPtVsBlVsCellAll[k] = (TH3F*)hnMthEff[1]->Projection(0,1,3);
+      hTrkPtVsBlVsCellAll[k]->SetName(Form("hTrkPtVsBlVsCellAll_PhiDiff%d_Type1",k));
+      hTrkPtVsBlVsCellAll[k]->Sumw2();
+      hnMthEff[1]->GetAxis(5)->SetRange(2, 2);
+      hTrkPtVsBlVsCellAcc[k] = (TH3F*)hnMthEff[1]->Projection(0,1,3);
+      hTrkPtVsBlVsCellAcc[k]->SetName(Form("hTrkPtVsBlVsCellAcc_PhiDiff%d_Type1",k));
+      hTrkPtVsBlVsCellAcc[k]->Sumw2();
+      hnMthEff[1]->GetAxis(5)->SetRange(0, -1);
     }
+  hnMthEff[1]->GetAxis(9)->SetRange(0,-1);
+
+  TH1F *hTrkPtInCellInPhiDiffAll[nPhiDiffCut][nCellBin];
+  TH1F *hTrkPtInCellInPhiDiffAcc[nPhiDiffCut][nCellBin];
+  for(int k=0; k<nPhiDiffCut; k++)
+    {
+      for(int j=0; j<nCellBin; j++)
+	{
+	  h1tmp = (TH1F*)hTrkPtVsBlVsCellAll[k]->ProjectionX(Form("hTrkPtAll_BtmBL_Cell%d_PhiDiff%d_Type1_tmp",j,k),1,hTrkPtVsBlVsCellAll[k]->GetNbinsY(),start_cell[j],end_cell[j]);
+	  hTrkPtInCellInPhiDiffAll[k][j] = (TH1F*)h1tmp->Rebin(nPtBins, Form("hTrkPtAll_BtmBL_Cell%d_PhiDiff%d_Type1",j,k), xPtBins);
+
+	  h1tmp = (TH1F*)hTrkPtVsBlVsCellAcc[k]->ProjectionX(Form("hTrkPtAcc_BtmBL_Cell%d_PhiDiff%d_Type1_tmp",j,k),1,hTrkPtVsBlVsCellAcc[k]->GetNbinsY(),start_cell[j],end_cell[j]);
+	  hTrkPtInCellInPhiDiffAcc[k][j] = (TH1F*)h1tmp->Rebin(nPtBins, Form("hTrkPtAcc_BtmBL_Cell%d_PhiDiff%d_Type1",j,k), xPtBins);
+	}
+    }
+  
+
+  //get the weights
+  hnMthEff[0]->GetAxis(4)->SetRangeUser(-1*vzCut+0.5, vzCut-0.5); // vz cut
+  hnMthEff[0]->GetAxis(7)->SetRangeUser(-1*etaCut,1*etaCut); // eta cut
+  TH2F *hTrkAllBLvsCell = (TH2F*)hnMthEff[0]->Projection(3,1);
+  hTrkAllBLvsCell->Scale(1./hTrkAllBLvsCell->Integral()); 
+  hnMthEff[0]->GetAxis(4)->SetRange(0,-1);
+  hnMthEff[0]->GetAxis(7)->SetRange(0,-1);
+
+  TH1F *hTrkPtInPhiDiffAll[nPhiDiffCut];
+  TH1F *hTrkPtInPhiDiffAcc[nPhiDiffCut];
+  TH1F *h1tmpAll, *h1tmpAcc;
+  for(int k=0; k<nPhiDiffCut; k++)
+    {	
+      hTrkPtInPhiDiffAll[k] = (TH1F*)hTrkPtVsBlVsCellAll[k]->ProjectionX(Form("hTrkPtAll_BtmBL_PhiDiff%d_Type1",k));
+      hTrkPtInPhiDiffAll[k]->Reset("AC");
+      hTrkPtInPhiDiffAcc[k] = (TH1F*)hTrkPtVsBlVsCellAll[k]->ProjectionX(Form("hTrkPtAcc_BtmBL_PhiDiff%d_Type1",k));
+      hTrkPtInPhiDiffAcc[k]->Reset("AC");
+      for(int bl=10; bl<=22; bl++) 
+	{
+	  for(int cell=0; cell<18; cell++)
+	    {
+	      h1tmpAll = (TH1F*)hTrkPtVsBlVsCellAll[k]->ProjectionX(Form("hTrkPtAll_BL%d_Cell%d_PhiDiff%d_Type1",bl,cell,k), bl, bl, cell+1, cell+1);
+	      h1tmpAcc = (TH1F*)hTrkPtVsBlVsCellAcc[k]->ProjectionX(Form("hTrkPtAcc_BL%d_Cell%d_PhiDiff%d_Type1",bl,cell,k), bl, bl, cell+1, cell+1);
+	      double weight = hTrkAllBLvsCell->GetBinContent(bl,cell+1)/h1tmpAll->Integral();
+	      hTrkPtInPhiDiffAll[k]->Add(h1tmpAll, weight);
+	      hTrkPtInPhiDiffAcc[k]->Add(h1tmpAcc, weight);
+	    }
+	}
+    }
+
 
   if(saveHisto)
     {
       TFile *fout = TFile::Open(Form("Rootfiles/%s.MtdMthEff.root",run_type),"update");
       printf("+++++ save histograms in %s +++++\n",fout->GetName());
 
-      TH2F *hCellVsPhiDiff[nBtmBL];
-      TH1F *hTrkPtVsCellInPhiDiff[nBtmBL][nPhiDiffCut];
-      TH1F *hTrkPtInCellInPhiDiffAll[nBtmBL][nCellBin][nPhiDiffCut];
-      TH1F *hTrkPtInCellInPhiDiffAcc[nBtmBL][nCellBin][nPhiDiffCut];
-      for(int j=0; j<nBtmBL; j++)
+      hCellVsPhiDiff->Write("",TObject::kOverwrite);
+      for(int k=0; k<nPhiDiffCut; k++)
 	{
-	  hCellVsPhiDiff[j]->Write("",TObject::kOverwrite);
-	  for(int k=0; k<nPhiDiffCut; k++)
+	  hTrkPtVsCellInPhiDiff[k]->Write("",TObject::kOverwrite);
+	  hTrkPtInPhiDiffAll[k]->Write("",TObject::kOverwrite);
+	  hTrkPtInPhiDiffAcc[k]->Write("",TObject::kOverwrite);
+	  for(int j=0; j<nCellBin; j++)
 	    {
-	      hTrkPtVsCellInPhiDiff[j][k]->Write("",TObject::kOverwrite);
-	    }
-	  for(int l=0; l<9; l++)
-	    {
-	      for(int k=0; k<nPhiDiffCut; k++)
-		{
-		  hTrkPtInCellInPhiDiffAll[j][l][k]->Write("",TObject::kOverwrite);
-		  hTrkPtInCellInPhiDiffAcc[j][l][k]->Write("",TObject::kOverwrite);
-		}
+	      hTrkPtInCellInPhiDiffAll[k][j]->Write("",TObject::kOverwrite);
+	      hTrkPtInCellInPhiDiffAcc[k][j]->Write("",TObject::kOverwrite);	      
 	    }
 	}
 

@@ -726,9 +726,9 @@ void tuneResolution(const int icent, const bool savePlot)
       hDataSigma->SetLineColor(2);
       hDataSigma->SetTitle(Form("%s: width of J/#Psi peak (%s%%)",run_type,cent_Name[icent]));
       hDataSigma->GetYaxis()->SetRangeUser(0.02,0.14);
-      if(icent==0 || icent==1) hDataSigma->GetXaxis()->SetRangeUser(0,10);
-      if(icent==2 || icent==3) hDataSigma->GetXaxis()->SetRangeUser(0,8);
-      if(icent==4) hDataSigma->GetXaxis()->SetRangeUser(0,5);
+      if(icent==0 || icent==1) hDataSigma->GetXaxis()->SetRangeUser(0.5,10);
+      if(icent==2 || icent==3) hDataSigma->GetXaxis()->SetRangeUser(0.5,8);
+      if(icent==4) hDataSigma->GetXaxis()->SetRangeUser(0.5,5);
       c = draw1D(hDataSigma);
       hEmbSmearSigma[0]->SetMarkerStyle(25);
       hEmbSmearSigma[0]->Draw("sames");

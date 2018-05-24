@@ -10,7 +10,7 @@ void ana_MtdRespEff()
   gStyle->SetStatW(0.2);                
   gStyle->SetStatH(0.2);
 
-  //ana_cosmicRay();
+  ana_cosmicRay();
   //ana_embed();
   //embedVsCosmic();
   //systematics();
@@ -62,10 +62,10 @@ void systematics(const int savePlot = 1, const int saveHisto = 1)
   if(saveHisto) fdata = TFile::Open(Form("Rootfiles/%s.Sys.MtdRespEff.root",run_type),"update");
   else          fdata = TFile::Open(Form("Rootfiles/%s.Sys.MtdRespEff.root",run_type),"read");
 
-  TH1F *hSysMtdRespEff[2][3];
+  TH1F *hSysMtdRespEff[2][4];
   for(int i=0; i<2; i++)
     {
-      for(int j=0; j<3; j++)
+      for(int j=0; j<4; j++)
 	{
 	  if(i==0)
 	    {
@@ -77,7 +77,7 @@ void systematics(const int savePlot = 1, const int saveHisto = 1)
 	      hSysMtdRespEff[i][j]->GetXaxis()->SetBinLabel(1, "p_{T} > 0 GeV/c");
 	      hSysMtdRespEff[i][j]->GetXaxis()->SetBinLabel(2, "p_{T} > 5 GeV/c");
 	    }
-	  if(j==2)
+	  if(j==3)
 	    {
 	      if(i==0) hSysMtdRespEff[i][j]->SetName(Form("%s_hMtdRespEffSysAll",part_name));
 	      if(i==1) hSysMtdRespEff[i][j]->SetName(Form("%s_Npart_hMtdRespEffSysAll",part_name));
@@ -172,41 +172,48 @@ void systematics(const int savePlot = 1, const int saveHisto = 1)
 	}
     }
 
+  // Uncertainty III: matching efficiency
+  TFile *fMth = TFile::Open("Rootfiles/Run14_AuAu200.Sys.MtdMthEff.root","read");
+  hSysMtdRespEff[0][2] = (TH1F*)fMth->Get("Run14_AuAu200_JpsiEffVsPt_Sys_MtdMthEff");
+  hSysMtdRespEff[1][2] = (TH1F*)fMth->Get("Run14_AuAu200_JpsiEffVsCent_Sys_MtdMthEff");
+
   // Combine the uncertainties
-  const char *legName[3] = {"Fit error","Template","All"};
+  const char *legName[4] = {"Resp. eff: fit error","Resp. eff: template","Mth. eff: cosmic vs. embed","All"};
   for(int i=0; i<2; i++)
     {
-      for(int bin=1; bin<=hSysMtdRespEff[i][2]->GetNbinsX(); bin++)
+      for(int bin=1; bin<=hSysMtdRespEff[i][3]->GetNbinsX(); bin++)
 	{
 	  double e1 = hSysMtdRespEff[i][0]->GetBinError(bin);
 	  double e2 = hSysMtdRespEff[i][1]->GetBinError(bin);
-	  double error = sqrt(e1*e1 + e2*e2);
-	  hSysMtdRespEff[i][2]->SetBinContent(bin, 1);
-	  hSysMtdRespEff[i][2]->SetBinError(bin, error);
+	  double e3 = hSysMtdRespEff[i][2]->GetBinError(bin);
+	  double error = sqrt(e1*e1 + e2*e2 + e3*e3);
+	  hSysMtdRespEff[i][3]->SetBinContent(bin, 1);
+	  hSysMtdRespEff[i][3]->SetBinError(bin, error);
 	}
-      hSysMtdRespEff[i][2]->SetMarkerStyle(21);
-      if(year==2013) hSysMtdRespEff[i][2]->GetYaxis()->SetRangeUser(0.85,1.15);
-      if(year==2014) hSysMtdRespEff[i][2]->GetYaxis()->SetRangeUser(0.9,1.1);
-      if(year==2015) hSysMtdRespEff[i][2]->GetYaxis()->SetRangeUser(0.95,1.05);
-      if(year==2016) hSysMtdRespEff[i][2]->GetYaxis()->SetRangeUser(0.95,1.05);
+      hSysMtdRespEff[i][3]->SetMarkerStyle(21);
+      if(year==2013) hSysMtdRespEff[i][3]->GetYaxis()->SetRangeUser(0.85,1.15);
+      if(year==2014) hSysMtdRespEff[i][3]->GetYaxis()->SetRangeUser(0.9,1.1);
+      if(year==2015) hSysMtdRespEff[i][3]->GetYaxis()->SetRangeUser(0.95,1.05);
+      if(year==2016) hSysMtdRespEff[i][3]->GetYaxis()->SetRangeUser(0.95,1.05);
       if(i==1)
 	{
-	  hSysMtdRespEff[i][2]->SetXTitle("");
-	  hSysMtdRespEff[i][2]->GetXaxis()->SetLabelSize(0.06);
+	  hSysMtdRespEff[i][3]->SetXTitle("");
+	  hSysMtdRespEff[i][3]->GetXaxis()->SetLabelSize(0.06);
 	}
-      c = draw1D(hSysMtdRespEff[i][2],Form("%s: %s uncertainty due to MTD response efficiency",run_type,part_title));
-      TLegend *leg = new TLegend(0.6,0.7,0.8,0.85);
+      c = draw1D(hSysMtdRespEff[i][3],Form("%s: %s uncertainty due to MTD matching efficiency",run_type,part_title));
+      TLegend *leg = new TLegend(0.4,0.7,0.6,0.85);
       leg->SetBorderSize(0);
       leg->SetFillColor(0);
       leg->SetTextSize(0.035);
-      leg->AddEntry(hSysMtdRespEff[i][2],legName[2],"P");
-      for(int j=0; j<2; j++)
+      leg->AddEntry(hSysMtdRespEff[i][3],legName[3],"P");
+      for(int j=0; j<3; j++)
 	{
 	  hSysMtdRespEff[i][j]->SetMarkerStyle(24);
-	  hSysMtdRespEff[i][j]->SetMarkerColor(4+j*2);
-	  hSysMtdRespEff[i][j]->SetLineColor(4+j*2);
+	  hSysMtdRespEff[i][j]->SetMarkerColor(color[j+1]);
+	  hSysMtdRespEff[i][j]->SetLineColor(color[j+1]);
 	  TGraphErrors *gr = new TGraphErrors(hSysMtdRespEff[i][j]);
-	  offset_x(gr,0.15+j*0.15);
+	  if(i==0) offset_x(gr,0.15+j*0.15);
+	  else     offset_x(gr,0.05+j*0.05);
 	  gr->Draw("samesPEZ");
 	  leg->AddEntry(hSysMtdRespEff[i][j],legName[j],"P");
 	}
@@ -225,9 +232,10 @@ void systematics(const int savePlot = 1, const int saveHisto = 1)
 
   if(saveHisto)
     {
+      fdata->cd();
       for(int i=0; i<2; i++)
 	{
-	  for(int j=0; j<3; j++)
+	  for(int j=0; j<4; j++)
 	    {
 	      hSysMtdRespEff[i][j]->Write("",TObject::kOverwrite);
 	      hSysMtdRespEff[i][j]->Write("",TObject::kOverwrite);
@@ -309,7 +317,7 @@ void embedVsCosmic(const int savePlot = 1)
   if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/Cosmic_RespEff_toEmbed.pdf",run_type));
   if(gSaveAN)
     {
-      c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_EffResp_EmbVsCosmic.pdf"));
+      c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_EffResp_EmbOverCosmic.pdf"));
     }
 
   // compare efficiency at high pt
@@ -324,6 +332,10 @@ void embedVsCosmic(const int savePlot = 1)
   TString legName[2] = {"Embedding","Cosmic"};
   c = drawHistos(list,"CompRespEff",Form("Run%d: MTD response efficiency;module;Resp. Eff",year-2000),kFALSE,-100,100,kTRUE,0.4,1.1,kFALSE,kTRUE,legName,kTRUE,"",0.15,0.25,0.2,0.3);
   if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/Cosmic_RespEffHighPt_VsEmbed.pdf",run_type));
+  if(gSaveAN)
+    {
+      c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_EffResp_EmbVsCosmic.pdf"));
+    }
 }
 
 //================================================
@@ -449,7 +461,7 @@ void ana_cosmicRay(const int savePlot = 1, const int saveHisto = 1)
   funcRespEffTemp->SetParameters(-0.09,0.97,-0.03,1.12,0.9);
   hRespEffTemp->Fit(funcRespEffTemp,"IR0");
   c = draw1D(hRespEffTemp,Form("Run%d_cosmic: efficiency template using bottom backlegs;p_{T} (GeV/c);Resp. Eff.",year-2000));
-  funcRespEffTemp->SetRange(1.15,20);
+  funcRespEffTemp->SetRange(1.0,20);
   funcRespEffTemp->SetLineColor(2);
   funcRespEffTemp->SetLineStyle(2);
   funcRespEffTemp->Draw("sames");
@@ -461,6 +473,10 @@ void ana_cosmicRay(const int savePlot = 1, const int saveHisto = 1)
   leg->AddEntry(funcRespEffTemp,"Fit to cosmic","L");
   leg->Draw();
   if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/Cosmic_RespEffTemplateFit.pdf",run_type));
+  if(gSaveAN)
+    {
+      c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_EffResp_TemplateFit.pdf"));
+    }
 
   //==============================================
   // Fit individual module

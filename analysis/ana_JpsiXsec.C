@@ -11,10 +11,10 @@ void ana_JpsiXsec()
   gStyle->SetStatH(0.2);
 
 
-  //xsec_Run14();
+  xsec_Run14();
   //compare();
   //trgSetup();
-  shiftDataPoint();
+  //shiftDataPoint();
 }
 
 //================================================
@@ -313,7 +313,7 @@ void trgSetup(const bool savePlot = 0)
 }
 
 //================================================
-void xsec_Run14(const bool savePlot = 1, const bool saveHisto = 1)
+void xsec_Run14(const bool savePlot = 0, const bool saveHisto = 0)
 {
 
   //==============================================
@@ -546,7 +546,7 @@ void xsec_Run14(const bool savePlot = 1, const bool saveHisto = 1)
 	  gAuAuYield_sQM[k-1]->SetMarkerStyle(29);
 	  gAuAuYield_sQM[k-1]->SetMarkerColor(kGreen+2);
 	  gAuAuYield_sQM[k-1]->SetLineColor(kGreen+2);
-	  gAuAuYield_sQM[k-1]->Draw("sames PE");
+	  //gAuAuYield_sQM[k-1]->Draw("sames PE");
 	}
 
       hJpsiInvYield[k]->Draw("sames");
@@ -564,7 +564,7 @@ void xsec_Run14(const bool savePlot = 1, const bool saveHisto = 1)
   leg->AddEntry(gAuAuHighPt[0],"J/#psi#rightarrowe^{+}e^{-}, |y|<1 (High p_{T})","P");
   leg->AddEntry(hTBW[0],"TBW fit (#beta=0) to J/#psi#rightarrowe^{+}e^{-}","L");
   leg->AddEntry(hJpsiInvYield[0],"J/#psi#rightarrow#mu^{+}#mu^{-}, |y|<0.5","P");
-  leg->AddEntry(gAuAuYield_sQM[0],"J/#psi#rightarrow#mu^{+}#mu^{-}, |y|<0.5 (sQM2016)","P");
+  //leg->AddEntry(gAuAuYield_sQM[0],"J/#psi#rightarrow#mu^{+}#mu^{-}, |y|<0.5 (sQM2016)","P");
   leg->Draw();
   if(savePlot)
     {
@@ -596,9 +596,9 @@ void xsec_Run14(const bool savePlot = 1, const bool saveHisto = 1)
 	  hRatio->SetBinContent(bin,hRatio->GetBinContent(bin)/scale);
 	  hRatio->SetBinError(bin,hRatio->GetBinError(bin)/scale);
 
-	  gAuAuYield_sQM[k]->GetPoint(bin-1, x, y);
-	  hRatio_sQM->SetBinContent(bin,y/scale);
-	  hRatio_sQM->SetBinError(bin,gAuAuYield_sQM[k]->GetErrorYhigh(bin-1)/scale);
+	  //gAuAuYield_sQM[k]->GetPoint(bin-1, x, y);
+	  //hRatio_sQM->SetBinContent(bin,y/scale);
+	  //hRatio_sQM->SetBinError(bin,gAuAuYield_sQM[k]->GetErrorYhigh(bin-1)/scale);
 	  
 	}
       c->cd(k+1);
@@ -612,13 +612,14 @@ void xsec_Run14(const bool savePlot = 1, const bool saveHisto = 1)
       ScaleHistoTitle(hRatio,0.06,1,0.05,0.06,1,0.05,62);
       hRatio->Draw();
 
+      /*
       // sQM2016
       hRatio_sQM->SetMarkerStyle(29);
       hRatio_sQM->SetMarkerColor(kGreen+2);
       hRatio_sQM->SetLineColor(kGreen+2);
       hRatio_sQM->SetMarkerSize(2);
       hRatio_sQM->Draw("samesP");
-
+      */
       // published
       TGraphAsymmErrors *gRatioLowPt = (TGraphAsymmErrors*)gAuAuLowPt[k]->Clone(Form("%s_ratio",gAuAuLowPt[k]->GetName()));
       for(int ipoint=0; ipoint<gRatioLowPt->GetN(); ipoint++)
@@ -655,13 +656,14 @@ void xsec_Run14(const bool savePlot = 1, const bool saveHisto = 1)
   leg->AddEntry(gAuAuLowPt[0],"J/#psi#rightarrowe^{+}e^{-}, |y|<1 (Low p_{T})","P");
   leg->AddEntry(gAuAuHighPt[0],"J/#psi#rightarrowe^{+}e^{-}, |y|<1 (High p_{T})","P");
   leg->AddEntry(hJpsiInvYield[0],"J/#psi#rightarrow#mu^{+}#mu^{-}, |y|<0.5","P");
-  leg->AddEntry(gAuAuYield_sQM[0],"J/#psi#rightarrow#mu^{+}#mu^{-}, |y|<0.5 (sQM2016)","P");
+  //leg->AddEntry(gAuAuYield_sQM[0],"J/#psi#rightarrow#mu^{+}#mu^{-}, |y|<0.5 (sQM2016)","P");
   leg->Draw();
   if(savePlot)
     {
       c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiXsec/%sJpsiInvYieldVsPt_RatioToTBW.pdf",run_type,run_config));
       c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiXsec/%sJpsiInvYieldVsPt_RatioToTBW.png",run_type,run_config));
     }
+  return;
 
   // Raa distribution
   TFile *fppRef = TFile::Open("Rootfiles/Paper.Run14_AuAu200.Jpsi.root","read");
@@ -703,6 +705,7 @@ void xsec_Run14(const bool savePlot = 1, const bool saveHisto = 1)
       c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiXsec/%sJpsiRaaVsPt.pdf",run_type,run_config));
       c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiXsec/%sJpsiRaaVsPt.png",run_type,run_config));
     }
+
 
   // compare Raa distribtion using different references
   const int kcent = 1;

@@ -30,8 +30,8 @@ void ana_JpsiYield()
   printf("HFT di-muon events: %4.2f%%\n",hStat->GetBinContent(15)/hStat->GetBinContent(10)*100);
 
   //yieldVsPt();
-  yieldVsNpart();
-  //yieldVsLumi();
+  //yieldVsNpart();
+  yieldVsLumi();
   //fitYield();
   //pt2scan();
   //HftTracking();
@@ -95,7 +95,7 @@ void fitYield(int icent = 0, int savePlot = 0, int saveHisto = 0)
 }
 
 //================================================
-void yieldVsPt(int savePlot = 0)
+void yieldVsPt(int savePlot = 1)
 {
   gStyle->SetOptFit(0);
   const int nPtBins         = nPtBins_pt;
@@ -311,7 +311,7 @@ void yieldVsPt(int savePlot = 0)
 }
 
 //================================================
-void yieldVsNpart(int savePlot = 0)
+void yieldVsNpart(int savePlot = 1)
 {
   const int nPtBins         = nPtBins_npart;
   const double* ptBins_low  = ptBins_low_npart;

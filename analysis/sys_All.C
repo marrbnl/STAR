@@ -3,7 +3,7 @@ const int year = YEAR;
 TString file_name;
 const int nSys = 5;
 const char *name[nSys] = {"SigExt","TpcTracking","PidCuts","MtdTrigEff","MtdRespEff"};
-const TString legName[nSys+1] = {"Total","Signal extraction", "Tpc tracking", "Muon PID", "Trigger efficiency", "MTD response"};
+const TString legName[nSys+1] = {"Total","Signal extraction", "Tpc tracking", "Muon PID", "Trigger efficiency", "MTD matching"};
 const int color[nSys+1] = {1, 2, 4, 6, kCyan, kGreen+2};
 
 //================================================
@@ -81,6 +81,7 @@ void mergeSystematics(int savePlot = 1, int saveHisto = 1)
       hJpsiSysVsPt[0][s]->SetLineColor(color[s]);
       hJpsiSysVsPt[0][s]->SetLineWidth(2);
       hJpsiSysVsPt[0][s]->GetYaxis()->SetRangeUser(0,0.3);
+      hJpsiSysVsPt[0][s]->GetXaxis()->SetRangeUser(0.5,12);
       hJpsiSysVsPt[0][s]->SetTitle(";p_{T} (GeV/c)");
       if(s>0) hJpsiSysVsPt[0][s]->SetLineStyle(2);
       else    hJpsiSysVsPt[0][s]->SetLineStyle(1);

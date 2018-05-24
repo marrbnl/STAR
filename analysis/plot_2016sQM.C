@@ -44,7 +44,7 @@ void nPart(const bool savePlot = 0, const bool saveHisto = 0)
   gPubNpartErr->SetLineColor(kGreen-10);
 
   // template
-  TH1F *hRaaVsNpart = new TH1F("hRaaVsNpart",";N_{part};J/#psi R_{AA}",100,-100,370);
+  TH1F *hRaaVsNpart = new TH1F("hRaaVsNpart",";N_{part};J/#psi R_{AA}",100,-100,420);
   ScaleHistoTitle(hRaaVsNpart,28,1,24,28,1,24,63);
   hRaaVsNpart->GetYaxis()->SetRangeUser(0,2);
   hRaaVsNpart->GetYaxis()->CenterTitle();
@@ -140,16 +140,17 @@ void nPart(const bool savePlot = 0, const bool saveHisto = 0)
   //==============================================
   TCanvas *c0 = new TCanvas("Jpsi_raa_vs_npart_dimuon","Jpsi_raa_vs_npart_dimuon",800,600);
   SetPadMargin(gPad,0.13,0.13,0.05,0.02);
-  hRaaVsNpart->GetXaxis()->SetRangeUser(0,370);
+  hRaaVsNpart->GetXaxis()->SetRangeUser(0,420);
+  hRaaVsNpart->GetYaxis()->SetRangeUser(0,1.5);
   hRaaVsNpart->DrawCopy();
-  gPubNpartErr->Draw("e3sames");
+  //gPubNpartErr->Draw("e3sames");
   TLine *line = GetLine(0,1,370,1,1);
-  line->Draw();
-  for(int i=0; i<2; i++)
+  //line->Draw();
+  for(int i=1; i<2; i++)
     {
       raaVsNpart[i]->Draw("samesPEZ");
       raaVsNpartSys[i]->Draw("samesE5");
-      globalSys[i]->Draw("fsame");
+      //globalSys[i]->Draw("fsame");
     }
   TLegend *leg0 = new TLegend(0.16,0.75,0.4,0.95);
   leg0->SetBorderSize(0);
@@ -159,16 +160,16 @@ void nPart(const bool savePlot = 0, const bool saveHisto = 0)
   leg0->SetHeader("Au+Au @ 200 GeV");
   leg0->AddEntry(raaVsNpart[0],"STAR J/#psi#rightarrow#mu^{+}#mu^{-}, |y| < 0.5, p_{T} > 0 GeV/c","P");
   leg0->AddEntry(raaVsNpart[1],"STAR J/#psi#rightarrow#mu^{+}#mu^{-}, |y| < 0.5, p_{T} > 5 GeV/c","P");
-  leg0->Draw();
+  //leg0->Draw();
   TLegend *leg_ncoll = new TLegend(0.15,0.17,0.35,0.22);
   leg_ncoll->SetBorderSize(0);
   leg_ncoll->SetFillColor(0);
   leg_ncoll->SetTextFont(62);
   leg_ncoll->SetTextSize(0.035);
   leg_ncoll->AddEntry(gPubNpartErr,"N_{coll} uncertainty","f");
-  leg_ncoll->Draw();
+  //leg_ncoll->Draw();
   TPaveText *star = GetPaveText(0.75,0.85,0.92,0.97,26,23);
-  star->AddText("STAR preliminary");
+  //star->AddText("STAR preliminary");
   star->SetTextColor(2);
   star->Draw();
   if(savePlot)
@@ -862,14 +863,14 @@ void nPart(const bool savePlot = 0, const bool saveHisto = 0)
       gTamuRaaVsNpartLHC[0]->Write("TAMU_LHC_JpsiRaaVsNpart_LowPt");
       gTamuRaaVsNpartLHC[1]->Write("TAMU_LHC_JpsiRaaVsNpart_HighPt");
     }
-
-
 }
+
 
 //================================================
 void xsec(const bool savePlot = 0, const bool saveHisto = 1)
 {
   gStyle->SetOptStat(0);
+  const int nCentBins = 4;
   const double ncoll[nCentBins] = {393., 785., 300., 95.}; 
   const double ncollErr[nCentBins] = {27., 29., 31., 21.};
   const double npart[nCentBins] = {161, 280, 142, 62};

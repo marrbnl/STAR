@@ -240,8 +240,7 @@ void Run14AuAu200(const int savePlot = 1, const int saveHisto = 1)
     }
 
   // MTD response efficiency
-  //TFile *fMtd =  TFile::Open(Form("Rootfiles/%s.MtdRespEff.root",run_type),"read");
-  TFile *fMtd =  TFile::Open(Form("Rootfiles/Run16_AuAu200.MtdRespEff.root"),"read");
+  TFile *fMtd =  TFile::Open(Form("Rootfiles/%s.MtdRespEff.root",run_type),"read");
   TF1 *funcRespEffEmb[30][5];
   TF1 *funcRespEffCos[30][5];
   for(int i=0; i<30; i++)

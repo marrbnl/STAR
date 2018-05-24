@@ -172,13 +172,22 @@ void MtdAccepLoss(const int savePlot, const int saveHisto)
     }
 
   TH1F *hRespEff[150];
-  TFile *fRespEff = TFile::Open(Form("Rootfiles/Run%dResponseEffViaPtTemplate.root",year-2000),"read");
+  TFile *fRespEff = TFile::Open(Form("Rootfiles/%s.MtdRespEff.root",run_type),"read");
+  TF1 *func  = 0x0;
   for(int i=0; i<150; i++)
     {
-      int backleg = i/5 + 1;
-      int module = i%5 + 1;
-      TF1 *func  = (TF1*)fRespEff->Get(Form("fSclPtMtdEffBkl%d_Mod%d",i/5,i%5));
-      hRespEff[i] = new TH1F(Form("MtdRespEffvsPt_Bkl%d_Mod%d",backleg,module),Form("MtdRespEffvsPt_Bkl%d_Mod%d",backleg,module),1500,0,30);
+      int bl = i/5 + 1;
+      int mod = i%5 + 1;
+      if(bl>9 && bl<23)
+	{
+	  func = (TF1*)fRespEff->Get(Form("Cosmic_FitRespEff_BL%d_Mod%d",bl,mod));
+	}
+      else
+	{
+	  func = (TF1*)fRespEff->Get(Form("Cosmic_TempRespEff_BL%d_Mod%d",bl,mod));
+	}
+
+      hRespEff[i] = new TH1F(Form("MtdRespEffvsPt_Bkl%d_Mod%d",bl,mod),Form("MtdRespEffvsPt_Bkl%d_Mod%d",bl,mod),1500,0,30);
       for(int bin=1; bin<=hRespEff[i]->GetNbinsX(); bin++)
         {
           double x = hRespEff[i]->GetBinCenter(bin);
@@ -242,8 +251,6 @@ void MtdAccepLoss(const int savePlot, const int saveHisto)
       if(prob2<eff2) isAcc2 = true;
       if(!isAcc1 || !isAcc2) continue;
 
-      hOutJpsiPt[0]->Fill(mc_pt,weight);
-
       if( (backleg1==24 && ((module1<=3&&cell1<=1) || (module1>3&&cell1>=10)) ) || 
 	  (backleg2==24 && ((module2<=3&&cell2<=1) || (module2>3&&cell1>=10)) ) ) continue;
 
@@ -252,6 +259,7 @@ void MtdAccepLoss(const int savePlot, const int saveHisto)
 
       if ( (backleg1==15&&module1==4) || (backleg2==15&&module2==4) ) continue;
 
+      hOutJpsiPt[0]->Fill(mc_pt,weight);
 
       if( !(backleg1==8 || backleg1==19 || (backleg1==17&&module1==3&&cell1==7)) &&
 	  !(backleg2==8 || backleg2==19 || (backleg2==17&&module2==3&&cell2==7)))

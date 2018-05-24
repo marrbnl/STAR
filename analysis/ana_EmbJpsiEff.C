@@ -13,8 +13,8 @@ void ana_EmbJpsiEff()
   gStyle->SetStatH(0.2);
 
   //getJpsiWeight(1,1);
-  embJpsiEff();
-  //compare();
+  //embJpsiEff();
+  compare();
 
   //ploEff();
   //plotEmbedEff();
@@ -28,7 +28,7 @@ void compare(const int savePlot = 1)
 {
   TFile *fin[2];
   fin[0] = TFile::Open(Form("Rootfiles/%s.EmbJpsiEff.pt%1.1f.pt%1.1f.root",run_type,pt1_cut,pt2_cut),"read");
-  fin[1] = TFile::Open(Form("Rootfiles/bk.%s.EmbJpsiEff.pt%1.1f.pt%1.1f.root",run_type,pt1_cut,pt2_cut),"read");
+  fin[1] = TFile::Open(Form("Rootfiles/old.%s.EmbJpsiEff.pt%1.1f.pt%1.1f.root",run_type,pt1_cut,pt2_cut),"read");
 
   // Jpsi efficiency vs. pT
   const int nPtBins         = nPtBins_pt;
@@ -61,7 +61,7 @@ void compare(const int savePlot = 1)
 	      hJpsiPt[j][i][k] = (TH1F*)fin[j]->Get(Form("hJpsiPt_%s_cent%s",trkEffType[i],cent_Title[k]));
 	      hJpsiPt[j][i][k]->SetName(Form("%s_file%d",hJpsiPt[j][i][k]->GetName(),j));
 	      if(j==0) hJpsiPt[j][i][k]->Rebin(4);
-	      if(j==1) hJpsiPt[j][i][k]->Rebin(2);
+	      if(j==1) hJpsiPt[j][i][k]->Rebin(4);
 	      int index = i-1;
 	      if(i==0) index = 0;
 	      hJpsiPtEffs[j][i][k] = DivideTH1ForEff(hJpsiPt[j][i][k],hJpsiPt[j][index][k],Form("hJpsiPtEff_%s_cent%s_file%d",trkEffType[i],cent_Title[k],j));
@@ -77,9 +77,10 @@ void compare(const int savePlot = 1)
       list->Add(hJpsiPtEffs[0][i][kcent]);
     }
   TString legName2[5] = {"TPC tracking + p_{T,#mu} cut","MTD acceptance & response","Muon PID","MTD triggering","Trigger unit"};
-  c = drawHistos(list,"JpsiEff_AllEffs",Form("%s: efficiencies for J/#psi ;p_{T} (GeV/c);Efficiency",run_type),true,0,15,true,0.9,1.2,false,kTRUE,legName2,true,Form("%s%%",cent_Name[kcent]),0.2,0.4,0.63,0.88,kTRUE,0.04,0.035);
+  c = drawHistos(list,"JpsiEff_AllEffs",Form("%s: efficiencies for J/#psi ;p_{T} (GeV/c);Efficiency",run_type),true,0,15,true,0.8,1.2,false,kTRUE,legName2,true,Form("%s%%",cent_Name[kcent]),0.2,0.4,0.63,0.88,kTRUE,0.04,0.035);
   if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbJpsiEff/Compare_JpsiEff_AllTypes.pdf",run_type));
   list->Clear();
+  return;
 
   // weighted and rebinned
   TH1F *hJpsiEffAll[2][3];

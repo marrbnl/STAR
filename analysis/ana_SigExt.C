@@ -27,11 +27,215 @@ void ana_SigExt()
     }
 
   
-  //prod_pt();
+  prod_pt();
   //Run14_signal();
   //prod_npart();
   //Run14_npart();
-  getJpsiWidthEmbed();
+  //getJpsiWidthEmbed();
+  //studyLowStat();
+}
+
+//================================================
+void studyLowStat(int savePlot = 1)
+{
+  gStyle->SetOptStat(0);
+  gStyle->SetOptFit(0);
+
+  // re-assign global constants
+  const int nPtBins         = nPtBins_pt;
+  const double* ptBins_low  = ptBins_low_pt;
+  const double* ptBins_high = ptBins_high_pt;
+  const char** pt_Name      = pt_Name_pt;
+  const int nCentBins       = nCentBins_pt; 
+  const int* centBins_low   = centBins_low_pt;
+  const int* centBins_high  = centBins_high_pt;
+  const char** cent_Name    = cent_Name_pt;
+  const char** cent_Title   = cent_Title_pt;
+
+ // open input and output files
+  TFile *fin = TFile::Open(Form("Rootfiles/%s.Jpsi.pt%1.1f.pt%1.1f.%sroot",run_type,pt1_cut,pt2_cut,run_config),"read");
+
+  // get histograms
+  TH1F *hSeUL[nCentBins];
+  TH1F *hSeLS[nCentBins];
+  TH1F *hMixUL[nCentBins];
+  TH1F *hMixLS[nCentBins];
+  TH1F *hMixBkg[nCentBins];
+  const int ptBin[nCentBins] = {9, 9, 8, 8, 6};
+  for(Int_t icent=0; icent<nCentBins; icent++)
+    {
+      hSeUL[icent] = (TH1F*)fin->Get(Form("InvMass_UL_pt%s_cent%s_weight",pt_Name[ptBin[icent]],cent_Name[icent]));
+      hSeLS[icent] = (TH1F*)fin->Get(Form("InvMass_LS_pt%s_cent%s_weight",pt_Name[ptBin[icent]],cent_Name[icent]));
+      hMixUL[icent] = (TH1F*)fin->Get(Form("Mix_InvMass_UL_pt%s_cent%s",pt_Name[ptBin[icent]],cent_Name[icent]));
+      hMixLS[icent] = (TH1F*)fin->Get(Form("Mix_InvMass_LS_pt%s_cent%s",pt_Name[ptBin[icent]],cent_Name[icent]));
+    }
+
+  // get the Jpsi width from embedding
+  TFile *fscan = TFile::Open(Form("Rootfiles/%s.TrkResScan.root",run_type),"read");
+  TH1F *hEmbJpsiWidth[nCentBins];
+  for(Int_t icent=0; icent<nCentBins; icent++)
+    {
+      hEmbJpsiWidth[icent] = (TH1F*)fscan->Get(Form("SmearEmb_JpsiWidth_cent%s_def",cent_Title[icent]));
+    }
+
+  // mixed event scaling
+  TH1F *hMixScale[nCentBins];
+  TF1 *funcScale[nCentBins];
+  TCanvas *cScaling = new TCanvas("ME_scale","ME_scale",1100,650);
+  cScaling->Divide(3, 2);
+  for(Int_t icent=0; icent<nCentBins; icent++)
+    {
+      hMixScale[icent] = (TH1F*)hSeLS[icent]->Clone(Form("LS_ratio_SE_to_ME_pt%s_cent%s",pt_Name[ptBin[icent]],cent_Name[icent]));
+      hMixScale[icent]->Rebin(5);
+      TH1F *htmp = (TH1F*)hMixLS[icent]->Clone(Form("%s_clone",hMixLS[icent]->GetName()));
+      htmp->Rebin(int(hMixScale[icent]->GetBinWidth(1)/hMixLS[icent]->GetBinWidth(1)));
+      hMixScale[icent]->Divide(htmp);
+
+      // fitting method
+      funcScale[icent] = new TF1(Form("Fit_%s",hMixScale[icent]->GetName()),"pol1",2.7,3.8);
+      hMixScale[icent]->Fit(funcScale[icent],"IR0Q");
+      
+      // plotting
+      cScaling->cd(icent+1);
+      hMixScale[icent]->SetTitle(";M_{#mu#mu} [GeV/c^{2}];LS: SE/ME");
+      hMixScale[icent]->SetMarkerStyle(21);
+      hMixScale[icent]->GetXaxis()->SetRangeUser(2.5,4);
+      hMixScale[icent]->SetMaximum(2*hMixScale[icent]->GetMaximum());
+      hMixScale[icent]->Draw();
+      funcScale[icent]->SetLineColor(2);
+      funcScale[icent]->Draw("sames");
+      TPaveText *t = GetTitleText(Form("%s (%s%%)",pt_Title_pt[ptBin[icent]],cent_Name[icent]),0.06);
+      t->Draw();
+    }
+
+  // jpsi signal
+  TH1F *hMixBkg[nCentBins];
+  for(Int_t icent=0; icent<nCentBins; icent++)
+    {
+      TCanvas *cSignal = new TCanvas(Form("InvMass_%s",cent_Name[icent]),Form("InvMass_%s",cent_Name[icent]),800,650);
+      cSignal->Divide(2,2);
+      
+      // scale mix event background
+      hMixBkg[icent] = (TH1F*)hMixUL[icent]->Clone(Form("mix_bkg_pt%s_cent%s",pt_Name[ptBin[icent]],cent_Name[icent]));
+      int low_bin = hMixBkg[icent]->FindFixBin(2.3);
+      int up_bin  = hMixBkg[icent]->FindFixBin(4.2);
+      for(int ibin=low_bin; ibin<=up_bin; ibin++)
+	{
+	  double mass = hMixBkg[icent]->GetBinCenter(ibin);
+	  double scale = funcScale[icent]->Eval(mass);
+	  hMixBkg[icent]->SetBinContent(ibin, scale * hMixBkg[icent]->GetBinContent(ibin));
+	  hMixBkg[icent]->SetBinError(ibin, scale * hMixBkg[icent]->GetBinError(ibin));
+	}
+      
+      // plot invariant mass
+      cSignal->cd(1);
+      double g_bin_width_tmp = 0.1;
+      hSeUL[icent]->Rebin(g_bin_width_tmp/hSeUL[icent]->GetBinWidth(1));
+      hSeUL[icent]->SetTitle("");
+      hSeUL[icent]->SetMarkerStyle(21);
+      hSeUL[icent]->SetMarkerColor(2);
+      hSeUL[icent]->SetLineColor(2);
+      hSeUL[icent]->GetXaxis()->SetRangeUser(2.5,4);
+      hSeLS[icent]->Rebin(g_bin_width_tmp/hSeLS[icent]->GetBinWidth(1));
+      hMixBkg[icent]->SetLineColor(4);
+      hMixBkg[icent]->Rebin(g_bin_width_tmp/hMixBkg[icent]->GetBinWidth(1));
+      hSeUL[icent]->Draw();
+      hSeLS[icent]->Draw("sames HIST");
+      hMixBkg[icent]->Draw("sames HIST");
+      TPaveText *t = GetTitleText(Form("%s%%: %s",cent_Name[icent],pt_Title_pt[ptBin[icent]]),0.06);
+      t->Draw();
+      leg = new TLegend(0.55,0.65,0.75,0.85);
+      leg->SetBorderSize(0);
+      leg->SetFillColor(0);
+      leg->SetTextSize(0.035);
+      leg->AddEntry(hSeUL[icent],"Unlike sign","P");
+      leg->AddEntry(hSeLS[icent],"Like sign (++)+(--)","L");
+      leg->AddEntry(hMixBkg[icent],"Mix UL","L");
+      leg->Draw();
+
+      // fit UL
+      cSignal->cd(2);
+      TH1F *hFit = (TH1F*)hSeUL[icent]->Clone(Form("%s_fit",hSeUL[icent]->GetName()));
+      hFit->SetMarkerColor(1);
+      hFit->SetLineColor(1);
+      hFit->Draw();
+      for(int j=0; j<2; j++)
+	{
+	  TF1 *func = new TF1(Form("%s_func%d",hSeUL[icent]->GetName(),j), "gausn(0)+pol1(3)", 2.5, 4.0);
+	  func->SetParameters(1, 3.09, 0.05, 1);
+	  if(j==0) hFit->Fit(func, "IR0Q");
+	  else     hFit->Fit(func, "IR0QL");
+	  func->SetLineColor(2+2*j);
+	  func->SetLineStyle(2);
+	  func->Draw("sames");
+	  TPaveText *t1 = GetPaveText(0.55, 0.8, 0.65-j*0.25, 0.85-j*0.25, 0.045);
+	  t1->SetTextColor(2+2*j);
+	  if(j==0) t1->AddText("#chi^{2} fit");
+	  if(j==1) t1->AddText("ML fit");
+	  t1->AddText(Form("N = %2.1f #pm %2.1f",func->GetParameter(0)/g_bin_width_tmp,func->GetParError(0)/g_bin_width_tmp));
+	  t1->AddText(Form("#sigma = %2.1f #pm %2.1f MeV/c^{2}",func->GetParameter(2)*1000,func->GetParError(2)*1000));
+	  t1->AddText(Form("#chi2/NDF = %2.1f/%d",func->GetChisquare(), func->GetNDF()));
+	  t1->Draw();
+	}
+      TPaveText *t = GetTitleText("Fit unlike-sign distribution",0.06);
+      t->Draw();
+
+      // fit UL - ME
+      cSignal->cd(3);
+      TH1F *hFit2 = (TH1F*)hSeUL[icent]->Clone(Form("%s_fit2",hSeUL[icent]->GetName()));
+      for(int bin=1; bin<=hFit2->GetNbinsX(); bin++)
+	{
+	  if(hFit2->GetBinContent(bin)==0)
+	    {
+	      hFit2->SetBinContent(bin,0);
+	      hFit2->SetBinError(bin,1.4);
+	    }
+	}
+      hFit2->Add(hMixBkg[icent],-1);
+      hFit2->SetMarkerColor(1);
+      hFit2->SetLineColor(1);
+      hFit2->Draw();
+      TF1 *func = new TF1(Form("%s_func%d_2",hSeUL[icent]->GetName()), "gausn(0)+pol1(3)", 2.5, 4.0);
+      func->SetParameters(1, 3.09, 0.05, 1);
+      hFit2->Fit(func, "IR0Q");
+      func->SetLineColor(2);
+      func->SetLineStyle(2);
+      func->Draw("sames");
+      TPaveText *t1 = GetPaveText(0.55, 0.8, 0.6, 0.85, 0.045);
+      t1->SetTextColor(2);
+      t1->AddText("#chi^{2} fit, free fit");
+      t1->AddText(Form("N = %2.1f #pm %2.1f",func->GetParameter(0)/g_bin_width_tmp,func->GetParError(0)/g_bin_width_tmp));
+      t1->AddText(Form("#sigma = %2.1f #pm %2.1f MeV/c^{2}",func->GetParameter(2)*1000,func->GetParError(2)*1000));
+      t1->AddText(Form("#chi2/NDF = %2.1f/%d",func->GetChisquare(), func->GetNDF()));
+      t1->Draw();
+      TPaveText *t = GetTitleText("Fit unlike-sign after ME background subtraction",0.05);
+      t->Draw();
+
+      // fit UL - ME with smeared width
+      cSignal->cd(4);
+      hFit2->Draw();
+      func = new TF1(Form("%s_func%d_3",hSeUL[icent]->GetName()), "gausn(0)+pol1(3)", 2.5, 4.0);
+      func->SetParameters(1, 3.09, 0.05, 1);
+      func->FixParameter(2, hEmbJpsiWidth[icent]->GetBinContent(ptBin[icent]));
+      hFit2->Fit(func, "IR0Q");
+      func->SetLineColor(2);
+      func->SetLineStyle(2);
+      func->Draw("sames");
+      TPaveText *t1 = GetPaveText(0.55, 0.8, 0.6, 0.85, 0.045);
+      t1->SetTextColor(2);
+      t1->AddText("#chi^{2} fit, width fixed");
+      t1->AddText(Form("N = %2.1f #pm %2.1f",func->GetParameter(0)/g_bin_width_tmp,func->GetParError(0)/g_bin_width_tmp));
+      t1->AddText(Form("#sigma = %2.1f #pm %2.1f MeV/c^{2}",func->GetParameter(2)*1000,func->GetParError(2)*1000));
+      t1->AddText(Form("#chi2/NDF = %2.1f/%d",func->GetChisquare(), func->GetNDF()));
+      t1->Draw();
+      TPaveText *t = GetTitleText("Fit unlike-sign after ME background subtraction",0.05);
+      t->Draw();
+
+      if(savePlot) 
+	{
+	  cSignal->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_SigExt/LowStat_FitJpsiSig_cent%s.pdf",run_type,cent_Title[icent]));
+	}	  
+    }
 }
 
 
@@ -182,7 +386,6 @@ void getJpsiWidthEmbed(int savePlot = 0, int saveHisto = 0)
   if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_SigExt/ToyMC_JpsiWidthVsPt_centComp.pdf",run_type));
   if(gSaveAN)  c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch3_MomSmear_JpsiWidthVsPt.pdf")); 
   list->Clear();
-
 
   // Jpsi width vs. npart
   TH1F* hInvMassIntegrTmp[nPtBins_npart][nCentBins][3];
@@ -433,7 +636,7 @@ void prod_pt()
 }
 
 //===============================================
-void Run14_signal(const int isetup = 0, const int icent = 2, const int isys = 0, int savePlot = 0, int saveHisto = 0, int saveHistoResScan = 0)
+void Run14_signal(const int isetup = 0, const int icent = 1, const int isys = 0, int savePlot = 0, int saveHisto = 0, int saveHistoResScan = 0)
 {
   // re-assign global constants
   const int nPtBins         = nPtBins_pt;
@@ -639,6 +842,7 @@ void Run14_signal(const int isetup = 0, const int icent = 2, const int isys = 0,
       if(i>=2) g_bin_width_tmp = g_bin_width_2;
       if(icent==4 && i==6) g_bin_width_tmp = g_bin_width_3;
       if((icent==0 || icent==1) && i==nPtBins-1) g_bin_width_tmp = g_bin_width_3;
+      if((icent==2 || icent==3) && i==nPtBins-2) g_bin_width_tmp = g_bin_width_3;
       hAcc[i] = (TH1F*)hMixUL[i]->Clone(Form("Mix_Acceptance_cent%s_pt%s",cent_Title[icent],pt_Name[i]));
       TH1F *htmp = (TH1F*)hMixLS[i]->Clone(Form("%s_clone2",hMixLS[i]->GetName()));
       hAcc[i]->Rebin(g_bin_width_tmp/hAcc[i]->GetBinWidth(1));
@@ -696,6 +900,7 @@ void Run14_signal(const int isetup = 0, const int icent = 2, const int isys = 0,
       if(i>=2) g_bin_width_tmp = g_bin_width_2;
       if(icent==4 && i==6) g_bin_width_tmp = g_bin_width_3;
       if((icent==0 || icent==1) && i==nPtBins-1) g_bin_width_tmp = g_bin_width_3;
+      if((icent==2 || icent==3) && i==nPtBins-2) g_bin_width_tmp = g_bin_width_3;
       hSeUL[i]->Rebin(g_bin_width_tmp/hSeUL[i]->GetBinWidth(1));
       hSeUL[i]->SetTitle("");
       hSeUL[i]->SetMarkerStyle(21);
@@ -827,10 +1032,16 @@ void Run14_signal(const int isetup = 0, const int icent = 2, const int isys = 0,
 	    {
 	      funcSignal[i]->SetParameter(2,0.1);
 	    }
-	  if(i==8 && icent==2)
+	  if(i==8 && (icent>=1 && icent<=3) )
 	    {
 	      funcSignal[i]->SetParameter(0, 10);
 	      funcSignal[i]->SetParameter(2,0.05);
+	    }
+	  if(i==7 && icent==3)
+	    {
+	      funcSignal[i]->SetParameter(0, 10);
+	      funcSignal[i]->SetParameter(3,0.01);
+	      funcSignal[i]->SetParameter(4,10);
 	    }
 	}
       else if(isys==12)
@@ -847,7 +1058,8 @@ void Run14_signal(const int isetup = 0, const int icent = 2, const int isys = 0,
 	  funcSignal[i] = new TF1(Form("Jpsi_FitSig_pt%s_%s",pt_Name[i],suffix.Data()),Form("gausn(0)+%s(3)",funcForm.Data()),g_sig_fit_min,g_sig_fit_max);
 	  funcSignal[i]->SetParameter(0,hSignal[i]->GetMaximum());
 	  funcSignal[i]->SetParameter(1,3.09);
-	  funcSignal[i]->SetParameter(2,0.05);
+	  funcSignal[i]->SetParameter(2,0.06);
+	  if(icent==2 && i==8) funcSignal[i]->SetParameter(2,0.03);
 	  if(useEmbWidth && i>0) funcSignal[i]->FixParameter(2,hEmbJpsiWidth[0]->GetBinContent(i));
 	}
 

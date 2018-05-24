@@ -44,7 +44,7 @@ void ana_EmbTrkEff()
   //efficiency(outName, 1, 1);
   //resolution(outName, 1, 1);
   //effVsZdc(1,1);
-  effVsCent(0);
+  //effVsCent(1);
   //effVsEta();
   //TrkEff3D(outName, outPDF);
 }
@@ -395,7 +395,7 @@ void effVsCent(const int savePlot = 0)
   if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbTrkEff/McTpcPtEff_in_Lumi.pdf",run_type));
 
   // efficiency vs luminosity
-  const double pt_cut = 0;
+  const double pt_cut = 2;
   TH1F *hTpcEffVsLumi[gNTrgSetup][nCentBins];
   for(int j=0; j<gNTrgSetup; j++)
     {
@@ -462,7 +462,6 @@ void effVsCent(const int savePlot = 0)
     {
       c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_EffTpc_EffVsCent.pdf"));
     }
-  return;
 
   // other efficiencies
   const char *trkEffTitle[4] = {"Tpc tracking","MTD matching","muon PID","MTD trigger"};
