@@ -152,82 +152,115 @@ void trackQA(const int savePlot = 0)
 
   //----------------------------------------------
   const int nData = 3;
+  const char* dataTitle[nData] = {"Embed", "Data_MTD", "Data_MB"};
   const int nType = 2;
   const char* typeName[nType] = {"NHitsFit", "Dca"};
 
-  TFile *fin = TFile::Open("output/Run14_AuAu200.Embed.Jpsi.root", "read");
+  TFile *fin[3];
+  fin[0] = TFile::Open("output/Run14_AuAu200.Embed.Jpsi.root", "read");
+  fin[1] = TFile::Open("output/Run14_AuAu200.Study.TpcTracking.root", "read");
+  fin[2] = TFile::Open("output/Run14_AuAu200.MB.P17id.Study.TpcTracking.root", "read");
 
-  THnSparseF *hnQa[nType];
-  TH1F *hTrkDis[nType][nCentBins-1][gNTrgSetup-1];
-  for(int i=0; i<nType; i++)
+  THnSparseF *hnQa[nData];
+  THnSparseF *hEmb2;
+  TH1F *hTrkDis[nData][nType][nCentBins-1][gNTrgSetup-1];
+  THnSparseF* hnTmp;
+  for(int d=0; d<nData; d++)
     {
-      hnQa[i] = (THnSparseF*)fin->Get(Form("mhQa%s_di_mu",typeName[i]));
-      hnQa[i]->GetAxis(0)->SetRangeUser(2, 20);
-      for(int j=0; j<nCentBins-1; j++)
+      if(d==0) 
 	{
-	  hnQa[i]->GetAxis(3)->SetRange(centBins_low[j+1], centBins_high[j+1]);
-	  for(int k=0; k<gNTrgSetup-1; k++)
-	    {
-	      hnQa[i]->GetAxis(4)->SetRange(k+1, k+1);
-	      hTrkDis[i][j][k] = (TH1F*)hnQa[i]->Projection(1);
-	      hTrkDis[i][j][k]->SetName(Form("Trk%s_cent%s%s",typeName[i],cent_Title[j+1], gTrgSetupTitle[k+1]));
-	      hTrkDis[i][j][k]->Sumw2();
-	      hTrkDis[i][j][k]->Scale(1./hTrkDis[i][j][k]->Integral());
-	    }
-	  hnQa[i]->GetAxis(4)->SetRange(0, -1);
+	  hnQa[d] = (THnSparseF*)fin[d]->Get(Form("mhQa%s_di_mu",typeName[0]));
+	  hEmb2   = (THnSparseF*)fin[d]->Get(Form("mhQa%s_di_mu",typeName[1]));
 	}
-      hnQa[i]->GetAxis(3)->SetRange(0, -1);
+      if(d==1)
+	{
+	  hnQa[d] = (THnSparseF*)fin[d]->Get(Form("mhnTrkPt_di_mu"));
+	} 
+      if(d==2)
+	{
+	  hnQa[d] = (THnSparseF*)fin[d]->Get(Form("mhnTrkPt_mb"));
+	}
+
+      for(int i=0; i<nType; i++)
+	{
+	  if(d==0)
+	    {
+	      if(i==0) hnTmp = hnQa[d];
+	      if(i==1) hnTmp = hEmb2;
+	    }
+	  else
+	    {
+	      hnTmp = hnQa[d];
+	    }
+	  hnTmp->GetAxis(0)->SetRangeUser(2, 10);
+	  for(int j=0; j<nCentBins-1; j++)
+	    {
+	      hnTmp->GetAxis(3)->SetRange(centBins_low[j+1], centBins_high[j+1]);
+	      for(int k=0; k<gNTrgSetup-1; k++)
+		{
+		  hnTmp->GetAxis(4)->SetRange(k+1, k+1);
+		  if(d==0) hTrkDis[d][i][j][k] = (TH1F*)hnTmp->Projection(1);
+		  else     hTrkDis[d][i][j][k] = (TH1F*)hnTmp->Projection(i+1);
+		  hTrkDis[d][i][j][k]->SetName(Form("%s_Trk%s_cent%s%s",dataTitle[d], typeName[i],cent_Title[j+1], gTrgSetupTitle[k+1]));
+		  if(d==0) hTrkDis[d][i][j][k]->Sumw2();
+		  hTrkDis[d][i][j][k]->Scale(1./hTrkDis[d][i][j][k]->Integral());
+		}
+	      hnQa[i]->GetAxis(4)->SetRange(0, -1);
+	    }
+	  hnQa[i]->GetAxis(3)->SetRange(0, -1);
+	}
+      hnTmp->GetAxis(0)->SetRange(0, -1);
     }
 
   // in centrality bins
-  TCanvas *cCent[nType];
-  for(int i=0; i<nType; i++)
+  TCanvas *cCent[nData][nType];
+  for(int d=0; d<nData; d++)
     {
-      cCent[i] = new TCanvas(Form("cCent_%s",typeName[i]), Form("cCent_%s",typeName[i]), 1100, 700);
-      cCent[i]->Divide(2, 2);
-      TLegend *leg =  0x0;
-      if(i<3) leg = new TLegend(0.2, 0.45, 0.4, 0.8);
-      else    leg = new TLegend(0.6, 0.45, 0.8, 0.8);
-      leg->SetBorderSize(0);
-      leg->SetFillColor(0);
-      leg->SetTextSize(0.045);
-      leg->SetHeader("p_{T} > 2 GeV/c, |#eta| < 0.5");
-      for(int k=0; k<gNTrgSetup-1; k++)
+      for(int i=0; i<nType; i++)
 	{
-	  cCent[i]->cd(k+1);
-	  if(i==1 || i==3) gPad->SetLogy();
-	  for(int j=0; j<nCentBins-1; j++)
+	  cCent[d][i] = new TCanvas(Form("cCent_%s_%s",dataTitle[d], typeName[i]), Form("cCent_%s_%s",dataTitle[d], typeName[i]), 1100, 700);
+	  cCent[d][i]->Divide(2, 2);
+	  TLegend *leg =  0x0;
+	  if(i==0) leg = new TLegend(0.2, 0.45, 0.4, 0.8);
+	  if(i==1) leg = new TLegend(0.6, 0.45, 0.8, 0.8);
+	  leg->SetBorderSize(0);
+	  leg->SetFillColor(0);
+	  leg->SetTextSize(0.045);
+	  leg->SetHeader("p_{T} > 2 GeV/c, |#eta| < 0.5");
+	  for(int k=0; k<gNTrgSetup-1; k++)
 	    {
-	      TH1F *hplot = (TH1F*)hTrkDis[i][j][k]->Clone(Form("%s_clone",hTrkDis[i][j][k]->GetName()));
-	      hplot->SetMarkerStyle(22+j);
-	      hplot->SetMarkerColor(color[j]);
-	      hplot->SetLineColor(color[j]);
-	      hplot->SetMarkerSize(1.2);
-	      hplot->SetTitle("");
-	      if(i==3) hplot->GetXaxis()->SetRangeUser(0,1.5);
-	      if(i==0 || i==2) 
+	      cCent[d][i]->cd(k+1);
+	      if(i==1) gPad->SetLogy();
+	      for(int j=0; j<nCentBins-1; j++)
 		{
-		  hplot->GetYaxis()->SetRangeUser(0,0.08);
+		  TH1F *hplot = (TH1F*)hTrkDis[d][i][j][k]->Clone(Form("%s_clone",hTrkDis[d][i][j][k]->GetName()));
+		  hplot->SetMarkerStyle(22+j);
+		  hplot->SetMarkerColor(color[j]);
+		  hplot->SetLineColor(color[j]);
+		  hplot->SetMarkerSize(1.2);
+		  hplot->SetTitle("");
+		  if(i==0) 
+		    {
+		      hplot->GetYaxis()->SetRangeUser(0,0.12);
+		    }
+		  if(i==1) 
+		    {
+		      hplot->GetXaxis()->SetRangeUser(0,1.5);
+		      hplot->GetYaxis()->SetRangeUser(5e-3, 1);
+		    }
+		  if(j==0) hplot->DrawCopy("P");
+		  else     hplot->DrawCopy("samesP");
+		  if(k==0) leg->AddEntry(hplot, Form("%s%%",cent_Name[j+1]), "P");
 		}
-	      else if(i==1)
-		{
-		  hplot->GetYaxis()->SetRangeUser(1e-4, 10);
-		}
-	      else
-		{
-		  hplot->GetYaxis()->SetRangeUser(1e-3, 1);
-		}
-	      if(j==0) hplot->DrawCopy("P");
-	      else     hplot->DrawCopy("samesP");
-	      if(k==0) leg->AddEntry(hplot, Form("%s%%",cent_Name[j+1]), "P");
+	      TPaveText *t1 = GetTitleText(Form("%s_%s%s",run_type,dataTitle[d],gTrgSetupTitle[k+1]), 0.05);
+	      t1->Draw();
 	    }
-	  TPaveText *t1 = GetTitleText(Form("%s%s",run_type,gTrgSetupTitle[k+1]), 0.05);
-	  t1->Draw();
+	  cCent[d][i]->cd(1);
+	  leg->Draw();
+	  if(savePlot) cCent[d][i]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_lumiDep/%s_%sVsCent.pdf",run_type,dataTitle[d],typeName[i]));
 	}
-      cCent[i]->cd(1);
-      leg->Draw();
-      if(savePlot) cCent[i]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_lumiDep/Embed_%sVsCent.pdf",run_type,typeName[i]));
     }
+  return;
 
   // in luminosity bins
   TCanvas *cLumi[nType];
