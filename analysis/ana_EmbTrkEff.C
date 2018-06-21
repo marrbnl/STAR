@@ -12,7 +12,7 @@ TFile *f;
 void ana_EmbTrkEff()
 {
   gStyle->SetOptStat(0);
-  gStyle->SetOptFit(1);
+  gStyle->SetOptFit(0);
   gStyle->SetStatY(0.9);                
   gStyle->SetStatX(0.9);  
   gStyle->SetStatW(0.2);                
@@ -43,8 +43,8 @@ void ana_EmbTrkEff()
 
   //efficiency(outName, 1, 1);
   //resolution(outName, 1, 1);
-  //effVsZdc(1,1);
-  //effVsCent(1);
+  //effVsZdc(0,0);
+  effVsCent(0);
   //effVsEta();
   //TrkEff3D(outName, outPDF);
 }
@@ -293,7 +293,7 @@ void effVsCent(const int savePlot = 0)
 		  if(j<3) h2Corr[i][j]->GetYaxis()->SetRangeUser(20, 60);
 		  else h2Corr[i][j]->GetYaxis()->SetRangeUser(60, 90);
 		}
-	      for(int bin=1; bin<=h2Corr[i][j]->GetNbinsX(); bin++)
+	      for(int bin=1; bin<=16; bin++)
 		{
 		  h2Corr[i][j]->GetXaxis()->SetBinLabel(bin, Form("%d-%d%%",80-bin*5,85-bin*5));
 		}
@@ -301,10 +301,18 @@ void effVsCent(const int savePlot = 0)
 	      h2Corr[i][j]->GetXaxis()->SetRangeUser(0, 16);
 	      h2Corr[i][j]->GetYaxis()->SetTitleOffset(1.2);
 	      h2Corr[i][j]->Draw("colz");
-	      TProfile *pro = (TProfile*)h2Corr[i][j]->ProfileX(Form("%s_pro",h2Corr[i][j]->GetName()));
-	      pro->SetMarkerStyle(21);
-	      pro->Draw("sames");
 	    }
+	  TH1F *pro = (TH1F*)h2Corr[i][j]->ProjectionX(Form("%s_pro",h2Corr[i][j]->GetName()));
+	  pro->Reset("AC");
+	  for(int bin=1; bin<=pro->GetNbinsX(); bin++)
+	    {
+	      TH1F *h1tmp = (TH1F*)h2Corr[i][j]->ProjectionY(Form("%s_proj%d",h2Corr[i][j]->GetName(),bin),bin,bin);
+	      pro->SetBinContent(bin, h1tmp->GetMean());
+	      pro->SetBinError(bin, h1tmp->GetMeanError());
+	    }
+	  c->cd(j+1);
+	  pro->SetMarkerStyle(21);
+	  pro->Draw("sames");
 	  TPaveText *t1 = GetTitleText(Form("%s_%s",run_type,trgSetupName[j]),0.055);
 	  t1->Draw();
 	}
@@ -348,7 +356,7 @@ void effVsCent(const int savePlot = 0)
 	      hMcTrkPtVsZdc[i][j][k] = (TH2F*)fin->Get(Form("McTrkPtVsZdc_%s_cent%s%s",trkEffType[i],cent_Title[k],gTrgSetupTitle[j]));
 	      hMcTrkPt[i][j][k] = (TH1F*)fin->Get(Form("McTrkPt_%s_cent%s%s",trkEffType[i],cent_Title[k],gTrgSetupTitle[j]));
 	      if(k<4) hMcTrkPt[i][j][k]->Rebin(10);
-	      else hMcTrkPt[i][j][k]->Rebin(10);
+	      else hMcTrkPt[i][j][k]->Rebin(20);
 	      if(i>0) 
 		{
 		  hMcTrkPtEff[i][j][k] = DivideTH1ForEff(hMcTrkPt[i][j][k], hMcTrkPt[i-1][j][k], Form("hMcTrkPtEff_%s_cent%s%s",trkEffType[i],cent_Title[k],gTrgSetupTitle[j]));
@@ -444,8 +452,9 @@ void effVsCent(const int savePlot = 0)
   for(int j=1; j<gNTrgSetup; j++)
     {
       int bin_cut = hMcTrkPtVsCent[1][j]->GetYaxis()->FindFixBin(pt_cut);
-      hTpcEffVsCent[j] = (TH1F*)hMcTrkPtVsCent[1][j]->ProjectionX(Form("hTpcEffVsCent%s",gTrgSetupTitle[j]),bin_cut,-1);
-      TH1F *htmp = (TH1F*)hMcTrkPtVsCent[0][j]->ProjectionX(Form("htmp%s",gTrgSetupTitle[j]),bin_cut,-1);
+      int bin_up  = hMcTrkPtVsCent[1][j]->GetNbinsY();
+      hTpcEffVsCent[j] = (TH1F*)hMcTrkPtVsCent[1][j]->ProjectionX(Form("hTpcEffVsCent%s",gTrgSetupTitle[j]),bin_cut,bin_up);
+      TH1F *htmp = (TH1F*)hMcTrkPtVsCent[0][j]->ProjectionX(Form("htmp%s",gTrgSetupTitle[j]),bin_cut,bin_up);
       hTpcEffVsCent[j]->Divide(htmp);
       hTpcEffVsCent[j]->SetMarkerStyle(20+j-1);
       hTpcEffVsCent[j]->SetLineColor(color[j-1]);

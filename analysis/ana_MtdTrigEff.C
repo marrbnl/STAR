@@ -12,10 +12,10 @@ void ana_MtdTrigEff()
   gStyle->SetStatW(0.2);                
   gStyle->SetStatH(0.2);
 
-  //getTrigEff(0,0);
-  //anaTrigEff(1,1);
+  //getTrigEff();
+  anaTrigEff();
   //sysTrigEff(1,1);
-  trigElecEff();
+  //trigElecEff();
   //studyRefData();
  
   //compareTacDiff();
@@ -67,7 +67,7 @@ void studyRefData(const int savePlot = 1)
 }
 
 //================================================
-void anaTrigEff(const int savePlot = 0, const int saveHisto = 0)
+void anaTrigEff(const int savePlot = 1, const int saveHisto = 1)
 {
   gStyle->SetStatY(0.9);                
   gStyle->SetStatX(0.9);  
@@ -76,9 +76,12 @@ void anaTrigEff(const int savePlot = 0, const int saveHisto = 0)
 
   if(year==2014)
     {
+      // const char* run_type ="Run14_AuAu200";
+      // const int nLumi = 2;
+      // const char *lumi_name[nLumi] = {"prod_high","prod_low"};
       const char* run_type ="Run14_AuAu200";
-      const int nLumi = 2;
-      const char *lumi_name[nLumi] = {"prod_high","prod_low"};
+      const int nLumi = 4;
+      const char *lumi_name[nLumi] = {"prod","prod_low","prod_mid","prod_high"};
     }
   if(year==2015)
     {
@@ -103,7 +106,9 @@ void anaTrigEff(const int savePlot = 0, const int saveHisto = 0)
   for(int l=0; l<nLumi; l++)
     {
       gTacEff[l] = (TGraphAsymmErrors*)fin->Get(Form("%s_gTacDiffEffFinal_BinCount_%s_Run15_pp200",run_type,lumi_name[l]));
+      //gTacEff[l] = (TGraphAsymmErrors*)fin->Get(Form("%s_gTacDiffEffFinal_Fitting_%s_Run15_pp200",run_type,lumi_name[l]));
       funcTacEff[l] = new TF1(Form("%s_gTacDiffEffFinalFit_BinCount_%s_Run15_pp200",run_type,lumi_name[l]),"[0]-exp(-1*[1]*(x-[2]))",1.3,7);
+      funcTacEff[l]->SetParameters(0.9, 3.5, 0.8);
       if(run_type=="Run15_pAu200") funcTacEff[l]->FixParameter(0, 1);
       gTacEff[l]->Fit(funcTacEff[l],"IR0");
       TCanvas *c = new TCanvas(Form("%s_TacDiffEff_%s",run_type,lumi_name[l]),Form("%s_TacDiffEff_%s",run_type,lumi_name[l]),800,600);
@@ -752,10 +757,21 @@ void getTrigEff(const int savePlot = 0, const int saveHisto = 0)
   // as the baseline
   if(year==2014)
     {
-      const int nLumi = 2;
-      const char *lumi_name[nLumi] = {"prod_high","prod_low"};
-      const double min_TacDiffCut[nLumi] = {788+1,785+1};
-      const double max_TacDiffCut[nLumi] = {837,837};
+      // const int nLumi = 2;
+      // const char *lumi_name[nLumi] = {"prod_high","prod_low"};
+      // const double min_TacDiffCut[nLumi] = {788+1,785+1};
+      // const double max_TacDiffCut[nLumi] = {837,837};
+      // const char* config = "";
+      // const TString data_name = Form("Run%d_AuAu200",year-2000);
+      // const char *data_title  = Form("Run%d Au+Au @ 200 GeV",year-2000);
+      // const double min_fit = 760;
+      // const double max_fit = 830;
+      // const int nBinsTacDiff = 22;
+      // const double xBinsTacDiff[nBinsTacDiff+1] = {760,765,770,775,780,782,784,786,788,789,793,797,801,805,809,813,817,821,825,829,833,837,841};
+      const int nLumi = 4;
+      const char *lumi_name[nLumi] = {"prod","prod_low","prod_mid","prod_high"};
+      const double min_TacDiffCut[nLumi] = {785+1,785+1,788+1,788+1};
+      const double max_TacDiffCut[nLumi] = {837,837,837,837};
       const char* config = "";
       const TString data_name = Form("Run%d_AuAu200",year-2000);
       const char *data_title  = Form("Run%d Au+Au @ 200 GeV",year-2000);
@@ -1189,7 +1205,7 @@ void getTrigEff(const int savePlot = 0, const int saveHisto = 0)
   // Fit the shifted distribution from pp collisions
   TF1  *hMuonTacDiffCombinedFit[nbins];
   TFitResultPtr hFitPtr[nbins];
-  int iFuncType = 1; // 0 - gaussian; 1 - crystal ball
+  int iFuncType = 0; // 0 - gaussian; 1 - crystal ball
   if(savePlot || saveHisto) iFuncType = 1;
   TCanvas *c = new TCanvas(Form("%s_TacDiff_Combined",legName[0]),Form("%s_TacDiff_Combined",legName[0]),1100,650);
   c->Divide(4,2);
@@ -1233,6 +1249,7 @@ void getTrigEff(const int savePlot = 0, const int saveHisto = 0)
       c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_EffTirg_FitTacDiffComb.pdf"));
     }
 
+  //return;
   TGraphAsymmErrors* gTacDiffEffComb[nLumi][2]; // 0 - bin counting; 1 - fitting;
   double pt_arr[nbins-1], all_arr[nbins-1], all_err_arr[nbins-1], acc_arr[nbins-1], acc_err_arr[nbins-1];
   for(int l=0; l<nLumi; l++)
@@ -1284,19 +1301,46 @@ void getTrigEff(const int savePlot = 0, const int saveHisto = 0)
     }
 
   // Recalculate the cut values according to the resolution difference
+  // take into account the shift in TacSum distribution for different luminosities
   TGraphAsymmErrors* gTacDiffEffFinal[nLumi][2]; // 0 - bin counting; 1 - fitting;
   double min_TacDiffCut_new[nLumi][nPtBins];
+  
+  TH1F *hTacDiffPtMeanLS[gNTrgSetup];
+  TH1F *hTacDiffPtSigmaLS[gNTrgSetup];  
+  if(year==2014)
+    {
+      TFile *fin = TFile::Open(Form("Rootfiles/%s.StudyLumiDep.root",run_type), "read");
+      for(int j=0; j<gNTrgSetup; j++)
+	{
+	  hTacDiffPtMeanLS[j]  = (TH1F*)fin->Get(Form("hTacDiffMeanVsPt%s",gTrgSetupName[j]));
+	  hTacDiffPtSigmaLS[j] = (TH1F*)fin->Get(Form("hTacDiffSigmaVsPt%s",gTrgSetupName[j]));
+	}
+    }
+
   for(int l=0; l<nLumi; l++)
     {
+      printf("+++ %s +++\n",lumi_name[l]);
       // calculate new cut values
       for(int bin=1; bin<nbins; bin++)
 	{
 	  double pt = hMuonTacDiffMean[0]->GetBinCenter(bin);
 	  double scale = funcMuonTacDiffSigma[0]->Eval(pt)/funcMuonTacDiffSigma[1]->Eval(pt);
 	  double mean = hMuonTacDiffMean[0]->GetBinContent(bin);
-	  min_TacDiffCut_new[l][bin-1] = mean - (mean - min_TacDiffCut[l])*scale;
+	  printf("before: mean = %4.2f, scale = %4.2f, cut = %4.2f\n",mean,scale,mean - (mean - min_TacDiffCut[l])*scale);
+
+	  if(year==2014)
+	    {
+	      scale = scale * hTacDiffPtSigmaLS[0]->GetBinContent(bin)/hTacDiffPtSigmaLS[l+1]->GetBinContent(bin);
+	      min_TacDiffCut_new[l][bin-1] = mean - (mean - min_TacDiffCut[l])*scale;
+	      cout << "Additional scale = " << scale << " -> cut = " << min_TacDiffCut_new[l][bin-1] << endl;
+	      min_TacDiffCut_new[l][bin-1] += hTacDiffPtMeanLS[0]->GetBinContent(bin) - hTacDiffPtMeanLS[l+1]->GetBinContent(bin);
+	      cout << "Additional shift = " << hTacDiffPtMeanLS[0]->GetBinContent(bin) - hTacDiffPtMeanLS[l+1]->GetBinContent(bin) << " -> cut = " << min_TacDiffCut_new[l][bin-1] << endl;
+	    }
+	  else
+	    {
+	      min_TacDiffCut_new[l][bin-1] = mean - (mean - min_TacDiffCut[l])*scale;
+	    }
 	  if(bin==nbins-1) min_TacDiffCut_new[l][bin-1] = min_TacDiffCut_new[l][bin-2];
-	  cout << pt << "  " << scale << ":  " << min_TacDiffCut[l] << " -> " << min_TacDiffCut_new[l][bin-1] << endl;
 	}
 
       // bin counting

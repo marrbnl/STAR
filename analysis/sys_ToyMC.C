@@ -45,6 +45,7 @@ TRandom3 *myRandom;
 void anaSys(const char* type, const int saveHisto = 0);
 void plotSys(const char* type, const int savePlot = 0, const int saveHisto = 0, const int saveAN = 0);
 void mtdTrigEff(const int saveHisto = 0);
+void mtdTrigEffLS(const int saveHisto = 0);
 void makeHisto(TString name, const double mass, const int nExpr = 1e4);
 void toyMC(const double mass, const int nExpr, const int debug = 0);
 
@@ -88,12 +89,13 @@ void sys_ToyMC()
   TDatime *clock = new TDatime();
   myRandom->SetSeed(clock->GetTime());
 
-  //const char* type = "MtdTrigEff";
+  const char* type = "MtdTrigEff";
   //const char* type = "Dtof";
-  const char* type = "MtdMthEff";
+  //const char* type = "MtdMthEff";
   //anaSys(type, 1);
-  plotSys(type, 1, 1, 0);
-  //mtdTrigEff(1);
+  //plotSys(type, 1, 1, 0);
+  //mtdTrigEff(0);
+  mtdTrigEffLS(1);
 }
 
 //================================================
@@ -385,13 +387,19 @@ void mtdTrigEff(const int saveHisto)
   if(saveHisto) fdata = TFile::Open(Form("Rootfiles/%s.Sys.MtdTrigEff.root",run_type),"update");
   else          fdata = TFile::Open(Form("Rootfiles/%s.Sys.MtdTrigEff.root",run_type),"read");
   hMuonPtEff[0] = (TF1*)fdata->Get(Form("%s_Muon_TacDiffEff",run_type));
-  hMuonPtEff[1] = (TF1*)fdata->Get(Form("%s_Muon_TacDiffEff_prod_low",run_type));
-  hMuonPtEff[2] = (TF1*)fdata->Get(Form("%s_Muon_TacDiffEff_prod_high",run_type));
+
+  TFile *fEff = TFile::Open(Form("Rootfiles/%s.MtdTrigEff.root",run_type),"read");
+  hMuonPtEff[1] = (TF1*)fEff->Get(Form("%s_gTacDiffEffFinalFit_BinCount_prod_mid_Run15_pp200",run_type));
+  hMuonPtEff[2] = (TF1*)fEff->Get(Form("%s_gTacDiffEffFinalFit_BinCount_prod_high_Run15_pp200",run_type));
+  hMuonPtEff[1]->SetName(Form("%s_Muon_TacDiffEff_prod_mid",run_type));
+  hMuonPtEff[2]->SetName(Form("%s_Muon_TacDiffEff_prod_high",run_type));
+
   for(int e=0; e<3; e++)
     {
       hMuonPtEff[e]->SetName(Form("%s_TrigStudy",hMuonPtEff[e]->GetName()));
       cout <<  hMuonPtEff[e]->GetName() << endl;
     }
+
   for(int i=0; i<1; i++)
     {
       makeHisto(part_name[i],part_mass[i],1e7);
@@ -399,6 +407,51 @@ void mtdTrigEff(const int saveHisto)
       if(saveHisto)
 	{
 	  fdata->cd();
+	  for(int e=0; e<3; e++)
+	    {
+	      hOutJpsiPt[e]->Write("",TObject::kOverwrite);
+	      hOutJpsiCent[e]->Write("",TObject::kOverwrite);
+	    }
+	}
+    }
+}
+
+//================================================
+void mtdTrigEffLS(const int saveHisto)
+{
+  // track momentum resolution
+  TFile *fRes = TFile::Open(Form("Rootfiles/Run14_AuAu200.TrkEff.root"),"read");
+  hTpcTrackRes = (TH2F*)fRes->Get("PrimTrkRes_vs_TruePt_cent0080");
+  int nHistos = hTpcTrackRes->GetNbinsX();
+  for(int i=0; i<nHistos; i++)
+    {
+      hTrkResBin[i] = (TH1F*)hTpcTrackRes->ProjectionY(Form("hTrkRes_Bin%d",i+1),i+1,i+1);
+    }
+
+  TFile *fdata = TFile::Open(Form("Rootfiles/%s.Sys.MtdTrigEff.root",run_type),"read");
+  hMuonPtEff[0] = (TF1*)fdata->Get(Form("%s_Muon_TacDiffEff",run_type));
+
+  TFile *fEff = 0x0;
+  if(saveHisto) fEff = TFile::Open(Form("Rootfiles/%s.StudyLumiDep.root",run_type),"update");
+  else          fEff = TFile::Open(Form("Rootfiles/%s.StudyLumiDep.root",run_type),"read");
+
+  hMuonPtEff[1] = (TF1*)fEff->Get(Form("%s_gTacDiffEff_LS_prod_mid_func",run_type));
+  hMuonPtEff[2] = (TF1*)fEff->Get(Form("%s_gTacDiffEff_LS_prod_high_func",run_type));
+  hMuonPtEff[1]->SetName(Form("%s_Muon_TacDiffEff_prod_mid",run_type));
+  hMuonPtEff[2]->SetName(Form("%s_Muon_TacDiffEff_prod_high",run_type));
+
+  for(int e=0; e<3; e++)
+    {
+      hMuonPtEff[e]->SetName(Form("%s_TrigStudy",hMuonPtEff[e]->GetName()));
+    }
+
+  for(int i=0; i<1; i++)
+    {
+      makeHisto(part_name[i],part_mass[i],1e7);
+      
+      if(saveHisto)
+	{
+	  fEff->cd();
 	  for(int e=0; e<3; e++)
 	    {
 	      hOutJpsiPt[e]->Write("",TObject::kOverwrite);
@@ -437,20 +490,20 @@ void makeHisto(TString name, const double mass, const int nExpr)
       if(year==2014)
 	{
 	  nbins_tmp = 9;
-	  double xbins_tmp_tmp[10] = {0,1,2,3,4,5,6,8,10,15};
-	  std::copy(std::begin(xbins_tmp_tmp), std::end(xbins_tmp_tmp), std::begin(xbins_tmp));
+	  double xbins_tmp_tmp[10] = {0.15,1,2,3,4,5,6,8,10,15};
+	  for(int i=0; i<nbins_tmp+1; i++) xbins_tmp[i] = xbins_tmp_tmp[i];
 	}
       else if(year==2015)
         {
           nbins_tmp = 8;
           double xbins_tmp_tmp[9] = {0,1,2,3,4,5,6,8,10};
-          std::copy(std::begin(xbins_tmp_tmp), std::end(xbins_tmp_tmp), std::begin(xbins_tmp));
+    	  for(int i=0; i<nbins_tmp+1; i++) xbins_tmp[i] = xbins_tmp_tmp[i];
         }
       else if(year==2016)
 	{
 	  nbins_tmp = 6;
 	  double xbins_tmp_tmp[7] = {0,1,2,3,4,6,10};
-	  std::copy(std::begin(xbins_tmp_tmp), std::end(xbins_tmp_tmp), std::begin(xbins_tmp));
+	  for(int i=0; i<nbins_tmp+1; i++) xbins_tmp[i] = xbins_tmp_tmp[i];
 	}
     }
   else
@@ -461,9 +514,10 @@ void makeHisto(TString name, const double mass, const int nExpr)
       hMcJpsiPt = (TH1F*)fBol->GetHistogram();
       nbins_tmp = 3;
       double xbins_tmp_tmp[4] = {0,2,4,10};
-      std::copy(std::begin(xbins_tmp_tmp), std::end(xbins_tmp_tmp), std::begin(xbins_tmp));
+      for(int i=0; i<nbins_tmp+1; i++) xbins_tmp[i] = xbins_tmp_tmp[i];
     }
   hMcJpsiPt->Scale(1./hMcJpsiPt->Integral());
+
   
   // book histograms
   const int nbinsPt = nbins_tmp;

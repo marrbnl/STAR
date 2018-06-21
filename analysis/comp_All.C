@@ -115,7 +115,7 @@ void All(const int compCount = 1, const int compEff = 1, const int compRef = 1, 
     {
       TFile *fpp[2];
       fpp[0] = TFile::Open(Form("Rootfiles/Paper.%s.Jpsi.root",run_type),"read");
-      fpp[1] = TFile::Open(Form("Rootfiles/old.Paper.%s.Jpsi.root",run_type),"read");
+      fpp[1] = TFile::Open(Form("Rootfiles/Comb2.Paper.%s.Jpsi.root",run_type),"read");
       TGraphAsymmErrors	*hppJpsiVsPt[2];
       TGraphAsymmErrors	*hppJpsiVsCent[2];
       double x, y, x1, y1;
@@ -163,8 +163,8 @@ void All(const int compCount = 1, const int compEff = 1, const int compRef = 1, 
       leg->SetFillColor(0);
       leg->SetTextFont(62);
       leg->SetTextSize(0.035);
-      leg->AddEntry(hppJpsiVsPt[0], "New/Old", "P");
-      leg->AddEntry(hppJpsiVsPt[1], "Old/Old", "P");
+      leg->AddEntry(hppJpsiVsPt[0], "(STAR+PHENIX)/STAR", "P");
+      leg->AddEntry(hppJpsiVsPt[1], "STAR/STAR", "P");
       leg->Draw();
       if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_CompAll/Compare_ppRefVsPt.pdf",run_type));
 

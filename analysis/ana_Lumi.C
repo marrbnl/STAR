@@ -1151,9 +1151,10 @@ void Lumi2015(const int savePlot = 0, const int saveHisto = 0)
 //================================================
 void makeHistoLumi(const int savePlot = 1, const int saveHisto = 1)
 {
-  const char *trigName = "VPD-ZDC-novtx-mon";
+  //const char *trigName = "VPD-ZDC-novtx-mon";
   //const char *trigName = "VPDMB-novtx";
   //const char *trigName = "dimuon";
+  const char *trigName = "BHT2-VPDMB-30";
   
   TH1F *hPreScale = new TH1F(Form("hPreScale_%s",trigName), Form("%s: per-scale per run;runId;Pre-scale",trigName), end_run-start_run+1, start_run-0.5, end_run+0.5);
   TH1F *hLiveTime = new TH1F(Form("hLiveTime_%s",trigName), Form("%s: live-time per run;runId;Live-time",trigName), end_run-start_run+1, start_run-0.5, end_run+0.5);
