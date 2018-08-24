@@ -41,12 +41,12 @@ void ana_JpsiMuon()
 
   fResDyVsPt = new TF1("fResDyVsPt","[0]+[1]*exp([2]/x)");
   fResDzVsPt = new TF1("fResDzVsPt","[0]+[1]*exp([2]/x)");
-  fResDyVsPt->SetParameters(-17.6867, 18.4528, 0.637142);
-  fResDzVsPt->SetParameters(-32.6793, 32.6034, 0.44421);
+  fResDyVsPt->SetParameters(-12.61, 13.43, 0.889);
+  fResDzVsPt->SetParameters(-21.04, 21.09, 0.693);
 
-  //makeHisto();
+  makeHisto();
   //makeHistoTn();
-  muonPID();
+  //muonPID();
   //pidSys();
   //TagAndProbe();
   //Run16nSigmaPiEff();
@@ -1135,18 +1135,20 @@ void makeHistoTn(const int saveHisto = 1)
 
 
 //================================================
-void makeHisto(const int savePlot = 0, const int saveHisto = 0)
+void makeHisto(const int savePlot = 1, const int saveHisto = 1)
 {
   TFile *fdata = 0x0;
-  //if(year==2014) fdata = TFile::Open("./output/Pico.Run14.AuAu200.jpsi.root","read");
-  if(year==2014) fdata = TFile::Open("./output/Pico.Run14.AuAu200.JpsiMuon.dtof0.4.root","read");
+  if(year==2014) fdata = TFile::Open(Form("./output/Run14_AuAu200.jpsi.%sroot",run_config),"read");
+  //if(year==2014) fdata = TFile::Open("./output/Pico.Run14.AuAu200.JpsiMuon.dtof0.4.root","read");
   if(year==2015) fdata = TFile::Open("./output/Pico.Run15.pp200.jpsi.muon.root","read");
-
 
   //==============================================
   // compare invariant mass
   //==============================================
   const int nHistos = 6;
+  const char *name[nHistos] = {"Dz","Dy","NsigmaPi","Dca","NHitsFit","NHitsDedx"};
+  const char *title[nHistos] = {"#Deltaz","#Deltay","n#sigma_{#pi}","DCA","NHitsFit","NHitsDedx"};
+  const char *unit[nHistos] = {" (cm)"," (cm)",""," (cm)","",""};
   const int nbins = 5;
   const double xbins[nbins+1] = {0,1.0,2.0,3.0,5.0,10.0};
   const double min_mass[3] = {3.0, 2.6, 3.3};
@@ -1230,15 +1232,15 @@ void makeHisto(const int savePlot = 0, const int saveHisto = 0)
       c->cd(6);
       leg->Draw();
       if(savePlot)
-	c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_DataVsEmbe/Data_JpsiMuon_%s_InvMassLSvsUL.pdf",run_type,name[i]));
+	c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/%sData_JpsiMuon_%s_InvMassLSvsUL.pdf",run_type,run_config,name[i]));
     }
 
   //==============================================
   // Muon distribution UL vs LS
   //==============================================
-  const int rebins[nHistos] = {8,8,10,1,1,1};
+  const int rebins[nHistos] = {4,4,5,1,1,1};
   const double minimum[nHistos] = {-50, -50, -5, 0, 0, 0};
-  const double maximum[nHistos] = {50, 50, 5, 2, 50, 50};
+  const double maximum[nHistos] = {50, 50, 5, 3, 50, 50};
 
   TH2F *hJpsiMassVsMuonPtUL[nHistos];
   TH2F *hJpsiMassVsMuonPtLS[nHistos];
@@ -1293,6 +1295,10 @@ void makeHisto(const int savePlot = 0, const int saveHisto = 0)
       hDataDisVsPt[i]->Add(hDataLS[i], -1);
     }
 
+  //const Int_t nMuonPtBin = 6;
+  //const Double_t muonPtBins[nMuonPtBin+1] = {1.3, 1.5, 2.0, 2.5, 3.0, 5.0, 10.0};
+  const Int_t nMuonPtBin = 3;
+  const Double_t muonPtBins[nMuonPtBin+1] = {1.3, 2.0, 3.0, 5.0};
   TH1F *hUL[nHistos][nMuonPtBin];
   TH1F *hLS[nHistos][nMuonPtBin];
   TH1F *hMuonFineBin[nHistos][nMuonPtBin];
@@ -1341,7 +1347,7 @@ void makeHisto(const int savePlot = 0, const int saveHisto = 0)
       	  hUL[i][bin-1]->Draw("P");
 	  hLS[i][bin-1]->Rebin(rebins[i]);
 	  hLS[i][bin-1]->Draw("samesP");
-	  TPaveText *t1 = GetTitleText(Form("J/#psi #mu: %1.1f < p_{T} < %1.1f",muonPtBins[bin-1],muonPtBins[bin]),0.06);
+	  TPaveText *t1 = GetTitleText(Form("J/#psi #mu: %1.1f < p_{T} < %1.1f GeV/c",muonPtBins[bin-1],muonPtBins[bin]),0.06);
           t1->Draw();
 	  t1 = GetPaveText(0.6,0.8,0.75,0.8,0.05);
 	  t1->AddText(Form("Scale = %4.3f",scale));
@@ -1358,9 +1364,12 @@ void makeHisto(const int savePlot = 0, const int saveHisto = 0)
       leg->Draw();
 
       if(savePlot)
-	c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_DataVsEmbe/Data_JpsiMuon_%s_ULvsLS.pdf",run_type,name[i]));
+	c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/%sData_JpsiMuon_%s_ULvsLS.pdf",run_type,run_config,name[i]));
     }
 
+  const double ptbound = 3;
+  const double nsigma1 = 2, nsigma2 = 2.5;
+  const double cuts[nHistos] = {0, 0, 0, 1, 15, 10};
   for(int i=0; i<nHistos; i++)
     {
       hDataDisVsPt[i]->GetXaxis()->SetRangeUser(0,10);
@@ -1368,13 +1377,16 @@ void makeHisto(const int savePlot = 0, const int saveHisto = 0)
       c = draw2D(hDataDisVsPt[i],Form("%s: %s distribution for J/#psi muon;p_{T,#mu} (GeV/c);%s%s",run_type,title[i],title[i],unit[i]));
       if(i<2)
 	{
-	  TF1 *func11 = (TF1*)fResVsPt[i]->Clone(Form("%s_2sigma_upBound",fResVsPt[i]->GetName()));
+	  TF1 *functmp = 0x0;
+	  if(i==0) functmp = fResDzVsPt;
+	  else     functmp = fResDyVsPt;
+	  TF1 *func11 = (TF1*)functmp->Clone(Form("%s_%1.1fsigma_upBound",functmp->GetName(),nsigma1));
 	  func11->SetRange(0.5,ptbound);
 	  func11->SetParameter(0,nsigma1*func11->GetParameter(0));
 	  func11->SetParameter(1,nsigma1*func11->GetParameter(1));
 	  func11->SetLineColor(2);
 	  func11->Draw("sames");
-	  TF1 *func12 = (TF1*)fResVsPt[i]->Clone(Form("%s_2sigma_lowBound",fResVsPt[i]->GetName()));
+	  TF1 *func12 = (TF1*)functmp->Clone(Form("%s_%1.1fsigma_lowBound",functmp->GetName(),nsigma1));
 	  func12->SetRange(0.5,ptbound);
 	  func12->SetParameter(0,-nsigma1*func12->GetParameter(0));
 	  func12->SetParameter(1,-nsigma1*func12->GetParameter(1));
@@ -1382,13 +1394,13 @@ void makeHisto(const int savePlot = 0, const int saveHisto = 0)
 	  func12->Draw("sames");
 	  if(ptbound<10)
 	    {
-	      TF1 *func21 = (TF1*)fResVsPt[i]->Clone(Form("%s_2.5sigma_upBound",fResVsPt[i]->GetName()));
+	      TF1 *func21 = (TF1*)functmp->Clone(Form("%s_%1.1fsigma_upBound",functmp->GetName(),nsigma2));
 	      func21->SetRange(ptbound,10);
 	      func21->SetParameter(0,nsigma2*func21->GetParameter(0));
 	      func21->SetParameter(1,nsigma2*func21->GetParameter(1));
 	      func21->SetLineColor(2);
 	      func21->Draw("sames");
-	      TF1 *func22 = (TF1*)fResVsPt[i]->Clone(Form("%s_2.5sigma_lowBound",fResVsPt[i]->GetName()));
+	      TF1 *func22 = (TF1*)functmp->Clone(Form("%s_%1.1fsigma_lowBound",functmp->GetName(),nsigma2));
 	      func22->SetRange(ptbound,10);
 	      func22->SetParameter(0,-nsigma2*func22->GetParameter(0));
 	      func22->SetParameter(1,-nsigma2*func22->GetParameter(1));
@@ -1409,9 +1421,9 @@ void makeHisto(const int savePlot = 0, const int saveHisto = 0)
 	  line->Draw();
 	}
       if(savePlot)
-	c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_DataVsEmbe/Data_JpsiMuon_%sVsPt.pdf",run_type,name[i]));
+	c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/%sData_JpsiMuon_%sVsPt.pdf",run_type,run_config,name[i]));
     }
- 
+
   //==============================================
   // Fit data distributions to extract efficiency
   //==============================================
@@ -1448,7 +1460,7 @@ void makeHisto(const int savePlot = 0, const int saveHisto = 0)
 	  t1->Draw();
 	}
       if(savePlot)
-	c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_DataVsEmbe/Data_JpsiMuon_%sFit.pdf",run_type,name[i]));
+	c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/%sData_JpsiMuon_%sFit.pdf",run_type,run_config,name[i]));
     }
   
   // efficiency
@@ -1466,7 +1478,9 @@ void makeHisto(const int savePlot = 0, const int saveHisto = 0)
 	  double pt = mean_pt[i][bin-1];;
 	  if(i<2)
 	    {
-	      double sigma = fResVsPt[i]->Eval(pt);
+	      double sigma = 0;
+	      if(i==0) sigma = fResDzVsPt->Eval(pt);
+	      if(i==1) sigma = fResDyVsPt->Eval(pt);
 	      if(pt<ptbound) min = -1 * nsigma1 * sigma;
 	      else           min = -1 * nsigma2 * sigma;
 	      max = -1 * min;
@@ -1567,7 +1581,7 @@ void makeHisto(const int savePlot = 0, const int saveHisto = 0)
       leg->AddEntry(gCountDataEff[i],Form("Bin counting"),"p");
       leg->AddEntry(gFitDataEff[i],Form("Fitting"),"p");
       leg->Draw();
-      if(savePlot) cEff->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_DataVsEmbe/Data_JpsiMuon_%sEff_FitVsCount.pdf",run_type,name[i]));
+      if(savePlot) cEff->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiMuon/%sData_JpsiMuon_%sEff.pdf",run_type,run_config,name[i]));
     }
 
   //==============================================
@@ -1575,7 +1589,7 @@ void makeHisto(const int savePlot = 0, const int saveHisto = 0)
   //==============================================
   if(saveHisto)
     {
-      TFile *fout = TFile::Open(Form("Rootfiles/%s.PIDcuts.root",run_type),"update");
+      TFile *fout = TFile::Open(Form("Rootfiles/%s.JpsiMuon.%sroot",run_type,run_config),"update");
       for(int i=0; i<nHistos; i++)
 	{
 	  hDataDisVsPt[i]->Write(Form("Data_JpsiMuon_%sVsPt",name[i]),TObject::kOverwrite);

@@ -14,17 +14,26 @@ void make_MtdTrigEff()
 
   makeHistos();
   //make_ppAu();
-
 }
 
 
 
 //================================================
-void makeHistos(const int savePlot = 0, const int saveHisto = 0)
+void makeHistos(const int savePlot = 1, const int saveHisto = 1)
 {
-  const int year = 20152;
+  const int year = 2013;
 
-  if(year==2014)
+  if(year==2013)
+    {
+      const char* config = "";
+      const char *data_name = "Run13_pp500";
+      const char *data_title  = "Run13 p+p @ 500 GeV";
+      const int nBinsTacDiff = 20;
+      const double xBinsTacDiff[nBinsTacDiff+1] = {780,787,790,795,800,805,810,815,820,825,830,835,840,845,850,855,860,865,870,880,900};
+      const double fit_min = 800;
+      const double fit_max = 850;
+    }
+  else if(year==2014)
     {
       const char* config = "";
       const char *data_name = "Run14_AuAu200";
@@ -74,7 +83,7 @@ void makeHistos(const int savePlot = 0, const int saveHisto = 0)
   const double xPtBins[nPtBins+1] = {1.3, 1.5, 2.0, 2.5, 3.0, 5.0, 10.0}; 
 
   TFile *fdata = 0x0;
-  if(year==2015 || year==20152) fdata = TFile::Open(Form("output/%s.jpsi.%sroot",data_name,config),"read");
+  if(year==2013 || year==2015 || year==20152) fdata = TFile::Open(Form("output/%s.jpsi.%sroot",data_name,config),"read");
   else fdata = TFile::Open(Form("output/%s.JpsiMuon.%sroot",data_name,config),"read");
 
   //==============================================
@@ -222,7 +231,7 @@ void makeHistos(const int savePlot = 0, const int saveHisto = 0)
 	    }
 	  hn->GetAxis(0)->SetRange(0,-1);
 	}
-      else if(year==2015 || year==20152)
+      else if(year==2013 || year==2015 || year==20152)
 	{
 	  // unlike-sign signal
 	  hn->GetAxis(5)->SetRange(1,1);
@@ -254,6 +263,7 @@ void makeHistos(const int savePlot = 0, const int saveHisto = 0)
 	{
 	  hTacDiffVsTrigUnit[k][bin]->SetTitle(";TrigUnit;#DeltaTacSum");
 	  hTacDiffVsTrigUnit[k][bin]->GetYaxis()->SetTitleOffset(1.2);
+	  if(year==2013) hTacDiffVsTrigUnit[k][bin]->GetYaxis()->SetRangeUser(760, 900);
 	  if(year==2014) hTacDiffVsTrigUnit[k][bin]->GetYaxis()->SetRangeUser(760, 860);
 	  if(year==2015 || year==20152) hTacDiffVsTrigUnit[k][bin]->GetYaxis()->SetRangeUser(820, 1000);
 	}
@@ -309,7 +319,6 @@ void makeHistos(const int savePlot = 0, const int saveHisto = 0)
     {
       c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_EffTirg_TacDiffLSvsUL_%s.pdf",data_name));
     }
-
 
   //==============================================
   // re-calculate background use all LS pairs
@@ -466,7 +475,7 @@ void makeHistos(const int savePlot = 0, const int saveHisto = 0)
 	    }
 	}
     }
-  
+
   //==============================================
   //  compare <TacDiff> vs. TrigUnit
   //==============================================
@@ -482,6 +491,7 @@ void makeHistos(const int savePlot = 0, const int saveHisto = 0)
 	  hTacDiffMeanVsTrigUnit[i][bin]->SetMarkerColor(TMath::Power(2,i-1));
 	  hTacDiffMeanVsTrigUnit[i][bin]->SetLineColor(TMath::Power(2,i-1));
 	  TH1F *htmp = (TH1F*)hTacDiffMeanVsTrigUnit[i][bin]->Clone(Form("%s_tmp",hTacDiffMeanVsTrigUnit[i][bin]->GetName()));
+	  if(year==2013) htmp->GetYaxis()->SetRangeUser(784,880);
 	  if(year==2014) htmp->GetYaxis()->SetRangeUser(788,805);
 	  if(year==2015) htmp->GetYaxis()->SetRangeUser(900, 920);
 	  if(year==20152) htmp->GetYaxis()->SetRangeUser(915, 935);

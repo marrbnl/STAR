@@ -18,13 +18,14 @@ void make_JpsiYield()
   if(f)
     {
       TH1F *hStat = (TH1F*)f->Get("hEventStat");
+      printf("%s\n",f->GetName());
       printf("all         events: %4.4e\n",hStat->GetBinContent(1));
       printf("all di-muon events: %4.4e\n",hStat->GetBinContent(3));
       printf("acc di-muon events: %4.4e\n",hStat->GetBinContent(10));
     }
 
-  //make_histo_pt();
-  make_histo_npart();
+  make_histo_pt();
+  //make_histo_npart();
 }
 
 //================================================
@@ -97,7 +98,7 @@ void make_histo_pt()
   TFile *fmix = 0;
   if(year==2014) 
     {
-      char *mixName = Form("%s.Mix.%spt%1.1f.pt%1.1f.root",run_type,run_config,pt1_cut,pt2_cut);
+      char *mixName = Form("%s.Mix.pt%1.1f.pt%1.1f.%sroot",run_type,pt1_cut,pt2_cut,run_config);
       fmix = TFile::Open(Form("Output/%s",mixName),"read");
 
       cout << "Mix file: " << fmix->GetName() << endl;
@@ -251,7 +252,7 @@ void make_histo_npart()
   TFile *fmix = 0;
   if(year==2014) 
     {
-      char *mixName = Form("%s.Mix.%spt%1.1f.pt%1.1f.root",run_type,run_config,pt1_cut,pt2_cut);
+      char *mixName = Form("%s.Mix.pt%1.1f.pt%1.1f.%sroot",run_type,pt1_cut,pt2_cut,run_config);
       fmix = TFile::Open(Form("Output/%s",mixName),"read");
 
       cout << "Mix file: " << fmix->GetName() << endl;

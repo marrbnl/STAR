@@ -11,214 +11,52 @@ void check_Lumi()
   gStyle->SetStatH(0.2);
 
 
-  //equiMB();
+  equiMB();
   //makeTacDiff();
-
-  //makeVz();
-  //anaVz();
+  //ppTacSumDiff();
 }
 
 //================================================
-void anaVz(const int savePlot = 1)
+void ppTacSumDiff(const int savePlot = 0)
 {
-  const int nCentBins       = nCentBins_pt; 
-  const char** cent_Name    = cent_Name_pt;
-  const char** cent_Title   = cent_Title_pt;
+  // compare dTacSum from pp
+  TH1F *hppTacDiff[3];
 
-  TFile *fin = TFile::Open("Rootfiles/Run14_AuAu200.StudyLumiDep.root","read");
-  const int nHistos = 3;
-  const char* histoName[nHistos] = {"TpcVz", "DiffVz", "TpcVr"};
-  const char* histoTitle[nHistos] = {"TPC v_{z}", "TPC-VPD v_{z}", "TPC v_{r}"};
-  const char* legTitle[nHistos] = {"|v_{z}| < 100 cm", "|#Deltav_{z}| < 3 cm", "|v_{r}| < 2 cm"};
-  const int nRunRanges = 8;
-  const char* runRangeName[nRunRanges] = {"Day 074-083", "15084035-040", "Day 084-085", "Day 086-088", "Day 089-094", "Day 095-121", "Day 122-162", "Day 163-167"};
+  // MT101
+  TFile *fin = TFile::Open("output/Run15_pp200.Study.MtdTrig.root", "read");
+  TH2F *hMT101TacDiff = (TH2F*)fin->Get("mhMT101TacDiff_di-muon");
+  hppTacDiff[0] = (TH1F*)hMT101TacDiff->ProjectionY("hppTacDiff_MT101");
+  hppTacDiff[0]->Sumw2();
 
-  TH1F *hVtxDis[4][nHistos][nRunRanges];
-  for(int k=0; k<4; k++)
+  // matched tracks
+  TFile *fpp = TFile::Open("Rootfiles/Run15_pp200.MtdTrigEff.root", "read");
+  TH2F *hppTacDiffLS = (TH2F*)fpp->Get("Run15_pp200_hTacDiffVsTrigUnit_LS_PtBin0");
+  hppTacDiff[1] = (TH1F*)hppTacDiffLS->ProjectionY("hppTacDiff_LS");
+
+  TH2F *hppTacDiffMuon = (TH2F*)fpp->Get("Run15_pp200_hTacDiffVsTrigUnit_Muon_PtBin0");
+  hppTacDiff[2] = (TH1F*)hppTacDiffMuon->ProjectionY("hppTacDiff_Muon");
+
+  // compare
+  const int peaks[3] = {920, 927, 930};
+  TString legName[3] = {"MT101", "Like-sign", "Muon"};
+  TList *list = new TList;
+  for(int i=0; i<3; i++)
     {
-      for(int j=0; j<nHistos; j++)
-	{
-	  for(int r=0; r<nRunRanges; r++)
-	    {
-	      hVtxDis[k][j][r] = (TH1F*)fin->Get(Form("h%s_cent%s_%s_run%d_MB",histoName[j],cent_Title_pt[0],gTrgSetupTitle[k+1],r));
-	    }
-	}
+      hppTacDiff[i]->Scale(1./hppTacDiff[i]->GetBinContent(hppTacDiff[i]->FindFixBin(peaks[i])));
+      hppTacDiff[i]->SetMarkerStyle(20+i);
+      hppTacDiff[i]->SetMarkerColor(color[i]);
+      hppTacDiff[i]->SetLineColor(color[i]);
+      hppTacDiff[i]->GetXaxis()->SetRangeUser(875, 1005);
+      hppTacDiff[i]->GetYaxis()->SetRangeUser(0, 1.2);
+      list->Add(hppTacDiff[i]);
     }
+  TCanvas *c = drawHistos(list,"ppTacSumDiff","Run15_pp200: #DeltaTacSum distribution",true,875,1005,true,0,1.2,kFALSE,kTRUE,legName,true,"p_{T} > 1.3 GeV/c",0.6,0.8,0.65,0.85,true,0.04,0.04,false,0,false,false);
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_lumiDep/TrigEff_ppTacSumComp.pdf",run_type));
 
-  TCanvas *cVtx[3][2];
-  for(int j=0; j<nHistos; j++)
-    {
-      for(int i=0; i<2; i++)
-	{
-	  cVtx[j][i] = new TCanvas(Form("c%s_%d",histoName[j],i), Form("c%s_%d",histoName[j],i), 1100, 700);
-	  cVtx[j][i]->Divide(2,2);
-	}
-      for(int r=0; r<nRunRanges; r++)
-	{
-	  cVtx[j][r/4]->cd(r%4+1);
-	  if(j>0) gPad->SetLogy();
-	  TLegend *leg =  new TLegend(0.55, 0.6, 0.75, 0.85);
-	  leg->SetBorderSize(0);
-	  leg->SetFillColor(0);
-	  leg->SetTextSize(0.045);
-	  leg->SetHeader(legTitle[j]);
-	  for(int k=0; k<4; k++)
-	    {
-	      if(hVtxDis[k][j][r]->Integral()>0) hVtxDis[k][j][r]->Scale(1./hVtxDis[k][j][r]->Integral());
-	      hVtxDis[k][j][r]->SetMarkerStyle(20+k);
-	      hVtxDis[k][j][r]->SetMarkerColor(color[k]);
-	      hVtxDis[k][j][r]->SetLineColor(color[k]);
-	      if(j==0) 
-		{
-		  hVtxDis[k][j][r]->GetXaxis()->SetRangeUser(-106, -92);
-		  hVtxDis[k][j][r]->GetYaxis()->SetRangeUser(0, 0.006);
-		}
-	      else if(j==1) 
-		{
-		  hVtxDis[k][j][r]->GetXaxis()->SetRangeUser(-10, 10);
-		  hVtxDis[k][j][r]->GetYaxis()->SetRangeUser(1e-4, 10);
-		}
-	      else if(j==2) 
-		{
-		  hVtxDis[k][j][r]->GetXaxis()->SetRangeUser(0, 5);
-		  hVtxDis[k][j][r]->GetYaxis()->SetRangeUser(1e-6, 10);
-		}
-	      if(k==0) hVtxDis[k][j][r]->Draw();
-	      else     hVtxDis[k][j][r]->Draw("sames");
-	      if(hVtxDis[k][j][r]->GetEntries()>0)
-		{
-		  int bin1, bin2;
-		  if(j==0)
-		    {
-		      bin1 = hVtxDis[k][j][r]->FindFixBin(-100+1e-4);
-		      bin2 = hVtxDis[k][j][r]->FindFixBin(100-1e-4);
-		    }
-		  else if(j==1)
-		    {
-		      bin1 = hVtxDis[k][j][r]->FindFixBin(-5+1e-4);
-		      bin2 = hVtxDis[k][j][r]->FindFixBin(5-1e-4);
-		    }
-		  else if(j==2)
-		    {
-		      bin1 = hVtxDis[k][j][r]->FindFixBin(0+1e-4);
-		      bin2 = hVtxDis[k][j][r]->FindFixBin(2-1e-4);
-		    }
-		  double eff = hVtxDis[k][j][r]->Integral(bin1, bin2)/hVtxDis[k][j][r]->Integral(0,-1);
-		  leg->AddEntry(hVtxDis[k][j][r], Form("%s: f = %4.1f%%",gTrgSetupTitle[k+1], eff*100), "P");
-		}
-	    }
-	  TPaveText *t1 = GetTitleText(Form("%s MB trigger (%s%%, %s)",run_type,cent_Name_pt[0],runRangeName[r]),0.05);
-	  t1->Draw();
-	  leg->Draw();
-	}
-
-     for(int i=0; i<2; i++)
-	{
-	  if(savePlot) cVtx[j][i]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_lumiDep/VtxEff_%sDis_%d.pdf",run_type,histoName[j],i));
-	}
-    }
-	      
-	  
-  
 }
 
 //================================================
-void makeVz(const int saveHisto = 1)
-{
-  const char *trgSetupName[4] = {"production","production_low","production_mid","production_high"};
-  const int nHistos = 3;
-  const char* histoName[nHistos] = {"TpcVz", "DiffVz", "TpcVr"};
-
-  // MB data
-  TFile *fMB = TFile::Open(Form("paper_code/Rootfiles/%s.data.jpsi.root",run_type),"read");
-  const char* lumiName[2] = {"prod_low", "prod_high"};
-  THnSparseF *hn[2];
-  TH2F *hVtxDisVsRunAll[2][nHistos];
-  for(int l=0; l<2; l++)
-    {
-      hn[l] = (THnSparseF*)fMB->Get(Form("mhMbEvtEffWeight_%s",lumiName[l]));
-      hn[l]->GetAxis(5)->SetRange(1,16); // 0-80%
-      for(int j=0; j<nHistos; j++)
-	{
-	  hVtxDisVsRunAll[l][j] = (TH2F*)hn[l]->Projection(j+1, 0);
-	  hVtxDisVsRunAll[l][j]->SetName(Form("h%sVsRunAll_cent%s_%d",histoName[j],cent_Title_pt[0],l));
-	}
-      hn[l]->GetAxis(5)->SetRange(0,-1);
-    }
-
-  TH2F *hVtxDisVsRun[4][nHistos];
-  for(int k=0; k<4; k++)
-    {
-      for(int j=0; j<nHistos; j++)
-	{
-	  hVtxDisVsRun[k][j] = (TH2F*)hVtxDisVsRunAll[0][j]->Clone(Form("h%sVsRun_cent%s_%s",histoName[j],cent_Title_pt[0],gTrgSetupTitle[k+1]));
-	  hVtxDisVsRun[k][j]->Reset();
-	}
-    }
-
-  TH2F *h2tmp;
-  for(int k=0; k<4; k++)
-    {
-      ifstream fruns;
-      fruns.open(Form("Rootfiles/Luminosity/Run14_AuAu200/AuAu_200_%s_2014.list",trgSetupName[k]));
-      int runnumber;
-      while(!fruns.eof())
-	{
-	  fruns >> runnumber;
-	  int xbin = hVtxDisVsRunAll[0][0]->GetXaxis()->FindFixBin(runnumber);
-
-	  for(int j=0; j<nHistos; j++)
-	    {
-	      if(k<3) h2tmp = hVtxDisVsRunAll[0][j];
-	      else    h2tmp = hVtxDisVsRunAll[1][j];
-	      int nybins = h2tmp->GetNbinsY();
-	      for(int ybin=1; ybin<=nybins; ybin++)
-		{
-		  hVtxDisVsRun[k][j]->SetBinContent(xbin, ybin, h2tmp->GetBinContent(xbin, ybin));
-		  hVtxDisVsRun[k][j]->SetBinError(xbin, ybin, h2tmp->GetBinError(xbin, ybin));
-		}
-	    }
-	}
-    }
-
-  const int nRunRanges = 8;
-  const int runRangeLow[nRunRanges]  = {15074000, 15084035, 15084500, 15085500, 15088500, 15094500, 15121500, 15162500};
-  const int runRangeHigh[nRunRanges] = {15083500, 15084040, 15085500, 15088500, 15094500, 15121500, 15162500, 15167500};
-  TH1F *hVtxDis[4][nHistos][nRunRanges];
-  for(int k=0; k<4; k++)
-    {
-      for(int j=0; j<nHistos; j++)
-	{
-	  for(int r=0; r<nRunRanges; r++)
-	    {
-	      int bin1 = hVtxDisVsRun[k][j]->GetXaxis()->FindBin(runRangeLow[r]);
-	      int bin2 = hVtxDisVsRun[k][j]->GetXaxis()->FindBin(runRangeHigh[r]);
-	      hVtxDis[k][j][r] = (TH1F*)hVtxDisVsRun[k][j]->ProjectionY(Form("h%s_cent%s_%s_run%d_MB",histoName[j],cent_Title_pt[0],gTrgSetupTitle[k+1],r), bin1, bin2);
-	    }
-	}
-    }
-
-
-  if(saveHisto)
-    {
-      TFile *fout = TFile::Open("Rootfiles/Run14_AuAu200.StudyLumiDep.root","update");
-      for(int k=0; k<4; k++)
-	{
-	  for(int j=0; j<nHistos; j++)
-	    {
-	      for(int r=0; r<nRunRanges; r++)
-		{
-		  hVtxDis[k][j][r]->SetTitle("");
-		  hVtxDis[k][j][r]->Write("",TObject::kOverwrite);
-		}
-	    }
-	}
-      fout->Close();
-    }
-}
-
-//================================================
-void makeTacDiff(const int savePlot = 1, const int saveHisto= 0)
+void makeTacDiff(const int savePlot = 0, const int saveHisto= 0)
 {
   TFile *fout = 0x0;
   if(saveHisto) fout = TFile::Open("Rootfiles/Run14_AuAu200.StudyLumiDep.root","update");
@@ -247,7 +85,7 @@ void makeTacDiff(const int savePlot = 1, const int saveHisto= 0)
   for(int bin=1; bin<=nbins; bin++)
     {
       double run = hMT101TacDiffVsRun->GetBinCenter(bin);
-      if(bin%1000==0) printf("[i] Process run %1.0f\n",run);
+      //if(bin%1000==1) printf("[i] Process run %1.0f\n",run);
       TH1F *h1tmp = (TH1F*)hMT101TacDiffVsRun->ProjectionY(Form("hMT101TacDiff_Run%d",bin), bin, bin);
       if(h1tmp->GetEntries()<=0) continue;
       bool isBadRun = false;
@@ -295,7 +133,8 @@ void makeTacDiff(const int savePlot = 1, const int saveHisto= 0)
       hTacDiffEff->SetBinError(bin, 1e-10);
       
       //if(run<=15131055 && run>=15131025)
-      if(run<=15164050 && run>=15164020)
+      //if(run<=15164050 && run>=15164020)
+      if(run<=15109032 && run>=15109006)
 	{
 	  cFit[counter/9]->cd(counter%9+1);
 	  h1tmp->GetXaxis()->SetRangeUser(780, 820);
@@ -341,7 +180,7 @@ void makeTacDiff(const int savePlot = 1, const int saveHisto= 0)
 
 
 //================================================
-void equiMB(const bool savePlot = 1)
+void equiMB(const bool savePlot = 0)
 {
   const int nCentBins       = nCentBins_pt; 
   const int* centBins_low   = centBins_low_pt;
@@ -359,10 +198,6 @@ void equiMB(const bool savePlot = 1)
   TH1F *hPSdimuon = (TH1F*)fLumi->Get("hPreScale_dimuon");
   TH1F *hLTdimuon = (TH1F*)fLumi->Get("hLiveTime_dimuon");
 
-  // TH1F *hNeventsTake = (TH1F*)fLumi->Get("hNevents_BHT2-VPDMB-30");
-  // TH1F *hPSdimuon = (TH1F*)fLumi->Get("hPreScale_BHT2-VPDMB-30");
-  // TH1F *hLTdimuon = (TH1F*)fLumi->Get("hLiveTime_BHT2-VPDMB-30");
-
   TH1F *hPSmb = (TH1F*)fLumi->Get("hPreScale_VPD-ZDC-novtx-mon");
   TH1F *hLTmb = (TH1F*)fLumi->Get("hLiveTime_VPD-ZDC-novtx-mon");
   TH1F *hNeventsTakeMb = (TH1F*)fLumi->Get("hNevents_VPD-ZDC-novtx-mon");
@@ -377,6 +212,7 @@ void equiMB(const bool savePlot = 1)
   TH1F *hNmbInTrig[4];
   TH1F *hEqvRatioInTrig[4];
   TH1F *hEqvRatioInTrigGood[4];
+  TH1F *hEvtRFCordimuon[4];
 
   double dimuonevent[gNTrgSetup];
   dimuonevent[0] = 0;
@@ -398,6 +234,8 @@ void equiMB(const bool savePlot = 1)
       hEqvRatioInTrig[j-1]->Reset("AC");
       hEqvRatioInTrigGood[j-1] = (TH1F*)hNeventsTakeMb->Clone(Form("hEqvRatioInTrigGood_%s",trgSetupName[j-1]));
       hEqvRatioInTrigGood[j-1]->Reset("AC");
+      hEvtRFCordimuon[j-1] = (TH1F*)hNeventsTakeMb->Clone(Form("hEvtRFCordimuon_%s",trgSetupName[j-1]));
+      hEvtRFCordimuon[j-1]->Reset("AC");
 
       dimuonevent[j] = 0;
       ifstream fruns;
@@ -440,12 +278,34 @@ void equiMB(const bool savePlot = 1)
 	  hNmbInTrig[j-1]->SetBinError(lumiBin, 1e-10);
 	  hEqvRatioInTrig[j-1]->SetBinContent(lumiBin, hNeventsTakeMb->GetBinContent(lumiBin)*hPSmb->GetBinContent(lumiBin)/nEventsTaken/hPSdimuon->GetBinContent(lumiBin));
 	  hEqvRatioInTrig[j-1]->SetBinError(lumiBin, 1e-10);
-	  hEqvRatioInTrigGood[j-1]->SetBinContent(lumiBin, nEventsRun/rf * eq_mb_good/nEventsTaken/nEventsTaken);
-	  hEqvRatioInTrigGood[j-1]->SetBinError(lumiBin, 1e-10);	  
+	  //hEqvRatioInTrigGood[j-1]->SetBinContent(lumiBin, nEventsRun/rf * eq_mb_good/nEventsTaken/nEventsTaken);
+	  hEqvRatioInTrigGood[j-1]->SetBinContent(lumiBin, eq_mb_good/nEventsTaken);
+	  hEqvRatioInTrigGood[j-1]->SetBinError(lumiBin, 1e-10);
+	  hEvtRFCordimuon[j-1]->SetBinContent(lumiBin, nEventsRun/rf/nEventsTaken);
+	  hEvtRFCordimuon[j-1]->SetBinError(lumiBin, 1e-10);
 	}
     }
   printf("+++++++++++++++++++++++++++++++++\n");
   // =============================================
+
+
+  // check RF corrected dimuon events
+  TCanvas *c = new TCanvas("Comp_EvtRFCordimuon","Comp_EvtRFCordimuon",800,600);
+  for(int j=1; j<gNTrgSetup; j++)
+    {
+      hEvtRFCordimuon[j-1]->SetMarkerStyle(19+j);
+      hEvtRFCordimuon[j-1]->SetMarkerColor(color[j-1]);
+      hEvtRFCordimuon[j-1]->SetLineColor(color[j-1]);
+      hEvtRFCordimuon[j-1]->GetYaxis()->SetRangeUser(0,1.5);
+      if(j==1) 
+	{
+	  hEvtRFCordimuon[j-1]->Draw("P");
+	  TPaveText *t1 = GetTitleText("(# of analyzed dimuon events * RF)/(# of recorded dimuon events)",0.035);
+	  t1->Draw();
+	}
+      else     hEvtRFCordimuon[j-1]->Draw("samesP");
+    }
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_lumiDep/EqMB_DimuonRFcorrEvtvsRun.pdf",run_type));
 
   // check the pre-scale and live-time
   TCanvas *c = new TCanvas("check_ps_lt", "check_ps_lt", 1200, 700);
@@ -516,8 +376,8 @@ void equiMB(const bool savePlot = 1)
   leg->Draw();
   if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_lumiDep/EqMB_PSandLT.pdf",run_type));
 
-  //const int firstrun = 15103035;
-  //const int lastrun  = 15103063;
+  // const int firstrun = 15109000;
+  // const int lastrun  = 15109040;
   const int firstrun = 0;
   const int lastrun = 1e8;
   TCanvas *c = new TCanvas("Comp_EqMbPerTrig","Comp_EqMbPerTrig",800,600);
@@ -562,7 +422,7 @@ void equiMB(const bool savePlot = 1)
   TH2F *hMT101TacDiffVsRun = (TH2F*)fTrig->Get("mhMT101TacDiffVsRun_di-muon");
   hMT101TacDiffVsRun->Sumw2();
 
-  // efficiency correction
+  // acceptance correction
   const int nRunRange = 8;
   int runRange[nRunRange+1] = {15074104, 15077035, 15078021, 15098066, 15099002, 15106130, 15131038, 15132019, 15167014};
   double accEff[nRunRange];  
@@ -594,7 +454,13 @@ void equiMB(const bool savePlot = 1)
       printf("[i] Total efficiency for %d-%d is %4.3f%%\n",runRange[i],runRange[i+1],accEff[i]*100);
     }
 
+  // MTD response efficiency correction
+  TFile *fRespEff = TFile::Open("Rootfiles/Run14_AuAu200.MtdRespEff.root", "read");
+  TH1F *hRespEff[2];
+  hRespEff[0] = (TH1F*)fRespEff->Get("Cosmic_JpsiEffVsCent_Btm_6300_TrigStudy");
+  hRespEff[1] = (TH1F*)fRespEff->Get("Cosmic_JpsiEffVsCent_Btm_6400_TrigStudy");
 
+  // Apply efficiency correction
   double eqMBevt[gNTrgSetup];
   double eqMBevtCorr[gNTrgSetup];
   double eqMBevtGood[gNTrgSetup];
@@ -604,13 +470,17 @@ void equiMB(const bool savePlot = 1)
   eqMBevtGood[0] = 0;
   eqMBevtGoodCorr[0] = 0;
   TH1F *hEqvRatioInTrigCorr[4];
-  TH1F *hEqvRatioInTrigAccCorr[4];
+  TH1F *hEqvRatioInTrigCorrAcc[4];
+  TH1F *hEqvRatioInTrigCorrAccResp[4];
   for(int j=1; j<gNTrgSetup; j++)
     {
       hEqvRatioInTrigCorr[j-1] = (TH1F*)hEqvRatioInTrig[j-1]->Clone(Form("%s_EffCorr",hEqvRatioInTrig[j-1]->GetName()));
       hEqvRatioInTrigCorr[j-1]->Reset("");
-      hEqvRatioInTrigAccCorr[j-1] = (TH1F*)hEqvRatioInTrig[j-1]->Clone(Form("%s_EffAccCorr",hEqvRatioInTrig[j-1]->GetName()));
-      hEqvRatioInTrigAccCorr[j-1]->Reset("");
+      hEqvRatioInTrigCorrAcc[j-1] = (TH1F*)hEqvRatioInTrig[j-1]->Clone(Form("%s_EffCorrAcc",hEqvRatioInTrig[j-1]->GetName()));
+      hEqvRatioInTrigCorrAcc[j-1]->Reset("");
+      hEqvRatioInTrigCorrAccResp[j-1] = (TH1F*)hEqvRatioInTrig[j-1]->Clone(Form("%s_EffCorrAccResp",hEqvRatioInTrig[j-1]->GetName()));
+      hEqvRatioInTrigCorrAccResp[j-1]->Reset("");
+
       int nbins = hEqvRatioInTrig[j-1]->GetNbinsX();
       eqMBevt[j] = 0;
       eqMBevtCorr[j] = 0;
@@ -621,11 +491,20 @@ void equiMB(const bool savePlot = 1)
 	  double ratio = hEqvRatioInTrig[j-1]->GetBinContent(bin);
 	  if(ratio<=0) continue;
 	  double run = hEqvRatioInTrig[j-1]->GetBinCenter(bin);
+
+	  // trigger efficiency
 	  int jbin = hTacDiffEff->GetXaxis()->FindBin(run);
 	  double eff = hTacDiffEff->GetBinContent(jbin);
 	  if(eff<=0) continue;
 	  hEqvRatioInTrigCorr[j-1]->SetBinContent(bin, ratio*eff*eff);
 	  hEqvRatioInTrigCorr[j-1]->SetBinError(bin, hEqvRatioInTrig[j-1]->GetBinError(bin)*eff*eff);
+	  if(run>=15109000 && run<=15109035)
+	    {
+	      printf("[i] run = %1.0f: ratio = %2.1f, eff = %4.2f, after = %2.1f\n",run,ratio,eff,ratio*eff*eff);
+	    }
+	  //if(run==15109008 || run==15109030) continue;
+
+	  // acceptance 
 	  int index = -1;
 	  for(int ir=0; ir<nRunRange; ir++)
 	    {
@@ -637,17 +516,28 @@ void equiMB(const bool savePlot = 1)
 	    }
 	  double accCorr = 1;
 	  if(index>-1) accCorr = accEff[index];
+	  hEqvRatioInTrigCorrAcc[j-1]->SetBinContent(bin, ratio*eff*eff*accCorr);
+	  hEqvRatioInTrigCorrAcc[j-1]->SetBinError(bin, hEqvRatioInTrig[j-1]->GetBinError(bin)*eff*eff*accCorr);
+
+	  // relaitve response efficiency w.r.t. 6400V
+	  double respEff = 1;
+	  if(run<15120072) respEff = 1;
+	  else if(run<15125034) respEff = hRespEff[1]->GetBinContent(1)/hRespEff[0]->GetBinContent(1);
+	  else if(run<15134021) respEff = 1;
+	  else respEff = hRespEff[1]->GetBinContent(1)/hRespEff[0]->GetBinContent(1);
+	  hEqvRatioInTrigCorrAccResp[j-1]->SetBinContent(bin, ratio*eff*eff*accCorr*respEff);
+	  hEqvRatioInTrigCorrAccResp[j-1]->SetBinError(bin, hEqvRatioInTrig[j-1]->GetBinError(bin)*eff*eff*accCorr*respEff);
+
+	  // good MB events within 0-80% with event weights
 	  double ratio_good = hEqvRatioInTrigGood[j-1]->GetBinContent(bin);
-	  hEqvRatioInTrigAccCorr[j-1]->SetBinContent(bin, ratio*eff*eff*accCorr);
-	  hEqvRatioInTrigAccCorr[j-1]->SetBinError(bin, 1e-10);
-	  hEqvRatioInTrigGood[j-1]->SetBinContent(bin,  ratio_good*eff*eff*accCorr);
+	  hEqvRatioInTrigGood[j-1]->SetBinContent(bin,  ratio_good*eff*eff*accCorr*respEff);
 	  double nEventsTaken = hNeventsTake->GetBinContent(hNeventsTake->FindBin(run));
 
 	  eqMBevt[j] += ratio * nEventsTaken;
 	  eqMBevt[0] += ratio * nEventsTaken;
 
-	  eqMBevtCorr[j] += ratio * nEventsTaken * eff * eff * accCorr;
-	  eqMBevtCorr[0] += ratio * nEventsTaken * eff * eff * accCorr;
+	  eqMBevtCorr[j] += ratio * nEventsTaken * eff * eff * accCorr *respEff;
+	  eqMBevtCorr[0] += ratio * nEventsTaken * eff * eff * accCorr *respEff;
 
 	  eqMBevtGood[j] += ratio_good * nEventsTaken;
 	  eqMBevtGood[0] += ratio_good * nEventsTaken;
@@ -662,15 +552,15 @@ void equiMB(const bool savePlot = 1)
       printf("[i] prod%10s: dm = %4.2e, eq_mb = %4.2e, eq_mb_corr = %4.2e, eq_mb_good = %4.2e, eq_mb_good_corr = %4.2e; eq_mb/dm = %2.2f, eq_mb_corr/dm = %2.2f, eq_mb_good_corr/dm = %2.2f\n",trgSetupName[j-1],dimuonevent[j],eqMBevt[j],eqMBevtCorr[j],eqMBevtGood[j],eqMBevtGoodCorr[j],eqMBevt[j]*1./dimuonevent[j],eqMBevtCorr[j]*1./dimuonevent[j],eqMBevtGoodCorr[j]*1./dimuonevent[j]);
     }
 
+  // apply trigger efficiency
   TCanvas *c = new TCanvas("Comp_EqMbPerTrigCorr","Comp_EqMbPerTrigCorr",800,600);
   for(int j=1; j<gNTrgSetup; j++)
     {
-      hEqvRatioInTrigCorr[j-1]->GetYaxis()->SetRangeUser(5,15);
+      hEqvRatioInTrigCorr[j-1]->GetYaxis()->SetRangeUser(0,15);
       if(j==1) 
 	{
 	  hEqvRatioInTrigCorr[j-1]->Draw("P");
-	  //TPaveText *t1 = GetTitleText("Equivalent # of MB events after vertex cuts per dimuon event (0-80%)",0.035);
-	  TPaveText *t1 = GetTitleText("Equivalent # of MB events on tape per dimuon event (TrigEff Corr.)",0.035);
+	  TPaveText *t1 = GetTitleText("Equivalent # of MB per dimuon (MtdTrigEff)",0.035);
 	  t1->Draw();
 	}
       else     hEqvRatioInTrigCorr[j-1]->Draw("samesP");
@@ -678,20 +568,38 @@ void equiMB(const bool savePlot = 1)
   if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_lumiDep/EqMB_AllMBTrigCorrvsRun.pdf",run_type));
 
 
+  // + apply acceptance correction
   TCanvas *c = new TCanvas("Comp_EqMbPerTrigAccCorr","Comp_EqMbPerTrigAccCorr",800,600);
   for(int j=1; j<gNTrgSetup; j++)
     {
-      hEqvRatioInTrigAccCorr[j-1]->GetYaxis()->SetRangeUser(5,15);
+      hEqvRatioInTrigCorrAcc[j-1]->GetYaxis()->SetRangeUser(0,15);
       if(j==1) 
 	{
-	  hEqvRatioInTrigAccCorr[j-1]->Draw("P");
-	  TPaveText *t1 = GetTitleText("Equivalent # of MB events on tape per dimuon event (TrigEff+Acc Corr.)",0.035);
+	  hEqvRatioInTrigCorrAcc[j-1]->Draw("P");
+	  TPaveText *t1 = GetTitleText("Equivalent # of MB per dimuon (MtdTrigEff+Accept)",0.035);
 	  t1->Draw();
 	}
-      else     hEqvRatioInTrigAccCorr[j-1]->Draw("samesP");
+      else     hEqvRatioInTrigCorrAcc[j-1]->Draw("samesP");
     }
   if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_lumiDep/EqMB_AllMBTrigAccCorrvsRun.pdf",run_type));
 
+
+  // + apply response efficiency
+  TCanvas *c = new TCanvas("Comp_EqMbPerTrigAccCorrResp","Comp_EqMbPerTrigAccCorrResp",800,600);
+  for(int j=1; j<gNTrgSetup; j++)
+    {
+      hEqvRatioInTrigCorrAccResp[j-1]->GetYaxis()->SetRangeUser(0,15);
+      if(j==1) 
+	{
+	  hEqvRatioInTrigCorrAccResp[j-1]->Draw("P");
+	  TPaveText *t1 = GetTitleText("Equivalent # of MB per dimuon (MtdTrigEff+Accept+RespEff)",0.035);
+	  t1->Draw();
+	}
+      else     hEqvRatioInTrigCorrAccResp[j-1]->Draw("samesP");
+    }
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_lumiDep/EqMB_AllMBTrigAccCorrRespvsRun.pdf",run_type));
+
+  // Good MB events with all corrections
   TCanvas *c = new TCanvas("Comp_EqMbPerTrigGood","Comp_EqMbPerTrigGood",800,600);
   for(int j=1; j<gNTrgSetup; j++)
     {
@@ -699,11 +607,11 @@ void equiMB(const bool savePlot = 1)
       hEqvRatioInTrigGood[j-1]->SetMarkerColor(color[j-1]);
       hEqvRatioInTrigGood[j-1]->SetLineColor(color[j-1]);
       hEqvRatioInTrigGood[j-1]->SetTitle(";runId;");
-      hEqvRatioInTrigGood[j-1]->GetYaxis()->SetRangeUser(5,15);
+      hEqvRatioInTrigGood[j-1]->GetYaxis()->SetRangeUser(0,15);
       if(j==1) 
 	{
 	  hEqvRatioInTrigGood[j-1]->Draw("P");
-	  TPaveText *t1 = GetTitleText("Equivalent # of MB events in 0-80% per dimuon event (TrigEff+Acc Corr.)",0.035);
+	  TPaveText *t1 = GetTitleText("Equivalent # of MB per dimuon (vtx, 0-80%, MtdTrigEff+Accept+RespEff)",0.035);
 	  t1->Draw();
 	}
       else     hEqvRatioInTrigGood[j-1]->Draw("samesP");

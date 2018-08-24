@@ -165,11 +165,11 @@ void compare(const int savePlot = 0)
 
 
 //================================================
-void embJpsiEff(const int savePlot = 1, const int saveHisto = 0)
+void embJpsiEff(const int savePlot = 0, const int saveHisto = 0)
 {
   TFile *fin;
-  if(saveHisto)   fin = TFile::Open(Form("Rootfiles/%s.EmbJpsiEff.pt%1.1f.pt%1.1f.root",run_type,pt1_cut,pt2_cut),"update");
-  else            fin = TFile::Open(Form("Rootfiles/%s.EmbJpsiEff.pt%1.1f.pt%1.1f.root",run_type,pt1_cut,pt2_cut),"read");
+  if(saveHisto)   fin = TFile::Open(Form("Rootfiles/%s.EmbJpsiEff.pt%1.1f.pt%1.1f.%sroot",run_type,pt1_cut,pt2_cut,run_config),"update");
+  else            fin = TFile::Open(Form("Rootfiles/%s.EmbJpsiEff.pt%1.1f.pt%1.1f.%sroot",run_type,pt1_cut,pt2_cut,run_config),"read");
 
   // Jpsi efficiency vs. pT
   const int nPtBins         = nPtBins_pt;
@@ -556,7 +556,7 @@ void embJpsiEff(const int savePlot = 1, const int saveHisto = 0)
   c = drawHistos(list,"JpsiEffFinal_vs_pt_InLumiBin_ratio",Form("%s: ratio of J/#psi to that of inclusive;p_{T} (GeV/c);Ratio",run_type),true,0.15,15,true,0.5,1.5,false,kTRUE,legName_lumi,true,"",0.5,0.7,0.15,0.35,kTRUE);
   if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbJpsiEff/JpsiEffFinal_vs_Pt_Lumi_ratio.pdf",run_type));
   list->Clear();
-  return;
+  //return;
 
   // centrality dependence
   for(int k=0; k<nCentBins; k++)
@@ -735,8 +735,8 @@ void getJpsiWeight(const int savePlot = 0, const int saveHisto = 0)
   TH1F *hEmbJpsiWidth = (TH1F*)fscan->Get(Form("SmearEmb_JpsiWidthIntegr_Pt0-15_def"));
 
   TFile *fin;
-  if(saveHisto)   fin = TFile::Open(Form("Rootfiles/%s.EmbJpsiEff.pt%1.1f.pt%1.1f.root",run_type,pt1_cut,pt2_cut),"update");
-  else            fin = TFile::Open(Form("Rootfiles/%s.EmbJpsiEff.pt%1.1f.pt%1.1f.root",run_type,pt1_cut,pt2_cut),"read");
+  if(saveHisto)   fin = TFile::Open(Form("Rootfiles/%s.EmbJpsiEff.pt%1.1f.pt%1.1f.%sroot",run_type,pt1_cut,pt2_cut,run_config),"update");
+  else            fin = TFile::Open(Form("Rootfiles/%s.EmbJpsiEff.pt%1.1f.pt%1.1f.%sroot",run_type,pt1_cut,pt2_cut,run_config),"read");
 
   TH1F *hJpsiInvMass[2][kNCent][gNTrgSetup][gNZdcRate];
   TH1F *hJpsiCount[gNTrgSetup][gNZdcRate];

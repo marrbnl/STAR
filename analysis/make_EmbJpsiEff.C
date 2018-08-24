@@ -31,6 +31,7 @@ TCanvas *draw1D(TH1 *h, TString hTitle = "",Bool_t setLog = kFALSE, Bool_t drawP
 		const Int_t wh = 800, const Int_t ww = 600);
 
 const int year = 2014;
+const char *run_config = "Dca3cm.";
 const char *run_type = "Run14_AuAu200";
 const int gNZdcRate = 11;
 const int gNTrgSetup = 5;
@@ -85,7 +86,7 @@ void make_EmbJpsiEff()
     }
   else if(year==2014)
     {
-      f = TFile::Open(Form("./output/%s.Embed.Jpsi.root",run_type),"read");
+      f = TFile::Open(Form("./output/%s.Embed.Jpsi.%sroot",run_type,run_config),"read");
     }
   TH1F *hStat = (TH1F*)f->Get("hEventStat");
   printf("[i] # of events: %4.4e\n",hStat->GetBinContent(3));
@@ -302,7 +303,7 @@ void makeJpsiTpcEffVsZdc(const int savePlot, const int saveHisto)
   if(saveHisto)
     {
       printf("+++ Save histograms +++\n");
-      TFile *fout = TFile::Open(Form("Rootfiles/%s.EmbJpsiEff.pt%1.1f.pt%1.1f.root",run_type,pt1_cut,pt2_cut),"update");
+      TFile *fout = TFile::Open(Form("Rootfiles/%s.EmbJpsiEff.pt%1.1f.pt%1.1f.%sroot",run_type,pt1_cut,pt2_cut,run_config),"update");
       for(int i=0; i<nPtBins_npart; i++)
 	{
 	  hTpcJpisEffVsCentAll[i]->Write("", TObject::kOverwrite);
@@ -342,12 +343,13 @@ void makeDataJpsiWeight(const int saveHisto)
   const int kNCent          = nCentBins[0];
 
   // unlike pairs in data
-  TFile *fdata = TFile::Open(Form("output/%s.jpsi.root",run_type),"read");
+  TFile *fdata = TFile::Open(Form("output/%s.jpsi.%sroot",run_type,run_config),"read");
   const char *hName[3] = {"hJpsiInfo","hBkgLSPos","hBkgLSNeg"};
   THnSparseF *hnJpsiInfo[3];
   for(int i=0; i<3; i++)
     {
-      hnJpsiInfo[i] = (THnSparseF*)fdata->Get(Form("m%sWeight_di_mu",hName[i]));
+      if(run_config=="") hnJpsiInfo[i] = (THnSparseF*)fdata->Get(Form("m%sWeight_di_mu",hName[i]));
+      else hnJpsiInfo[i] = (THnSparseF*)fdata->Get(Form("m%s_di_mu",hName[i]));
       hnJpsiInfo[i]->Sumw2();
     }
   hnJpsiInfo[1]->Add(hnJpsiInfo[2]);
@@ -381,7 +383,7 @@ void makeDataJpsiWeight(const int saveHisto)
   if(saveHisto)
     {
       printf("+++ Save histograms +++\n");
-      TFile *fout = TFile::Open(Form("Rootfiles/%s.EmbJpsiEff.pt%1.1f.pt%1.1f.root",run_type,pt1_cut,pt2_cut),"update");
+      TFile *fout = TFile::Open(Form("Rootfiles/%s.EmbJpsiEff.pt%1.1f.pt%1.1f.%sroot",run_type,pt1_cut,pt2_cut,run_config),"update");
       for(int i=0; i<2; i++)
 	{
 	  for(int j=0; j<kNCent; j++)
@@ -503,7 +505,7 @@ void makeJpsi(const bool saveHisto)
   if(saveHisto)
     {
       printf("+++ Save histograms +++\n");
-      TFile *fout = TFile::Open(Form("Rootfiles/%s.EmbJpsiEff.pt%1.1f.pt%1.1f.root",run_type,pt1_cut,pt2_cut),"recreate");
+      TFile *fout = TFile::Open(Form("Rootfiles/%s.EmbJpsiEff.pt%1.1f.pt%1.1f.%sroot",run_type,pt1_cut,pt2_cut,run_config),"recreate");
       for(int i=0; i<nEffType; i++)
 	{
 	  for(int w=0; w<1; w++)

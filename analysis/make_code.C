@@ -3,11 +3,138 @@ void make_code()
 {
   gStyle->SetOptStat(0);
   //data();
-  //JpsiWidth();
-  lumi();
-
+  //lumi();
   //embed();
-  //input();
+
+  //JpsiWidth();
+  //JpsiPtShape();
+  //MtdAcc();
+
+  publication();
+  //efficiency();
+}
+
+
+//================================================
+void efficiency(const int saveHisto = 1)
+{
+  // Online timing cut efficiency
+  TFile *fTrigEff = TFile::Open("Rootfiles/Run14_AuAu200.Sys.MtdTrigEff.root","read");
+  TF1 *fucnTrig = (TF1*)fTrigEff->Get("Run14_AuAu200_Muon_TacDiffEff");
+  TF1 *fucnTrigUp = (TF1*)fTrigEff->Get("Run14_AuAu200_Muon_TacDiffEff_Sysup");
+  TF1 *fucnTrigDown = (TF1*)fTrigEff->Get("Run14_AuAu200_Muon_TacDiffEff_Sysdown");
+
+  // PID efficiency
+  TFile *fpid = TFile::Open("Rootfiles/Run14_AuAu200.EmbTrkEff.root","read");
+  TH1F *hTrkPtMtdMth = (TH1F*)fpid->Get("McTrkPt_MtdMth_cent0080");
+  TH1F *hTrkPtPid = (TH1F*)fpid->Get("McTrkPt_MuonPid_cent0080");
+
+  // dTof efficiency
+  TFile *fdtof = TFile::Open("Rootfiles/Run14_AuAu200.DtofEff.root","read");
+  TF1 *fucnDtof = (TF1*)fdtof->Get("TagAndProbe_Muon_Dtof0.75Eff_FitFunc");
+  TF1 *fucnDtofUp = (TF1*)fdtof->Get("TagAndProbe_Muon_Dtof0.75Eff_Sysup");
+  TF1 *fucnDtofDown = (TF1*)fdtof->Get("TagAndProbe_Muon_Dtof0.75Eff_Sysdown");
+
+  // nsigmaPi, dy and dz efficiency
+  TFile *femb = TFile::Open("output/Run14_AuAu200.Embed.Jpsi.root","read");
+  TH1F *hTrkPt[4];
+  hTrkPt[0] = (TH1F*)femb->Get("mhTrkPtDis_Tpc_di_mu");
+  hTrkPt[1] = (TH1F*)femb->Get("mhTrkPtDis_NsigmaPi_di_mu");
+  hTrkPt[2] = (TH1F*)femb->Get("mhTrkPtDis_MtdMth_di_mu");
+  hTrkPt[3] = (TH1F*)femb->Get("mhTrkPtDis_DyDz_di_mu");
+
+  if(saveHisto)
+    {
+      TFile *fout = TFile::Open(Form("paper_code/Rootfiles/JpsiAna.input.root"),"update");
+      fucnTrig->Write("",TObject::kOverwrite);
+      fucnTrigUp->Write("",TObject::kOverwrite);
+      fucnTrigDown->Write("",TObject::kOverwrite);
+      hTrkPtMtdMth->Write("",TObject::kOverwrite);
+      hTrkPtPid->Write("",TObject::kOverwrite);
+      fucnDtof->Write("",TObject::kOverwrite);
+      fucnDtofUp->Write("",TObject::kOverwrite);
+      fucnDtofDown->Write("",TObject::kOverwrite);
+      fout->Close();
+
+      TFile *fout2 = TFile::Open(Form("paper_code/Rootfiles/Run14_AuAu200.embed.jpsi.root"),"update");
+      for(int i=0; i<4; i++)
+	{
+	  hTrkPt[i]->Write("",TObject::kOverwrite);
+	}
+      fout2->Close();
+    }
+}
+
+//================================================
+void publication(const int saveHisto = 1)
+{
+  TFile *frun12 = TFile::Open("Rootfiles/jpsi_xsec_pp200_run12.root","read");
+  TGraphAsymmErrors *gRun12Sys = (TGraphAsymmErrors*)frun12->Get("gJpsiXsecCombSys"); 
+  gRun12Sys->SetName("STAR_2012_xsec_sys");
+  TGraphAsymmErrors *gRun12 = (TGraphAsymmErrors*)frun12->Get("gJpsiXsecCombAsy");
+  gRun12->SetName("STAR_2012_xsec");
+
+  TFile *fjpsi = TFile::Open(Form("Rootfiles/2016sQM/jpsi_xsec_pp200_run12.root"),"read");
+  TGraphAsymmErrors *gPhenixSys = (TGraphAsymmErrors*)fjpsi->Get("gYieldVsPt_pp_Phenix_Systematics");
+  gPhenixSys->SetName("PHENIX_xsec_sys");
+  TGraphAsymmErrors *gPhenix = (TGraphAsymmErrors*)fjpsi->Get("gYieldVsPt_pp_Phenix");
+  gPhenix->SetName("PHENIX_xsec");
+
+  TFile *fpub = TFile::Open(Form("Rootfiles/Paper/Publication.Jpsi.200GeV.root"),"read");
+  const char* star_cent[4] = {"0020","2040","4060","0060"};
+  TGraphAsymmErrors *gRaaLowPt[4];
+  TGraphAsymmErrors *gRaaLowPtSys[4];
+  TGraphAsymmErrors *gRaaHighPt[4];
+  TGraphAsymmErrors *gRaaHighPtSys[4];
+  for(int k=0; k<4; k++)
+    {
+      gRaaLowPt[k] = (TGraphAsymmErrors*)fpub->Get(Form("Jpsi_InvYield_Raa200_LowPt_cent%s",star_cent[k]));
+      gRaaLowPtSys[k] = (TGraphAsymmErrors*)fpub->Get(Form("Jpsi_InvYield_Raa200_LowPt_systematics_cent%s",star_cent[k]));
+      gRaaHighPt[k] = (TGraphAsymmErrors*)fpub->Get(Form("Jpsi_InvYield_Raa200_HighPt_cent%s",star_cent[k]));
+      gRaaHighPtSys[k] = (TGraphAsymmErrors*)fpub->Get(Form("Jpsi_InvYield_Raa200_HighPt_systematics_cent%s",star_cent[k]));
+    }
+
+  if(saveHisto)
+    {
+      TFile *fout = TFile::Open(Form("paper_code/Rootfiles/JpsiAna.input.root",run_type),"update");
+      gRun12->Write("",TObject::kOverwrite);
+      gRun12Sys->Write("",TObject::kOverwrite);
+
+      gPhenix->Write("",TObject::kOverwrite);
+      gPhenixSys->Write("",TObject::kOverwrite);
+
+      for(int k=0; k<4; k++)
+	{
+	  gRaaLowPt[k]->Write("",TObject::kOverwrite);
+	  gRaaLowPtSys[k]->Write("",TObject::kOverwrite);
+	  gRaaHighPt[k]->Write("",TObject::kOverwrite);
+	  gRaaHighPtSys[k]->Write("",TObject::kOverwrite);
+	}
+    }
+}
+
+
+//================================================
+void embed(const int saveHisto = 1)
+{
+  TFile *fin = TFile::Open("./output/Run14_AuAu200.Embed.Jpsi.root","read");
+  THnSparseF *hMcTrkMc = (THnSparseF*)fin->Get("mhMcTrkPtEff_MC_di_mu");
+  THnSparseF *hMcTrkTpc = (THnSparseF*)fin->Get("mhMcTrkPtEff_Tpc_di_mu");
+
+  THnSparseF *hJpsiMatch = (THnSparseF*)fin->Get("mhJpsiMatch_di_mu");
+  THnSparseF *hJpsiMc = (THnSparseF*)fin->Get("hJpsiInfo_MC_di_mu");
+  THnSparseF *hJpsiMtd = (THnSparseF*)fin->Get("hJpsiInfo_TrigUnit_di_mu");
+
+ if(saveHisto)
+    {
+      TFile *fout = TFile::Open(Form("paper_code/Rootfiles/%s.embed.jpsi.root",run_type),"update");
+      hMcTrkMc->Write("",TObject::kOverwrite);
+      hMcTrkTpc->Write("",TObject::kOverwrite);
+      hJpsiMatch->Write("",TObject::kOverwrite);
+      hJpsiMc->Write("",TObject::kOverwrite);
+      hJpsiMtd->Write("hJpsiInfo_Mtd_di_mu",TObject::kOverwrite);
+      fout->Close();
+    }
 }
 
 //================================================
@@ -46,6 +173,49 @@ void lumi(const int saveHisto = 1)
 	}
     }
 }
+
+//================================================
+void MtdAcc(const int saveHisto = 1)
+{
+  const int nRunRange = 7;
+  TFile *fAcc = TFile::Open(Form("Rootfiles/%s.AcceptanceLoss.root",run_type),"read");
+  TH1F *hAccLoss[nRunRange];
+  for(int i=0; i<nRunRange; i++)
+    {
+      hAccLoss[i] = (TH1F*)fAcc->Get(Form("hAccepLoss_RunRange%d",i+1));
+    }
+
+  if(saveHisto)
+    {
+      TFile *fout = TFile::Open(Form("paper_code/Rootfiles/JpsiAna.input.root",run_type),"update");
+      for(int i=0; i<nRunRange; i++)
+	{
+	  hAccLoss[i]->Write("",TObject::kOverwrite);
+	}
+    }
+}
+
+
+//================================================
+void JpsiPtShape(const int saveHisto = 1)
+{
+  TFile *fWeight = TFile::Open("Rootfiles/models.root","read");  
+  TH1F *hInputJpsi[4];
+  hInputJpsi[0] = (TH1F*)fWeight->Get("TBW_JpsiYield_AuAu200_cent0060");
+  hInputJpsi[1] = (TH1F*)fWeight->Get("TBW_JpsiYield_AuAu200_cent0020");
+  hInputJpsi[2] = (TH1F*)fWeight->Get("TBW_JpsiYield_AuAu200_cent2040");
+  hInputJpsi[3] = (TH1F*)fWeight->Get("TBW_JpsiYield_AuAu200_cent4060");
+
+  if(saveHisto)
+    {
+      TFile *fout = TFile::Open(Form("paper_code/Rootfiles/JpsiAna.input.root",run_type),"update");
+      for(int i=0; i<4; i++)
+	{
+	  hInputJpsi[i]->Write("",TObject::kOverwrite);
+	}
+    }
+}
+
 
 //================================================
 void JpsiWidth(const int saveHisto = 1)

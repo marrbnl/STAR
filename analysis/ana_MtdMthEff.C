@@ -980,7 +980,7 @@ void studyMthEff(const int savePlot = 1, const int saveHisto = 1)
   
   if(saveHisto == 1)
     {
-      TFile *fout = TFile::Open(Form("Rootfiles/%s.Sys.MtdMthEff.root",run_type), "recreate");
+      TFile *fout = TFile::Open(Form("Rootfiles/%s.Sys.MtdMthEff.root",run_type), "update");
       for(int i=0; i<2; i++)
 	{
 	  funcTrkPtBtmBlEff[i]->Write("",TObject::kOverwrite);

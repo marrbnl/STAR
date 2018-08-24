@@ -31,10 +31,91 @@ void ana_JpsiYield()
 
   //yieldVsPt();
   //yieldVsNpart();
-  yieldVsLumi();
+  //yieldVsLumi();
   //fitYield();
   //pt2scan();
   //HftTracking();
+  compare();
+}
+
+//================================================
+void compare(const bool savePlot = 0)
+{
+  //==========================
+  const int nCentBins       = nCentBins_pt; 
+  const int* centBins_low   = centBins_low_pt;
+  const int* centBins_high  = centBins_high_pt;
+  const char** cent_Name    = cent_Name_pt;
+  const char** cent_Title   = cent_Title_pt;
+  //==========================
+
+  const int nFile = 2;
+  const char *filename[nFile] = {"bk.Run14_AuAu200.JpsiYield.pt1.5.pt1.3.root","Run14_AuAu200.JpsiYield.pt1.5.pt1.3.root"};
+  const TString legName[nFile] = {"Old","Remove dimuon-hft trigger"};
+  const char *save_name = "RmDmHftTrig";
+
+  // raw yield - efficiency - xsec
+  TFile *fin[nFile];
+  TH1F *hYield[nCentBins][nFile][gNTrgSetup];
+  TGraphErrors *gYield[nCentBins][nFile][gNTrgSetup];
+  double x,y;
+  for(int i=0; i<nFile; i++)
+    {
+      fin[i] = TFile::Open(Form("Rootfiles/%s",filename[i]),"read");
+      for(int k=0; k<nCentBins; k++)
+	{
+	  for(int t=0; t<gNTrgSetup; t++)
+	    {
+	      hYield[k][i][t] = (TH1F*)fin[i]->Get(Form("Jpsi_FitYield_cent%s%s%s_M0",cent_Title[k],gWeightName[1],gTrgSetupName[t]));
+	      hYield[k][i][t]->SetName(Form("%s_%d",hYield[k][i][t]->GetName(),i));
+	      hYield[k][i][t]->SetMarkerStyle(20+k);
+	      hYield[k][i][t]->SetMarkerColor(pow(2,k));
+	      hYield[k][i][t]->SetLineColor(pow(2,k));
+	      gYield[k][i][t] = new TGraphErrors(hYield[k][i][t]);
+	      int nbins = hYield[k][i][t]->GetNbinsX();
+	      for(int ibin=1; ibin<=nbins; ibin++)
+		{
+		  gYield[k][i][t]->GetPoint(ibin-1, x, y);
+		  double scale = hYield[k][0][t]->GetBinContent(ibin);
+		  gYield[k][i][t]->SetPoint(ibin-1, x+0.2*i, y/scale);
+		  gYield[k][i][t]->SetPointError(ibin-1, gYield[k][i][t]->GetErrorX(ibin-1), gYield[k][i][t]->GetErrorY(ibin-1)/scale);
+		}
+	    }
+	}
+    }
+
+  TH1F *hAuAu = new TH1F("AuAu200_Jpsi",";p_{T} (GeV/c);Ratio",15,0,15);
+  hAuAu->GetYaxis()->SetRangeUser(0.4,1.6);
+  ScaleHistoTitle(hAuAu,0.055,1,0.045,0.055,1,0.045,62);
+  TCanvas *c = new TCanvas("AuAu200_Jpsi_RawCounts","AuAu200_Jpsi_RawCounts",1100,700);
+  c->Divide(3,2);
+  TLegend *leg = new TLegend(0.18,0.2,0.42,0.4);
+  leg->SetBorderSize(0);
+  leg->SetFillColor(0);
+  leg->SetTextSize(0.05);
+  for(int t=0; t<gNTrgSetup; t++)
+    {
+      c->cd(t+1);
+      SetPadMargin(gPad,0.15,0.15,0.05,0.02);
+      if(k==0 || k==1) hAuAu->GetXaxis()->SetRangeUser(0,15);
+      if(k==2 || k==3) hAuAu->GetXaxis()->SetRangeUser(0,10);
+      if(k==4) hAuAu->GetXaxis()->SetRangeUser(0,6);
+      hAuAu->SetYTitle(Form("Ratio of raw counts"));
+      hAuAu->DrawCopy();
+      for(int k=0; k<nCentBins; k++)
+	{
+	  gYield[k][1][t]->Draw("samesPEZ");
+	  if(t==0)leg->AddEntry(gYield[k][1][t],Form("%s%%",cent_Name[k]),"P");
+	}
+      TPaveText *t1 = GetTitleText(Form("%s%s",run_type,gTrgSetupName[t]),0.05,62);
+      t1->Draw();
+    }
+  c->cd(1);
+  leg->Draw();
+  if(savePlot)
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiXsec/CompareRawCount_%s.pdf",run_type,save_name));
+    }
 }
 
 

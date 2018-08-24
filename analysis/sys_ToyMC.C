@@ -46,6 +46,7 @@ void anaSys(const char* type, const int saveHisto = 0);
 void plotSys(const char* type, const int savePlot = 0, const int saveHisto = 0, const int saveAN = 0);
 void mtdTrigEff(const int saveHisto = 0);
 void mtdTrigEffLS(const int saveHisto = 0);
+void mtdRespEff(const int saveHisto = 0);
 void makeHisto(TString name, const double mass, const int nExpr = 1e4);
 void toyMC(const double mass, const int nExpr, const int debug = 0);
 
@@ -91,11 +92,17 @@ void sys_ToyMC()
 
   const char* type = "MtdTrigEff";
   //const char* type = "Dtof";
-  //const char* type = "MtdMthEff";
+
   //anaSys(type, 1);
   //plotSys(type, 1, 1, 0);
-  //mtdTrigEff(0);
+
+
+  //const char* type = "MtdMthEff";
+  //mtdTrigEff(1);
   mtdTrigEffLS(1);
+
+  //const char* type = "MtdRespEff";
+  //mtdRespEff(1);
 }
 
 //================================================
@@ -354,6 +361,7 @@ void anaSys(const char* type, const int saveHisto)
       hMuonPtEff[2] = (TF1*)fdata->Get("funcTrkPtBtmBlEff_Type1");
       hMuonPtEff[2]->SetName("Muon_MtdMthEff_Sysdown");
     }
+  printf("[i] Process %s\n",fdata->GetName());
 
   for(int i=0; i<4; i++)
     {
@@ -389,10 +397,10 @@ void mtdTrigEff(const int saveHisto)
   hMuonPtEff[0] = (TF1*)fdata->Get(Form("%s_Muon_TacDiffEff",run_type));
 
   TFile *fEff = TFile::Open(Form("Rootfiles/%s.MtdTrigEff.root",run_type),"read");
-  hMuonPtEff[1] = (TF1*)fEff->Get(Form("%s_gTacDiffEffFinalFit_BinCount_prod_mid_Run15_pp200",run_type));
-  hMuonPtEff[2] = (TF1*)fEff->Get(Form("%s_gTacDiffEffFinalFit_BinCount_prod_high_Run15_pp200",run_type));
-  hMuonPtEff[1]->SetName(Form("%s_Muon_TacDiffEff_prod_mid",run_type));
-  hMuonPtEff[2]->SetName(Form("%s_Muon_TacDiffEff_prod_high",run_type));
+  hMuonPtEff[1] = (TF1*)fEff->Get(Form("%s_gTacDiffEffFinalFit_BinCount_prod_Run15_pp200",run_type));
+  hMuonPtEff[2] = (TF1*)fEff->Get(Form("%s_gTacDiffEffFinalFit_BinCount_prod_low_Run15_pp200",run_type));
+  hMuonPtEff[1]->SetName(Form("%s_Muon_TacDiffEff_prod",run_type));
+  hMuonPtEff[2]->SetName(Form("%s_Muon_TacDiffEff_prod_low",run_type));
 
   for(int e=0; e<3; e++)
     {
@@ -462,6 +470,48 @@ void mtdTrigEffLS(const int saveHisto)
 }
 
 //================================================
+void mtdRespEff(const int saveHisto)
+{
+  // track momentum resolution
+  TFile *fRes = TFile::Open(Form("Rootfiles/Run14_AuAu200.TrkEff.root"),"read");
+  hTpcTrackRes = (TH2F*)fRes->Get("PrimTrkRes_vs_TruePt_cent0080");
+  int nHistos = hTpcTrackRes->GetNbinsX();
+  for(int i=0; i<nHistos; i++)
+    {
+      hTrkResBin[i] = (TH1F*)hTpcTrackRes->ProjectionY(Form("hTrkRes_Bin%d",i+1),i+1,i+1);
+    }
+
+  TFile *fdata = TFile::Open(Form("Rootfiles/%s.MtdRespEff.root",run_type),"update");
+  hMuonPtEff[0] = (TF1*)fdata->Get("Cosmic_FitRespEff_Template");
+  hMuonPtEff[1] = (TF1*)fdata->Get("Cosmic_RespEff_Btm_6300_fit");
+  hMuonPtEff[2] = (TF1*)fdata->Get("Cosmic_RespEff_Btm_6400_fit");
+ 
+  hMuonPtEff[0]->SetName("Cosmic_Muon_Btm_All");
+  hMuonPtEff[1]->SetName("Cosmic_Muon_Btm_6300");
+  hMuonPtEff[2]->SetName("Cosmic_Muon_Btm_6400");
+
+  for(int e=0; e<3; e++)
+    {
+      hMuonPtEff[e]->SetName(Form("%s_TrigStudy",hMuonPtEff[e]->GetName()));
+    }
+
+  for(int i=0; i<1; i++)
+    {
+      makeHisto(part_name[i],part_mass[i],1e7);
+      
+      if(saveHisto)
+	{
+	  fdata->cd();
+	  for(int e=0; e<3; e++)
+	    {
+	      hOutJpsiPt[e]->Write("",TObject::kOverwrite);
+	      hOutJpsiCent[e]->Write("",TObject::kOverwrite);
+	    }
+	}
+    }
+}
+
+//================================================
 void makeHisto(TString name, const double mass, const int nExpr)
 {
   int nbins_tmp = 0;
@@ -469,7 +519,19 @@ void makeHisto(TString name, const double mass, const int nExpr)
   if(name.Contains("Jpsi"))
     {
       TFile *fin = 0x0;
-      if(year==2014 || year==2016)
+      if(year==2013)
+	{
+	  fin = TFile::Open("Rootfiles/pp500GeVfit_new.root","read");
+	  TF1 *funcJpsi = (TF1*)fin->Get("ffpt");
+	  funcJpsi->SetNpx(1000);
+	  hMcJpsiPt = (TH1F*)funcJpsi->GetHistogram();
+	  hMcJpsiPt->SetName(Form("GlobalFit_Jpsi_Yield_cent00100"));
+	  for(int bin=1; bin<=hMcJpsiPt->GetNbinsX(); bin++)
+	    {
+	      hMcJpsiPt->SetBinContent(bin,hMcJpsiPt->GetBinCenter(bin)*hMcJpsiPt->GetBinContent(bin));
+	    }
+	}
+      else if(year==2014 || year==2016)
 	{
 	  fin = TFile::Open("Rootfiles/models.root","read");
 	  hMcJpsiPt = (TH1F*)fin->Get(Form("TBW_JpsiYield_AuAu200_cent0060"));
@@ -487,7 +549,13 @@ void makeHisto(TString name, const double mass, const int nExpr)
             }
         }
 
-      if(year==2014)
+      if(year==2013)
+	{
+	  nbins_tmp = 5;
+	  double xbins_tmp_tmp[6] = {0,1.5,3,5,7,9};
+	  for(int i=0; i<nbins_tmp+1; i++) xbins_tmp[i] = xbins_tmp_tmp[i];
+	}
+      else if(year==2014)
 	{
 	  nbins_tmp = 9;
 	  double xbins_tmp_tmp[10] = {0.15,1,2,3,4,5,6,8,10,15};

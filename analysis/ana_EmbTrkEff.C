@@ -1,4 +1,3 @@
-const char *run_config = "";
 const int year = YEAR;
 TString run_cfg_name;
 const int nDet = 4;
@@ -30,9 +29,9 @@ void ana_EmbTrkEff()
     }
   else if(year==2014)
     {
-      fileName = Form("Run14_AuAu200.Embed.%s.root",particle);
+      fileName = Form("Run14_AuAu200.Embed.%s.%sroot",particle,run_config);
     }
-  outName = Form("%s.EmbTrkEff.root",run_type);
+  outName = Form("%s.EmbTrkEff.%sroot",run_type,run_config);
   outPDF = Form("%s.EmbTrkEff.%s.pdf",run_type,particle);
 
   run_cfg_name = run_config;
@@ -43,8 +42,8 @@ void ana_EmbTrkEff()
 
   //efficiency(outName, 1, 1);
   //resolution(outName, 1, 1);
-  //effVsZdc(0,0);
-  effVsCent(0);
+  effVsZdc(0,1);
+  //effVsCent(0);
   //effVsEta();
   //TrkEff3D(outName, outPDF);
 }
@@ -63,8 +62,8 @@ void effVsZdc(const int savePlot = 0, const int saveHisto = 0)
   const int nTrkPtBins = 13;
   const double xTrkPtBins[14] = {0,0.2,0.4,0.6,0.8,1.0,1.2,1.5,2.0,2.5,3.0,5.0,10,20};
   TFile *ftrk = 0;
-  if(saveHisto) ftrk = TFile::Open(Form("Rootfiles/%s.EmbTrkEff.root",run_type),"update");
-  else          ftrk = TFile::Open(Form("Rootfiles/%s.EmbTrkEff.root",run_type),"read");
+  if(saveHisto) ftrk = TFile::Open(Form("Rootfiles/%s.EmbTrkEff.%sroot",run_type,run_config),"update");
+  else          ftrk = TFile::Open(Form("Rootfiles/%s.EmbTrkEff.%sroot",run_type,run_config),"read");
   TH1F *hMcTrkPtInZdc[2][gNZdcRate][kNCent];
   TH1F *hMcTrkPtInZdcAll[2];
   TH1F *htmp = 0x0;
@@ -247,7 +246,7 @@ void effVsCent(const int savePlot = 0)
   // TofMult vs. gRefMult
   const char *hName[4] = {"TofMultVsgRefMult", "TofMultVsgRefMultCorr", "NgTrkVsCent", "ZdcRateVsCent"};
   const char *trgSetupName[4] = {"prod","prod_low","prod_mid","prod_high"};
-  TFile *fdata = TFile::Open("output/Run14_AuAu200.Embed.Jpsi.root", "read");
+  TFile *fdata = TFile::Open(Form("output/Run14_AuAu200.Embed.Jpsi.%sroot",run_config),"read");
   TH2F *h2Corr[4][4];
   for(int i=0; i<4; i++)
     {
@@ -323,7 +322,7 @@ void effVsCent(const int savePlot = 0)
 	}
     }
 
-  TFile *fin  = TFile::Open(Form("Rootfiles/%s.EmbTrkEff.root",run_type),"read");
+  TFile *fin  = TFile::Open(Form("Rootfiles/%s.EmbTrkEff.%sroot",run_type,run_config),"read");
   TList *list = new TList;
 
   TString legName_cent[nCentBins];

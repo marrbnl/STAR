@@ -224,16 +224,25 @@ void makeHisto(const int savePlot, const int saveHisto)
       hRespEff[i] = new TH1F(Form("MtdRespEffvsPt_Bkl%d_Mod%d",bl,mod),Form("MtdRespEffvsPt_Bkl%d_Mod%d",bl,mod),1000,0,20);
       for(int bin=1; bin<=hRespEff[i]->GetNbinsX(); bin++)
 	{
-	  double x = hRespEff[i]->GetBinCenter(bin);		      
-	  if(bl>9 && bl<23) 
+	  double x = hRespEff[i]->GetBinCenter(bin);	
+	  if(year==2013)
 	    {
-	      hRespEff[i]->SetBinContent(bin,func1->Eval(x));
-	      funcRespEff[i] = (TF1*)func1->Clone(Form("funcMtdRespEffvsPt_Bkl%d_Mod%d",bl,mod));
-	    }
-	  else                  
-	    {
+	      // use templates for all the moduels in 2013
 	      hRespEff[i]->SetBinContent(bin,func->Eval(x));
 	      funcRespEff[i] = (TF1*)func->Clone(Form("funcMtdRespEffvsPt_Bkl%d_Mod%d",bl,mod));
+	    }
+	  else
+	    {
+	      if(bl>9 && bl<23) 
+		{
+		  hRespEff[i]->SetBinContent(bin,func1->Eval(x));
+		  funcRespEff[i] = (TF1*)func1->Clone(Form("funcMtdRespEffvsPt_Bkl%d_Mod%d",bl,mod));
+		}
+	      else                  
+		{
+		  hRespEff[i]->SetBinContent(bin,func->Eval(x));
+		  funcRespEff[i] = (TF1*)func->Clone(Form("funcMtdRespEffvsPt_Bkl%d_Mod%d",bl,mod));
+		}
 	    }
 	}
     }
@@ -298,8 +307,15 @@ void makeHisto(const int savePlot, const int saveHisto)
 	  int mod = i%5 + 1;
 	  hSclFacErr[i] = (TH1F*)hRespEff[i]->Clone(Form("hSclFacErr_BL%d_Mod%d", bl, mod));
 	  TH1F *hFitError = 0x0;
-	  if(bl>9 && bl<23) hFitError = (TH1F*)fRespEff->Get(Form("Cosmic_FitRespEff_BL%d_Mod%d_Err", bl, mod));
-	  else hFitError = (TH1F*)fRespEff->Get(Form("Cosmic_FitRespEff_BL%d_Mod%d_HighPt_Err", bl, mod));
+	  if(year==2013)
+	    {
+	      hFitError = (TH1F*)fRespEff->Get(Form("Cosmic_FitRespEff_BL%d_Mod%d_HighPt_Err", bl, mod));
+	    }
+	  else
+	    {
+	      if(bl>9 && bl<23) hFitError = (TH1F*)fRespEff->Get(Form("Cosmic_FitRespEff_BL%d_Mod%d_Err", bl, mod));
+	      else hFitError = (TH1F*)fRespEff->Get(Form("Cosmic_FitRespEff_BL%d_Mod%d_HighPt_Err", bl, mod));
+	    }
 
 	  for(int bin=1; bin<=hSclFacErr[i]->GetNbinsX(); bin++)
 	    {
@@ -464,8 +480,15 @@ void makeHisto(const int savePlot, const int saveHisto)
 		  double x = hRespEffTmp[i]->GetBinCenter(bin);
 		  double ratio = 1;
 		  if(ih==1) ratio = hRatio->GetBinContent(hRatio->FindFixBin(x));
-		  if(bl>9 && bl<23) hRespEffTmp[i]->SetBinContent(bin,func1->Eval(x));
-		  else              hRespEffTmp[i]->SetBinContent(bin,func2->Eval(x)*ratio);
+		  if(year==2013)
+		    {
+		      hRespEffTmp[i]->SetBinContent(bin,func2->Eval(x)*ratio);
+		    }
+		  else
+		    {
+		      if(bl>9 && bl<23) hRespEffTmp[i]->SetBinContent(bin,func1->Eval(x));
+		      else              hRespEffTmp[i]->SetBinContent(bin,func2->Eval(x)*ratio);
+		    }
 		  hRespEffTmp[i]->SetBinError(bin,1e-10);
 		}
 	      //printf("BL = %d, Mod = %d, err = %4.4f, scale = %4.4f\n",i/5+1,i%5+1,error,scale);

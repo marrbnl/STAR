@@ -5,11 +5,13 @@ const char *name[nHistos] = {"Dz","Dy","NsigmaPi","Dca","NHitsFit","NHitsDedx"};
 const char *title[nHistos] = {"#Deltaz","#Deltay","n#sigma_{#pi}","DCA","NHitsFit","NHitsDedx"};
 const char *unit[nHistos] = {" (cm)"," (cm)",""," (cm)","",""};
 const double cuts[nHistos] = {0, 0, 0, 1, 15, 10};
-const Int_t nMuonPtBin = 6;
-const Double_t muonPtBins[nMuonPtBin+1] = {1.3, 1.5, 2.0, 2.5, 3.0, 5.0, 10.0};
+//const Int_t nMuonPtBin = 6;
+//const Double_t muonPtBins[nMuonPtBin+1] = {1.3, 1.5, 2.0, 2.5, 3.0, 5.0, 10.0};
+const Int_t nMuonPtBin = 3;
+const Double_t muonPtBins[nMuonPtBin+1] = {1.3, 2.0, 3.0, 5.0};
 char* data_name[2] = {"Data","Embed"};
-double ptbound = 100;
-double nsigma1 = 2, nsigma2 = 2;
+double ptbound = 3;
+double nsigma1 = 2, nsigma2 = 2.5;
 
 //================================================
 void ana_DataVsEmbed()
@@ -38,11 +40,9 @@ void ana_DataVsEmbed()
   fResVsPt[2] = new TF1("fResDtofVsPt","[0]+[1]*exp([2]/x)",1,10);
   fResVsPt[2]->SetParameters(0.0817528, 0.0169419, 4.34897);
 
-  //makeData();
-  makeEmbed();
-  //dataVsEmbed();
+  //makeEmbed();
+  dataVsEmbed();
   //DyDzCut();
-  //Run16nSigmaPiEff();
 }
 
 //================================================
@@ -108,21 +108,23 @@ void DyDzCut(const bool savePlot = 0, const bool saveHisto = 0, const bool saveA
 }
 
 //================================================
-void dataVsEmbed(const bool savePlot = 0, const bool saveAN = 1)
+void dataVsEmbed(const bool savePlot = 1, const bool saveAN = 0)
 {
-  TFile *fin = TFile::Open(Form("Rootfiles/%s.PIDcuts.root",run_type),"read");
+  //TFile *fin = TFile::Open(Form("Rootfiles/%s.PIDcuts.root",run_type),"read");
+  TFile *fin = TFile::Open(Form("Rootfiles/%s.JpsiMuon.%sroot",run_type,run_config),"read");
 
   //==============================================
   // Compare single muon distribution
   //==============================================
   TH1F *hMuonDis[2][nHistos][nMuonPtBin];
-  const int rebin[nHistos] = {4,4,5,4,5,5};
+  const int rebin[nHistos] = {4,4,2,4,5,5};
   const double minimum[nHistos] = {-50, -50, -5, 0, 0, 0};
-  const double maximum[nHistos] = {50, 50, 5, 2, 50, 50};
+  const double maximum[nHistos] = {50, 50, 5, 3, 50, 50};
   for(int i=0; i<nHistos; i++)
     {
       TCanvas *c = new TCanvas(Form("%s_distribution",name[i]),Form("%s_distribution",name[i]),1100,700);
-      c->Divide(3,2);
+      if(nMuonPtBin==6) c->Divide(3,2);
+      if(nMuonPtBin==3) c->Divide(2,2);
       for(int bin=1; bin<=nMuonPtBin; bin++)
 	{
 	  c->cd(bin);
@@ -180,7 +182,7 @@ void dataVsEmbed(const bool savePlot = 0, const bool saveAN = 1)
       leg->Draw();
 
       if(savePlot)
-	c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_DataVsEmbed/DataVsEmbed_%s_InPtBins.pdf",run_type,name[i]));
+	c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_DataVsEmbed/%sDataVsEmbed_%s_InPtBins.pdf",run_type,run_config,name[i]));
       if(saveAN)
 	c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch2_Comp%s_InPtBins.pdf",name[i]));
     }
@@ -282,21 +284,23 @@ void dataVsEmbed(const bool savePlot = 0, const bool saveAN = 1)
 }
 
 //================================================
-void makeEmbed(const bool savePlot = 1, const bool saveHisto = 0)
+void makeEmbed(const bool savePlot = 0, const bool saveHisto = 0)
 {
   TFile *fEmbed = 0x0;
   if(year==2013) fEmbed = TFile::Open("output/Run13.pp500.jpsi.Embed.root","read");
-  if(year==2014) fEmbed = TFile::Open("output/Run14_AuAu200.Embed.Jpsi.root","read");
+  if(year==2014) fEmbed = TFile::Open("output/Run14_AuAu200.Embed.Jpsi.Dca3cm.root","read");
 
+  const char *name[nHistos] = {"Dz","Dy","NsigmaPi","Dca","NHitsFit","NHitsDedx"};
+  THnSparseF *hnMuonDis[nHistos];
   TH2F *hMuonDisVsPt[nHistos];
   TH1F *hMuon[nHistos][nMuonPtBin];
   for(int i=0; i<nHistos; i++)
     {
-      cout << Form("hTrk%sVsPt_MCreco_di_mu",name[i]) << endl;
-      if(i<2) hMuonDisVsPt[i] = (TH2F*)fEmbed->Get(Form("hTrk%sVsPt_MCreco_di_mu",name[i]));
-      else if(i==2) hMuonDisVsPt[i] = (TH2F*)fEmbed->Get(Form("hTrkNSigmaPi_MCreco_di_mu"));
-      else hMuonDisVsPt[i] = (TH2F*)fEmbed->Get(Form("hTrk%s_MCreco_di_mu",name[i]));
-
+      cout << Form("hTrk%s_MCreco_di_mu",name[i]) << endl;
+      if(i<2) hnMuonDis[i] = (THnSparseF*)fEmbed->Get(Form("hTrk%sVsPt_MCreco_di_mu",name[i]));
+      else if(i==2) hnMuonDis[i] = (THnSparseF*)fEmbed->Get(Form("hTrkNSigmaPi_MCreco_di_mu"));
+      else    hnMuonDis[i] = (THnSparseF*)fEmbed->Get(Form("hTrk%s_MCreco_di_mu",name[i]));
+      hMuonDisVsPt[i] = (TH2F*)hnMuonDis[i]->Projection(1,0);
       hMuonDisVsPt[i]->SetName(Form("Embed_JpsiMuon_%sVsPt",name[i]));
       for(int bin=1; bin<=nMuonPtBin; bin++)
 	{
@@ -310,7 +314,7 @@ void makeEmbed(const bool savePlot = 1, const bool saveHisto = 0)
   // Display cuts
   //==============================================
   const double minimum[nHistos] = {-50, -50, -5, 0, 0, 0};
-  const double maximum[nHistos] = {50, 50, 5, 2, 50, 50};
+  const double maximum[nHistos] = {50, 50, 5, 3, 50, 50};
   for(int i=0; i<nHistos; i++)
     {
       hMuonDisVsPt[i]->GetXaxis()->SetRangeUser(0,10);
@@ -365,8 +369,10 @@ void makeEmbed(const bool savePlot = 1, const bool saveHisto = 0)
   //==============================================
   // Fit MC distributions to extract efficiency
   //==============================================
-  const int nbins = 19;
-  const double xbins[nbins+1] = {1.0,1.2,1.4,1.6,1.8,2.0,2.2,2.4,2.6,2.8,3.0,3.5,4.0,4.5,5.0,5.5,6.0,7.0,8.0,10.0};
+  // const int nbins = 19;
+  // const double xbins[nbins+1] = {1.0,1.2,1.4,1.6,1.8,2.0,2.2,2.4,2.6,2.8,3.0,3.5,4.0,4.5,5.0,5.5,6.0,7.0,8.0,10.0};
+  const int nbins = 9;
+  const double xbins[nbins+1] = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0};
   TH1F *hFitSigma[nHistos];
   TH1F *hFitMean[nHistos];
   TH1F *hMuonFit[nHistos][nbins];
@@ -379,7 +385,8 @@ void makeEmbed(const bool savePlot = 1, const bool saveHisto = 0)
       hFitSigma[i] = new TH1F(Form("Embed_JpsiMuon_%s_FitSigma",name[i]),Form("Width of %s for muons;p_{T} (GeV/c)",title[i]),nbins,xbins);
 
       TCanvas *cfit = new TCanvas(Form("Fit_%s",name[i]),Form("Fit_%s",name[i]),1000,600);
-      cfit->Divide(5,4);
+      if(nbins==19) cfit->Divide(5,4);
+      if(nbins==9)  cfit->Divide(3,3);
       for(int bin=1; bin<=nbins; bin++)
 	{
 	  int start_bin = hMuonDisVsPt[i]->GetXaxis()->FindBin(xbins[bin-1]+1e-4);
@@ -504,7 +511,7 @@ void makeEmbed(const bool savePlot = 1, const bool saveHisto = 0)
   //==============================================
   if(saveHisto)
     {
-      TFile *fout = TFile::Open(Form("Rootfiles/%s.PIDcuts.root",run_type),"update");
+      TFile *fout = TFile::Open(Form("Rootfiles/%s.JpsiMuon.%sroot",run_type,run_config),"update");
       for(int i=0; i<nHistos; i++)
 	{
 	  hMuonDisVsPt[i]->Write(Form("Embed_JpsiMuon_%sVsPt",name[i]),TObject::kOverwrite);

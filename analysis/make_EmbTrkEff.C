@@ -12,7 +12,7 @@ void make_EmbTrkEff()
     }
   else if(year==2014)
     {
-      f = TFile::Open(Form("./output/Run14_AuAu200.Embed.Jpsi.root"),"read");
+      f = TFile::Open(Form("./output/Run14_AuAu200.Embed.Jpsi.%sroot",run_config),"read");
     }
   TH1F *hStat = (TH1F*)f->Get("hEventStat");
   printf("[i] # of events: %4.4e\n",hStat->GetBinContent(3));
@@ -233,7 +233,7 @@ void makeHistos(const int saveHistos = 1)
   if(saveHistos)
     {
       printf("+++ Save histograms +++\n");
-      TFile *fout = TFile::Open(Form("Rootfiles/%s.EmbTrkEff.root",run_type),"recreate");
+      TFile *fout = TFile::Open(Form("Rootfiles/%s.EmbTrkEff.%sroot",run_type,run_config),"recreate");
       for(int k=0; k<nCentBins_tmp; k++)
 	{
 	  for(int i=0; i<2; i++)

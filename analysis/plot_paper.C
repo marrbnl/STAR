@@ -2148,6 +2148,7 @@ void ppRef(const bool savePlot = 0, const bool saveHisto = 0)
   xbins[0] = 0.15;
 
   const char *name[3] = {"STAR_2009","STAR_2012","PHENIX"};
+
   // check the y-distribution
   // PHYSICAL REVIEW C 93, 024919 (2016)
   double midRapFrac[3] = {0, 0, 0};
@@ -2215,6 +2216,183 @@ void ppRef(const bool savePlot = 0, const bool saveHisto = 0)
   if(gSaveAN)
     {
       c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch6_JpsiXsecPP_Ydis.pdf"));
+    }
+
+  // check the pt dependence in different rapidity bins
+  const char* modelName[3] = {"ICEM", "NRQCD-JXW", "NRQCD-ZHF"};
+  TGraphErrors *hppXsecRatio[3][2]; // two models; two ratios |y|<0.5/|y|<1; |y|<0.35/|y|<0.5
+  for(int i=0; i<3; i++)
+    {
+      for(int j=0; j<2; j++)
+	{
+	  if(i==0) hppXsecRatio[i][j] = new TGraphErrors(60);
+	  else
+	    {
+	      if(j==0) hppXsecRatio[i][j] = new TGraphErrors(7);
+	      if(j==1) hppXsecRatio[i][j] = new TGraphErrors(8);
+	    }
+	  hppXsecRatio[i][j]->SetName(Form("hppXsecRatio_%s_Rap%d",modelName[i],j));
+	}
+    }
+  /// ICEM from Ramona
+  char tmp_str[256];
+  double tmp_d;
+  ifstream file;
+  file.open("Rootfiles/Paper/pp/ptratio.agr");
+  double pt_tmp, ratio_tmp;
+  for(int i=0; i<346; i++)
+    {
+      file.getline(tmp_str, 256);
+    }
+  for(int i=0; i<60; i++)
+    {
+      file >> pt_tmp >> ratio_tmp;
+      hppXsecRatio[0][0]->SetPoint(i, pt_tmp, ratio_tmp);
+    }
+  for(int i=0; i<4; i++)
+    {
+      file.getline(tmp_str, 256);
+    }
+  for(int i=0; i<60; i++)
+    {
+      file >> pt_tmp >> ratio_tmp;
+      hppXsecRatio[0][1]->SetPoint(i, pt_tmp, ratio_tmp);
+    }
+  double x1_tmp, y1_tmp, x2_tmp, y2_tmp;
+  for(int i=0; i<60; i++)
+    {
+      hppXsecRatio[0][0]->GetPoint(i, x1_tmp, y1_tmp);
+      hppXsecRatio[0][1]->GetPoint(i, x2_tmp, y2_tmp);
+      hppXsecRatio[0][0]->SetPoint(i, x1_tmp, y2_tmp/y1_tmp);
+      hppXsecRatio[0][0]->SetPointError(i, 0.25, 1e-10);
+      hppXsecRatio[0][1]->SetPoint(i, x1_tmp, 1./y2_tmp);
+      hppXsecRatio[0][1]->SetPointError(i, 0.25, 1e-10);
+    }
+  file.close();
+  
+  // NRQCD
+  double pt_model[2][3][10], yield_model[2][3][10], error_model[2][3][10];
+  const char* modelNameTmp[2] = {"JXW", "ZHF"};
+  const char* rapidityNameTmp[3] = {"035", "05", "10"};
+  for(int i=0; i<2; i++)
+    {
+      for(int j=0; j<3; j++)
+	{
+	  file.open(Form("Rootfiles/Paper/pp/dsig_dpt/Jpsi-Y%s-dsig-dpt-%s.dat",rapidityNameTmp[j],modelNameTmp[i]));
+	  for(int l=0; l<5; l++)
+	    {
+	      file.getline(tmp_str, 256);
+	    }
+	  for(int l=0; l<9; l++)
+	    {
+	      if(j<2 && l==8) continue;
+	      file >> pt_model[i][j][l] >>  yield_model[i][j][l] >>  error_model[i][j][l]; 
+	    }
+	  file.close();
+	}
+
+      for(int ipoint=0; ipoint<7; ipoint++)
+	{
+	  double xerror = 0.5;
+	  if(ipoint>=3) xerror = 1;
+	  double yerror =  yield_model[i][1][ipoint+1]/yield_model[i][2][ipoint] * fabs(error_model[i][1][ipoint+1]/yield_model[i][1][ipoint+1] - error_model[i][2][ipoint]/yield_model[i][2][ipoint]);
+
+	  hppXsecRatio[i+1][0]->SetPoint(ipoint, pt_model[i][1][ipoint+1], yield_model[i][1][ipoint+1]/yield_model[i][2][ipoint]);
+	  hppXsecRatio[i+1][0]->SetPointError(ipoint, xerror, yerror);
+	}
+
+      for(int ipoint=0; ipoint<8; ipoint++)
+	{
+	  double xerror = 0.5;
+	  if(ipoint>=4) xerror = 1;
+	  double yerror =  yield_model[i][0][ipoint]/yield_model[i][1][ipoint] * fabs(error_model[i][0][ipoint]/yield_model[i][0][ipoint] - error_model[i][1][ipoint]/yield_model[i][1][ipoint]);
+
+	  hppXsecRatio[i+1][1]->SetPoint(ipoint, pt_model[i][0][ipoint], yield_model[i][0][ipoint]/yield_model[i][1][ipoint]);
+	  hppXsecRatio[i+1][1]->SetPointError(ipoint, xerror, yerror);
+	}
+    }
+
+  //|y|<0.5/|y|<1; |y|<0.35/|y|<0.5
+  TCanvas *c = new TCanvas("Jpsi_ptDisInY","Jpsi_ptDisInY",800,600);
+  TH1F *hplotInY = new TH1F("hplotInY",";p_{T} [GeV/c];J/#Psi yield ratio",150,0,15);
+  hplotInY->GetYaxis()->SetRangeUser(0, 0.9);
+  hplotInY->DrawCopy();
+  TLine *linePar[3][2];
+  for(int i=0; i<3; i++)
+    {
+      for(int j=0; j<2; j++)
+	{
+	  if(i==0)
+	    {
+	      double fraction = midRapFrac[0]/2;
+	      if(j==1) fraction = 0.7/midRapFrac[2];
+	      linePar[i][j] = GetLine(0, fraction, 15, fraction, j+1);
+	      linePar[i][j]->Draw();
+	    }
+	  hppXsecRatio[i][j]->SetMarkerStyle(24-i*2);
+	  hppXsecRatio[i][j]->SetMarkerSize(1.5);
+	  hppXsecRatio[i][j]->SetMarkerColor(j+1);
+	  hppXsecRatio[i][j]->SetLineColor(j+1);
+	  hppXsecRatio[i][j]->Draw("samesP");
+	}
+    }
+  leg = new TLegend(0.12,0.2,0.3,0.3);
+  leg->SetBorderSize(0);
+  leg->SetFillColor(0);
+  leg->SetTextSize(0.035);
+  leg->AddEntry(hppXsecRatio[2][0],"|y|<0.5/|y|<1","P");
+  leg->AddEntry(hppXsecRatio[2][1],"|y|<0.35/|y|<0.5","P");
+  leg->Draw();
+  leg = new TLegend(0.35,0.15,0.6,0.35);
+  leg->SetBorderSize(0);
+  leg->SetFillColor(0);
+  leg->SetTextSize(0.035);
+  leg->AddEntry(hppXsecRatio[0][0],"ICEM [PRD94.114029 (2016)]","P");
+  leg->AddEntry(hppXsecRatio[1][0],"NRQCD [PRL110.042002(2013)]","P");
+  leg->AddEntry(hppXsecRatio[2][0],"NRQCD [PRL114.092006(2015)]","P");
+  leg->AddEntry(linePar[0][0],"World data [PRC93.024919(2016)]","L");
+  leg->Draw();
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/paper/JpsiPtDisInY.pdf",run_type,run_cfg_name.Data()));
+  if(gSaveAN)
+    {
+      c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch6_JpsiXsecPP_PtDisInY.pdf"));
+    }
+
+
+  // fit the ICEM results to be used for scaling data
+  TF1 *funcICEM[2];
+  TCanvas *c = new TCanvas("fit_ICEM_ratio","fit_ICEM_ratio",1100,450);
+  c->Divide(2,1);
+  for(int j=0; j<2; j++)
+    {
+      TGraphErrors* graphTmp = (TGraphErrors*)hppXsecRatio[0][j]->Clone(Form("%s_clone",hppXsecRatio[0][j]->GetName()));
+      for(int ipoint=0; ipoint<graphTmp->GetN(); ipoint++)
+	{
+	  graphTmp->SetPointError(ipoint, 0.25, 1e-3);
+	}
+      funcICEM[j] = new TF1(Form("funcICEM_ratio%d",j),"pol4",0,15);
+      if(j==0) funcICEM[j]->SetParameters(0.5, -1e-2, 2e-3, -1.5e-4, 4e-6);
+      if(j==1) funcICEM[j]->SetParameters(0.7, -4e-3, 1e-3, -9e-5, 2e-6);
+      graphTmp->Fit(funcICEM[j], "R0Q");
+      c->cd(j+1);
+      if(j==0) hplotInY->GetYaxis()->SetRangeUser(0.3,0.7);
+      if(j==1) hplotInY->GetYaxis()->SetRangeUser(0.55,0.8);
+      hplotInY->DrawCopy();
+      graphTmp->Draw("samesPE");
+      funcICEM[j]->Draw("sames");
+      linePar[0][j]->Draw();
+      TPaveText *t1;
+      if(j==0) t1 = GetTitleText("ICEM: |y|<0.5/|y|<1", 0.05);
+      else t1 = GetTitleText("ICEM: |y|<0.35/|y|<0.5", 0.05);
+      t1->Draw();
+      leg = new TLegend(0.15,0.15,0.4,0.35);
+      leg->SetBorderSize(0);
+      leg->SetFillColor(0);
+      leg->SetTextSize(0.04);
+      leg->AddEntry(graphTmp,"ICEM [PRD94.114029 (2016)]","P");
+      leg->AddEntry(funcICEM[j],"Fit","L");
+      leg->AddEntry(linePar[0][0],"World data [PRC93.024919(2016)]","L");
+      leg->Draw();
     }
   
   // pp data
@@ -2310,6 +2488,7 @@ void ppRef(const bool savePlot = 0, const bool saveHisto = 0)
   TGraphAsymmErrors *hJpsiXsecScale[3];
   TGraphAsymmErrors *hJpsiXsecSysScale[3];
   TGraphAsymmErrors *graph = 0x0, *gSys = 0x0;
+  TF1 *funcICEMscale = 0x0;
   double xtmp, ytmp;
   for(int i=0; i<3; i++)
     {
@@ -2317,25 +2496,30 @@ void ppRef(const bool savePlot = 0, const bool saveHisto = 0)
 	{
 	  graph = gHighPtPP;
 	  gSys = gHighPtPPSys;
+	  funcICEMscale = funcICEM[0];
 	}
       else if(i==1)
 	{
 	  graph = gRun12;
 	  gSys = gRun12Sys;
+	  funcICEMscale = funcICEM[0];
 	}
       else if(i==2)
 	{
 	  graph = gPhenix;
 	  gSys = gPhenixSys;
+	  funcICEMscale = funcICEM[1];
 	}
       hJpsiXsecScale[i] = new TGraphAsymmErrors(*graph);
       hJpsiXsecScale[i]->SetName(Form("%s_scaled",graph->GetName()));
       for(int ipoint=0; ipoint<graph->GetN(); ipoint++)
 	{
 	  graph->GetPoint(ipoint, xtmp, ytmp);
-	  hJpsiXsecScale[i]->SetPoint(ipoint, xtmp, ytmp*midRapFrac[i]);
+	  double scale = funcICEMscale->Eval(xtmp) * 2;
+	  if(i==2) scale = 0.7/funcICEMscale->Eval(xtmp);
+	  hJpsiXsecScale[i]->SetPoint(ipoint, xtmp, ytmp*scale);
 	  hJpsiXsecScale[i]->SetPointError(ipoint, graph->GetErrorXlow(ipoint), graph->GetErrorXhigh(ipoint),
-					   graph->GetErrorYlow(ipoint)*midRapFrac[i], graph->GetErrorYhigh(ipoint)*midRapFrac[i]);
+					   graph->GetErrorYlow(ipoint)*midRapFrac[i], graph->GetErrorYhigh(ipoint)*scale);
 	}
       hJpsiXsecSysScale[i] = new TGraphAsymmErrors(gSys->GetN());
       hJpsiXsecSysScale[i]->SetName(Form("%s_scaled",gSys->GetName()));
@@ -2345,10 +2529,12 @@ void ppRef(const bool savePlot = 0, const bool saveHisto = 0)
       for(int ipoint=0; ipoint<graph->GetN(); ipoint++)
       	{
       	  gSys->GetPoint(ipoint, xtmp, ytmp);
-      	  hJpsiXsecSysScale[i]->SetPoint(ipoint, xtmp, ytmp*midRapFrac[i]);
+	  double scale = funcICEMscale->Eval(xtmp) * 2;
+	  if(i==2) scale = 0.7/funcICEMscale->Eval(xtmp);
+      	  hJpsiXsecSysScale[i]->SetPoint(ipoint, xtmp, ytmp*scale);
       	  hJpsiXsecSysScale[i]->SetPointError(ipoint, gSys->GetErrorXlow(ipoint), gSys->GetErrorXhigh(ipoint),
-					      sqrt( pow(gSys->GetErrorYlow(ipoint),2) + pow(midRapFracSys[i]*ytmp,2) )*midRapFrac[i], 
-					      sqrt( pow(gSys->GetErrorYhigh(ipoint),2) + pow(midRapFracSys[i]*ytmp,2) )*midRapFrac[i]);
+					      sqrt( pow(gSys->GetErrorYlow(ipoint),2) + pow(midRapFracSys[i]*ytmp,2) )*scale, 
+					      sqrt( pow(gSys->GetErrorYhigh(ipoint),2) + pow(midRapFracSys[i]*ytmp,2) )*scale);
       	}
     }
   TCanvas *c = draw1D(hpp,"Invariant J/psi cross section scaled to |y| < 0.5",kTRUE);
@@ -2391,7 +2577,7 @@ void ppRef(const bool savePlot = 0, const bool saveHisto = 0)
       gPad->SetLogy();
       graph->GetXaxis()->SetRangeUser(0,15);
       graph->GetYaxis()->SetRangeUser(1e-6,10);
-      funcJpsiXsec[i] = new TF1(Form("Func_Jpsi_xsec_%s",name[i]),"[0]*(([1]-1)*([1]-2))/(2*3.14*[1]*[2]*([1]*[2]+[3]*([1]-2)))*(1+(sqrt(x*x+[3]*[3])-[3])/([1]*[2]))**(-1*[1])",0,15);
+      funcJpsiXsec[i] = new TF1(Form("Func_Jpsi_xsec_%s",name[i]),"[0]*(([1]-1)*([1]-2))/(2*3.14*[1]*[2]*([1]*[2]+[3]*([1]-2)))*(1+(sqrt(x*x+[3]*[3])-[3])/([1]*[2]))**(-1*[1])",0,14);
       if(i==2) funcJpsiXsec[i]->SetRange(0,6);
       funcJpsiXsec[i]->SetParameters(1, 3, 1, 4);
       graph->Fit(funcJpsiXsec[i], "R0Q");
@@ -2504,7 +2690,6 @@ void ppRef(const bool savePlot = 0, const bool saveHisto = 0)
   TF1 *funcPhenix = new TF1("PHENIX_paper","[0]*x*1./((1+(x/[1])**2)**[2])",0,8);
   funcPhenix->SetParameters(28.7, 3.41, 4.6);
   printf("[i] PHENIX paper: fraction of [0.15, 0.25]/[0, 0.25] = %4.3f\n",funcPhenix->Integral(0.15,0.25)/funcPhenix->Integral(0,0.25));
-  return;
 
   TH1F *hppRebin = new TH1F("pp200_Jpsi_Rebin",";p_{T} (GeV/c);Bd^{2}#sigma/(2#pip_{T}dp_{T}dy) [nb/(GeV/c)^{2}]",15,0,15);
   hppRebin->GetYaxis()->SetRangeUser(1e-6,10);
@@ -2524,7 +2709,6 @@ void ppRef(const bool savePlot = 0, const bool saveHisto = 0)
   leg->AddEntry(gPhenix,"PHENIX |y|<0.35","PL");
   leg->Draw();
   if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/paper/ppRef_Compare_rebin.pdf",run_type,run_cfg_name.Data()));
-  return;
 
   // take the average
   TH1F *hPPJpsiFinal = new TH1F("hpp200JpsiVsPtFinal","",nbins,xbins);

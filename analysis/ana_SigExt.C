@@ -4,6 +4,7 @@ TString run_cfg_name;
 const int useEmbWidth = 1;
 TH1F *hSignalTemplate;
 TF1  *funcBkgTemplate;
+TH1F *hMixBkgTemplate;
 
 //================================================
 void ana_SigExt()
@@ -21,22 +22,24 @@ void ana_SigExt()
   if(f)
     {
       TH1F *hStat = (TH1F*)f->Get("hEventStat");
+      printf("%s\n",f->GetName());
       printf("all         events: %4.4e\n",hStat->GetBinContent(1));
       printf("all di-muon events: %4.4e\n",hStat->GetBinContent(3));
       printf("acc di-muon events: %4.4e\n",hStat->GetBinContent(10));
     }
 
   
-  //prod_pt();
-  Run14_signal();
+  prod_pt();
+  //Run14_signal();
   //prod_npart();
   //Run14_npart();
   //getJpsiWidthEmbed();
   //studyLowStat();
+  //MLfit();
 }
 
 //================================================
-void getJpsiWidthEmbed(int savePlot = 0, int saveHisto = 0)
+void getJpsiWidthEmbed(int savePlot, int saveHisto)
 {
   // re-assign global constants
   const int nPtBins         = nPtBins_pt;
@@ -256,93 +259,6 @@ void getJpsiWidthEmbed(int savePlot = 0, int saveHisto = 0)
 	}
     }
 
-  /*
-
-  TH2F* hMassVsPtIntegr[kNCent-1][3];
-  for(int k=0; k<kNCent-1; k++)
-    {
-      for(int i=0; i<3; i++)
-	{
-	  hMassVsPtIntegr[k][i] = (TH2F*)fscan->Get(Form("hRcJpsiMass_%s_final_%s",cent_Title_npart[kNCent+k],sysName_scan[i]));
-	}
-    }
-  TH1F* hInvMassIntegr[nPtBins_npart][kNCent][3];
-  TF1 *funcInvMassIntegr[nPtBins_npart][kNCent][3];
-  TH1F *hSigmaIntegr[nPtBins_npart][3];
-  TH1F *hMeanIntegr[nPtBins_npart][3];
-  TCanvas *cFitIntegr[nPtBins_npart][3];
-  for(int j=0; j<nPtBins_npart; j++)
-    {
-      for(int i=0; i<3; i++)
-	{
-	  cFitIntegr[j][i] = new TCanvas(Form("cFitIntegr_Pt%s_%s",pt_Name_npart[j],sysName_scan[i]),Form("cFitIntegr_Pt%s_%s",pt_Name_npart[j],sysName_scan[i]), 1100, 700);
-	  cFitIntegr[j][i]->Divide(4,2);
-	  hSigmaIntegr[j][i] = new TH1F(Form("SmearEmb_JpsiWidthIntegr_Pt%s_%s",pt_Name_npart[j],sysName_scan[i]), "Width of J/psi peak", nCentBins_npart[j], 0, nCentBins_npart[j]);
-	  hMeanIntegr[j][i] = new TH1F(Form("SmearEmb_JpsiMeanIntegr_Pt%s_%s",pt_Name_npart[j],sysName_scan[i]), "Mean of J/psi peak", nCentBins_npart[j], 0, nCentBins_npart[j]);
-	  for(int k=0; k<kNCent-1; k++)
-	    {
-	      hSigmaIntegr[j][i]->GetXaxis()->SetBinLabel(k+1, Form("%s%%",cent_Name_npart[k+j*kNCent]));
-	      if(j==0 && k==kNCent-2) hSigmaIntegr[j][i]->GetXaxis()->SetBinLabel(k+2, Form("%s%%",cent_Name_npart[k+1]));
-	      hInvMassIntegr[j][k][i] = (TH1F*)hMassVsPtIntegr[k][i]->ProjectionY(Form("SmearEmb_JpsiInvMass_cent%s_Pt%s_%s",cent_Title_npart[kNCent+k],pt_Name_npart[j],sysName_scan[i]));
-	      hInvMassIntegr[j][k][i]->Reset("AC");
-	      int low_bin = hMassVsPtIntegr[k][i]->GetXaxis()->FindFixBin(ptBins_low_npart[j]+1e-4);
-	      int up_bin = hMassVsPtIntegr[k][i]->GetXaxis()->FindFixBin(ptBins_high_npart[j]-1e-4);
-	      for(int bin=low_bin; bin<=up_bin; bin++)
-		{
-		  TH1F *htmp = (TH1F*)hMassVsPtIntegr[k][i]->ProjectionY(Form("Projy2_bin%d_%s_%d_%d",bin,sysName_scan[i],j,k),bin,bin);
-		  double scale = funcInputJpsi->Integral(hMassVsPtIntegr[k][i]->GetXaxis()->GetBinLowEdge(bin),
-							 hMassVsPtIntegr[k][i]->GetXaxis()->GetBinUpEdge(bin));
-		  hInvMassIntegr[j][k][i]->Add(htmp, scale); 
-		}
-	      hInvMassIntegr[j][k][i]->Rebin(2);
-	      hInvMassIntegr[j][k][i]->Scale(1./hInvMassIntegr[j][k][i]->Integral());
-
-	      TH1F *hplot = (TH1F*)hInvMassIntegr[j][k][i]->Clone(Form("%s_plot",hInvMassIntegr[j][k][i]->GetName()));
-	      funcInvMassIntegr[j][k][i] = new TF1(Form("func_%s",hInvMassIntegr[j][k][i]->GetName()), "gaus", 2.95, 3.25);
-	      hplot->Fit(funcInvMassIntegr[j][k][i], "IR0Q");
-	      hSigmaIntegr[j][i]->SetBinContent(k+1, funcInvMassIntegr[j][k][i]->GetParameter(2));
-	      hSigmaIntegr[j][i]->SetBinError(k+1, funcInvMassIntegr[j][k][i]->GetParError(2));
-	      hMeanIntegr[j][i]->SetBinContent(k+1, funcInvMassIntegr[j][k][i]->GetParameter(1));
-	      hMeanIntegr[j][i]->SetBinError(k+1, funcInvMassIntegr[j][k][i]->GetParError(1));
-	      if(j==0 && k==kNCent-2)
-		{
-		  hSigmaIntegr[j][i]->SetBinContent(k+2, funcInvMassIntegr[j][k][i]->GetParameter(2));
-		  hSigmaIntegr[j][i]->SetBinError(k+2, funcInvMassIntegr[j][k][i]->GetParError(2));
-		  hMeanIntegr[j][i]->SetBinContent(k+2, funcInvMassIntegr[j][k][i]->GetParameter(1));
-		  hMeanIntegr[j][i]->SetBinError(k+2, funcInvMassIntegr[j][k][i]->GetParError(1));
-		}
-	      cFitIntegr[j][i]->cd(k+1);
-	      hplot->SetMarkerStyle(24);
-	      hplot->GetXaxis()->SetRangeUser(2.9, 3.4);
-	      hplot->SetTitle("");
-	      hplot->Draw();
-	      TPaveText *t1 = GetTitleText(Form("ToyMC: %s%% (%s)",cent_Name_npart[kNCent+k],sysName_scan[i]),0.06);
-	      t1->Draw();
-	      funcInvMassIntegr[j][k][i]->SetLineColor(4);
-	      funcInvMassIntegr[j][k][i]->SetLineStyle(2);
-	      funcInvMassIntegr[j][k][i]->Draw("sames");	 
-	    }
-	  cFitIntegr[j][i]->cd(8);
-	  t1 = GetPaveText(0.2,0.4,0.4,0.6,0.06,62);
-	  t1->AddText(run_type);
-	  t1->AddText(Form("p_{T} > %1.0f GeV/c",ptBins_low_npart[j]));
-	  t1->SetTextColor(2);
-	  t1->Draw();
-	}
-    }
-
-  for(int j=0; j<nPtBins_npart; j++)
-    {
-      hSigmaIntegr[j][0]->GetXaxis()->SetLabelSize(0.05);
-      list->Add(hSigmaIntegr[j][0]);
-      list->Add(hSigmaIntegr[j][1]);
-      list->Add(hSigmaIntegr[j][2]);
-      TCanvas *c = drawHistos(list,Form("Emb_JpsiWidthVsNpart_Pt%s",pt_Name_npart[j]),Form("%s: Jpsi width extracted from simulation (p_{T} > %1.0f GeV/c)",run_type,ptBins_low_npart[j]),kFALSE,0,30,kTRUE,0,0.1,kFALSE,kTRUE,legName,kTRUE,"Toy MC",0.5,0.7,0.68,0.85,kTRUE);
-      if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_SigExt/ToyMC_JpsiWidthVsCent_Pt%s.pdf",run_type,pt_Name_npart[j]));
-      list->Clear();
-    }
-  */
-
   if(saveHisto)
     {
       fscan->cd();
@@ -418,22 +334,23 @@ double funcTotalPol4(double *x, double *par)
 //================================================
 void prod_pt()
 {
-  for(int t=1; t<5; t++)
+  for(int t=0; t<5; t++)
     {
       for(int i=0; i<nCentBins_pt; i++)
 	{
-	  for(int j=0; j<13; j++)
-	    //for(int j=0; j<1; j++)
+	  //for(int j=0; j<13; j++)
+	  for(int j=0; j<1; j++)
 	    {
-	      if(t>0 && j>8) continue;
+	      if(t>0 && j>0) continue;
 	      Run14_signal(t,i,j,1,1,0);
+	      //MLfit(t,i,1,1);
 	    }
 	}
     }
 }
 
 //===============================================
-void Run14_signal(const int isetup = 4, const int icent = 0, const int isys = 0, int savePlot = 0, int saveHisto = 0, int saveHistoResScan = 0)
+void Run14_signal(const int isetup = 0, const int icent = 0, const int isys = 0, int savePlot = 0, int saveHisto = 0, int saveHistoResScan = 0)
 {
   // re-assign global constants
   const int nPtBins         = nPtBins_pt;
@@ -463,7 +380,7 @@ void Run14_signal(const int isetup = 4, const int icent = 0, const int isys = 0,
   // open input and output files
   TString fileName   = Form("Rootfiles/%s.Jpsi.pt%1.1f.pt%1.1f.%sroot",run_type,pt1_cut,pt2_cut,run_config);
   TString outName    = Form("Rootfiles/%s.JpsiYield.pt%1.1f.pt%1.1f.%sroot",run_type,pt1_cut,pt2_cut,run_config);
-  TString outNameSys = Form("Rootfiles/%s.Sys.JpsiYield.root",run_type);
+  TString outNameSys = Form("Rootfiles/%s.Sys.JpsiYield.%sroot",run_type,run_config);
   TFile *fin = TFile::Open(fileName,"read");
 
   // get the Jpsi width from embedding
@@ -737,6 +654,7 @@ void Run14_signal(const int isetup = 4, const int icent = 0, const int isys = 0,
 	  printf("[i] %s: UL = %1.0f, LS = %1.0f, Mix = %1.0f\n",hSeUL[i]->GetName(),hSeUL[i]->Integral(bin1, bin2), hSeLS[i]->Integral(bin1, bin2), hMixBkg[i]->Integral(bin1, bin2));
 	}
     }
+
   cSignal->cd(10);
   leg = new TLegend(0.2,0.6,0.6,0.85);
   leg->SetBorderSize(0);
@@ -754,7 +672,6 @@ void Run14_signal(const int isetup = 4, const int icent = 0, const int isys = 0,
     {
       cSignal->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch3_InvMass_ULvsLS.pdf"));
     }
-  return;
 
   // Fit residual
   double fix_mean[nPtBins] = {0};
@@ -1051,7 +968,9 @@ void Run14_signal(const int isetup = 4, const int icent = 0, const int isys = 0,
   t->SetTextColor(4);
   cFit->cd(1);
   t->Draw();
-
+  printf("\n++++++++++++++++++++++++++++++++++++++++\n");
+  printf("[i] Check Jpsi counts consistency: %4.2f =? %4.1f, diff = %4.2f%%\n",hFitYield->GetBinContent(0),hFitYield->Integral(1,8),(hFitYield->Integral(1,8)/hFitYield->GetBinContent(0)-1)*100);
+  printf("++++++++++++++++++++++++++++++++++++++++\n\n");
   if(savePlot) 
     {
       cFit1->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_SigExt/%s%sSig.Fit_All_%s.pdf",run_type,run_cfg_name.Data(),sys_title[isys],suf_title.Data()));
@@ -1788,6 +1707,611 @@ void Run14_npart(const int isys = 0, int savePlot = 0, int saveHisto = 0)
 }
 
 //================================================
+double funcBkgTmpPol3(double *x, double *par)
+{
+  double xx = x[0];
+  int bin = hMixBkgTemplate->GetXaxis()->FindFixBin(xx);
+  double xmin = hMixBkgTemplate->GetXaxis()->GetBinLowEdge(bin);
+  double xmax = hMixBkgTemplate->GetXaxis()->GetBinUpEdge(bin);
+  double bkg = hMixBkgTemplate->GetBinContent(bin);
+  double sig = 0, res = 0;
+  const int nstep = 10;
+  const double size = (xmax-xmin)/nstep;
+  for(int i=0; i<nstep; i++)
+    {
+      double xtemp = xmin+(i+0.5)*size;
+      sig += par[0]*TMath::Gaus(xtemp, par[1], par[2], true)*size;
+      res += (par[3] + par[4]*xtemp + par[5]*xtemp*xtemp + par[6]*xtemp*xtemp*xtemp)*size;
+    }
+  sig = sig/(xmax-xmin);
+  res = res/(xmax-xmin);
+  return sig+bkg+res;
+}
+
+
+//===============================================
+void MLfit(const int isetup = 2, const int icent = 0, int savePlot = 0, int saveHisto = 0)
+{
+  gStyle->SetOptFit(0);
+
+  // re-assign global constants
+  const int nPtBins         = nPtBins_pt;
+  const double* ptBins_low  = ptBins_low_pt;
+  const double* ptBins_high = ptBins_high_pt;
+  const char** pt_Name      = pt_Name_pt;
+  const int nCentBins       = nCentBins_pt; 
+  const int* centBins_low   = centBins_low_pt;
+  const int* centBins_high  = centBins_high_pt;
+  const char** cent_Name    = cent_Name_pt;
+  const char** cent_Title   = cent_Title_pt;
+
+  const int nbins = nPtBins -1;
+  double xbins[nbins+1];
+  for(int i=0; i<nbins; i++)
+    xbins[i] = ptBins_low[i+1];
+  xbins[nbins] = ptBins_high[nbins];
+  xbins[0] = 0.15;
+
+  // prepare name and title
+  const TString suffix = Form("cent%s%s%s",cent_Title[icent],gWeightName[gApplyWeight],gTrgSetupName[isetup]);
+  const TString suf_title = Form("cent%s%s%s",cent_Title[icent],gWeightName[gApplyWeight],gTrgSetupName[isetup]);
+
+  // global setup
+  double  g_mix_scale_low = 2.7;
+  double  g_mix_scale_high = 3.8;
+  TString g_mix_func = "pol1";
+  double  g_bin_width_1 = 0.02;
+  double  g_bin_width_2 = 0.02;
+  double  g_bin_width_3 = 0.02;
+  TString g_func1 = "pol3";
+  int     g_func1_npar = 5;
+  TString g_func2 = "pol1";
+  int     g_func2_npar = 2;
+  double  g_sig_fit_min = 2.5;
+  double  g_sig_fit_max = 4.0;
+
+  if(isetup>0)
+    {
+      g_bin_width_1 = 0.04;
+      g_bin_width_2 = 0.05;
+      g_bin_width_3 = 0.05;
+    }
+
+  // get the Jpsi width from smeared simulation
+  TFile *finput = TFile::Open(Form("Rootfiles/%s.TrkResScan.root",run_type),"read");
+  TH1F *hEmbJpsiWidth = (TH1F*)finput->Get(Form("SmearEmb_JpsiWidth_cent%s_def",cent_Title[icent]));
+
+  // get histograms
+  TFile* fin = TFile::Open(Form("Rootfiles/%s.Jpsi.pt%1.1f.pt%1.1f.%sroot",run_type,pt1_cut,pt2_cut,run_config),"read");
+  printf("\n===== Running configuration =====\n");
+  printf("Input filename: %s\n",fin->GetName());
+  printf("Histogram name: %s\n",suffix.Data());
+  printf("Centrality: %s\n",cent_Name[icent]);
+  printf("==================================\n\n");
+
+  TH1F *hSeUL[nPtBins];
+  TH1F *hSeLS[nPtBins];
+  TH1F *hMixUL[nPtBins];
+  TH1F *hMixLS[nPtBins];
+  TH1F *hMixBkg[nPtBins];
+  for(Int_t i=0; i<nPtBins; i++)
+    {
+      hSeUL[i] = (TH1F*)fin->Get(Form("InvMass_UL_pt%s_cent%s%s%s",pt_Name[i],cent_Name[icent],gWeightName[gApplyWeight],gTrgSetupName[isetup]));
+      hSeLS[i] = (TH1F*)fin->Get(Form("InvMass_LS_pt%s_cent%s%s%s",pt_Name[i],cent_Name[icent],gWeightName[gApplyWeight],gTrgSetupName[isetup]));
+      hMixUL[i] = (TH1F*)fin->Get(Form("Mix_InvMass_UL_pt%s_cent%s",pt_Name[i],cent_Name[icent]));
+      hMixLS[i] = (TH1F*)fin->Get(Form("Mix_InvMass_LS_pt%s_cent%s",pt_Name[i],cent_Name[icent]));
+    }
+  const int binWidthScale = int(hSeUL[0]->GetBinWidth(1)/hMixUL[0]->GetBinWidth(1));
+
+  // mixed event scaling
+  TH1F *hMixScale[nPtBins];
+  TF1 *funcScale[nPtBins];
+  TCanvas *cScaling = new TCanvas(Form("mix_scale_%s",cent_Name[icent]),Form("mix_scale_%s",cent_Name[icent]),1100,650);
+  int nxpad, nypad;
+  if(nPtBins-1<=4) { nxpad = 2; nypad = 2; }
+  else             { nxpad = (nPtBins-1)/2 + (nPtBins-1)%2; nypad = 2; }
+  cScaling->Divide(nxpad,nypad);
+  for(int i=0; i<nPtBins; i++)
+    {
+      hMixScale[i] = (TH1F*)hSeLS[i]->Clone(Form("LS_ratio_SE_to_ME_pt%s_cent%s",pt_Name[i],cent_Name[icent]));
+      hMixScale[i]->Rebin(5);
+      TH1F *htmp = (TH1F*)hMixLS[i]->Clone(Form("%s_clone",hMixLS[i]->GetName()));
+      htmp->Rebin(int(hMixScale[i]->GetBinWidth(1)/hMixLS[i]->GetBinWidth(1)));
+      hMixScale[i]->Divide(htmp);
+
+      double g_mix_scale_low_tmp = g_mix_scale_low;
+      double g_mix_scale_high_tmp = g_mix_scale_high;
+
+      // fitting method
+      funcScale[i] = new TF1(Form("Fit_%s",hMixScale[i]->GetName()),g_mix_func,g_mix_scale_low_tmp,g_mix_scale_high_tmp);
+      hMixScale[i]->Fit(funcScale[i],"IR0Q");
+
+      if(i>0)
+	{
+	  // plotting
+	  cScaling->cd(i);
+	  hMixScale[i]->SetTitle("");
+	  hMixScale[i]->SetMarkerStyle(21);
+	  if(i==1) hMixScale[i]->GetXaxis()->SetRangeUser(2.7,4);
+	  else hMixScale[i]->GetXaxis()->SetRangeUser(2.5,4);
+	  hMixScale[i]->SetMaximum(1.1*hMixScale[i]->GetMaximum());
+	  hMixScale[i]->Draw();
+	  funcScale[i]->SetLineColor(2);
+	  funcScale[i]->Draw("sames");
+	  TPaveText *t = GetTitleText(Form("%s (%s%%)",pt_Title_pt[i],cent_Name[icent]),0.06);
+	  t->Draw();
+	}
+    }
+  t = GetPaveText(0.2,0.35,0.5,0.6,0.06);
+  t->SetTextFont(62);
+  t->AddText("LS: SE/ME");
+  t->SetTextColor(4);
+  cScaling->cd(1);
+  t->Draw();
+
+  // Acceptance
+  TCanvas *cAcc = new TCanvas(Form("Acceptance_%s",cent_Name[icent]),Form("Acceptance_%s",cent_Name[icent]),1100,650);
+  cAcc->Divide(nxpad,nypad);
+  TH1F *hAcc[nPtBins];
+  for(int i=0; i<nPtBins; i++)
+    {
+      double g_bin_width_tmp = g_bin_width_1;
+      if(i>=2) g_bin_width_tmp = g_bin_width_2;
+      if(icent==4 && i==6) g_bin_width_tmp = g_bin_width_3;
+      if((icent==0 || icent==1) && i==nPtBins-1) g_bin_width_tmp = g_bin_width_3;
+      if((icent==2 || icent==3) && i==nPtBins-2) g_bin_width_tmp = g_bin_width_3;
+      hAcc[i] = (TH1F*)hMixUL[i]->Clone(Form("Mix_Acceptance_cent%s_pt%s",cent_Title[icent],pt_Name[i]));
+      TH1F *htmp = (TH1F*)hMixLS[i]->Clone(Form("%s_clone2",hMixLS[i]->GetName()));
+      hAcc[i]->Rebin(g_bin_width_tmp/hAcc[i]->GetBinWidth(1));
+      htmp->Rebin(g_bin_width_tmp/htmp->GetBinWidth(1));
+      hAcc[i]->Divide(htmp);
+      if(i>0)
+	{
+	  cAcc->cd(i);
+	  hAcc[i]->SetTitle(";M [GeV/c^{2}]");
+	  hAcc[i]->SetMarkerStyle(21);
+	  hAcc[i]->GetXaxis()->SetRangeUser(2,4);
+	  hAcc[i]->GetYaxis()->SetRangeUser(0.9,1.1);
+	  hAcc[i]->Draw("PE");
+	  TPaveText *t = GetTitleText(Form("%s (%s%%)",pt_Title_pt[i],cent_Name[icent]),0.06);
+	  t->Draw();
+	  TLine *line = GetLine(2,1,4,1,1);
+	  line->Draw();
+	}
+    }
+  t = GetPaveText(0.3,0.4,0.2,0.3,0.07);
+  t->SetTextFont(62);
+  t->AddText("Mix: UL/LS");
+  t->SetTextColor(4);
+  cAcc->cd(1);
+  t->Draw();
+
+  // jpsi signal
+  TCanvas *cSignal = new TCanvas(Form("InvMass_%s",cent_Name[icent]),Form("InvMass_%s",cent_Name[icent]),1100,650);
+  cSignal->Divide(nxpad,nypad);
+  for(int i=0; i<nPtBins; i++)
+    {
+      hMixBkg[i] = (TH1F*)hMixUL[i]->Clone(Form("mix_bkg_pt%s_cent%s",pt_Name[i],cent_Name[icent]));
+      
+      // scale mix event background
+      int low_bin = hMixBkg[i]->FindFixBin(2.3);
+      int up_bin  = hMixBkg[i]->FindFixBin(4.2);
+      for(int ibin=low_bin; ibin<=up_bin; ibin++)
+	{
+	  double mass = hMixBkg[i]->GetBinCenter(ibin);
+	  double scale = funcScale[i]->Eval(mass);
+	  hMixBkg[i]->SetBinContent(ibin, scale * hMixBkg[i]->GetBinContent(ibin));
+	  hMixBkg[i]->SetBinError(ibin, scale * hMixBkg[i]->GetBinError(ibin));
+	}
+      
+      double g_bin_width_tmp = g_bin_width_1;
+      if(i>=2) g_bin_width_tmp = g_bin_width_2;
+      if(icent==4 && i==6) g_bin_width_tmp = g_bin_width_3;
+      if((icent==0 || icent==1) && i==nPtBins-1) g_bin_width_tmp = g_bin_width_3;
+      if((icent==2 || icent==3) && i==nPtBins-2) g_bin_width_tmp = g_bin_width_3;
+      hSeUL[i]->Rebin(g_bin_width_tmp/hSeUL[i]->GetBinWidth(1));
+      hSeUL[i]->SetTitle("");
+      hSeUL[i]->SetMarkerStyle(21);
+      hSeUL[i]->SetMarkerColor(2);
+      hSeUL[i]->SetLineColor(2);
+      hSeUL[i]->GetXaxis()->SetRangeUser(2.5,4);
+      hSeLS[i]->Rebin(hSeUL[i]->GetBinWidth(1)/hSeLS[i]->GetBinWidth(1));
+      hMixBkg[i]->SetLineColor(4);
+      hMixBkg[i]->Rebin(hSeUL[i]->GetBinWidth(1)/hMixBkg[i]->GetBinWidth(1));
+      if(i>0)
+	{
+	  cSignal->cd(i);
+	  hSeUL[i]->Draw();
+	  hSeLS[i]->Draw("sames HIST");
+	  hMixBkg[i]->Draw("sames HIST");
+	  TPaveText *t = GetTitleText(Form("%s (%s%%)",pt_Title_pt[i],cent_Name[icent]),0.06);
+	  t->Draw();
+	}
+    }
+  cSignal->cd(10);
+  leg = new TLegend(0.2,0.6,0.6,0.85);
+  leg->SetBorderSize(0);
+  leg->SetFillColor(0);
+  leg->SetTextSize(0.07);
+  leg->AddEntry(hSeUL[1],"Unlike sign","P");
+  leg->AddEntry(hSeLS[1],"Like sign (++)+(--)","L");
+  leg->AddEntry(hMixBkg[1],"Mix UL","L");
+  leg->Draw();
+  
+
+  // try three different methods
+  // 1 - fit UL with likelihood method
+  // 2 - fit UL with chi2 method
+  // 3 - fit UL-ME with chi2 method
+  const int nMethods = 3;
+  TH1F *hSignal[nPtBins][nMethods];
+  TF1 *funcSignal[nPtBins][nMethods];
+  TF1 *funcBkg[nPtBins][nMethods];
+  TH1F *hChi2[nMethods], *hMean[nMethods], *hSigma[nMethods], *hFitYield[nMethods], *hBinCountYield[nMethods], *hSigToBkg[nMethods];
+  double bkg_params[5];
+  double bkg_matrix[5*5];
+  TCanvas *cFit1[nMethods], *cFit2[nMethods];
+  TCanvas *c = 0x0;
+  for(int m=0; m<3; m++)
+    {
+      hChi2[m] = new TH1F(Form("Jpsi_Chi2_%s_M%d",suffix.Data(),m),"Chi2/NDF of Jpsi fit",nbins,xbins);
+      hMean[m] = new TH1F(Form("Jpsi_FitMean_%s_M%d",suffix.Data(),m),"Mean of Jpsi peak",nbins,xbins);
+      hSigma[m]= new TH1F(Form("Jpsi_FitSigma_%s_M%d",suffix.Data(),m),"Sigma of Jpsi peak",nbins,xbins);
+      hFitYield[m] = new TH1F(Form("Jpsi_FitYield_%s_M%d",suffix.Data(),m),"Jpsi yield from fitting",nbins,xbins);
+      hBinCountYield[m] = new TH1F(Form("Jpsi_BinCountYield_%s_M%d",suffix.Data(),m),"Jpsi yield from bin counting",nbins,xbins);
+      hSigToBkg[m] = new TH1F(Form("Jpsi_SigToBkg_%s_M%d",suffix.Data(),m),"Signal-to-background ratio for Jpsi",nbins,xbins);
+
+      cFit2[m] = new TCanvas(Form("Fit2_Jpsi_%s_M%d",cent_Name[icent],m),Form("Fit2_Jpsi_%s_M%d",cent_Name[icent],m),1400,650);
+      cFit2[m]->Divide(5,2);
+
+      cFit1[m] = new TCanvas(Form("Fit1_Jpsi_%s_M%d",cent_Name[icent],m),Form("Fit1_Jpsi_%s_M%d",cent_Name[icent],m),1400,650);
+      cFit1[m]->Divide(5,2);
+
+      TCanvas *ctmp = new TCanvas("ctmp","ctmp",800,600);
+
+      TString funcForm;
+      int nPar;
+      for(int i=0; i<nPtBins; i++)
+	{
+	  if(icent==3 && i==nPtBins-1) continue;
+	  if(icent==4 && i>=nPtBins-3) continue;
+
+	  printf("+++++ %1.0f < pT < %1.0f +++++\n",ptBins_low[i],ptBins_high[i]);
+	  hSignal[i][m] = (TH1F*)hSeUL[i]->Clone(Form("Jpsi_Signal_cent%s_pt%s_M%d",cent_Title[icent],pt_Name[i],m));
+	  hSignal[i][m]->SetMarkerStyle(24);
+	  hSignal[i][m]->SetMarkerSize(0.8);
+	  hSignal[i][m]->SetLineColor(1);
+	  hSignal[i][m]->SetMarkerColor(1);
+	  TFitResultPtr ptr;
+	  if(m==0)
+	    {
+	      nPar = 4;
+	      funcForm = "pol3";
+	      hMixBkgTemplate = hMixBkg[i];
+	      funcSignal[i][m] = new TF1(Form("Jpsi_FitSig_pt%s_%s_M%d",pt_Name[i],suffix.Data(),m),funcBkgTmpPol3,g_sig_fit_min,g_sig_fit_max,7);
+
+	      //funcSignal[i][m] = new TF1(Form("Jpsi_FitSig_pt%s_%s_M%d",pt_Name[i],suffix.Data(),m),Form("gausn(0)+pol3(3)"),g_sig_fit_min,g_sig_fit_max);
+	      funcSignal[i][m]->SetParameters(hSignal[i][m]->GetMaximum(), 3.09, 0.06, 100, -10, 1, 1);
+	      if(i>0) funcSignal[i][m]->FixParameter(2,hEmbJpsiWidth->GetBinContent(i));
+	      if(isetup>0) funcSignal[i][m]->FixParameter(1, 3.09);
+	      if(i==1) funcSignal[i][m]->SetRange(2.75,g_sig_fit_max);
+	      ptr = hSignal[i][m]->Fit(funcSignal[i][m],"IRS0L");
+	    }
+	  else if(m==1)
+	    {
+	      nPar = 4;
+	      funcForm = "pol3";
+
+	      hMixBkgTemplate = hMixBkg[i];
+	      funcSignal[i][m] = new TF1(Form("Jpsi_FitSig_pt%s_%s_M%d",pt_Name[i],suffix.Data(),m),funcBkgTmpPol3,g_sig_fit_min,g_sig_fit_max,7);
+	      //funcSignal[i][m] = new TF1(Form("Jpsi_FitSig_pt%s_%s_M%d",pt_Name[i],suffix.Data(),m),Form("gausn(0)+pol3(3)"),g_sig_fit_min,g_sig_fit_max);
+	      funcSignal[i][m]->SetParameters(hSignal[i][m]->GetMaximum(), 3.09, 0.06, 100, -10, 1, 1);
+	      if(i>0) funcSignal[i][m]->FixParameter(2,hEmbJpsiWidth->GetBinContent(i));
+	      if(isetup>0) funcSignal[i][m]->FixParameter(1, 3.09);
+	      if(i==1) funcSignal[i][m]->SetRange(2.75,g_sig_fit_max);
+	      ptr = hSignal[i][m]->Fit(funcSignal[i][m],"IRS0Q");
+	    }
+	  else if(m==2)
+	    {
+	      for(int bin=1; bin<=hSignal[i][m]->GetNbinsX(); bin++)
+		{
+		  if(hSignal[i][m]->GetBinContent(bin)==0)
+		    {
+		      hSignal[i][m]->SetBinContent(bin,0);
+		      hSignal[i][m]->SetBinError(bin,1.4);
+		    }
+		}
+	      hSignal[i][m]->Add(hMixBkg[i],-1);
+	      hSignal[i][m]->SetLineColor(1);
+	      hSignal[i][m]->SetMarkerColor(1);
+
+	      // Fit signal
+	      if(i<1)
+		{
+		  funcForm = g_func1; 
+		  nPar = g_func1_npar;
+		}
+	      else
+		{
+		  funcForm = g_func2; 
+		  nPar = g_func2_npar;
+		}
+
+	      funcSignal[i][m] = new TF1(Form("Jpsi_FitSig_pt%s_%s_M%d",pt_Name[i],suffix.Data(),m),Form("gausn(0)+%s(3)",funcForm.Data()),g_sig_fit_min,g_sig_fit_max);
+	      funcSignal[i][m]->SetParameters(hSignal[i][m]->GetMaximum(), 3.09, 0.06);
+	      if(i>0) funcSignal[i][m]->FixParameter(2,hEmbJpsiWidth->GetBinContent(i));
+	      if(isetup>0) funcSignal[i][m]->FixParameter(1, 3.09);
+	      if(i==1) funcSignal[i][m]->SetRange(2.75,g_sig_fit_max);
+	      ptr = hSignal[i][m]->Fit(funcSignal[i][m],"IRS0Q");
+	    }
+
+	  double *matrix = ptr->GetCovarianceMatrix().GetMatrixArray();
+	  double bin_width = hSignal[i][m]->GetBinWidth(1);
+	  double fit_yield = funcSignal[i][m]->GetParameter(0)/bin_width;
+	  double fit_yield_err = funcSignal[i][m]->GetParError(0)/bin_width;
+	  double fit_mean = funcSignal[i][m]->GetParameter(1);
+	  double fit_sigma = fabs(funcSignal[i][m]->GetParameter(2));
+	  printf("Fitting = %1.1f +/- %1.1f (%1.1fsigma)\n",fit_yield,fit_yield_err,fit_yield/fit_yield_err);
+	  hFitYield[m]->SetBinContent(i,fit_yield);
+	  hFitYield[m]->SetBinError(i,fit_yield_err);
+	  hChi2[m]->SetBinContent(i, funcSignal[i][m]->GetChisquare()/funcSignal[i][m]->GetNDF());   
+	  hChi2[m]->SetBinError(i, 1e-10);
+	  hMean[m]->SetBinContent(i,funcSignal[i][m]->GetParameter(1));
+	  hMean[m]->SetBinError(i,funcSignal[i][m]->GetParError(1));
+	  hSigma[m]->SetBinContent(i,fit_sigma);
+	  hSigma[m]->SetBinError(i,funcSignal[i][m]->GetParError(2));
+
+	  // Extract background matrix
+	  funcBkg[i][m] = new TF1(Form("Jpsi_FitBkg_pt%s_%s_M%d",pt_Name[i],suffix.Data(),m),Form("%s",funcForm.Data()),g_sig_fit_min,g_sig_fit_max);
+	  int nSigPar = 3;
+	  for(int j=0; j<nPar; j++)
+	    {
+	      funcBkg[i][m]->SetParameter(j,funcSignal[i][m]->GetParameter(nSigPar+j));
+	      funcBkg[i][m]->SetParError(j,funcSignal[i][m]->GetParError(nSigPar+j));
+	      bkg_params[j] = funcSignal[i][m]->GetParameter(nSigPar+j);
+	    }
+ 
+	  for(int j=nSigPar; j<nSigPar+nPar; j++)
+	    {
+	      for(int k=nSigPar; k<nSigPar+nPar; k++)
+		{
+		  bkg_matrix[(j-nSigPar)*nPar+k-nSigPar] = matrix[j*(nSigPar+nPar)+k];
+		}
+	    }
+
+	  // bin counting
+	  double low_mass_tmp = fit_mean - 3.5 * fit_sigma;
+	  double high_mass_tmp = fit_mean + 3.5 * fit_sigma;
+	  int low_bin = hSignal[i][m]->FindFixBin(low_mass_tmp+1e-4) + 1;
+	  int high_bin = hSignal[i][m]->FindFixBin(high_mass_tmp-1e-4) - 1;
+	  double low_bin_mass = hSignal[i][m]->GetXaxis()->GetBinLowEdge(low_bin);
+	  double high_bin_mass = hSignal[i][m]->GetXaxis()->GetBinUpEdge(high_bin);
+	  double yield_all_err;
+	  double yield_all = hSignal[i][m]->IntegralAndError(low_bin,high_bin,yield_all_err);
+	  double yield_bkg = funcBkg[i][m]->Integral(low_bin_mass,high_bin_mass) * 1./hSignal[i][m]->GetBinWidth(1);
+	  double yield_bkg_err = funcBkg[i][m]->IntegralError(low_bin_mass,high_bin_mass,bkg_params,bkg_matrix)* 1./hSignal[i][m]->GetBinWidth(1);
+	  if(m<2)
+	    {
+	      // account for mixed event background
+	      double mix_bkg_err;
+	      double mix_bkg = hMixBkg[i]->IntegralAndError(low_bin, high_bin, mix_bkg_err);
+	      yield_bkg = yield_bkg + mix_bkg;
+	      yield_bkg_err = sqrt(yield_bkg_err*yield_bkg_err + mix_bkg_err*mix_bkg_err);
+	    }
+
+	  TF1 *funcJpsi_temp = new TF1(Form("funcJpsi_temp_%d",i),"gausn");
+	  for(int par=0; par<3; par++)
+	    {
+	      funcJpsi_temp->SetParameter(par, funcSignal[i][m]->GetParameter(par));
+	      funcJpsi_temp->SetParError(par, funcSignal[i][m]->GetParError(par));
+	    }
+	  double efficiency = funcJpsi_temp->Integral(low_bin_mass,high_bin_mass)/funcJpsi_temp->GetParameter(0);
+	  double yield_sig = (yield_all - yield_bkg)/efficiency;
+	  double yield_sig_err = TMath::Sqrt(yield_all_err*yield_all_err+yield_bkg_err*yield_bkg_err)/efficiency;
+	  double all = hSeUL[i]->Integral(hSeUL[i]->FindBin(low_mass_tmp+1e-4),hSeUL[i]->FindBin(high_mass_tmp-1e-4));
+	  hBinCountYield[m]->SetBinContent(i,yield_sig);
+	  hBinCountYield[m]->SetBinError(i,yield_sig_err);
+	  hSigToBkg[m]->SetBinContent(i,yield_sig/(all-yield_sig));
+	  printf("Count = %1.1f +/- %1.1f (%1.1fsigma)\n",yield_sig,yield_sig_err,yield_sig/yield_sig_err);
+	  printf("Background = %1.1f +/- %1.1f\n",yield_bkg,yield_bkg_err);
+	  printf("all = %1.2f, signal = %1.2f\n",all,yield_sig);
+
+	  // plotting
+	  funcSignal[i][m]->SetLineStyle(2);
+	  funcSignal[i][m]->SetLineColor(2);
+	  funcSignal[i][m]->SetLineWidth(0.5);
+	  TH1F *funcSignalHist = (TH1F*)funcSignal[i][m]->GetHistogram();
+	  TH1F *fitRatio = (TH1F*)hSignal[i][m]->Clone(Form("%s_ratio",hSignal[i][m]->GetName()));
+	  int minbin = hSignal[i][m]->FindBin(funcSignal[i][m]->GetXmin());
+	  int maxbin = hSignal[i][m]->FindBin(funcSignal[i][m]->GetXmax())-1;
+	  for(int bin=minbin; bin<=maxbin; bin++)
+	    {
+	      if(m<2)
+		{
+		  double scale = funcSignalHist->GetBinContent(funcSignalHist->FindBin(hSignal[i][m]->GetBinCenter(bin)));
+		  if(scale>0)
+		    {
+		      fitRatio->SetBinContent(bin, fitRatio->GetBinContent(bin)/scale);
+		      fitRatio->SetBinError(bin, fitRatio->GetBinError(bin)/scale);
+		    }
+		  else
+		    {
+		      fitRatio->SetBinContent(bin, -1);
+		      fitRatio->SetBinError(bin, 1e-10);
+		    }
+		}
+	      else
+		{
+		  double fityield = funcSignal[i][m]->Integral(fitRatio->GetXaxis()->GetBinLowEdge(bin), fitRatio->GetXaxis()->GetBinUpEdge(bin))/fitRatio->GetBinWidth(bin);
+		  fitRatio->SetBinContent(bin, fitRatio->GetBinContent(bin)-fityield);
+		}
+	    }
+
+	  if(m<2)
+	    {
+	      fitRatio->SetYTitle("Data/Fit");
+	      if(i<nPtBins/2) fitRatio->GetYaxis()->SetRangeUser(0.8, 1.2);
+	      else if(i<8) fitRatio->GetYaxis()->SetRangeUser(0.5, 1.5);
+	      else    fitRatio->GetYaxis()->SetRangeUser(0, 2);
+	    }
+	  else
+	    {
+	      fitRatio->SetYTitle("Data-Fit");
+	      fitRatio->SetMaximum(1.8*fitRatio->GetMaximum());
+	    }
+	  int index;
+	  if(i<nPtBins/2) 
+	    {
+	      c = cFit1[m];
+	      index = i;
+	    }
+	  else
+	    {
+	      c = cFit2[m];
+	      index = i-nPtBins/2;
+	    }
+	  
+	  c->cd(index+6);
+	  fitRatio->GetYaxis()->SetTitleOffset(1.3);
+	  fitRatio->Draw();
+
+	  c->cd(index+1);
+	  hSignal[i][m]->SetMaximum(1.5*hSignal[i][m]->GetMaximum());
+	  hSignal[i][m]->DrawCopy();
+	  if(m<2) hMixBkg[i]->Draw("samesHIST");
+	  funcSignalHist->Draw("sames");
+	  if(m==2)
+	    {
+	      funcBkg[i][m]->SetLineColor(4);
+	      funcBkg[i][m]->SetLineStyle(2);
+	      funcBkg[i][m]->Draw("sames");
+	    }
+
+	  TPaveText *t = GetTitleText(Form("%s (%s%%)",pt_Title_pt[i],cent_Name[icent]),0.05);
+	  t->Draw();
+	  TLine *line = GetLine(low_bin_mass,hSignal[i][m]->GetMinimum(),low_bin_mass,hSignal[i][m]->GetMaximum()*0.6,1);
+	  line->Draw();
+	  TLine *line = GetLine(high_bin_mass,hSignal[i][m]->GetMinimum(),high_bin_mass,hSignal[i][m]->GetMaximum()*0.6,1);
+	  line->Draw();
+
+	  t = GetPaveText(0.16,0.3,0.75,0.88,0.045);
+	  t->SetTextFont(62);
+	  t->AddText(Form("Fitting: %1.0f #pm %1.0f (%1.1f#sigma)",fit_yield,fit_yield_err,fit_yield/fit_yield_err));
+	  t->AddText(Form("Counting: %1.0f #pm %1.0f (%1.1f#sigma)",yield_sig,yield_sig_err,yield_sig/yield_sig_err));
+	  t->SetTextAlign(11);
+	  t->Draw();
+	}
+      t = GetPaveText(0.7,0.8,0.3,0.35,0.06);
+      t->SetTextFont(62);
+      if(m<2) t->AddText("UL");
+      else t->AddText("UL-MIX(UL)");
+      t->SetTextColor(4);
+      cFit1[m]->cd(1);
+      t->Draw();
+      cFit2[m]->cd(1);
+      t->Draw();
+
+      if(savePlot) 
+	{
+	  cFit1[m]->SaveAs(Form("./Plots/%s/ana_SigExt/ML_M%d_SigFit1_%s%s.pdf",run_type,m,cent_Title[icent],gTrgSetupTitle[isetup]));
+	  cFit2[m]->SaveAs(Form("./Plots/%s/ana_SigExt/ML_M%d_SigFit2_%s%s.pdf",run_type,m,cent_Title[icent],gTrgSetupTitle[isetup]));
+	}
+    }
+
+  TList *list = new TList();
+  TString legName[nMethods] = {"UL: ML fit", "UL: Chi2 fit", "UL-ME: Chi2 fit"};
+  double pt_high = 15;
+  if(icent==2 || icent==3) pt_high = 10;
+  if(icent==4) pt_high = 6;
+
+  // compare signal mean
+  for(int m=0; m<nMethods; m++)
+    {
+      list->Add(hMean[m]);
+    }
+  c = drawHistos(list,"FitMean",Form("%s: mean of J/psi peak;p_{T} (GeV/c);Mean",run_type),true,0.15,pt_high,kTRUE,3.04,3.16,false,true,legName,true,Form("%s%%",cent_Name[icent]),0.15,0.35,0.7,0.88,kTRUE);
+  list->Clear();
+  if(savePlot) c->SaveAs(Form("./Plots/%s/ana_SigExt/ML_CompMean_%s%s.pdf",run_type,cent_Title[icent],gTrgSetupTitle[isetup]));
+
+  // chi2/ndf
+  for(int m=0; m<nMethods; m++)
+    {
+      list->Add(hChi2[m]);
+    }
+  c = drawHistos(list,"FitChi2",Form("%s: #chi^{2}/NDF of fits;p_{T} (GeV/c);#chi^{2}/NDF",run_type),true,0.15,pt_high,kTRUE,0,2.5,false,true,legName,true,Form("%s%%",cent_Name[icent]),0.15,0.35,0.7,0.88,kTRUE);
+  list->Clear();
+  if(savePlot) c->SaveAs(Form("./Plots/%s/ana_SigExt/ML_CompChi2_%s%s.pdf",run_type,cent_Title[icent],gTrgSetupTitle[isetup]));
+
+  // fit yield
+  for(int m=0; m<nMethods; m++)
+    {
+      list->Add(hFitYield[m]);
+    }
+  c = drawHistos(list,"FitYield",Form("%s: J/psi yield from fitting;p_{T} (GeV/c);counts",run_type),true,0.15,pt_high,true,1,hFitYield[2]->GetBinContent(1)*1.5,false,true,legName,true,Form("%s%%",cent_Name[icent]),0.55,0.75,0.65,0.85,kTRUE);
+  if(savePlot) c->SaveAs(Form("./Plots/%s/ana_SigExt/ML_CompFitYield_%s%s.pdf",run_type,cent_Title[icent],gTrgSetupTitle[isetup]));
+
+  c = drawHistos(list,"FitYieldLog",Form("%s: J/psi yield from fitting;p_{T} (GeV/c);counts",run_type),true,0.15,pt_high,true,1,hFitYield[2]->GetBinContent(1)*10,true,true,legName,true,Form("%s%%",cent_Name[icent]),0.55,0.75,0.65,0.85,kTRUE);
+  if(savePlot) c->SaveAs(Form("./Plots/%s/ana_SigExt/ML_CompFitYieldLog_%s%s.pdf",run_type,cent_Title[icent],gTrgSetupTitle[isetup]));
+  list->Clear();
+  
+  // signal significance & difference with bin counting
+  TH1F *hYieldDiff[nMethods];
+  TH1F *hYieldSig[nMethods];
+  for(int m=0; m<nMethods; m++)
+    {
+      hYieldDiff[m] = (TH1F*)hFitYield[m]->Clone(Form("Jpsi_YieldDiff_%s_M%d",suffix.Data(),m));
+      hYieldSig[m] = (TH1F*)hFitYield[m]->Clone(Form("Jpsi_YieldSig_%s_M%d",suffix.Data(),m));
+      for(int bin=1; bin<=nbins; bin++)
+	{
+	  double fityield = hFitYield[m]->GetBinContent(bin);
+	  double fiterr = hFitYield[m]->GetBinError(bin);
+	  double countyield = hBinCountYield[m]->GetBinContent(bin);
+
+	  if(fityield<=0) continue;
+
+	  hYieldSig[m]->SetBinContent(bin, fityield/fiterr);
+	  hYieldSig[m]->SetBinError(bin, 1e-10);
+	  hYieldDiff[m]->SetBinContent(bin, countyield/fityield - m*0.5);
+	  hYieldDiff[m]->SetBinError(bin, fiterr/fityield);
+	  cout << m << "  " << bin << "  " << countyield/fityield - m*0.5 << endl;
+	}
+    }
+
+  for(int m=0; m<nMethods; m++)
+    {
+      list->Add(hYieldSig[m]);
+    }
+  c = drawHistos(list,"FitSig",Form("%s: signal significance from fits;p_{T} (GeV/c);sig.",run_type),true,0.15,pt_high,true,0,30,false,true,legName,true,Form("%s%%",cent_Name[icent]),0.55,0.75,0.65,0.85,kTRUE);
+  list->Clear();
+  if(savePlot) c->SaveAs(Form("./Plots/%s/ana_SigExt/ML_CompSignalSig_%s%s.pdf",run_type,cent_Title[icent],gTrgSetupTitle[isetup]));
+
+
+  for(int m=0; m<nMethods; m++)
+    {
+      list->Add(hYieldDiff[m]);
+    }
+  c = drawHistos(list,"YieldDiff",Form("%s: J/psi yield difference between fitting and bin-counting;p_{T} (GeV/c);Counting/Fitting",run_type),true,0.15,pt_high,true,-0.5,2,false,true,legName,true,Form("%s%%",cent_Name[icent]),0.55,0.75,0.65,0.85,kTRUE);
+  for(int m=0; m<nMethods; m++)
+    {
+      TLine *line = GetLine(0.15, 1-m*0.5, pt_high, 1-m*0.5, hYieldDiff[m]->GetLineColor());
+      line->Draw();
+    }
+  list->Clear();
+  if(savePlot) c->SaveAs(Form("./Plots/%s/ana_SigExt/ML_CompYieldDiff_%s%s.pdf",run_type,cent_Title[icent],gTrgSetupTitle[isetup]));
+
+  if(saveHisto)
+    {
+      TFile *fout = TFile::Open(Form("Rootfiles/%s.JpsiYield.pt%1.1f.pt%1.1f.%sroot",run_type,pt1_cut,pt2_cut,run_config),"update");
+      for(int m=0; m<3; m++)
+	{
+	  hFitYield[m]->Write("",TObject::kOverwrite);
+	}
+      fout->Close();
+    }
+
+}
+
+//================================================
 void studyLowStat(int savePlot = 1)
 {
   gStyle->SetOptStat(0);
@@ -1987,562 +2511,6 @@ void studyLowStat(int savePlot = 1)
 	{
 	  cSignal->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_SigExt/LowStat_FitJpsiSig_cent%s.pdf",run_type,cent_Title[icent]));
 	}	  
-    }
-}
-
-//================================================
-void makeYieldRun13(const int icent = 0, const int isys = 0, int savePlot = 0, int saveHisto = 0)
-{
-  const char *sys_name[7] = {"","_LargeScale","_SmallScale","_pol1","_LargeFit","_SmallFit","_Rebin"};
-  const char *sys_title[7] = {"","Sys.LargeScale.","Sys.SmallScale.","Sys.pol1.","Sys.LargeFit.","Sys.SmallFit.","Sys.Rebin"};
-
-  printf("Process centrality %s%%\n",cent_Name[icent]);
-  TString fileName = f->GetName();
-  fileName.ReplaceAll("output","Rootfiles");
-  fileName.ReplaceAll(".root",Form(".pt%1.1f.pt%1.1f.root",pt1_cut,pt2_cut));
-  TFile *fin = TFile::Open(fileName,"read");
-  cout << fileName << endl;
-
-  TString outName = fileName;
-  outName.ReplaceAll(".root",".yield.root");
-  TString outNameSys = outName;
-  outNameSys.ReplaceAll(".yield.root",".sys.signal.root");
-
-  TH1F *hSeUL[nPtBins];
-  TH1F *hSeLS[nPtBins];
-  for(Int_t i=0; i<nPtBins; i++)
-    {
-      hSeUL[i] = (TH1F*)fin->Get(Form("InvMass_UL_pt%s_cent%s",pt_Name[i],cent_Name[icent]));
-      hSeLS[i] = (TH1F*)fin->Get(Form("InvMass_LS_pt%s_cent%s",pt_Name[i],cent_Name[icent]));
-    }
-  
-  int nxpad, nypad;
-  if(nPtBins-1==6 || nPtBins-1==5) { nxpad = 3; nypad = 2; }
-  if(nPtBins-1<=4) { nxpad = 2; nypad = 2; }
-
-  const int nbins = nPtBins -1;
-  double xbins[nbins+1];
-  for(int i=0; i<nbins; i++)
-    xbins[i] = ptBins_low[i+1];
-  xbins[nbins] = ptBins_high[nbins];
-
-  // jpsi signal
-  TCanvas *cSignal = new TCanvas(Form("InvMass_%s",cent_Name[icent]),Form("InvMass_%s",cent_Name[icent]),1100,650);
-  cSignal->Divide(nxpad+1,nypad);
-  int rebin_signal = 10;
-  if(isys==6) rebin_signal = 5;
-  for(int i=0; i<nPtBins; i++)
-    {
-      hSeUL[i]->Rebin(rebin_signal);
-      hSeUL[i]->SetTitle("");
-      hSeUL[i]->SetMarkerStyle(21);
-      hSeUL[i]->SetMarkerColor(2);
-      hSeUL[i]->SetLineColor(2);
-      hSeUL[i]->GetXaxis()->SetRangeUser(2,4);
-      //hSeUL[i]->SetMaximum(1.2*hSeUL[i]->GetMaximum());
-      hSeLS[i]->Rebin(rebin_signal);
-      cSignal->cd(i+1);
-      hSeUL[i]->Draw();
-      hSeLS[i]->Draw("sames HIST");
-      TPaveText *t = GetTitleText(Form("%1.0f < p_{T} < %1.0f GeV/c",ptBins_low[i],ptBins_high[i]),0.06);
-      t->Draw();
-    }
-  cSignal->cd(nPtBins+1);
-  leg = new TLegend(0.2,0.5,0.5,0.7);
-  leg->SetBorderSize(0);
-  leg->SetFillColor(0);
-  leg->SetTextSize(0.06);
-  leg->AddEntry(hSeUL[1],"Unlike sign","P");
-  leg->AddEntry(hSeLS[1],"Like sign (++)+(--)","L");
-  leg->Draw();
-  if(savePlot) 
-    {
-      cSignal->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/make_JpsiYield/%s%sJpsiSignal_cent%s.pdf",run_type,run_cfg_name.Data(),sys_title[isys],cent_Title[icent]));
-      cSignal->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/make_JpsiYield/%s%sJpsiSignal_cent%s.png",run_type,run_cfg_name.Data(),sys_title[isys],cent_Title[icent]));
-    }
-
-  // Fit signal
-  TCanvas *cFit1 = new TCanvas(Form("Fit_Jpsi_%s_All",cent_Name[icent]),Form("Fit_Jpsi_%s_All",cent_Name[icent]),800,650);
-  TCanvas *cFit = new TCanvas(Form("Fit_Jpsi_%s",cent_Name[icent]),Form("Fit_Jpsi_%s",cent_Name[icent]),1100,650);
-  cFit->Divide(nxpad,nypad);
-  TH1F *hSignal[nPtBins];
-  TH1F *hSignalSave[nPtBins];
-  TF1 *funcSignal[nPtBins];
-  TH1F *hMean = new TH1F(Form("Jpsi_FitMean_cent%s%s",cent_Title[icent],sys_name[isys]),Form("Jpsi_FitMean_cent%s%s",cent_Title[icent],sys_name[isys]),nbins,xbins);
-  TH1F *hSigma = new TH1F(Form("Jpsi_FitSigma_cent%s%s",cent_Title[icent],sys_name[isys]),Form("Jpsi_FitSigma_cent%s%s",cent_Title[icent],sys_name[isys]),nbins,xbins);
-  TH1F *hFitYield = new TH1F(Form("Jpsi_FitYield_cent%s%s",cent_Title[icent],sys_name[isys]),Form("Jpsi_FitYield_cent%s%s",cent_Title[icent],sys_name[isys]),nbins,xbins);
-  TH1F *hBinCountYield = new TH1F(Form("Jpsi_BinCountYield_cent%s%s",cent_Title[icent],sys_name[isys]),Form("Jpsi_BinCountYield_cent%s%s",cent_Title[icent],sys_name[isys]),nbins,xbins);
-  TH1F *hSigToBkg = new TH1F(Form("Jpsi_SigToBkg_cent%s%s",cent_Title[icent],sys_name[isys]),Form("Jpsi_SigToBkg_cent%s%s",cent_Title[icent],sys_name[isys]),nbins,xbins);
-  TString funcForm1 = "pol3";
-  int nPar1 = 4;
-  TString funcForm2 = "pol3";
-  int nPar2 = 4;
-  double fit_min = 2.5, fit_max = 4.0;
-  if(isys==3)
-    {
-      funcForm2 = "pol1"; 
-      const int nPar2 = 2;
-    }
-  if(isys==4)
-    {
-      fit_min = 2.5; fit_max = 3.9;
-    }
-  if(isys==5)
-    {
-      fit_min = 2.7; fit_max = 3.7;
-    }
-
-  TString funcForm;
-  int nPar;
-  for(int i=0; i<nPtBins; i++)
-    {
-      printf("+++++ %1.0f < pT < %1.0f +++++\n",ptBins_low[i],ptBins_high[i]);
-
-      // Fitting
-      hSignal[i] = (TH1F*)hSeUL[i]->Clone(Form("Jpsi_Signal_cent%s_pt%s",cent_Title[icent],pt_Name[i]));
-      hSignal[i]->GetXaxis()->SetRangeUser(2.5,4);
-      for(int bin=1; bin<=hSignal[i]->GetNbinsX(); bin++)
-	{
-	  if(hSignal[i]->GetBinContent(bin)==0)
-	    {
-	      hSignal[i]->SetBinContent(bin,0);
-	      hSignal[i]->SetBinError(bin,1.4);
-	    }
-	}
-      hSignal[i]->SetLineColor(1);
-      hSignal[i]->SetMarkerColor(1);
-      hSignalSave[i] = (TH1F*)hSignal[i]->Clone(Form("%s_save",hSignal[i]->GetName()));
-      if(i==0)
-      	{
-	  funcForm = funcForm1; 
-	  nPar = nPar1;
-      	}
-      else
-      	{
-	  funcForm = funcForm2; 
-	  nPar = nPar2;
-      	}
-
-      
-      TF1 *functmp = new TF1(Form("Fit%s_temp",hSignal[i]->GetName()),Form("gausn(0)+%s(3)",funcForm.Data()),fit_min,fit_max);
-      functmp->SetParameter(0,20);
-      functmp->FixParameter(1,3.09);
-      functmp->FixParameter(2,0.05);
-      hSignal[i]->Fit(functmp,"IRS0Q");
-      
-      funcSignal[i] = new TF1(Form("Fit%s",hSignal[i]->GetName()),Form("gausn(0)+%s(3)",funcForm.Data()),fit_min,fit_max);
-      for(int ip=0; ip<functmp->GetNpar(); ip++)
-      	{
-      	  funcSignal[i]->SetParameter(ip,functmp->GetParameter(ip));
-      	}
-      funcSignal[i]->SetLineColor(2);
-      TFitResultPtr ptr = hSignal[i]->Fit(funcSignal[i],"IRS0");
-      printf("Fit signal = %1.1f +/- %1.1f (%1.1fsigma)\n",funcSignal[i]->GetParameter(0)/hSignal[i]->GetBinWidth(1),funcSignal[i]->GetParError(0)/hSignal[i]->GetBinWidth(1),funcSignal[i]->GetParameter(0)/funcSignal[i]->GetParError(0));
-      hFitYield->SetBinContent(i,funcSignal[i]->GetParameter(0)/hSignal[i]->GetBinWidth(1));
-      hFitYield->SetBinError(i,funcSignal[i]->GetParError(0)/hSignal[i]->GetBinWidth(1));
-      hMean->SetBinContent(i,funcSignal[i]->GetParameter(1));
-      hMean->SetBinError(i,funcSignal[i]->GetParError(1));
-      hSigma->SetBinContent(i,funcSignal[i]->GetParameter(2));
-      hSigma->SetBinError(i,funcSignal[i]->GetParError(2));
-      double *matrix = ptr->GetCovarianceMatrix().GetMatrixArray();
-
-      // bin counting
-      double low_mass_tmp = low_mass;
-      double high_mass_tmp = high_mass;
-      if(i>4) 
-	{
-	  low_mass_tmp = 2.8;
-	  high_mass_tmp = 3.3;
-	}
-      //double low_mass_tmp = funcSignal[i]->GetParameter(1) - 3*funcSignal[i]->GetParameter(2);
-      //double high_mass_tmp = funcSignal[i]->GetParameter(1) + 3*funcSignal[i]->GetParameter(2);
-      //cout << low_mass_tmp << " -> " << high_mass_tmp << endl;
-      int low_bin = hSignal[i]->FindFixBin(low_mass_tmp+1e-4);
-      int high_bin =hSignal[i]->FindFixBin(high_mass_tmp-1e-4);
-      //cout << low_bin << " -> " << high_bin << endl;
-      double error;
-      double count = hSignal[i]->IntegralAndError(low_bin,high_bin,error);
-      printf("All = %1.0f +/- %1.1f\n",count,error);
-      TF1 *functmp = new TF1(Form("bkg_%s",hSignal[i]->GetName()),Form("%s",funcForm.Data()),fit_min,fit_max);
-      functmp->SetLineColor(4);
-      const int nParameter = nPar;
-      double bkg_params[nParameter];
-      for(int j=0; j<nPar; j++)
-	{
-	  functmp->SetParameter(j,funcSignal[i]->GetParameter(3+j));
-	  functmp->SetParError(j,funcSignal[i]->GetParError(3+j));
-	  bkg_params[j] = funcSignal[i]->GetParameter(3+j);
-	}
-      double bkg_matrix[nParameter*nParameter];
-      for(int j=3; j<3+nPar; j++)
-	{
-	  for(int k=3; k<3+nPar; k++)
-	    {
-	      bkg_matrix[(j-3)*nPar+k-3] = matrix[j*(3+nPar)+k];
-	    }
-	}
-      if(0)
-	{
-	  for(int im=0; im<nPar*nPar; im++) cout << bkg_matrix[im] << "  ";
-	  cout << endl;
-	  double *parameters = ptr->GetParams();
-	  for(int im=0; im<nPar; im++) cout << bkg_params[im] << "  ";
-	  cout << endl;
-	}
-      double bkg = functmp->Integral(low_mass_tmp,high_mass_tmp) * 1./hSignal[i]->GetBinWidth(1);
-      double bkg_err = functmp->IntegralError(low_mass_tmp,high_mass_tmp,bkg_params,bkg_matrix) * 1./hSignal[i]->GetBinWidth(1);
-      double signal = count - bkg;
-      double sig_err = TMath::Sqrt(error*error+bkg_err*bkg_err);
-      printf("Fit combined = %1.1f +/- %1.1f -> %1.1f +/- %1.1f (%1.1fsigma)\n",bkg,bkg_err,signal,sig_err,signal/sig_err);
-
-      // fit background only
-      TF1 *func_tmp = 0;
-      if(funcForm=="pol1") func_tmp = new TF1(Form("func_tmp_%d",i),Polynomial1,fit_min,fit_max,nPar);
-      if(funcForm=="pol3") func_tmp = new TF1(Form("func_tmp_%d",i),Polynomial3,fit_min,fit_max,nPar);
-      for(int ip=0; ip<func_tmp->GetNpar(); ip++)
-      	{
-      	  //func_tmp->SetParameter(ip,functmp->GetParameter(ip+3));
-      	}
-      TH1F *hBkgSig = (TH1F*)hSignal[i]->Clone(Form("%s_fit_bkg",hSignal[i]->GetName()));
-      TFitResultPtr ptr = hBkgSig->Fit(func_tmp,"IR0QS");
-      TF1 *bkgfunc_tmp = new TF1(Form("bkgfunc_tmp_%d",i),Form("%s",funcForm.Data()),fit_min,fit_max);
-      for(int j=0; j<nPar; j++)
-      	{
-      	  bkgfunc_tmp->SetParameter(j,func_tmp->GetParameter(j));
-      	  bkgfunc_tmp->SetParError(j,func_tmp->GetParError(j));
-      	}
-      double bkg_2 = bkgfunc_tmp->Integral(low_mass_tmp,high_mass_tmp) * 1./hSignal[i]->GetBinWidth(1);
-      double bkg_err_2 = bkgfunc_tmp->IntegralError(low_mass_tmp,high_mass_tmp,ptr->GetParams(), ptr->GetCovarianceMatrix().GetMatrixArray())* 1./hSignal[i]->GetBinWidth(1);
-      double signal_2 = count-bkg_2;
-      double sig_err_2 = sqrt(error*error+bkg_err_2*bkg_err_2);
-      printf("Fit background = %1.1f +/- %1.1f -> %1.1f +/- %1.1f (%1.1fsigma)\n",bkg_2,bkg_err_2,signal_2,sig_err_2,signal_2/sig_err_2);
-      hBinCountYield->SetBinContent(i,signal_2);
-      hBinCountYield->SetBinError(i,sig_err_2);
-      double all = hSeUL[i]->Integral(hSeUL[i]->FindBin(low_mass_tmp+1e-4),hSeUL[i]->FindBin(high_mass_tmp-1e-4));
-      hSigToBkg->SetBinContent(i,signal_2/(all-signal_2));
-
-
-      // plotting
-      if(i==0) cFit1->cd();
-      else     cFit->cd(i);	  
-      hSignal[i]->SetMaximum(2*hSignal[i]->GetMaximum());
-      if(i<4)  hSignal[i]->SetMaximum(1.2*hSignal[i]->GetMaximum());
-      hSignal[i]->Draw();
-      funcSignal[i]->Draw("sames");
-      functmp->Draw("sames");
-      TPaveText *t = GetTitleText(Form("%1.0f < p_{T} < %1.0f GeV/c",ptBins_low[i],ptBins_high[i]),0.06);
-      t->Draw();
-      TLine *line = GetLine(low_mass_tmp,hSignal[i]->GetMinimum()*1,low_mass_tmp,hSignal[i]->GetMaximum()*0.5,1);
-      line->Draw();
-      TLine *line = GetLine(high_mass_tmp,hSignal[i]->GetMinimum()*1,high_mass_tmp,hSignal[i]->GetMaximum()*0.5,1);
-      line->Draw();
-
-      t = GetPaveText(0.16,0.3,0.63,0.88,0.045);
-      t->SetTextFont(62);
-      t->AddText("Fitting");
-      t->AddText(Form("%1.0f #pm %1.0f (%1.1f#sigma)",funcSignal[i]->GetParameter(0)/hSignal[i]->GetBinWidth(1),funcSignal[i]->GetParError(0)/hSignal[i]->GetBinWidth(1),funcSignal[i]->GetParameter(0)/funcSignal[i]->GetParError(0)));
-      t->AddText("Counting");
-      t->AddText(Form("%1.0f #pm %1.0f (%1.1f#sigma)",signal_2,sig_err_2,signal_2/sig_err_2));
-      t->SetTextAlign(11);
-      t->Draw();
-
-      func_tmp->SetLineColor(6);
-      func_tmp->SetLineStyle(2);
-      func_tmp->Draw("sames");
-    }
-
-
-
-  if(savePlot) 
-    {
-      cFit1->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/make_JpsiYield/%s%sFit_Jpsi_All_cent%s.pdf",run_type,run_cfg_name.Data(),sys_title[isys],cent_Title[icent]));
-      cFit1->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/make_JpsiYield/%s%sFit_Jpsi_All_cent%s.png",run_type,run_cfg_name.Data(),sys_title[isys],cent_Title[icent]));
-
-      cFit->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/make_JpsiYield/%s%sFit_Jpsi_cent%s.pdf",run_type,run_cfg_name.Data(),sys_title[isys],cent_Title[icent]));
-      cFit->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/make_JpsiYield/%s%sFit_Jpsi_cent%s.png",run_type,run_cfg_name.Data(),sys_title[isys],cent_Title[icent]));
-    }
-
-  hMean->SetMarkerStyle(21);
-  hMean->GetYaxis()->SetRangeUser(3.0,3.12);
-  c = draw1D(hMean,Form("Mean of Gaussian fit to Jpsi signal;p_{T} (GeV/c);mean"));
-  if(savePlot) 
-    {
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/make_JpsiYield/%s%sFit_Jpsi_Mean_cent%s.pdf",run_type,run_cfg_name.Data(),sys_title[isys],cent_Title[icent]));
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/make_JpsiYield/%s%sFit_Jpsi_Mean_cent%s.png",run_type,run_cfg_name.Data(),sys_title[isys],cent_Title[icent]));
-
-    }
-
-  hSigma->SetMarkerStyle(21);
-  hSigma->GetYaxis()->SetRangeUser(0,0.12);
-  c = draw1D(hSigma,Form("Sigma of Gaussian fit to Jpsi signal;p_{T} (GeV/c);#sigma"));
-
-  if(savePlot) 
-    {
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/make_JpsiYield/%s%sFit_Jpsi_Sigma_cent%s.pdf",run_type,run_cfg_name.Data(),sys_title[isys],cent_Title[icent]));
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/make_JpsiYield/%s%sFit_Jpsi_Sigma_cent%s.png",run_type,run_cfg_name.Data(),sys_title[isys],cent_Title[icent]));
-    }
-
-  if(saveHisto)
-    {
-      cout << outName.Data() << endl;
-      TFile *fout = 0;
-      if(icent==0) 
-	{
-	if(isys==0) fout = TFile::Open(outName,"recreate");
-	else if(isys==1) fout = TFile::Open(outNameSys,"recreate");
-	else fout = TFile::Open(outNameSys,"update");
-	}
-      else
-	{
-	  if(isys==0) fout = TFile::Open(outName,"update");
-	  else        fout = TFile::Open(outNameSys,"update");
-	}
-      //hFitScaleFactor->Write("",TObject::kOverwrite);
-      //hBinCountScaleFactor->Write("",TObject::kOverwrite);
-      hMean->Write("",TObject::kOverwrite);
-      hSigma->Write("",TObject::kOverwrite);
-      hFitYield->Write("",TObject::kOverwrite);
-      hBinCountYield->Write("",TObject::kOverwrite);
-      hSigToBkg->Write("",TObject::kOverwrite);
-      if(isys==0)
-	{
-	  for(int i=0; i<nPtBins; i++)
-	    {
-	      //hAcc[i]->Write("",TObject::kOverwrite);
-	      hSignal[i]->Write("",TObject::kOverwrite);
-	      hSignalSave[i]->Write("",TObject::kOverwrite);
-	      funcSignal[i]->Write("",TObject::kOverwrite);
-	      //hMixBkg[i]->Write("",TObject::kOverwrite);
-	      hSeUL[i]->Write("",TObject::kOverwrite);
-	      hSeLS[i]->Write("",TObject::kOverwrite);
-	    }
-	}
-      fout->Close();
-    }
-}
-
-//================================================
-void makeYieldRun15(const int icent = 0, int savePlot = 0, int saveHisto = 0)
-{
-  TFile *fin = 0x0;
-  if(saveHisto) fin = TFile::Open(Form("Rootfiles/%s.JpsiYield.root",run_type),"update");
-  else          fin = TFile::Open(Form("Rootfiles/%s.JpsiYield.root",run_type),"read");
-
-  const int nbins = nPtBins -1;
-  double xbins[nbins+1];
-  for(int i=0; i<nbins; i++)
-    xbins[i] = ptBins_low[i+1];
-  xbins[nbins] = ptBins_high[nbins];
-
-  // jpsi signal
-  TH1F *hSignal[nPtBins];
-  TF1 *funcSignal[nPtBins];
-  TH1F *hMean = new TH1F(Form("Jpsi_FitMean_cent%s",cent_Title[icent]),"",nbins,xbins);
-  TH1F *hSigma = new TH1F(Form("Jpsi_FitSigma_cent%s",cent_Title[icent]),"",nbins,xbins);
-  TH1F *hBinCountYield = new TH1F(Form("Jpsi_BinCountYield_cent%s",cent_Title[icent]),"",nbins,xbins);
-
-  TCanvas *c = new TCanvas("Fit_JpsiSignal","Fit_JpsiSignal",1100,700);
-  c->Divide(3,3);
-  for(int i=0; i<nPtBins; i++)
-    {
-      printf("+++++ %1.0f < pT < %1.0f +++++\n",ptBins_low[i],ptBins_high[i]);
-
-      // Fitting
-      hSignal[i] = (TH1F*)fin->Get(Form("mhMassCent0_Pt%d",i));
-      hSignal[i]->GetXaxis()->SetTitleOffset(0.85);
-      funcSignal[i] = (TF1*)fin->Get(Form("mfAllCent0_Pt%d",i));
-      if(i>0)
-	{
-	  c->cd(i);
-	  hSignal[i]->SetMaximum(1.3*hSignal[i]->GetMaximum());
-	  hSignal[i]->SetTitle("");
-	  hSignal[i]->Draw();
-	  TPaveText *t1 = GetTitleText(Form("%1.0f < p_{T} < %1.0f GeV/c",ptBins_low[i],ptBins_high[i]),0.08);
-	  t1->Draw();
-	}
-
-      //funcSignal[i]->SetParErrors(func1->GetParErrors());
-      hBinCountYield->SetBinContent(i,funcSignal[i]->GetParameter(0));
-      hBinCountYield->SetBinError(i,funcSignal[i]->GetParError(0));
-      hMean->SetBinContent(i,funcSignal[i]->GetParameter(1));
-      hMean->SetBinError(i,funcSignal[i]->GetParError(1));
-      hSigma->SetBinContent(i,funcSignal[i]->GetParameter(2));
-      hSigma->SetBinError(i,funcSignal[i]->GetParError(2));
-    }  
-  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/make_JpsiYield/FitJpsiSignal_cent%s.pdf",run_type,cent_Title[icent]));   
-  c = draw1D(hSignal[0]);
-  TPaveText *t1 = GetPaveText(0.15,0.3,0.75,0.8,0.04);
-  t1->AddText(run_type);
-  t1->Draw();
-  t1->Draw();
-  if(savePlot) 
-    c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/make_JpsiYield/FitJpsiSignalAll_cent%s.pdf",run_type,cent_Title[icent]));   
-
-  TH1F *hInputTmp = (TH1F*)hBinCountYield->Clone(Form("%s_tmp",hBinCountYield->GetName()));
-  for(int bin=1; bin<=hInputTmp->GetNbinsX(); bin++)
-    {
-      double dpt = hInputTmp->GetBinWidth(bin);
-      double pt = hInputTmp->GetBinCenter(bin);
-      double yield = hInputTmp->GetBinContent(bin);
-      double error = hInputTmp->GetBinError(bin);
-      hInputTmp->SetBinContent(bin, yield/dpt);
-      hInputTmp->SetBinError(bin, error/dpt);
-    }
-  TF1 *funcInputJpsi = new TF1(Form("fitfunc_%s",hBinCountYield->GetName()),"[0]*exp([1]*x+[2]*x*x)*x*x",0.1,10);
-  hInputTmp->Fit(funcInputJpsi,"R0Q");
-  hInputTmp->SetMarkerStyle(21);
-  c = draw1D(hInputTmp, Form("%s: raw J/#Psi yield as a function of p_{T};p_{T} (GeV/c);dN/dp_{T}",run_type), true, true);
-  funcInputJpsi->SetLineStyle(2);
-  funcInputJpsi->SetLineColor(2);
-  funcInputJpsi->Draw("sames");
-  leg = new TLegend(0.15,0.2,0.4,0.35);
-  leg->SetBorderSize(0);
-  leg->SetFillColor(0);
-  leg->SetTextSize(0.04);
-  leg->AddEntry(hInputTmp,"Data","PL");
-  leg->AddEntry(funcInputJpsi,"Fit to data: [0]*e^{[1]*x+[2]*x^{2}}*x^{2}","L");
-  leg->Draw();
-  if(savePlot) 
-    c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/make_JpsiYield/FitJpsiYield_cent%s.pdf",run_type,cent_Title[icent]));
-
-  // re-generate the resolution plot
-  TFile* fRes = 0x0;
-  if(saveHisto) fRes = TFile::Open(Form("Rootfiles/%s.PtResolution.root",run_type),"update");
-  else          fRes = TFile::Open(Form("Rootfiles/%s.PtResolution.root",run_type),"read");
-  TH1F *mhRelPtResVsPt = (TH1F*)fRes->Get("mhRelPtResVsPt");
-  TH1F *mhRelPtShiftVsPt = (TH1F*)fRes->Get("mhRelPtShiftVsPt");
-  TH2F *hRelRes = new TH2F(Form("PrimTrkRes_vs_TruePt_cent%s",cent_Title[icent]),"",60,0,12,200,-1,1);
-  for(int ibin=1; ibin<=60; ibin++)
-    {
-      TF1 *funcTmp = new TF1(Form("funcTmp_%d",ibin),"gaus",-1,1);
-      double pt = mhRelPtResVsPt->GetBinCenter(ibin);
-      double weight = funcInputJpsi->Eval(pt);
-      funcTmp->SetParameters(1, mhRelPtShiftVsPt->GetBinContent(ibin), mhRelPtResVsPt->GetBinContent(ibin));
-      for(int i=0; i<1e6; i++)
-	{
-	  hRelRes->Fill(pt, funcTmp->GetRandom(), weight);
-	}
-    }
-  c = draw2D(hRelRes);
-
-  if(saveHisto)
-    {
-      fin->cd();
-      for(int i=0; i<nPtBins; i++)
-	{
-	  hSignal[i]->Write(Form("Jpsi_Signal_pt%s_cent%s",pt_Name[i],cent_Title[icent]),TObject::kOverwrite);
-	  funcSignal[i]->Write(Form("Jpsi_FitSig_pt%s_cent%s",pt_Name[i],cent_Title[icent]),TObject::kOverwrite);
-	}
-      hMean->Write("",TObject::kOverwrite);
-      hSigma->Write("",TObject::kOverwrite);
-      hBinCountYield->Write("",TObject::kOverwrite);
-      funcInputJpsi->Write("",TObject::kOverwrite);
-
-      fRes->cd();
-      hRelRes->Write("",TObject::kOverwrite);
-    }
-}
-
-
-//================================================
-void makeYieldRun16(const int icent = 0, int savePlot = 0, int saveHisto = 0)
-{
-  TFile *fin = 0x0;
-  if(saveHisto) fin = TFile::Open("Rootfiles/Run16_AuAu200.JpsiYield.root","update");
-  else          fin = TFile::Open("Rootfiles/Run16_AuAu200.JpsiYield.root","read");
-
-  const int nbins = nPtBins -1;
-  double xbins[nbins+1];
-  for(int i=0; i<nbins; i++)
-    xbins[i] = ptBins_low[i+1];
-  xbins[nbins] = ptBins_high[nbins];
-
-  // jpsi signal
-  TH1F *hSignal[nPtBins];
-  TF1 *funcSignal[nPtBins];
-  TH1F *hMean = new TH1F(Form("Jpsi_FitMean_cent%s",cent_Title[icent]),"",nbins,xbins);
-  TH1F *hSigma = new TH1F(Form("Jpsi_FitSigma_cent%s",cent_Title[icent]),"",nbins,xbins);
-  TH1F *hBinCountYield = new TH1F(Form("Jpsi_BinCountYield_cent%s",cent_Title[icent]),"",nbins,xbins);
-
-  TCanvas *c = new TCanvas("Fit_JpsiSignal","Fit_JpsiSignal",1100,700);
-  c->Divide(3,2);
-  for(int i=0; i<nPtBins; i++)
-    {
-      printf("+++++ %1.0f < pT < %1.0f +++++\n",ptBins_low[i],ptBins_high[i]);
-
-      // Fitting
-      if(i==0)
-	{
-	  hSignal[i] = (TH1F*)fin->Get("hFitbgRawSignal");
-	  funcSignal[i] = (TF1*)fin->Get("fSig");
-	}
-      else
-	{
-	  hSignal[i] = (TH1F*)fin->Get(Form("hFitbgRawSignalPtBin%d",i-1));
-	  funcSignal[i] = (TF1*)fin->Get(Form("fSig_PtBin%d",i-1));
-	  c->cd(i);
-	  hSignal[i]->SetMaximum(1.3*hSignal[i]->GetMaximum());
-	  hSignal[i]->Draw();
-	}
-
-      TList *list = (TList*)hSignal[i]->GetListOfFunctions();
-      TF1 *func1 = (TF1*)list->At(0);
-      funcSignal[i]->SetParErrors(func1->GetParErrors());
-      hBinCountYield->SetBinContent(i,funcSignal[i]->GetParameter(0));
-      hBinCountYield->SetBinError(i,funcSignal[i]->GetParError(0));
-      hMean->SetBinContent(i,funcSignal[i]->GetParameter(1));
-      hMean->SetBinError(i,funcSignal[i]->GetParError(1));
-      hSigma->SetBinContent(i,funcSignal[i]->GetParameter(2));
-      hSigma->SetBinError(i,funcSignal[i]->GetParError(2));
-    }  
-  if(savePlot) 
-    c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/make_JpsiYield/FitJpsiSignal_cent%s.pdf",run_type,cent_Title[icent]));   
-  c = draw1D(hSignal[0]);
-  TPaveText *t1 = GetPaveText(0.15,0.3,0.75,0.8);
-  t1->AddText("Run16 AuAu200");
-  t1->Draw();
-  if(savePlot) 
-    c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/make_JpsiYield/FitJpsiSignalAll_cent%s.pdf",run_type,cent_Title[icent]));   
-
-  TH1F *hInputTmp = (TH1F*)hBinCountYield->Clone(Form("%s_tmp",hBinCountYield->GetName()));
-  for(int bin=1; bin<=hInputTmp->GetNbinsX(); bin++)
-    {
-      double dpt = hInputTmp->GetBinWidth(bin);
-      double pt = hInputTmp->GetBinCenter(bin);
-      double yield = hInputTmp->GetBinContent(bin);
-      double error = hInputTmp->GetBinError(bin);
-      hInputTmp->SetBinContent(bin, yield/dpt);
-      hInputTmp->SetBinError(bin, error/dpt);
-    }
-  TF1 *funcInputJpsi = new TF1(Form("fitfunc_%s",hBinCountYield->GetName()),"[0]*exp([1]*x+[2]*x*x)*x*x",0.1,10);
-  hInputTmp->Fit(funcInputJpsi,"R0Q");
-  hInputTmp->SetMarkerStyle(21);
-  c = draw1D(hInputTmp, Form("%s: raw J/#Psi yield as a function of p_{T};p_{T} (GeV/c);dN/dp_{T}",run_type), true, true);
-  funcInputJpsi->SetLineStyle(2);
-  funcInputJpsi->SetLineColor(2);
-  funcInputJpsi->Draw("sames");
-  leg = new TLegend(0.15,0.2,0.4,0.35);
-  leg->SetBorderSize(0);
-  leg->SetFillColor(0);
-  leg->SetTextSize(0.04);
-  leg->AddEntry(hInputTmp,"Data","P");
-  leg->AddEntry(funcInputJpsi,"Fit to data: [0]*e^{[1]*x+[2]*x^{2}}*x","L");
-  leg->Draw();
-  if(savePlot) 
-    c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/make_JpsiYield/FitJpsiYield_cent%s.pdf",run_type,cent_Title[icent]));
-
-  if(saveHisto)
-    {
-      fin->cd();
-      for(int i=0; i<nPtBins; i++)
-	{
-	  hSignal[i]->Write(Form("Jpsi_Signal_pt%s_cent%s",pt_Name[i],cent_Title[icent]),TObject::kOverwrite);
-	  funcSignal[i]->Write(Form("Jpsi_FitSig_pt%s_cent%s",pt_Name[i],cent_Title[icent]),TObject::kOverwrite);
-	}
-      hMean->Write("",TObject::kOverwrite);
-      hSigma->Write("",TObject::kOverwrite);
-      hBinCountYield->Write("",TObject::kOverwrite);
-      funcInputJpsi->Write("",TObject::kOverwrite);
     }
 }
 

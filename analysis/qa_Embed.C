@@ -27,18 +27,18 @@ void qa_Embed()
   if(year==2014)
     {
       run_type = "Run14_AuAu200";
-      fmc   = TFile::Open(Form("./output/Run14.AuAu200.%s.Embed.root",part_name[part_type]),"read");
-      fdata = TFile::Open(Form("./output/Pico.Run14.AuAu200.jpsi.root"),"read");
+      fmc   = TFile::Open(Form("./output/Run14_AuAu200.Embed.%s.root",part_name[part_type]),"read");
+      fdata = TFile::Open(Form("./output/Run14_AuAu200.jpsi.root"),"read");
     }
   run_cfg_name = Form("%s",run_config);
   if(iPico) run_cfg_name = Form("Pico.%s",run_cfg_name.Data());
 
-  compWithData();
-  //makePDF();
+  //compWithData();
+  makePDF();
 }
 
 //================================================
-void compWithData(const int savePlot = 1)
+void compWithData(const int savePlot = 0)
 {
   // TPC vz distribution
   TH1F *hTpcVz[2];
