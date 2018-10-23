@@ -12,7 +12,7 @@ void make_JpsiYield()
   gStyle->SetStatW(0.2);                
   gStyle->SetStatH(0.2);
 
-  f = TFile::Open(Form("./output/%s.jpsi.%sroot",run_type,run_config),"read");
+  f = TFile::Open(Form("./output/%s.jpsi.%sroot",run_type.Data(),run_config),"read");
   run_cfg_name = Form("%s",run_config);
 
   if(f)
@@ -98,7 +98,7 @@ void make_histo_pt()
   TFile *fmix = 0;
   if(year==2014) 
     {
-      char *mixName = Form("%s.Mix.pt%1.1f.pt%1.1f.%sroot",run_type,pt1_cut,pt2_cut,run_config);
+      char *mixName = Form("%s.Mix.pt%1.1f.pt%1.1f.%sroot",run_type.Data(),pt1_cut,pt2_cut,run_config);
       fmix = TFile::Open(Form("Output/%s",mixName),"read");
 
       cout << "Mix file: " << fmix->GetName() << endl;
@@ -135,7 +135,7 @@ void make_histo_pt()
         }
     }
 
-  TString fileName = Form("Rootfiles/%s.Jpsi.pt%1.1f.pt%1.1f.%sroot",run_type,pt1_cut,pt2_cut,run_config);
+  TString fileName = Form("Rootfiles/%s.Jpsi.pt%1.1f.pt%1.1f.%sroot",run_type.Data(),pt1_cut,pt2_cut,run_config);
   TFile *fout = NULL;
   if(nCentBins_pt==5) fout = TFile::Open(fileName,"recreate");
   else  fout = TFile::Open(fileName,"update");
@@ -252,7 +252,7 @@ void make_histo_npart()
   TFile *fmix = 0;
   if(year==2014) 
     {
-      char *mixName = Form("%s.Mix.pt%1.1f.pt%1.1f.%sroot",run_type,pt1_cut,pt2_cut,run_config);
+      char *mixName = Form("%s.Mix.pt%1.1f.pt%1.1f.%sroot",run_type.Data(),pt1_cut,pt2_cut,run_config);
       fmix = TFile::Open(Form("Output/%s",mixName),"read");
 
       cout << "Mix file: " << fmix->GetName() << endl;
@@ -291,7 +291,7 @@ void make_histo_npart()
         }
     }
 
-  TString fileName = Form("Rootfiles/%s.Jpsi.pt%1.1f.pt%1.1f.%sroot",run_type,pt1_cut,pt2_cut,run_config);
+  TString fileName = Form("Rootfiles/%s.Jpsi.pt%1.1f.pt%1.1f.%sroot",run_type.Data(),pt1_cut,pt2_cut,run_config);
   TFile *fout = TFile::Open(fileName,"update");
   const char* pair_name[2] = {"UL","LS"};
   for(int w=0; w<2; w++) 

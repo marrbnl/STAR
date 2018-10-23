@@ -51,8 +51,8 @@ void YieldVsPt(int savePlot = 1, int saveHisto = 1)
   const char *sys_name[nSys]  = {"","_LargeScale","_SmallScale","_ScaleFit","_Binning","_BkgFunc1","_BkgFunc2","_LargeFit","_SmallFit","_SigFunc","_FixSigDown","_FixSigUp","_LineShape"};
   const char *sys_leg[nSys] = {"Default","Larger bkg norm range","Smaller bkg norm range","Fit ME/SE w/ pol0","Binning","Res. bkg order-1","Res. bkg order+1","Larger sig fit range","Smaller sig fit range","Crystal-ball","Fix sig. down","Fix sig. up","line shape"};
 
-  TString outName    = Form("Rootfiles/%s.JpsiYield.pt%1.1f.pt%1.1f.%sroot",run_type,pt1_cut,pt2_cut,run_config);
-  TString outNameSys = Form("Rootfiles/%s.Sys.JpsiYield.root",run_type);
+  TString outName    = Form("Rootfiles/%s.JpsiYield.pt%1.1f.pt%1.1f.%sroot",run_type.Data(),pt1_cut,pt2_cut,run_config);
+  TString outNameSys = Form("Rootfiles/%s.Sys.JpsiYield.root",run_type.Data());
 
   TFile *fdata = TFile::Open(Form("%s",outName.Data()),"read");
   TFile *fsys = 0x0;
@@ -121,6 +121,7 @@ void YieldVsPt(int savePlot = 1, int saveHisto = 1)
 	      for(int k=0; k<nPtBins; k++)
 		{
 		  double value = fabs(htmp->GetBinContent(k+1)-1);
+		  if(value>0.8) continue;
 		  if(max[i][k]<value) max[i][k] = value;
 		}
 	    }
@@ -148,18 +149,6 @@ void YieldVsPt(int savePlot = 1, int saveHisto = 1)
       for(int bin=1; bin<=hSys[i]->GetNbinsX(); bin++)
 	{
 	  double sys = max[i][bin-1];
-	  if(i==0 || i==1)
-	    {
-	      if(bin==9) sys = max[i][7];
-	    }
-	  if(i==2 || i==3)
-	    {
-	      if(bin==8) sys = max[i][6];
-	    }
-	  if(i==4)
-	    {
-	      if(bin==6) sys = max[i][4];
-	    }
 	  hSys[i]->SetBinContent(bin,sys+1);
 	  htmp->SetBinContent(bin,1-sys);
 	  hMax[i][0]->SetBinContent(bin,1+max[i][bin-1]);
@@ -188,18 +177,18 @@ void YieldVsPt(int savePlot = 1, int saveHisto = 1)
   leg2->SetBorderSize(0);
   leg2->SetFillColor(0);
   leg2->SetTextSize(0.045);
-  leg2->SetHeader(run_type);
+  leg2->SetHeader(run_type.Data());
   leg2->AddEntry(hSys[0],"Assigned uncertainty","L");
   //leg2->AddEntry(hSys[0],"Re-assigned uncert.","L");
   leg2->Draw();
 
   if(savePlot)
     {
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/sys_JpsiXsec/Sys_signalExt.pdf",run_type));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/sys_JpsiXsec/Sys_signalExt.pdf",run_type.Data()));
     }
   if(gSaveAN)
     {
-      c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch5_SysSigExtVsPt.pdf"));
+      c->SaveAs(Form("~/Dropbox/STAR_Quarkonium/Run14_Jpsi/Analysis_note/Figures/Ch5_SysSigExtVsPt.pdf"));
     }
 
   if(saveHisto)
@@ -241,8 +230,8 @@ void YieldVsNpart(int savePlot = 1, int saveHisto = 1)
   const char *sys_name[nSys]  = {"","_LargeScale","_SmallScale","_ScaleFit","_Binning","_BkgFunc1","_BkgFunc2","_LargeFit","_SmallFit","_SigFunc","_FixSigDown","_FixSigUp","_LineShape",""};
   const char *sys_leg[nSys] = {"Default","Larger bkg norm range","Smaller bkg norm range","Fit ME/SE w/ pol0","Binning","Res. bkg order-1","Res. bkg order+1","Larger sig fit range","Smaller sig fit range","Crystal-ball","Fix sig. down","Fix sig. up","Line shape","Bin-counting"};
 
-  TString outName    = Form("Rootfiles/%s.JpsiYield.pt%1.1f.pt%1.1f.%sroot",run_type,pt1_cut,pt2_cut,run_config);
-  TString outNameSys = Form("Rootfiles/%s.Sys.JpsiYield.root",run_type);
+  TString outName    = Form("Rootfiles/%s.JpsiYield.pt%1.1f.pt%1.1f.%sroot",run_type.Data(),pt1_cut,pt2_cut,run_config);
+  TString outNameSys = Form("Rootfiles/%s.Sys.JpsiYield.root",run_type.Data());
   TFile *fdata = TFile::Open(Form("%s",outName.Data()),"read");
   TFile *fsys = 0x0;
   if(saveHisto) fsys = TFile::Open(Form("%s",outNameSys.Data()),"update");
@@ -288,12 +277,11 @@ void YieldVsNpart(int savePlot = 1, int saveHisto = 1)
 	  ScaleHistoTitle(htmp,0.04,1,0.045,0.04,1,0.035,62);
 	  if(j==0) htmp->Draw("P");
 	  else htmp->Draw("P sames");
-	  TPaveText *t1 = GetTitleText(Form("%s: signal extraction uncertainty (%s)",run_type,pt_Title_npart[i]));
+	  TPaveText *t1 = GetTitleText(Form("%s: signal extraction uncertainty (%s)",run_type.Data(),pt_Title_npart[i]));
 	  t1->Draw();
 	  for(int k=0; k<nCentBins[i]; k++)
 	    {
 	      if(i==1 && k>=5 && j==9) continue;
-	      if(i==0 && k==0 && j==5) continue;
 	      double value = fabs(htmp->GetBinContent(k+1)-1);
 	      if(max[i][k]<value) max[i][k] = value;
 	    }
@@ -333,11 +321,11 @@ void YieldVsNpart(int savePlot = 1, int saveHisto = 1)
       leg[1]->Draw();
       if(savePlot)
 	{
-	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/sys_JpsiXsec/Npart.Sys_signalExt_pt%s.pdf",run_type,pt_Name[i]));
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/sys_JpsiXsec/Npart.Sys_signalExt_pt%s.pdf",run_type.Data(),pt_Name[i]));
 	}
       if(gSaveAN)
 	{
-	  c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch5_SysSigExtVsCent_Pt%1.0f.pdf",ptBins_low[i]));
+	  c->SaveAs(Form("~/Dropbox/STAR_Quarkonium/Run14_Jpsi/Analysis_note/Figures/Ch5_SysSigExtVsCent_Pt%1.0f.pdf",ptBins_low[i]));
 	}
     }
 

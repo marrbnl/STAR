@@ -12,10 +12,12 @@ void make_EmbTrkEff()
     }
   else if(year==2014)
     {
-      f = TFile::Open(Form("./output/Run14_AuAu200.Embed.Jpsi.%sroot",run_config),"read");
+      if(iMbEmb) f = TFile::Open(Form("./output/Run14_AuAu200.Embed_MB.Jpsi.%sroot",run_config),"read");
+      else f = TFile::Open(Form("./output/Run14_AuAu200.Embed.Jpsi.%sroot",run_config),"read");
     }
   TH1F *hStat = (TH1F*)f->Get("hEventStat");
-  printf("[i] # of events: %4.4e\n",hStat->GetBinContent(3));
+  if(iMbEmb) printf("[i] # of events: %4.4e\n",hStat->GetBinContent(6));
+  else printf("[i] # of events: %4.4e\n",hStat->GetBinContent(3));
 
   makeHistos();
 }
@@ -23,6 +25,8 @@ void make_EmbTrkEff()
 //================================================
 void makeHistos(const int saveHistos = 1)
 {
+  TString trig_name = "di_mu";
+  if(iMbEmb) trig_name = "mb";
   const int nCentBins       = nCentBins_pt; 
   const int* centBins_low   = centBins_low_pt;
   const int* centBins_high  = centBins_high_pt;
@@ -42,7 +46,7 @@ void makeHistos(const int saveHistos = 1)
   TH2F *hResVsTruePt[nTypes][nCentBins_tmp];
   for(int i=0; i<2; i++)
     {
-      hnTrkPtRes[i]= (THnSparseF*)f->Get(Form("mh%sTrkPtRes_di_mu",trackType[i]));
+      hnTrkPtRes[i]= (THnSparseF*)f->Get(Form("mh%sTrkPtRes_%s",trackType[i],trig_name.Data()));
       for(int k=0; k<nCentBins_tmp; k++)
 	{
 	  hnTrkPtRes[i]->GetAxis(3)->SetRange(centBins_low_tmp[k],centBins_high_tmp[k]);
@@ -79,7 +83,7 @@ void makeHistos(const int saveHistos = 1)
   
   for(int i=0; i<nDet; i++)
     {
-      hMcTrkInfo[i] = (THnSparseF*)f->Get(Form("mhMcTrkInfo%s_di_mu",det_name[i]));
+      hMcTrkInfo[i] = (THnSparseF*)f->Get(Form("mhMcTrkInfo%s_%s",det_name[i],trig_name.Data()));
       hMcTrkInfo[i]->SetTitle(Form("%s_jpsi",hMcTrkInfo[i]->GetName()));
       hMcTrkInfo[i]->Sumw2();
 
@@ -138,8 +142,8 @@ void makeHistos(const int saveHistos = 1)
 
   printf("+++ MTD PID+trigger efficiency +++\n");
   TH1F *hMtdEff[30][5];
-  TH3F *hMtdInPtBlMod = (TH3F*)f->Get("mhTrkPtBlModMtd_di_mu");
-  TH3F *hMtdOutPtBlMod = (TH3F*)f->Get("mhTrkPtBlModTrig_di_mu");
+  TH3F *hMtdInPtBlMod = (TH3F*)f->Get(Form("mhTrkPtBlModMtd_%s",trig_name.Data()));
+  TH3F *hMtdOutPtBlMod = (TH3F*)f->Get(Form("mhTrkPtBlModTrig_%s",trig_name.Data()));
   for(int i=0; i<30; i++)
     {
       for(int j=0; j<5; j++)
@@ -165,7 +169,7 @@ void makeHistos(const int saveHistos = 1)
   TH2F *hMcTrkPtVsZdc[nEffType][gNTrgSetup][nCentBins];
   for(int i=0; i<nEffType; i++)
     {
-      hnMcTrkPt[i] = (THnSparseF*)f->Get(Form("mhMcTrkPtEff_%s_di_mu",trkEffType[i]));
+      hnMcTrkPt[i] = (THnSparseF*)f->Get(Form("mhMcTrkPtEff_%s_%s",trkEffType[i],trig_name.Data()));
       hnMcTrkPt[i]->GetAxis(0)->SetRangeUser(0,20);
       hnMcTrkPt[i]->GetAxis(1)->SetRangeUser(-0.5,0.5);
 
@@ -193,18 +197,17 @@ void makeHistos(const int saveHistos = 1)
     }
   
   // efficiency vs. centrality
-  const int kNCent = nCentBins_npart[0];
-  TH1F *hMcTrkPtVsNpart[nEffType][gNTrgSetup][kNCent];
+  TH1F *hMcTrkPtVsNpart[nEffType][gNTrgSetup][nCentBinsEff];
   for(int i=0; i<nEffType; i++)
     {
       for(int j=0; j<gNTrgSetup; j++)
 	{
 	  if(j>0) hnMcTrkPt[i]->GetAxis(4)->SetRange(j,j);
-	  for(int k=0; k<kNCent; k++)
+	  for(int k=0; k<nCentBinsEff; k++)
 	    {
-	      hnMcTrkPt[i]->GetAxis(2)->SetRange(centBins_low_npart[k],centBins_high_npart[k]);
+	      hnMcTrkPt[i]->GetAxis(2)->SetRange(centBinsLowEff[k],centBinsHighEff[k]);
 	      hMcTrkPtVsNpart[i][j][k] = (TH1F*)hnMcTrkPt[i]->Projection(0);
-	      hMcTrkPtVsNpart[i][j][k]->SetName(Form("McTrkPt_%s_cent%s%s",trkEffType[i],cent_Title_npart[k],gTrgSetupTitle[j]));
+	      hMcTrkPtVsNpart[i][j][k]->SetName(Form("McTrkPt_%s_cent%s%s",trkEffType[i],centTitleEff[k],gTrgSetupTitle[j]));
 	      hMcTrkPtVsNpart[i][j][k]->SetTitle("");
 	      hnMcTrkPt[i]->GetAxis(2)->SetRange(0,-1);
 	    }
@@ -212,17 +215,17 @@ void makeHistos(const int saveHistos = 1)
 	}
     }
 
-  TH1F *hMcTrkPtInZdc[2][gNZdcRate][kNCent];
+  TH1F *hMcTrkPtInZdc[2][gNZdcRate][nCentBinsEff];
   for(int i=0; i<2; i++)
     {
       for(int j=0; j<gNZdcRate; j++)
 	{
 	  hnMcTrkPt[i]->GetAxis(3)->SetRange(j+1,j+1);
-	  for(int k=0; k<kNCent; k++)
+	  for(int k=0; k<nCentBinsEff; k++)
 	    {
-	      hnMcTrkPt[i]->GetAxis(2)->SetRange(centBins_low_npart[k],centBins_high_npart[k]);
+	      hnMcTrkPt[i]->GetAxis(2)->SetRange(centBinsLowEff[k],centBinsHighEff[k]);
 	      hMcTrkPtInZdc[i][j][k] = (TH1F*)hnMcTrkPt[i]->Projection(0);
-	      hMcTrkPtInZdc[i][j][k]->SetName(Form("McTrkPt_%s_cent%s_Zdc%d-%d",trkEffType[i],cent_Title_npart[k],j*10,j*10+10));
+	      hMcTrkPtInZdc[i][j][k]->SetName(Form("McTrkPt_%s_cent%s_Zdc%d-%d",trkEffType[i],centTitleEff[k],j*10,j*10+10));
 	      hMcTrkPtInZdc[i][j][k]->SetTitle("");
 	      hnMcTrkPt[i]->GetAxis(2)->SetRange(0,-1);
 	    }
@@ -233,7 +236,9 @@ void makeHistos(const int saveHistos = 1)
   if(saveHistos)
     {
       printf("+++ Save histograms +++\n");
-      TFile *fout = TFile::Open(Form("Rootfiles/%s.EmbTrkEff.%sroot",run_type,run_config),"recreate");
+      TFile *fout = NULL;
+      if(iMbEmb) fout = TFile::Open(Form("Rootfiles/%s.MbEmbTrkEff.%sroot",run_type.Data(),run_config),"recreate");
+      else  fout = TFile::Open(Form("Rootfiles/%s.EmbTrkEff.%sroot",run_type.Data(),run_config),"recreate");
       for(int k=0; k<nCentBins_tmp; k++)
 	{
 	  for(int i=0; i<2; i++)
@@ -284,7 +289,7 @@ void makeHistos(const int saveHistos = 1)
        {
 	 for(int j=0; j<gNTrgSetup; j++)
 	   {
-	     for(int k=0; k<kNCent; k++)
+	     for(int k=0; k<nCentBinsEff; k++)
 	       {
 		 hMcTrkPtVsNpart[i][j][k]->Write();
 	       }
@@ -295,7 +300,7 @@ void makeHistos(const int saveHistos = 1)
        {
 	 for(int j=0; j<gNZdcRate; j++)
 	   {
-	     for(int k=0; k<kNCent; k++)
+	     for(int k=0; k<nCentBinsEff; k++)
 	       {
 		 hMcTrkPtInZdc[i][j][k]->Write();
 	       }

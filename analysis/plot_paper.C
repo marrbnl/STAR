@@ -1,4 +1,4 @@
-const char *run_type = "Run14_AuAu200";
+TString run_type = "Run14_AuAu200";
 TString run_cfg_name = "paper";
 const double luminosity = 14.2;
 const double ppInelastic = 42.; // mb
@@ -9,9 +9,10 @@ const char* model_name[4] = {"TAMU", "Tsinghua", "SHM", "Co-mover"};
 //================================================
 void plot_paper()
 {  
-  //rawSignal(0,1,1);
+  //rawSignal();
   //efficiency();
   //xsec();
+  //xsec_v2();
   //nPart();
   //v2();
   ppRef();
@@ -222,10 +223,10 @@ void v2(const bool savePlot = 1, const bool saveHisto = 0)
 
   if(savePlot)
     {
-      c1->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/JpsiV2_uu_Run14_model.pdf",run_type,run_cfg_name.Data()));
-      c1->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/JpsiV2_uu_Run14_model.png",run_type,run_cfg_name.Data()));
-      c1->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/JpsiV2_uu_Run14_model.jpg",run_type,run_cfg_name.Data()));
-      c1->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/JpsiV2_uu_Run14_model.eps",run_type,run_cfg_name.Data()));
+      c1->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/JpsiV2_uu_Run14_model.pdf",run_type.Data(),run_cfg_name.Data()));
+      c1->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/JpsiV2_uu_Run14_model.png",run_type.Data(),run_cfg_name.Data()));
+      c1->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/JpsiV2_uu_Run14_model.jpg",run_type.Data(),run_cfg_name.Data()));
+      c1->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/JpsiV2_uu_Run14_model.eps",run_type.Data(),run_cfg_name.Data()));
     }
 
   if(gSavePaper)
@@ -584,7 +585,7 @@ void makeModel(const bool savePlot = 1, const bool saveHisto = 1)
 }
 
 //================================================
-void efficiency(const bool savePlot = 1, const bool saveHisto = 1)
+void efficiency(const bool savePlot = 0, const bool saveHisto = 0)
 {
   gStyle->SetOptStat(0);
 
@@ -725,7 +726,7 @@ void efficiency(const bool savePlot = 1, const bool saveHisto = 1)
   leg->SetTextSize(20);;
   leg->AddEntry(hTrkPt[1],"n#sigma_{#pi} cut","P");
   leg->AddEntry(hTrkPt[3],"#Deltay & #Deltaz cut","P");
-  leg->AddEntry(fucnDtof,"#Deltatof cut (after other PID cuts)","L");
+  leg->AddEntry(fucnDtof,"#DeltaT_{tof} cut (after other PID cuts)","L");
   leg->AddEntry(gPidEffSys[0],"Total muon PID efficiency","FL");
   leg->Draw();
   cEff->cd();
@@ -733,9 +734,9 @@ void efficiency(const bool savePlot = 1, const bool saveHisto = 1)
 
   if(savePlot)
     {
-      cEff->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/MtdEfficiency.pdf",run_type,run_cfg_name.Data()));      
-      cEff->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/MtdEfficiency.png",run_type,run_cfg_name.Data()));   
-      cEff->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/MtdEfficiency.eps",run_type,run_cfg_name.Data()));
+      cEff->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/MtdEfficiency.pdf",run_type.Data(),run_cfg_name.Data()));      
+      cEff->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/MtdEfficiency.png",run_type.Data(),run_cfg_name.Data()));   
+      cEff->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/MtdEfficiency.eps",run_type.Data(),run_cfg_name.Data()));
     }
   if(gSavePaper)
     {
@@ -744,7 +745,7 @@ void efficiency(const bool savePlot = 1, const bool saveHisto = 1)
 
   if(saveHisto)
     {
-      TFile *fout = TFile::Open(Form("Rootfiles/Paper.%s.Jpsi.root",run_type),"update");
+      TFile *fout = TFile::Open(Form("Rootfiles/Paper.%s.Jpsi.root",run_type.Data()),"update");
       gTrigEffSys->Write("MTD_TrigEff", TObject::kOverwrite);
       gPidEffSys[0]->Write("MTD_PidEff_LowPt", TObject::kOverwrite);
       gPidEffSys[1]->Write("MTD_PidEff_HighPt", TObject::kOverwrite);
@@ -799,12 +800,12 @@ void nPart(const bool savePlot = 1, const bool saveHisto = 1)
 
   // MTD results
   TFile *fout = 0x0;
-  if(saveHisto) fout = TFile::Open(Form("Rootfiles/Paper.%s.Jpsi.root",run_type),"update");
-  else fout = TFile::Open(Form("Rootfiles/Paper.%s.Jpsi.root",run_type),"read");
+  if(saveHisto) fout = TFile::Open(Form("Rootfiles/Paper.%s.Jpsi.root",run_type.Data()),"update");
+  else fout = TFile::Open(Form("Rootfiles/Paper.%s.Jpsi.root",run_type.Data()),"read");
   TGraphAsymmErrors *hpp = (TGraphAsymmErrors*)fout->Get("hpp200JpsiVsCentFinalSys");
 
-  TFile *fdata = TFile::Open(Form("Rootfiles/%s.JpsiXsec.pt%1.1f.pt%1.1f.root",run_type,pt1_cut,pt2_cut),"read");
-  TFile *fsys = TFile::Open(Form("Rootfiles/%s.Sys.JpsiXsec.root",run_type), "read");
+  TFile *fdata = TFile::Open(Form("Rootfiles/%s.JpsiXsec.pt%1.1f.pt%1.1f.root",run_type.Data(),pt1_cut,pt2_cut),"read");
+  TFile *fsys = TFile::Open(Form("Rootfiles/%s.Sys.JpsiXsec.root",run_type.Data()), "read");
   TH1F *hdata[nPtBins], *hsys[nPtBins];
   TH1F *hRaa[nPtBins];
   TGraphErrors *raaVsNpart[nPtBins], *raaVsNpartSys[nPtBins];
@@ -1039,9 +1040,9 @@ void nPart(const bool savePlot = 1, const bool saveHisto = 1)
 
       if(savePlot)
 	{
-	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/JpsiRaaVsNpart_Pt%s_RHICvsLHC.pdf",run_type,run_cfg_name.Data(),pt_Name[i]));
-	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/JpsiRaaVsNpart_Pt%s_RHICvsLHC.png",run_type,run_cfg_name.Data(),pt_Name[i]));
-	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/JpsiRaaVsNpart_Pt%s_RHICvsLHC.eps",run_type,run_cfg_name.Data(),pt_Name[i]));
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/JpsiRaaVsNpart_Pt%s_RHICvsLHC.pdf",run_type.Data(),run_cfg_name.Data(),pt_Name[i]));
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/JpsiRaaVsNpart_Pt%s_RHICvsLHC.png",run_type.Data(),run_cfg_name.Data(),pt_Name[i]));
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/JpsiRaaVsNpart_Pt%s_RHICvsLHC.eps",run_type.Data(),run_cfg_name.Data(),pt_Name[i]));
 	}
       if(gSaveAN)
 	{
@@ -1154,8 +1155,11 @@ void nPart(const bool savePlot = 1, const bool saveHisto = 1)
 }
 
 //================================================
-void xsec(const bool savePlot = 1, const bool saveHisto = 1)
+void xsec(const int mode = 1, const bool savePlot = 0, const bool saveHisto = 0)
 {
+  // mode 0: get histogram from scratch
+  // mode 1: get histogram from saved 
+
   const int nPtBins         = nPtBins_pt;
   const double* ptBins_low  = ptBins_low_pt;
   const double* ptBins_high = ptBins_high_pt;
@@ -1177,96 +1181,112 @@ void xsec(const bool savePlot = 1, const bool saveHisto = 1)
 
   TFile *fout = 0x0;
   if(saveHisto) fout = TFile::Open("Rootfiles/Paper.Run14_AuAu200.Jpsi.root","update");
-  else fout = TFile::Open(Form("Rootfiles/Paper.%s.Jpsi.root",run_type),"read");
+  else fout = TFile::Open(Form("Rootfiles/Paper.%s.Jpsi.root",run_type.Data()),"read");
   TGraphAsymmErrors *hJpsipp = (TGraphAsymmErrors*)fout->Get("hpp200JpsiVsPtFinalSys");
 
-
-  TFile *fSys = TFile::Open(Form("Rootfiles/%s.Sys.JpsiXsec.root",run_type),"read");
-  TH1F *hAuAuJpsiSys[nCentBins];
-  for(int k=0; k<nCentBins; k++)
-    {
-      hAuAuJpsiSys[k]= (TH1F*)fSys->Get(Form("JpsiSysVsPt_All_cent%s",cent_Title[k]));
-    }
-
-  TFile *fdata = TFile::Open(Form("Rootfiles/%s.JpsiXsec.pt%1.1f.pt%1.1f.root",run_type,pt1_cut,pt2_cut),"read");
-  TH1F *hJpsiInvYield[nCentBins];
   TGraphAsymmErrors *hJpsiXsec[nCentBins];
   TGraphAsymmErrors *hJpsiXsecSys[nCentBins];
   TGraphAsymmErrors *hJpsiRaa[nCentBins];
   TGraphAsymmErrors *hJpsiRaaSys[nCentBins];
   TGraphAsymmErrors *hJpsiRaaSys2[nCentBins];
-  TH1F *hJpsiPtPos = (TH1F*)fdata->Get("hJpsiPtPos_cent0080");
+
   double x, y;
   double x1, y1;
   const double x_err = 0.25;
-  for(int k=0; k<nCentBins; k++)
+  if(mode==0)
     {
-      hJpsiInvYield[k] = (TH1F*)fdata->Get(Form("Jpsi_InvYieldVsPt_cent%s",cent_Title[k]));
-      int npoints = hJpsiInvYield[k]->GetNbinsX();
-      hJpsiXsec[k] = new TGraphAsymmErrors(npoints);
-      hJpsiXsec[k]->SetName(Form("Graph_Jpsi_InvYield_cent%s",cent_Title[k]));
-      hJpsiXsecSys[k] = new TGraphAsymmErrors(npoints);
-      hJpsiXsecSys[k]->SetName(Form("Graph_Jpsi_InvYield_cent%s_sys",cent_Title[k]));
-      for(int i=0; i<npoints; i++)
+      TFile *fSys = TFile::Open(Form("Rootfiles/%s.Sys.JpsiXsec.root",run_type.Data()),"read");
+      TH1F *hAuAuJpsiSys[nCentBins];
+      for(int k=0; k<nCentBins; k++)
 	{
-	  if( (k==2 || k==3) && i==npoints-1) continue;
-	  if(k==4 && i>5) continue;
-	  double pt = hJpsiPtPos->GetBinContent(i+1);
-	  x = hJpsiInvYield[k]->GetBinCenter(i+1);
-	  y = hJpsiInvYield[k]->GetBinContent(i+1)*x/pt;
-	  double min_pt = hJpsiInvYield[k]->GetXaxis()->GetBinLowEdge(i+1);
-	  double max_pt = hJpsiInvYield[k]->GetXaxis()->GetBinUpEdge(i+1);
-	  double stat_rel = hJpsiInvYield[k]->GetBinError(i+1)/hJpsiInvYield[k]->GetBinContent(i+1);
-	  hJpsiXsec[k]->SetPoint(i,pt,y*scale_factor[k]);
-	  hJpsiXsec[k]->SetPointError(i,pt-min_pt,max_pt-pt,stat_rel*y*scale_factor[k],stat_rel*y*scale_factor[k]);
-	  hJpsiXsecSys[k]->SetPoint(i,pt,y*scale_factor[k]);
-	  hJpsiXsecSys[k]->SetPointError(i,x_err,x_err,hAuAuJpsiSys[k]->GetBinContent(i+1)*y*scale_factor[k],hAuAuJpsiSys[k]->GetBinContent(i+1)*y*scale_factor[k]);
+	  hAuAuJpsiSys[k]= (TH1F*)fSys->Get(Form("JpsiSysVsPt_All_cent%s",cent_Title[k]));
 	}
 
-      hJpsiRaa[k] = new TGraphAsymmErrors(npoints);
-      hJpsiRaa[k]->SetName(Form("Graph_Jpsi_Raa_cent%s",cent_Title[k]));
-      hJpsiRaaSys[k] = new TGraphAsymmErrors(npoints);
-      hJpsiRaaSys[k]->SetName(Form("Graph_Jpsi_Raa_cent%s_sys",cent_Title[k]));
-      hJpsiRaaSys2[k] = new TGraphAsymmErrors(npoints);
-      hJpsiRaaSys2[k]->SetName(Form("Graph_Jpsi_Raa_cent%s_sys_pp",cent_Title[k]));
-      for(int i=0; i<npoints; i++)
+      TFile *fdata = TFile::Open(Form("Rootfiles/%s.JpsiXsec.pt%1.1f.pt%1.1f.root",run_type.Data(),pt1_cut,pt2_cut),"read");
+      TH1F *hJpsiInvYield[nCentBins];
+
+      TH1F *hJpsiPtPos = (TH1F*)fdata->Get("hJpsiPtPos_cent0080");
+      for(int k=0; k<nCentBins; k++)
 	{
-	  if( (k==2 || k==3) && i==npoints-1) continue;
-	  if(k==4 && i>5) continue;
-	  double bin_center = hJpsiInvYield[k]->GetBinCenter(i+1);
-	  hJpsiXsec[k]->GetPoint(i,x,y);
-	  double AuAu_val = y/scale_factor[k]*x/bin_center;
-	  double AuAu_err = hJpsiXsec[k]->GetErrorY(i)/y*AuAu_val;
-	  double AuAu_sys = hAuAuJpsiSys[k]->GetBinContent(i+1) * AuAu_val;
+	  hJpsiInvYield[k] = (TH1F*)fdata->Get(Form("Jpsi_InvYieldVsPt_cent%s",cent_Title[k]));
+	  int npoints = hJpsiInvYield[k]->GetNbinsX();
+	  hJpsiXsec[k] = new TGraphAsymmErrors(npoints);
+	  hJpsiXsec[k]->SetName(Form("Graph_Jpsi_InvYield_cent%s",cent_Title[k]));
+	  hJpsiXsecSys[k] = new TGraphAsymmErrors(npoints);
+	  hJpsiXsecSys[k]->SetName(Form("Graph_Jpsi_InvYield_cent%s_sys",cent_Title[k]));
+	  for(int i=0; i<npoints; i++)
+	    {
+	      if( (k==2 || k==3) && i==npoints-1) continue;
+	      if(k==4 && i>5) continue;
+	      double pt = hJpsiPtPos->GetBinContent(i+1);
+	      x = hJpsiInvYield[k]->GetBinCenter(i+1);
+	      y = hJpsiInvYield[k]->GetBinContent(i+1)*x/pt;
+	      double min_pt = hJpsiInvYield[k]->GetXaxis()->GetBinLowEdge(i+1);
+	      double max_pt = hJpsiInvYield[k]->GetXaxis()->GetBinUpEdge(i+1);
+	      double stat_rel = hJpsiInvYield[k]->GetBinError(i+1)/hJpsiInvYield[k]->GetBinContent(i+1);
+	      hJpsiXsec[k]->SetPoint(i,pt,y*scale_factor[k]);
+	      hJpsiXsec[k]->SetPointError(i,pt-min_pt,max_pt-pt,stat_rel*y*scale_factor[k],stat_rel*y*scale_factor[k]);
+	      hJpsiXsecSys[k]->SetPoint(i,pt,y*scale_factor[k]);
+	      hJpsiXsecSys[k]->SetPointError(i,x_err,x_err,hAuAuJpsiSys[k]->GetBinContent(i+1)*y*scale_factor[k],hAuAuJpsiSys[k]->GetBinContent(i+1)*y*scale_factor[k]);
+	    }
 
-	  hJpsipp->GetPoint(i, x1, y1);
-	  double pp_val = y1;
-	  double pp_err_h = hJpsipp->GetErrorYlow(i);
-	  double pp_err_l = hJpsipp->GetErrorYhigh(i);
-	  double prefix = ppInelastic/ncoll[k] * 1e6;
-	  double val = prefix * AuAu_val / pp_val;
-	  double err = prefix * AuAu_err / pp_val;
-	  double sys = prefix * AuAu_sys / pp_val;
-	  hJpsiRaa[k]->SetPoint(i,bin_center,val);
-	  hJpsiRaa[k]->SetPointError(i,hJpsiInvYield[k]->GetBinWidth(i+1)/2,hJpsiInvYield[k]->GetBinWidth(i+1)/2,err,err);
-	  //printf("%s: raa -> %2.2f +/- %2.2f%%, AuAu -> %2.2e +/- %2.2f%%, pp -> %2.2e +/-%2.2f%%\n",cent_Title[k],val,err/val*100,AuAu_val,AuAu_err/AuAu_val*100,pp_val,pp_err_h/pp_val*100);
-	  //printf("%s: raa -> %2.2f +/- %2.2f%%, AuAu -> %2.2e +/- %2.2f%%, pp -> %2.2e +/-%2.2f%%\n",pt_Name[i+1],val,sys2/val*100,AuAu_val,AuAu_sys/AuAu_val*100,pp_val,pp_err/pp_val*100);
+	  hJpsiRaa[k] = new TGraphAsymmErrors(npoints);
+	  hJpsiRaa[k]->SetName(Form("Graph_Jpsi_Raa_cent%s",cent_Title[k]));
+	  hJpsiRaaSys[k] = new TGraphAsymmErrors(npoints);
+	  hJpsiRaaSys[k]->SetName(Form("Graph_Jpsi_Raa_cent%s_sys",cent_Title[k]));
+	  hJpsiRaaSys2[k] = new TGraphAsymmErrors(npoints);
+	  hJpsiRaaSys2[k]->SetName(Form("Graph_Jpsi_Raa_cent%s_sys_pp",cent_Title[k]));
+	  for(int i=0; i<npoints; i++)
+	    {
+	      if( (k==2 || k==3) && i==npoints-1) continue;
+	      if(k==4 && i>5) continue;
+	      double bin_center = hJpsiInvYield[k]->GetBinCenter(i+1);
+	      hJpsiXsec[k]->GetPoint(i,x,y);
+	      double AuAu_val = y/scale_factor[k]*x/bin_center;
+	      double AuAu_err = hJpsiXsec[k]->GetErrorY(i)/y*AuAu_val;
+	      double AuAu_sys = hAuAuJpsiSys[k]->GetBinContent(i+1) * AuAu_val;
 
-	  hJpsiRaaSys[k]->SetPoint(i,bin_center,val);
-	  hJpsiRaaSys[k]->SetPointError(i,x_err*x_max[k]/x_max[0],x_err*x_max[k]/x_max[0],sys,sys);
+	      hJpsipp->GetPoint(i, x1, y1);
+	      double pp_val = y1;
+	      double pp_err_h = hJpsipp->GetErrorYlow(i);
+	      double pp_err_l = hJpsipp->GetErrorYhigh(i);
+	      double prefix = ppInelastic/ncoll[k] * 1e6;
+	      double val = prefix * AuAu_val / pp_val;
+	      double err = prefix * AuAu_err / pp_val;
+	      double sys = prefix * AuAu_sys / pp_val;
+	      hJpsiRaa[k]->SetPoint(i,bin_center,val);
+	      hJpsiRaa[k]->SetPointError(i,hJpsiInvYield[k]->GetBinWidth(i+1)/2,hJpsiInvYield[k]->GetBinWidth(i+1)/2,err,err);
+	      //printf("%s: raa -> %2.2f +/- %2.2f%%, AuAu -> %2.2e +/- %2.2f%%, pp -> %2.2e +/-%2.2f%%\n",cent_Title[k],val,err/val*100,AuAu_val,AuAu_err/AuAu_val*100,pp_val,pp_err_h/pp_val*100);
+	      //printf("%s: raa -> %2.2f +/- %2.2f%%, AuAu -> %2.2e +/- %2.2f%%, pp -> %2.2e +/-%2.2f%%\n",pt_Name[i+1],val,sys2/val*100,AuAu_val,AuAu_sys/AuAu_val*100,pp_val,pp_err/pp_val*100);
 
-	  hJpsiRaaSys2[k]->SetPoint(i,bin_center,val);
-	  hJpsiRaaSys2[k]->SetPointError(i,x_err*x_max[k]/x_max[0],x_err*x_max[k]/x_max[0],pp_err_l/pp_val*val,pp_err_h/pp_val*val);
+	      hJpsiRaaSys[k]->SetPoint(i,bin_center,val);
+	      hJpsiRaaSys[k]->SetPointError(i,x_err*x_max[k]/x_max[0],x_err*x_max[k]/x_max[0],sys,sys);
+
+	      hJpsiRaaSys2[k]->SetPoint(i,bin_center,val);
+	      hJpsiRaaSys2[k]->SetPointError(i,x_err*x_max[k]/x_max[0],x_err*x_max[k]/x_max[0],pp_err_l/pp_val*val,pp_err_h/pp_val*val);
+	    }
+	  hJpsiRaa[k]->SetMarkerStyle(29);
+	  hJpsiRaa[k]->SetMarkerColor(2);
+	  hJpsiRaa[k]->SetLineColor(2);
+	  hJpsiRaa[k]->SetMarkerSize(2.5);
+	  hJpsiRaaSys[k]->SetFillStyle(0);
+	  hJpsiRaaSys[k]->SetLineColor(hJpsiRaa[k]->GetLineColor());
+	  hJpsiRaaSys2[k]->SetLineColor(kGray);
+	  hJpsiRaaSys2[k]->SetFillColor(kGray);
+	  hJpsiRaaSys2[k]->SetFillStyle(1001);
 	}
-      hJpsiRaa[k]->SetMarkerStyle(29);
-      hJpsiRaa[k]->SetMarkerColor(2);
-      hJpsiRaa[k]->SetLineColor(2);
-      hJpsiRaa[k]->SetMarkerSize(2.5);
-      hJpsiRaaSys[k]->SetFillStyle(0);
-      hJpsiRaaSys[k]->SetLineColor(hJpsiRaa[k]->GetLineColor());
-      hJpsiRaaSys2[k]->SetLineColor(kGray);
-      hJpsiRaaSys2[k]->SetFillColor(kGray);
-      hJpsiRaaSys2[k]->SetFillStyle(1001);
+    }
+  else
+    {
+      for(int k=0; k<nCentBins; k++)
+	{
+	  hJpsiXsec[k] = (TGraphAsymmErrors*)fout->Get(Form("Graph_Jpsi_InvYield_cent%s",cent_Title[k]));
+	  hJpsiXsecSys[k] = (TGraphAsymmErrors*)fout->Get(Form("Graph_Jpsi_InvYield_cent%s_sys",cent_Title[k]));
+
+	  hJpsiRaa[k] = (TGraphAsymmErrors*)fout->Get(Form("Graph_Jpsi_Raa_cent%s",cent_Title[k]));
+	  hJpsiRaaSys[k] = (TGraphAsymmErrors*)fout->Get(Form("Graph_Jpsi_Raa_cent%s_sys",cent_Title[k]));
+	  hJpsiRaaSys2[k] = (TGraphAsymmErrors*)fout->Get(Form("Graph_Jpsi_Raa_cent%s_sys_pp",cent_Title[k]));
+	}
     }
 
 
@@ -1310,9 +1330,9 @@ void xsec(const bool savePlot = 1, const bool saveHisto = 1)
   t1->Draw();
   if(savePlot)
     {
-      c1->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/AuAu_JpsiInvYield.pdf",run_type,run_cfg_name.Data()));
-      c1->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/AuAu_JpsiInvYield.png",run_type,run_cfg_name.Data()));
-      c1->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/AuAu_JpsiInvYield.eps",run_type,run_cfg_name.Data()));
+      c1->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/AuAu_JpsiInvYield.pdf",run_type.Data(),run_cfg_name.Data()));
+      c1->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/AuAu_JpsiInvYield.png",run_type.Data(),run_cfg_name.Data()));
+      c1->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/AuAu_JpsiInvYield.eps",run_type.Data(),run_cfg_name.Data()));
     }
   if(gSaveAN)
     {
@@ -1526,9 +1546,9 @@ void xsec(const bool savePlot = 1, const bool saveHisto = 1)
   leg->Draw();
   if(savePlot)
     {
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/Run14_JpsiRaaPt_vs_pub.pdf",run_type,run_cfg_name.Data()));
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/Run14_JpsiRaaPt_vs_pub.png",run_type,run_cfg_name.Data()));
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/Run14_JpsiRaaPt_vs_pub.eps",run_type,run_cfg_name.Data()));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/Run14_JpsiRaaPt_vs_pub.pdf",run_type.Data(),run_cfg_name.Data()));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/Run14_JpsiRaaPt_vs_pub.png",run_type.Data(),run_cfg_name.Data()));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/Run14_JpsiRaaPt_vs_pub.eps",run_type.Data(),run_cfg_name.Data()));
     }
   if(gSaveAN)
     {
@@ -1762,9 +1782,9 @@ void xsec(const bool savePlot = 1, const bool saveHisto = 1)
 
   if(savePlot)
     {
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/Run14_JpsiRaaPt_dimuon.pdf",run_type,run_cfg_name.Data()));
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/Run14_JpsiRaaPt_dimuon.png",run_type,run_cfg_name.Data()));
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/Run14_JpsiRaaPt_dimuon.eps",run_type,run_cfg_name.Data()));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/Run14_JpsiRaaPt_dimuon.pdf",run_type.Data(),run_cfg_name.Data()));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/Run14_JpsiRaaPt_dimuon.png",run_type.Data(),run_cfg_name.Data()));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/Run14_JpsiRaaPt_dimuon.eps",run_type.Data(),run_cfg_name.Data()));
     }
   if(gSaveAN)
     {
@@ -1861,11 +1881,678 @@ void xsec(const bool savePlot = 1, const bool saveHisto = 1)
     }
 }
 
+
 //================================================
-void rawSignal(const int icent = 0, const bool savePlot = 1, const bool saveHisto = 1)
+void xsec_v2(const int mode = 1, const bool savePlot = 0, const bool saveHisto = 0)
+{
+  // mode 0: get histogram from scratch
+  // mode 1: get histogram from saved 
+
+  const int nPtBins         = nPtBins_pt;
+  const double* ptBins_low  = ptBins_low_pt;
+  const double* ptBins_high = ptBins_high_pt;
+  const char** pt_Name      = pt_Name_pt;
+  const int nCentBins       = nCentBins_pt; 
+  const int* centBins_low   = centBins_low_pt;
+  const int* centBins_high  = centBins_high_pt;
+  const char** cent_Name    = cent_Name_pt;
+  const char** cent_Title   = cent_Title_pt;
+
+  gStyle->SetOptStat(0);
+  const double ncoll[nCentBins] = {291.9, 766.47, 290.87, 91.33, 21.57};
+  const double ncollErr[nCentBins] = {20.46, 28.56, 30.47, 20.01, 8.04};
+  const int marker_style[nCentBins] = {kFullCircle, kFullStar, kFullSquare, kFullCross, kFullDiamond};
+  const double marker_size[nCentBins] = {1.5,2,1.5,2,2};
+  const int marker_color[nCentBins] = {1,2,4,6,kGreen+2};
+  const double scale_factor[nCentBins] = {10,1,0.2,0.1,0.01};
+  const double x_max[nCentBins] = {15, 15, 12, 12, 7.5};
+
+  TFile *fout = 0x0;
+  if(saveHisto) fout = TFile::Open("Rootfiles/Paper.Run14_AuAu200.Jpsi.root","update");
+  else fout = TFile::Open(Form("Rootfiles/Paper.%s.Jpsi.root",run_type.Data()),"read");
+  TGraphAsymmErrors *hJpsipp = (TGraphAsymmErrors*)fout->Get("hpp200JpsiVsPtFinalSys");
+
+  TGraphAsymmErrors *hJpsiXsec[nCentBins];
+  TGraphAsymmErrors *hJpsiXsecSys[nCentBins];
+  TGraphAsymmErrors *hJpsiRaa[nCentBins];
+  TGraphAsymmErrors *hJpsiRaaSys[nCentBins];
+  TGraphAsymmErrors *hJpsiRaaSys2[nCentBins];
+
+  double x, y;
+  double x1, y1;
+  const double x_err = 0.25;
+  if(mode==0)
+    {
+      TFile *fSys = TFile::Open(Form("Rootfiles/%s.Sys.JpsiXsec.root",run_type.Data()),"read");
+      TH1F *hAuAuJpsiSys[nCentBins];
+      for(int k=0; k<nCentBins; k++)
+	{
+	  hAuAuJpsiSys[k]= (TH1F*)fSys->Get(Form("JpsiSysVsPt_All_cent%s",cent_Title[k]));
+	}
+
+      TFile *fdata = TFile::Open(Form("Rootfiles/%s.JpsiXsec.pt%1.1f.pt%1.1f.root",run_type.Data(),pt1_cut,pt2_cut),"read");
+      TH1F *hJpsiInvYield[nCentBins];
+
+      TH1F *hJpsiPtPos = (TH1F*)fdata->Get("hJpsiPtPos_cent0080");
+      for(int k=0; k<nCentBins; k++)
+	{
+	  hJpsiInvYield[k] = (TH1F*)fdata->Get(Form("Jpsi_InvYieldVsPt_cent%s",cent_Title[k]));
+	  int npoints = hJpsiInvYield[k]->GetNbinsX();
+	  hJpsiXsec[k] = new TGraphAsymmErrors(npoints);
+	  hJpsiXsec[k]->SetName(Form("Graph_Jpsi_InvYield_cent%s",cent_Title[k]));
+	  hJpsiXsecSys[k] = new TGraphAsymmErrors(npoints);
+	  hJpsiXsecSys[k]->SetName(Form("Graph_Jpsi_InvYield_cent%s_sys",cent_Title[k]));
+	  for(int i=0; i<npoints; i++)
+	    {
+	      if( (k==2 || k==3) && i==npoints-1) continue;
+	      if(k==4 && i>5) continue;
+	      double pt = hJpsiPtPos->GetBinContent(i+1);
+	      x = hJpsiInvYield[k]->GetBinCenter(i+1);
+	      y = hJpsiInvYield[k]->GetBinContent(i+1)*x/pt;
+	      double min_pt = hJpsiInvYield[k]->GetXaxis()->GetBinLowEdge(i+1);
+	      double max_pt = hJpsiInvYield[k]->GetXaxis()->GetBinUpEdge(i+1);
+	      double stat_rel = hJpsiInvYield[k]->GetBinError(i+1)/hJpsiInvYield[k]->GetBinContent(i+1);
+	      hJpsiXsec[k]->SetPoint(i,pt,y*scale_factor[k]);
+	      hJpsiXsec[k]->SetPointError(i,pt-min_pt,max_pt-pt,stat_rel*y*scale_factor[k],stat_rel*y*scale_factor[k]);
+	      hJpsiXsecSys[k]->SetPoint(i,pt,y*scale_factor[k]);
+	      hJpsiXsecSys[k]->SetPointError(i,x_err,x_err,hAuAuJpsiSys[k]->GetBinContent(i+1)*y*scale_factor[k],hAuAuJpsiSys[k]->GetBinContent(i+1)*y*scale_factor[k]);
+	    }
+
+	  hJpsiRaa[k] = new TGraphAsymmErrors(npoints);
+	  hJpsiRaa[k]->SetName(Form("Graph_Jpsi_Raa_cent%s",cent_Title[k]));
+	  hJpsiRaaSys[k] = new TGraphAsymmErrors(npoints);
+	  hJpsiRaaSys[k]->SetName(Form("Graph_Jpsi_Raa_cent%s_sys",cent_Title[k]));
+	  hJpsiRaaSys2[k] = new TGraphAsymmErrors(npoints);
+	  hJpsiRaaSys2[k]->SetName(Form("Graph_Jpsi_Raa_cent%s_sys_pp",cent_Title[k]));
+	  for(int i=0; i<npoints; i++)
+	    {
+	      if( (k==2 || k==3) && i==npoints-1) continue;
+	      if(k==4 && i>5) continue;
+	      double bin_center = hJpsiInvYield[k]->GetBinCenter(i+1);
+	      hJpsiXsec[k]->GetPoint(i,x,y);
+	      double AuAu_val = y/scale_factor[k]*x/bin_center;
+	      double AuAu_err = hJpsiXsec[k]->GetErrorY(i)/y*AuAu_val;
+	      double AuAu_sys = hAuAuJpsiSys[k]->GetBinContent(i+1) * AuAu_val;
+
+	      hJpsipp->GetPoint(i, x1, y1);
+	      double pp_val = y1;
+	      double pp_err_h = hJpsipp->GetErrorYlow(i);
+	      double pp_err_l = hJpsipp->GetErrorYhigh(i);
+	      double prefix = ppInelastic/ncoll[k] * 1e6;
+	      double val = prefix * AuAu_val / pp_val;
+	      double err = prefix * AuAu_err / pp_val;
+	      double sys = prefix * AuAu_sys / pp_val;
+	      hJpsiRaa[k]->SetPoint(i,bin_center,val);
+	      hJpsiRaa[k]->SetPointError(i,hJpsiInvYield[k]->GetBinWidth(i+1)/2,hJpsiInvYield[k]->GetBinWidth(i+1)/2,err,err);
+	      //printf("%s: raa -> %2.2f +/- %2.2f%%, AuAu -> %2.2e +/- %2.2f%%, pp -> %2.2e +/-%2.2f%%\n",cent_Title[k],val,err/val*100,AuAu_val,AuAu_err/AuAu_val*100,pp_val,pp_err_h/pp_val*100);
+	      //printf("%s: raa -> %2.2f +/- %2.2f%%, AuAu -> %2.2e +/- %2.2f%%, pp -> %2.2e +/-%2.2f%%\n",pt_Name[i+1],val,sys2/val*100,AuAu_val,AuAu_sys/AuAu_val*100,pp_val,pp_err/pp_val*100);
+
+	      hJpsiRaaSys[k]->SetPoint(i,bin_center,val);
+	      hJpsiRaaSys[k]->SetPointError(i,x_err*x_max[k]/x_max[0],x_err*x_max[k]/x_max[0],sys,sys);
+
+	      hJpsiRaaSys2[k]->SetPoint(i,bin_center,val);
+	      hJpsiRaaSys2[k]->SetPointError(i,x_err*x_max[k]/x_max[0],x_err*x_max[k]/x_max[0],pp_err_l/pp_val*val,pp_err_h/pp_val*val);
+	    }
+	  hJpsiRaa[k]->SetMarkerStyle(29);
+	  hJpsiRaa[k]->SetMarkerColor(2);
+	  hJpsiRaa[k]->SetLineColor(2);
+	  hJpsiRaa[k]->SetMarkerSize(2.5);
+	  hJpsiRaaSys[k]->SetFillStyle(0);
+	  hJpsiRaaSys[k]->SetLineColor(hJpsiRaa[k]->GetLineColor());
+	  hJpsiRaaSys2[k]->SetLineColor(kGray);
+	  hJpsiRaaSys2[k]->SetFillColor(kGray);
+	  hJpsiRaaSys2[k]->SetFillStyle(1001);
+	}
+    }
+  else
+    {
+      for(int k=0; k<nCentBins; k++)
+	{
+	  hJpsiXsec[k] = (TGraphAsymmErrors*)fout->Get(Form("Graph_Jpsi_InvYield_cent%s",cent_Title[k]));
+	  hJpsiXsecSys[k] = (TGraphAsymmErrors*)fout->Get(Form("Graph_Jpsi_InvYield_cent%s_sys",cent_Title[k]));
+
+	  hJpsiRaa[k] = (TGraphAsymmErrors*)fout->Get(Form("Graph_Jpsi_Raa_cent%s",cent_Title[k]));
+	  hJpsiRaaSys[k] = (TGraphAsymmErrors*)fout->Get(Form("Graph_Jpsi_Raa_cent%s_sys",cent_Title[k]));
+	  hJpsiRaaSys2[k] = (TGraphAsymmErrors*)fout->Get(Form("Graph_Jpsi_Raa_cent%s_sys_pp",cent_Title[k]));
+	}
+    }
+
+
+  TCanvas *c1 = new TCanvas("AuAu200_Jpsi","AuAu200_Jpsi",800,700);
+  TH1F *hAuAu = new TH1F("AuAu200_Jpsi",";p_{T} [GeV/c];B_{ll}d^{2}N/(2#pip_{T}dp_{T}dy) [(GeV/c)^{-2}]",15,0,15);
+  hAuAu->GetYaxis()->SetRangeUser(1e-12,1e-2);
+  ScaleHistoTitle(hAuAu,0.05,1,0.04,0.05,1.2,0.04,62);
+  gPad->SetLogy();
+  SetPadMargin(gPad,0.13,0.13,0.05,0.02);
+  hAuAu->Draw();
+  for(int k=0; k<nCentBins; k++)
+    {
+      hJpsiXsec[k]->SetMarkerStyle(marker_style[k]);
+      hJpsiXsec[k]->SetMarkerColor(marker_color[k]);
+      hJpsiXsec[k]->SetLineColor(marker_color[k]);
+      hJpsiXsec[k]->SetMarkerSize(marker_size[k]+0.5);
+      hJpsiXsecSys[k]->SetFillStyle(0);
+      hJpsiXsecSys[k]->SetLineColor(hJpsiXsec[k]->GetLineColor());
+      hJpsiXsecSys[k]->Draw("samesE5");
+      hJpsiXsec[k]->Draw("samesPEZ");
+      if(k==1)
+	{
+	  hJpsiXsec[k]->GetPoint(0, x, y);
+	  printf("[i] Jpsi yield = %4.2e +/- %4.2e +/- %4.2e\n",y,hJpsiXsec[k]->GetErrorYhigh(0),hJpsiXsecSys[k]->GetErrorYhigh(0));
+	}
+    }
+  TLegend *leg = new TLegend(0.7,0.65,0.9,0.95);
+  leg->SetBorderSize(0);
+  leg->SetFillColor(0);
+  leg->SetTextSize(0.04);
+  leg->AddEntry(hJpsiXsec[0],"0-80%#times10","P");
+  leg->AddEntry(hJpsiXsec[1],"0-20%","P");
+  leg->AddEntry(hJpsiXsec[2],"20-40%/5","P");
+  leg->AddEntry(hJpsiXsec[3],"40-60%/10","P");
+  leg->AddEntry(hJpsiXsec[4],"60-80%/100","P");
+  leg->Draw();
+  TPaveText *t1 = GetPaveText(0.15,0.3,0.85,0.95,0.04,62);
+  t1->SetTextAlign(11);
+  t1->AddText(Form("Au+Au @ 200 GeV, #it{L} ~ %1.1f nb^{-1}",luminosity));
+  t1->AddText("J/#psi#rightarrow#mu^{+}#mu^{-}, |y| < 0.5");
+  t1->Draw();
+  if(savePlot)
+    {
+      c1->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/AuAu_JpsiInvYield.pdf",run_type.Data(),run_cfg_name.Data()));
+      c1->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/AuAu_JpsiInvYield.png",run_type.Data(),run_cfg_name.Data()));
+      c1->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/AuAu_JpsiInvYield.eps",run_type.Data(),run_cfg_name.Data()));
+    }
+  if(gSaveAN)
+    {
+      c1->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch6_InvYieldVsPt.pdf"));
+    }
+  if(gSavePaper)
+    {
+      c1->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Paper/%s/Figure_JpsiInvYieldVsPt.pdf",gPaperVersion));
+    }
+
+  //==============================================
+  // RAA vs. pT
+  //==============================================
+
+  /*
+    // CMS: Eur. Phys. J. C 05 (2012) 063
+    // Inclusive Jpsi, |y| < 2.4, 0-100%
+    // global uncertainty = 8.3%
+    const int ncms = 2;
+    double cms_pt[ncms] = {8.11, 13.22};
+    double cms_pt_err_low[ncms] = {1.61, 3.22};
+    double cms_pt_err_high[ncms] = {1.89, 16.78};
+    double cms_pt_sys_low[ncms] = {0.25, 0.25};
+    double cms_pt_sys_high[ncms] = {0.25, 0.25};
+    double cms_raa[ncms] = {0.32, 0.31};
+    double cms_raa_err_low[ncms] = {0.03, 0.04};
+    double cms_raa_err_high[ncms] = {0.03, 0.04};
+    double cms_raa_sys_low[ncms] = {0.02, 0.01};
+    double cms_raa_sys_high[ncms] = {0.02, 0.01};
+
+   */
+  // CMS: Eur. Phys. J. C 77 (2017) 252
+  // Prompt Jpsi, |y| < 2.4, 0-100%
+  const int ncms = 5;
+  double cms_pt[ncms] = {7.5, 9.0, 10.25, 12, 14.5};
+  double cms_pt_err[ncms] = {1, 0.5, 0.75, 1, 1.5};
+  double cms_pt_sys[ncms] = {0.25, 0.25, 0.25, 0.25, 0.25};
+  double cms_raa[ncms] = {0.37, 0.337, 0.374, 0.371, 0.446};
+  double cms_raa_err[ncms] = {0.0097, 0.0136, 0.0156, 0.0178, 0.0238};
+  double cms_raa_sys[ncms] = {0.0407, 0.0282, 0.0288, 0.0356, 0.0406};
+  TGraphErrors *gCmsRaaVsPt = new TGraphErrors(ncms, cms_pt, cms_raa, cms_pt_err, cms_raa_err);
+  gCmsRaaVsPt->SetName("CMS_PromptJpsiRaaVsPt_0100");
+  TGraphErrors *gCmsRaaVsPtSys = new TGraphErrors(ncms, cms_pt, cms_raa, cms_pt_sys, cms_raa_sys);
+  gCmsRaaVsPt->SetName("CMS_PromptJpsiRaaVsPt_0100_sys");
+  double cms_gsys = 0.0748;
+  
+  // ALICE JHEP 1507,051 (2015) (http://hepdata.cedar.ac.uk/view/ins1364887)
+  // Inclusive Jpsi, |y| < 0.8, 0-40%
+  const int nalice = 2;
+  double alice_pt[nalice] = {1.56, 3.33};
+  double alice_pt_err_low[nalice] = {1.56, 0.83};
+  double alice_pt_err_high[nalice] = {0.94, 2.67};
+  double alice_pt_sys_low[nalice] = {0.25, 0.25};
+  double alice_pt_sys_high[nalice] = {0.25, 0.25};
+  double alice_raa[nalice] = {0.82, 0.58};
+  double alice_raa_err_low[nalice] = {0.11, 0.06};
+  double alice_raa_err_high[nalice] = {0.11, 0.06};
+  double alice_raa_sys_low[nalice] = {0.10,0.08};
+  double alice_raa_sys_high[nalice] = {0.10,0.08};
+  TGraphAsymmErrors *gAliceRaaVsPt = new TGraphAsymmErrors(nalice, alice_pt, alice_raa, alice_pt_err_low, alice_pt_err_high, alice_raa_err_low, alice_raa_err_high);
+  gAliceRaaVsPt->SetName("ALICE_InclusiveJpsiRaaVsPt_040");
+  TGraphAsymmErrors *gAliceRaaVsPtSys  = new TGraphAsymmErrors(nalice, alice_pt, alice_raa, alice_pt_sys_low, alice_pt_sys_high, alice_raa_sys_low, alice_raa_sys_high);
+  gAliceRaaVsPtSys->SetName("ALICE_InclusiveJpsiRaaVsPt_040_sys");
+  double alice_gsys = 0.12;
+  
+  // PHENIX 
+  // four centrality bins: 0-20%, 20-40%, 40-60%, 60-92%
+  const char* phenix_cent[4] = {"020","2040","4060","6092"};
+  const int nphenix = 5;
+  double phenix_pt[nphenix] = {0.5, 1.5, 2.5, 3.5, 4.5};
+  double phenix_pt_err[nphenix] = {0.5, 0.5, 0.5, 0.5, 0.5};
+  double phenix_pt_sys[nphenix] = {0.25, 0.25, 0.25, 0.25, 0.25};
+  double phenix_raa[4][nphenix] = { {0.365, 0.379, 0.318, 0.134, 0.636},
+				    {0.487, 0.554, 0.560, 0.649, 0.977},
+				    {0.738, 0.566, 0.540, 0.694, 1.610},
+				    {1.130, 0.586, 0.431, 0.818, 0.792}};
+  double phenix_raa_err[4][nphenix] = { {0.057, 0.054, 0.067, 0.107, 0.339},
+					{0.073, 0.074, 0.101, 0.203, 0.486},
+					{0.111, 0.091, 0.125, 0.258, 0.848},
+					{0.237, 0.151, 0.183, 0.485, 0.833}};
+  double phenix_raa_sys[4][nphenix] = { {0.035, 0.036, 0.031, 0.013, 0.061},
+					{0.072, 0.081, 0.082, 0.095, 0.144},
+					{0.107, 0.082, 0.078, 0.101, 0.234},
+					{0.163, 0.084, 0.062, 0.118, 0.114}};
+  double phenix_gsys[4] = {0.1, 0.1, 0.13, 0.28};
+  TGraphErrors *gPhenixRaaVsPt[4];
+  TGraphErrors *gPhenixRaaVsPtSys[4];
+  for(int i=0; i<4; i++)
+    {
+      gPhenixRaaVsPt[i] = new TGraphErrors(nphenix, phenix_pt, phenix_raa[i], phenix_pt_err, phenix_raa_err[i]);
+      gPhenixRaaVsPt[i]->SetName(Form("PHENIX_InclusiveJpsiRaaVsPt_%s",phenix_cent[i]));
+      gPhenixRaaVsPtSys[i] = new TGraphErrors(nphenix, phenix_pt, phenix_raa[i], phenix_pt_sys, phenix_raa_sys[i]);
+      gPhenixRaaVsPtSys[i]->SetName(Form("PHENIX_InclusiveJpsiRaaVsPt_%s_sys",phenix_cent[i]));
+      for(int ipoint=0; ipoint<nphenix; ipoint++)
+	{
+	  gPhenixRaaVsPtSys[i]->SetPointError(ipoint, phenix_pt_sys[ipoint]*x_max[i+1]/x_max[0], phenix_raa_sys[i][ipoint]);
+	}
+    }
+
+  // STAR
+  // High pt: Phys. Lett. B 722 (2013) 55
+  // Low pt: Phys. Rev. C 90 (2014) 24906
+  TFile *fpub = TFile::Open(Form("Rootfiles/%s/Publication.Jpsi.200GeV.root",run_cfg_name.Data()),"read");
+  const char* star_cent[4] = {"0020","2040","4060","0060"};
+  TGraphAsymmErrors *gRaaLowPt[4];
+  TGraphAsymmErrors *gRaaLowPtSys[4];
+  TGraphAsymmErrors *gRaaHighPt[4];
+  TGraphAsymmErrors *gRaaHighPtSys[4];
+  double x,y;
+  for(int k=0; k<4; k++)
+    {
+      gRaaLowPt[k] = (TGraphAsymmErrors*)fpub->Get(Form("Jpsi_InvYield_Raa200_LowPt_cent%s",star_cent[k]));
+      gRaaLowPtSys[k] = (TGraphAsymmErrors*)fpub->Get(Form("Jpsi_InvYield_Raa200_LowPt_systematics_cent%s",star_cent[k]));
+      gRaaHighPt[k] = (TGraphAsymmErrors*)fpub->Get(Form("Jpsi_InvYield_Raa200_HighPt_cent%s",star_cent[k]));
+      gRaaHighPtSys[k] = (TGraphAsymmErrors*)fpub->Get(Form("Jpsi_InvYield_Raa200_HighPt_systematics_cent%s",star_cent[k]));
+    }
+
+  //==============================================
+  // compare all the previous Raa results from RHIC
+  const int lowpt_color = 9;
+  const int highpt_color = 12;
+  const int phenix_color = kGreen + 2;
+  TCanvas *c = new TCanvas("Raa_Jpsi_vs_pub","Raa_Jpsi_vs_pub",1100,700);
+  c->Divide(2,2);
+
+  TH1F *hRaa = new TH1F("Raa_Jpsi",";p_{T} (GeV/c);R_{AA}",10,0,15);
+  hRaa->GetYaxis()->SetRangeUser(0.05,1.95);
+  hRaa->GetYaxis()->CenterTitle();
+  ScaleHistoTitle(hRaa,22,1.9,18,22,1.9,18,63);
+  for(int k=0; k<4; k++)
+    {
+      c->cd(k+1);
+      SetPadMargin(gPad, 0.14, 0.13, 0.01, 0.01);
+      hRaa->GetXaxis()->SetRangeUser(0, x_max[k+1]);
+      hRaa->DrawCopy();
+      TLine *line = GetLine(0,1,x_max[k+1],1,1);
+      line->Draw();
+      if(k<3)
+	{
+	  gRaaLowPt[k]->SetMarkerStyle(kFullCircle);
+	  gRaaLowPt[k]->SetMarkerSize(2);
+	  gRaaLowPt[k]->SetMarkerColor(lowpt_color);
+	  gRaaLowPt[k]->SetLineColor(lowpt_color);
+	  gRaaLowPtSys[k]->SetMarkerColor(lowpt_color);
+	  gRaaLowPtSys[k]->SetLineColor(lowpt_color);
+
+	  gRaaHighPt[k]->SetMarkerStyle(kOpenCircle);
+	  gRaaHighPt[k]->SetMarkerSize(2);
+	  gRaaHighPt[k]->SetMarkerColor(highpt_color);
+	  gRaaHighPt[k]->SetLineColor(highpt_color);
+	  gRaaHighPtSys[k]->SetMarkerColor(highpt_color);
+	  gRaaHighPtSys[k]->SetLineColor(highpt_color);
+
+	  gRaaLowPtSys[k]->Draw("sameE5");
+	  gRaaHighPtSys[k]->Draw("sameE5");
+	  gRaaLowPt[k]->Draw("sames PEZ");
+	  gRaaHighPt[k]->Draw("sames PEZ");
+	}
+      gPhenixRaaVsPt[k]->SetMarkerStyle(kOpenCross);
+      gPhenixRaaVsPt[k]->SetMarkerSize(2.2);
+      gPhenixRaaVsPt[k]->SetMarkerColor(phenix_color);
+      gPhenixRaaVsPt[k]->SetLineColor(phenix_color);
+      gPhenixRaaVsPtSys[k]->SetMarkerColor(phenix_color);
+      gPhenixRaaVsPtSys[k]->SetLineColor(phenix_color);
+      gPhenixRaaVsPtSys[k]->SetFillStyle(0);
+      gPhenixRaaVsPtSys[k]->Draw("sameE5");
+      gPhenixRaaVsPt[k]->Draw("sames PEZ");
+
+      hJpsiRaaSys2[k+1]->Draw("sameE5");
+      hJpsiRaaSys[k+1]->Draw("sameE5");
+      hJpsiRaa[k+1]->Draw("samesPEZ");
+
+      // centrality label
+      TPaveText *t1 = GetPaveText(0.8,0.9,0.9,0.95);
+      t1->SetTextFont(63);
+      t1->SetTextSize(22);
+      t1->AddText(Form("%s%%",cent_Name[k+1]));
+      t1->Draw();
+      if(k==3)
+	{
+	  t1 = GetPaveText(0.8,0.9,0.8,0.85);
+	  t1->SetTextFont(63);
+	  t1->SetTextSize(22);
+	  t1->SetTextColor(gPhenixRaaVsPt[k]->GetMarkerColor());
+	  t1->AddText("60-92%");
+	  t1->Draw();
+	}
+
+      // Global systematics
+      TBox *box_phenix = new TBox(x_max[k+1]-0.5,1-phenix_gsys[k],x_max[k+1]-0.7,1+phenix_gsys[k]);
+      box_phenix->SetFillStyle(1001);
+      box_phenix->SetFillColor(gPhenixRaaVsPt[k]->GetMarkerColor());
+      box_phenix->Draw();
+
+      double gerr = sqrt(pow(ncollErr[k+1]/ncoll[k+1],2)+pow(ppInelasticErr/ppInelastic,2));
+      TBox *box_star = new TBox(x_max[k+1]-0.3,1-gerr,x_max[k+1]-0.5,1+gerr);
+      box_star->SetFillStyle(1001);
+      box_star->SetFillColor(kRed);
+      box_star->Draw();
+    }
+  c->cd(1);
+  TLegend *leg = new TLegend(0.2,0.65,0.45,0.95);
+  leg->SetBorderSize(0);
+  leg->SetFillColor(0);
+  leg->SetTextFont(63);
+  leg->SetTextSize(16);
+  leg->AddEntry(hJpsiRaa[0],"STAR: J/#psi#rightarrow#mu^{+}#mu^{-}, |y| < 0.5","P");
+  leg->AddEntry(gRaaLowPt[0],"STAR: J/#psi#rightarrowe^{+}e^{-}, |y| < 1 (MB)","P");
+  leg->AddEntry(gRaaHighPt[0],"STAR: J/#psi#rightarrowe^{+}e^{-}, |y| < 1 (HT)","P");
+  leg->AddEntry(gPhenixRaaVsPt[0],"PHENIX: J/#psi#rightarrowe^{+}e^{-}, |y| < 0.35","P");
+  leg->Draw();
+  if(savePlot)
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/Run14_JpsiRaaPt_vs_pub.pdf",run_type.Data(),run_cfg_name.Data()));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/Run14_JpsiRaaPt_vs_pub.png",run_type.Data(),run_cfg_name.Data()));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/Run14_JpsiRaaPt_vs_pub.eps",run_type.Data(),run_cfg_name.Data()));
+    }
+  if(gSaveAN)
+    {
+      c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch6_RaaVsPt_CompPub.pdf"));
+    }
+
+
+  //==============================================
+  // final plot
+
+  // model calculation
+  TFile *fmodel = TFile::Open("Rootfiles/Paper/models/AuAu200.models.root", "read");
+  TGraphErrors *gRaaVsPtModel[2][nCentBins];
+  for(int k=0; k<nCentBins; k++)
+    {
+      gRaaVsPtModel[0][k] = (TGraphErrors*)fmodel->Get(Form("gRaaVsPt_cent%s_TAMU",cent_Title[k]));
+      gRaaVsPtModel[0][k]->SetFillStyle(1001);
+      gRaaVsPtModel[0][k]->SetFillColor(29);
+      gRaaVsPtModel[0][k]->SetLineColor(29);
+      gRaaVsPtModel[1][k] = (TGraphErrors*)fmodel->Get(Form("gRaaVsPt_cent%s_Tsinghua",cent_Title[k]));
+      gRaaVsPtModel[1][k]->SetLineWidth(2);
+      gRaaVsPtModel[1][k]->SetLineColor(kViolet);
+      gRaaVsPtModel[1][k]->SetLineStyle(1);
+    }
+
+  TCanvas *c = new TCanvas("Raa_Jpsi_dimuon","Raa_Jpsi_dimuon",1200,700);
+  TBox *box_ncoll[nCentBins];
+  TPaveText *centLabel[nCentBins];
+  TPad *pads[nCentBins];
+  const char* alphabet[nCentBins] = {"a", "b", "c", "d", "e"};
+  for(int k=0; k<nCentBins; k++)
+    {
+      c->cd();
+      if(k==0) pads[k] = GetSinglePad(Form("pad_cent%d",k), 0.345, 0.68, 0.51, 0.99);
+      if(k==1) pads[k] = GetSinglePad(Form("pad_cent%d",k), 0.68, 0.98, 0.51, 0.99);
+      if(k==2) pads[k] = GetSinglePad(Form("pad_cent%d",k), 0.05, 0.38, 0.01, 0.49);
+      if(k==3) pads[k] = GetSinglePad(Form("pad_cent%d",k), 0.38, 0.68, 0.01, 0.49);
+      if(k==4) pads[k] = GetSinglePad(Form("pad_cent%d",k), 0.68, 0.98, 0.01, 0.49);
+      pads[k]->Draw();
+      pads[k]->cd();
+      SetPadMargin(gPad, 0.15, 0.13, 0.005, 0.005);
+
+      TH1F *hRaa = new TH1F(Form("Raa_Jpsi_cent%d",k),";p_{T} [GeV/c];",150,0,15);
+      hRaa->GetYaxis()->SetRangeUser(0.01,1.75);
+      hRaa->GetYaxis()->CenterTitle();
+      ScaleHistoTitle(hRaa,22,2.1,20,24,1.9,20,63);
+      if(k!=0 && k!=2) 
+	{
+	  hRaa->GetYaxis()->SetLabelSize(0);
+	  gPad->SetLeftMargin(0.02);
+	}
+      if(k==2 || k==3)  hRaa->GetXaxis()->SetRangeUser(0, 11);
+      if(k==4)  hRaa->GetXaxis()->SetRangeUser(0, 8.1);
+      hRaa->DrawCopy();
+
+      if(k<4) gRaaVsPtModel[0][k]->Draw("samesE4");
+      else    gRaaVsPtModel[0][k]->Draw("samesL");
+      gRaaVsPtModel[1][k]->Draw("samesL");
+
+
+      TLine *line = GetLine(hRaa->GetXaxis()->GetXmin(),1,hRaa->GetXaxis()->GetXmax(),1,1);
+      line->Draw();
+
+      if(k==0)
+	{
+	  gCmsRaaVsPt->SetMarkerStyle(27);
+	  gCmsRaaVsPt->SetMarkerSize(2.5);
+	  gCmsRaaVsPt->SetMarkerColor(4);
+	  gCmsRaaVsPt->SetLineColor(4);
+	  gCmsRaaVsPtSys->SetFillStyle(0);
+	  gCmsRaaVsPtSys->SetLineColor(gCmsRaaVsPt->GetLineColor());
+	  gCmsRaaVsPtSys->Draw("sameE5");
+	  gCmsRaaVsPt->Draw("samesPEZ");
+
+	  gAliceRaaVsPt->SetMarkerStyle(25);
+	  gAliceRaaVsPt->SetMarkerSize(1.8);
+	  gAliceRaaVsPt->SetMarkerColor(1);
+	  gAliceRaaVsPt->SetLineColor(1);
+	  gAliceRaaVsPtSys->SetFillStyle(0);
+	  gAliceRaaVsPtSys->SetLineColor(gAliceRaaVsPt->GetLineColor());
+	  gAliceRaaVsPtSys->Draw("sameE5");
+	  gAliceRaaVsPt->Draw("samesPEZ");
+	}
+
+      else
+	{
+	  if(k<4)
+	    {
+	      gRaaLowPtSys[k-1]->Draw("sameE5");
+	      gRaaHighPtSys[k-1]->Draw("sameE5");
+	      gRaaLowPt[k-1]->Draw("sames PEZ");
+	      gRaaHighPt[k-1]->Draw("sames PEZ");
+	    }
+	  gPhenixRaaVsPtSys[k-1]->Draw("sameE5");
+	  gPhenixRaaVsPt[k-1]->Draw("sames PEZ");
+	}
+
+      hJpsiRaa[k]->SetMarkerStyle(29);
+      hJpsiRaa[k]->SetMarkerColor(2);
+      hJpsiRaa[k]->SetLineColor(2);
+      hJpsiRaa[k]->SetMarkerSize(2.5);
+      hJpsiRaaSys[k]->SetFillStyle(0);
+      hJpsiRaaSys[k]->SetLineColor(hJpsiRaa[k]->GetLineColor());
+      hJpsiRaaSys2[k]->SetLineColor(kGray);
+      hJpsiRaaSys2[k]->SetFillColor(kGray);
+      hJpsiRaaSys2[k]->SetFillStyle(1001);
+
+      hJpsiRaaSys2[k]->Draw("sameE5");
+      hJpsiRaaSys[k]->Draw("sameE5");
+      hJpsiRaa[k]->Draw("samesPEZ");
+
+      if(k==0 || k==2) centLabel[k] = GetPaveText(0.27,0.32,0.9,0.95);
+      else centLabel[k] = GetPaveText(0.19,0.24,0.9,0.95);
+      centLabel[k]->SetTextFont(63);
+      centLabel[k]->SetTextSize(22);
+      centLabel[k]->AddText(Form("(%s) %s%%",alphabet[k],cent_Name[k]));
+      centLabel[k]->Draw();
+
+      // Global systematics
+      double gerr = sqrt(pow(ncollErr[k]/ncoll[k],2)+pow(ppInelasticErr/ppInelastic,2));
+      double x_pos = 14.25;
+      if(k==2 || k==3) x_pos = 10.5;
+      if(k==4) x_pos = 7.75;
+      box_ncoll[k] = new TBox(x_pos,1-gerr,x_pos+0.25*x_max[k]/x_max[0],1+gerr);
+      box_ncoll[k]->SetFillStyle(1001);
+      box_ncoll[k]->SetFillColor(kRed-7);
+      box_ncoll[k]->Draw();
+
+      if(k==0)
+	{
+	  TBox *box_alice = new TBox(x_pos-0.25,1-alice_gsys,x_pos,1+alice_gsys);
+	  box_alice->SetFillStyle(1001);
+	  box_alice->SetFillColor(gAliceRaaVsPt->GetLineColor());
+	  box_alice->Draw();
+
+	  TBox *box_cms = new TBox(x_pos-0.5,1-cms_gsys,x_pos-0.25,1+cms_gsys);
+	  box_cms->SetFillStyle(1001);
+	  box_cms->SetFillColor(gCmsRaaVsPt->GetLineColor());
+	  box_cms->Draw();
+	}
+
+      else
+	{
+	  TBox *box_phenix = new TBox(x_pos-0.25*x_max[k]/x_max[0],1-phenix_gsys[k-1],x_pos,1+phenix_gsys[k-1]);
+	  box_phenix->SetFillStyle(1001);
+	  box_phenix->SetFillColor(gPhenixRaaVsPt[0]->GetMarkerColor());
+	  box_phenix->Draw();
+	}
+    }
+  c->cd();
+  TPad *pad = GetSinglePad(Form("pad_cent6"), 0.00, 0.34, 0.50, 0.99);
+  pad->Draw();
+  pad->cd();
+  TLegend *leg30 = new TLegend(0.02,0.45,0.5,0.95);
+  leg30->SetBorderSize(0);
+  leg30->SetFillColor(0);
+  leg30->SetTextFont(63);
+  leg30->SetTextSize(17);
+  leg30->SetHeader("Au+Au @ 200 GeV, Inclusive J/#psi");
+  leg30->AddEntry(hJpsiRaa[0],"J/#psi#rightarrow#mu^{+}#mu^{-}, |y|< 0.5","P");
+  leg30->AddEntry(hJpsiRaaSys[0],"Au+Au uncertainty","F");
+  leg30->AddEntry(hJpsiRaaSys2[0],"p+p uncertainty","F");
+  leg30->AddEntry(gPhenixRaaVsPt[0],"PHENIX: |y|<0.35 (PRL98 (2007) 232301)","P");
+  leg30->AddEntry(gRaaLowPt[0],"STAR: |y|<1 (PRC 90 (2014) 024906)","P");
+  leg30->AddEntry(gRaaHighPt[0],"STAR: |y|<1 (PLB 733 (2013) 55)","P");
+  leg30->Draw();
+
+  TLegend *leg = new TLegend(0.02,0.2,0.55,0.4);
+  leg->SetBorderSize(0);
+  leg->SetFillColor(0);
+  leg->SetTextFont(63);
+  leg->SetTextSize(17);
+  leg->SetHeader("Pb+Pb @ 2.76 TeV");
+  leg->AddEntry(gAliceRaaVsPt,"ALICE: Inclusive J/#psi, 0-40%, |y|<0.8","P");
+  leg->AddEntry(gCmsRaaVsPt,"CMS: Prompt J/#psi, 0-100%, |y|<2.4","P");
+  leg->Draw();
+
+  pads[0]->cd();
+  TLegend *leg32 = new TLegend(0.5,0.78,0.9,0.95);
+  leg32->SetBorderSize(0);
+  leg32->SetFillColor(0);
+  leg32->SetTextFont(63);
+  leg32->SetTextSize(16);
+  leg32->SetHeader("Au+Au @ 200 GeV, |y| < 0.5");
+  leg32->AddEntry(gRaaVsPtModel[1][0],"TM I: Tsinghua","L");
+  leg32->AddEntry(gRaaVsPtModel[0][0],"TM II: TAMU","F");
+  leg32->Draw();
+
+
+  TLegend *leg = new TLegend(0.05,0.65,0.4,0.89);
+  leg->SetBorderSize(0);
+  leg->SetFillColor(0);
+  leg->SetTextFont(63);
+  leg->SetTextSize(16);
+  leg->SetHeader("Inclusive");
+  leg->AddEntry(gPhenixRaaVsPt[0],"PHENIX: |y| < 0.35 (PRL 98 (2007) 232301)","P");
+  leg->AddEntry(gRaaLowPt[0],"STAR: |y| < 1 (PRC 90 (2014) 024906)","P");
+  leg->AddEntry(gRaaHighPt[0],"STAR: |y| < 1 (PLB 733 (2013) 55)","P");
+  //leg->Draw();
+
+  pads[4]->cd();
+  TLegend *leg = new TLegend(0.5,0.9,0.8,0.95);
+  leg->SetBorderSize(0);
+  leg->SetFillColor(0);
+  leg->SetTextFont(63);
+  leg->SetTextSize(18);
+  leg->AddEntry(gPhenixRaaVsPt[3],"PHENIX: 60-92%","P");
+  leg->Draw();
+
+  c->cd();
+  
+  TPad *pad = GetSinglePad(Form("pad_new"), 0.30, 0.34, 0.51, 0.99);
+  pad->Draw();
+  pad->cd();
+  TLatex latex;
+  latex.SetTextFont(63);
+  latex.SetTextSize(26);
+  latex.SetTextAngle(90);  //align at top
+  latex.DrawLatex(.85,.5,"R_{AA}");
+  c->cd();
+  TPad *pad = GetSinglePad(Form("pad_new"), 0.01, 0.05, 0.01, 0.49);
+  pad->Draw();
+  pad->cd();
+  TLatex latex;
+  latex.SetTextFont(63);
+  latex.SetTextSize(26);
+  latex.SetTextAngle(90);  //align at top
+  latex.DrawLatex(.85,.5,"R_{AA}");
+
+  if(savePlot)
+    {
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/Run14_JpsiRaaPt_dimuon.pdf",run_type.Data(),run_cfg_name.Data()));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/Run14_JpsiRaaPt_dimuon.png",run_type.Data(),run_cfg_name.Data()));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/Run14_JpsiRaaPt_dimuon.eps",run_type.Data(),run_cfg_name.Data()));
+    }
+  if(gSaveAN)
+    {
+      c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch6_RaaVsPt.pdf"));
+    }
+  if(gSavePaper)
+    {
+      c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Paper/%s/Figure_JpsiRaaVsPt.pdf",gPaperVersion));
+    }
+
+  if(saveHisto)
+    {
+      fout->cd();
+      for(int k=0; k<nCentBins; k++)
+	{
+	  hJpsiXsec[k]->Write("", TObject::kOverwrite);
+	  hJpsiXsecSys[k]->Write("", TObject::kOverwrite);
+	  hJpsiRaa[k]->Write("", TObject::kOverwrite);
+	  hJpsiRaaSys[k]->Write("", TObject::kOverwrite);
+	  hJpsiRaaSys2[k]->Write("", TObject::kOverwrite);
+	}
+    }
+}
+
+//================================================
+void rawSignal(const int icent = 0, const bool savePlot = 0, const bool saveHisto = 0)
 {
   gStyle->SetOptStat(0);
   gStyle->SetOptFit(kFALSE);
+
+  // di-electron distribution
+  TFile *fe = TFile::Open("Rootfiles/lowmidhigh_cent_0_8_cut1_Run14BHT2.root","read");
+  TH1F *hSignalElec;
+  for(int i=0; i<5; i++)
+    {
+      TH1F *htmp = (TH1F*)fe->Get(Form("hsmmix_sig_%d",3+i));
+      if(i==0) hSignalElec = (TH1F*)htmp->Clone("hSignalElec");
+      else     hSignalElec->Add(htmp);
+    }
+  draw1D(hSignalElec);
+
+  // di-muon distribution
   TFile *fin = TFile::Open(Form("Rootfiles/Run14_AuAu200.Jpsi.pt%1.1f.pt%1.1f.root",pt1_cut,pt2_cut));
   const int nPtBins = 2;
   const double ptBins_low[nPtBins]  = {0,5};
@@ -1885,7 +2572,7 @@ void rawSignal(const int icent = 0, const bool savePlot = 1, const bool saveHist
     }
 
   // get the Jpsi width from embedding
-  TFile *fscan = TFile::Open(Form("Rootfiles/%s.TrkResScan.root",run_type),"read");
+  TFile *fscan = TFile::Open(Form("Rootfiles/%s.TrkResScan.root",run_type.Data()),"read");
   TH1F *hEmbJpsiWidth[nPtBins];
   for(int i=0; i<nPtBins; i++)
     {
@@ -1984,6 +2671,12 @@ void rawSignal(const int icent = 0, const bool savePlot = 1, const bool saveHist
       hhSignal->SetMarkerColor(2);
       hhSignal->SetLineColor(2);
       hhSignal->SetMarkerStyle(21);
+
+      // increase the error bars of the data points in psi2S mass range
+      for(int bin=hhSignal->FindBin(3.6); bin<=hhSignal->FindBin(3.75); bin++)
+	{
+	  //hhSignal->SetBinError(bin, hhSignal->GetBinError(bin)*10);
+	}
       hhSignal->Draw("sames");
 
       // fitting
@@ -1996,22 +2689,32 @@ void rawSignal(const int icent = 0, const bool savePlot = 1, const bool saveHist
       funcSignal->SetLineStyle(1);
       funcSignal->Draw("same");
 
+      if(i==1)
+	{
+	  hSignalElec->Scale(hhSignal->GetBinContent(hhSignal->FindBin(3.1))/hSignalElec->GetBinContent(hSignalElec->FindBin(3.1)));
+	  hSignalElec->SetMarkerStyle(25);
+	  hSignalElec->SetMarkerColor(kGreen+2);
+	  hSignalElec->SetLineColor(hSignalElec->GetMarkerColor());
+	  hSignalElec->SetMarkerSize(hhSignal->GetMarkerSize());
+	  hSignalElec->Draw("sames");
+	}
+
       TF1 *funcJpsi = new TF1(Form("Fit_Jpsi_pt%s",pt_Name[i]),"gausn",2.45,3.8);
       for(int ipar=0; ipar<3; ipar++)
 	{
 	  funcJpsi->SetParameter(ipar, funcSignal->GetParameter(ipar));
 	}
 
-      TLegend *leg = new TLegend(0.15,0.3,0.3,0.45);
+      TLegend *leg = new TLegend(0.15,0.7,0.3,0.85);
       leg->SetBorderSize(0);
       leg->SetFillColor(0);
       leg->SetTextFont(63);
       leg->SetTextSize(18);
       if(i==0)
 	{
-	  leg->AddEntry(hplot,"Unlike-sign pairs (#times 0.15)","P");
-	  leg->AddEntry(hhSeLS,"Like-sign pairs (#times 0.15)","PL");
-	  leg->AddEntry(hhMixBkg,"Mixed-event (#times 0.15)","L");
+	  leg->AddEntry(hplot,"Unlike-sign (UL) pairs (#times 0.15)","P");
+	  leg->AddEntry(hhSeLS,"Like-sign (LS) pairs (#times 0.15)","PL");
+	  leg->AddEntry(hhMixBkg,"Mixed-event (ME) (#times 0.15)","L");
 	}
       else
 	{
@@ -2021,6 +2724,26 @@ void rawSignal(const int icent = 0, const bool savePlot = 1, const bool saveHist
 	}
       leg->Draw();
 
+      TLegend *leg1 = new TLegend(0.13,0.37,0.28,0.47);
+      leg1->SetBorderSize(0);
+      leg1->SetFillColor(0);
+      leg1->SetTextFont(63);
+      leg1->SetTextSize(18);
+      leg1->AddEntry(hhSignal,"Signal = UL - ME", "P");
+      leg1->AddEntry(funcSignal, "Fit to signal","L");
+      leg1->Draw();
+
+      if(i==1)
+	{
+	  TLegend *leg2 = new TLegend(0.13,0.32,0.28,0.37);
+	  leg2->SetBorderSize(0);
+	  leg2->SetFillColor(0);
+	  leg2->SetTextFont(63);
+	  leg2->SetTextSize(18);
+	  leg2->AddEntry(hSignalElec,"J/#psi#rightarrowe^{+}+e^{-}", "P");
+	  leg2->Draw();
+	}
+
       double nJpsiAll = funcSignal->GetParameter(0)/hhSignal->GetBinWidth(1);
       double nJpsiAll_err = funcSignal->GetParError(0)/hhSignal->GetBinWidth(1);
       double min_mass = 3.0, max_mass = 3.2;
@@ -2028,9 +2751,9 @@ void rawSignal(const int icent = 0, const bool savePlot = 1, const bool saveHist
       double nJpsiMass = funcJpsi->Integral(min_mass, max_mass)/funcJpsi->Integral(2.5, 3.7)*nJpsiAll;
 
 
-      TPaveText *t1 = GetPaveText(0.58,0.75,0.62,0.92,0.038,62);
+      TPaveText *t1 = GetPaveText(0.60,0.77,0.65,0.92,0.035,62);
       t1->SetTextAlign(11);
-      t1->AddText(Form("J/#psi #rightarrow #mu^{+} + #mu^{-}"));
+      t1->AddText(Form("J/#psi#rightarrow#mu^{+}+#mu^{-}, #it{L} ~ 14.2 nb^{-1}"));
       if(i==0) t1->AddText(Form("|y| < 0.5, p_{T} > 0.15 GeV/c"));
       else     t1->AddText(Form("|y| < 0.5, p_{T} > %1.0f GeV/c",ptBins_low[i]));
       t1->AddText(Form("N_{J/#psi} = %2.0f #pm %2.0f",nJpsiAll, nJpsiAll_err));
@@ -2038,17 +2761,17 @@ void rawSignal(const int icent = 0, const bool savePlot = 1, const bool saveHist
       t1->AddText(Form("#chi^{2}/NDF = %2.1f/%d\n",funcSignal->GetChisquare(),funcSignal->GetNDF()));
       t1->Draw();
 
-      TPaveText *t1 = GetPaveText(0.15,0.2,0.82,0.92,0.038,62);
+      TPaveText *t1 = GetPaveText(0.14,0.2,0.84,0.94,0.038,62);
       t1->SetTextAlign(11);
-      t1->AddText(Form("Au+Au @ 200 GeV"));
-      t1->AddText(Form("%s%%",cent_Name_pt[icent]));
+      t1->AddText(Form("Au+Au @ 200 GeV, %s%%",cent_Name_pt[icent]));
+      //t1->AddText(Form("%s%%"));
       t1->Draw();
 
       if(savePlot)
 	{
-	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/JpsiSig_pt%s_cent%s.pdf",run_type,run_cfg_name.Data(),pt_Name[i],cent_Title_pt[icent]));
-	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/JpsiSig_pt%s_cent%s.png",run_type,run_cfg_name.Data(),pt_Name[i],cent_Title_pt[icent]));
-	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/JpsiSig_pt%s_cent%s.eps",run_type,run_cfg_name.Data(),pt_Name[i],cent_Title_pt[icent]));
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/JpsiSig_pt%s_cent%s.pdf",run_type.Data(),run_cfg_name.Data(),pt_Name[i],cent_Title_pt[icent]));
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/JpsiSig_pt%s_cent%s.png",run_type.Data(),run_cfg_name.Data(),pt_Name[i],cent_Title_pt[icent]));
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/JpsiSig_pt%s_cent%s.eps",run_type.Data(),run_cfg_name.Data(),pt_Name[i],cent_Title_pt[icent]));
 	}
       if(gSavePaper)
 	{
@@ -2212,7 +2935,7 @@ void ppRef(const bool savePlot = 0, const bool saveHisto = 0)
   leg->AddEntry(funcy1,Form("#frac{%2.4f}{2#pi#times%2.4f}e^{-0.5#times(#frac{x}{%2.4f})^{2}}",funcy1->GetParameter(0),funcy1->GetParameter(2),funcy1->GetParameter(2)),"L");
   leg->AddEntry(funcy2,Form("#frac{%2.4f}{1-(y/y_{max})^{2}}e^{-%2.4f[ln(#frac{1+y/y_{max}}{1-y/y_{max}})]^{2}}",funcy2->GetParameter(1),funcy2->GetParameter(0)),"L");
   leg->Draw();
-  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/paper/JpsiYDis.pdf",run_type,run_cfg_name.Data()));
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/paper/JpsiYDis.pdf",run_type.Data(),run_cfg_name.Data()));
   if(gSaveAN)
     {
       c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch6_JpsiXsecPP_Ydis.pdf"));
@@ -2278,7 +3001,8 @@ void ppRef(const bool savePlot = 0, const bool saveHisto = 0)
     {
       for(int j=0; j<3; j++)
 	{
-	  file.open(Form("Rootfiles/Paper/pp/dsig_dpt/Jpsi-Y%s-dsig-dpt-%s.dat",rapidityNameTmp[j],modelNameTmp[i]));
+	  if(i==0) file.open(Form("Rootfiles/Paper/pp/UpdatedJXW/Jpsi-Y%s-dsig-dpt-%s.dat",rapidityNameTmp[j],modelNameTmp[i]));
+	  else file.open(Form("Rootfiles/Paper/pp/dsig_dpt/Jpsi-Y%s-dsig-dpt-%s.dat",rapidityNameTmp[j],modelNameTmp[i]));
 	  for(int l=0; l<5; l++)
 	    {
 	      file.getline(tmp_str, 256);
@@ -2352,7 +3076,7 @@ void ppRef(const bool savePlot = 0, const bool saveHisto = 0)
   leg->AddEntry(hppXsecRatio[2][0],"NRQCD [PRL114.092006(2015)]","P");
   leg->AddEntry(linePar[0][0],"World data [PRC93.024919(2016)]","L");
   leg->Draw();
-  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/paper/JpsiPtDisInY.pdf",run_type,run_cfg_name.Data()));
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/paper/JpsiPtDisInY.pdf",run_type.Data(),run_cfg_name.Data()));
   if(gSaveAN)
     {
       c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch6_JpsiXsecPP_PtDisInY.pdf"));
@@ -2394,7 +3118,8 @@ void ppRef(const bool savePlot = 0, const bool saveHisto = 0)
       leg->AddEntry(linePar[0][0],"World data [PRC93.024919(2016)]","L");
       leg->Draw();
     }
-  
+  return;
+
   // pp data
   const int npp = 11;
   double xpp[npp] = {2.25, 2.75, 3.25, 3.75, 4.5, 5.5, 6.5, 7.5, 9, 11, 13};
@@ -2478,7 +3203,7 @@ void ppRef(const bool savePlot = 0, const bool saveHisto = 0)
   leg->AddEntry(gRun12,"STAR 2012 |y|<1","PL");
   leg->AddEntry(gPhenix,"PHENIX |y|<0.35","PL");
   leg->Draw();
-  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/paper/ppRef_Compare.pdf",run_type,run_cfg_name.Data()));
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/paper/ppRef_Compare.pdf",run_type.Data(),run_cfg_name.Data()));
   if(gSaveAN)
     {
       c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch6_JpsiXsecPP_Comp.pdf"));
@@ -2545,7 +3270,7 @@ void ppRef(const bool savePlot = 0, const bool saveHisto = 0)
   hJpsiXsecSysScale[2]->Draw("sameE5");
   hJpsiXsecScale[2]->Draw("sames PE");
   leg->Draw();
-  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/paper/ppRef_Compare_scaled.pdf",run_type,run_cfg_name.Data()));
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/paper/ppRef_Compare_scaled.pdf",run_type.Data(),run_cfg_name.Data()));
   if(gSaveAN)
     {
       c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch6_JpsiXsecPP_Comp_scaled.pdf"));
@@ -2590,7 +3315,7 @@ void ppRef(const bool savePlot = 0, const bool saveHisto = 0)
       fraction2[i] = funcTmp->Integral(10,14)/funcTmp->Integral(10,15);
       TPaveText *t1 = GetTitleText(name[i],0.05);
       t1->Draw();
-      if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/ppRef_Fit_%s.pdf",run_type,run_cfg_name.Data(),name[i]));
+      if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/ppRef_Fit_%s.pdf",run_type.Data(),run_cfg_name.Data(),name[i]));
       if(gSaveAN)
 	{
 	  c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch6_JpsiXsecPP_Fit%s.pdf",name[i]));
@@ -2708,7 +3433,7 @@ void ppRef(const bool savePlot = 0, const bool saveHisto = 0)
   leg->AddEntry(gRun12,"STAR 2012 |y|<1","PL");
   leg->AddEntry(gPhenix,"PHENIX |y|<0.35","PL");
   leg->Draw();
-  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/paper/ppRef_Compare_rebin.pdf",run_type,run_cfg_name.Data()));
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/paper/ppRef_Compare_rebin.pdf",run_type.Data(),run_cfg_name.Data()));
 
   // take the average
   TH1F *hPPJpsiFinal = new TH1F("hpp200JpsiVsPtFinal","",nbins,xbins);
@@ -2791,7 +3516,7 @@ void ppRef(const bool savePlot = 0, const bool saveHisto = 0)
   leg->SetTextSize(0.04);
   leg->AddEntry(hPPJpsiFinalSys,"Combined","PL");
   leg->Draw();
-  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/ppRef_Final.pdf",run_type,run_cfg_name.Data()));
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/ppRef_Final.pdf",run_type.Data(),run_cfg_name.Data()));
   if(gSaveAN)
     {
       c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch6_JpsiXsecPP_Comb.pdf"));
@@ -2857,7 +3582,7 @@ void ppRef(const bool savePlot = 0, const bool saveHisto = 0)
       if(i==2) leg->AddEntry(gRatioToFit[i], "PHENIX", "P");
     }
   leg->Draw();
-  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/ppRef_Final_Ratio.pdf",run_type,run_cfg_name.Data()));
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/ppRef_Final_Ratio.pdf",run_type.Data(),run_cfg_name.Data()));
   if(gSaveAN)
     {
       c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch6_JpsiXsecPP_Comb_Ratio.pdf"));
@@ -2997,7 +3722,7 @@ void ppRef2(const int savePlot = 0, const int saveHisto = 0)
       leg->AddEntry(hJpsiXsec[i], data[i], "PL");
     }
   leg->Draw();
-  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/ppRef_Run12vs15.pdf",run_type,run_cfg_name.Data()));
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/ppRef_Run12vs15.pdf",run_type.Data(),run_cfg_name.Data()));
 
   // rebin
   TF1 *funcJpsiXsec[nHistos];
@@ -3021,7 +3746,7 @@ void ppRef2(const int savePlot = 0, const int saveHisto = 0)
       fraction1[i] = funcTmp->Integral(0.15,1)/funcTmp->Integral(0,1);
       fraction2[i] = funcTmp->Integral(10,14)/funcTmp->Integral(10,15);
       printf("[i] low pt fraction = %4.2f%%, high pt fraction = %4.2f%%\n",fraction1[i]*100,fraction2[i]*100);
-      if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/ppRef_Fit_%s.pdf",run_type,run_cfg_name.Data(),data[i]));
+      if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/ppRef_Fit_%s.pdf",run_type.Data(),run_cfg_name.Data(),data[i]));
      
       hppRef[i] = new TH1F(Form("hpp200JpsiVsPtFinal_%s",data[i]),"",nbins,xbins);
       gppRefSys[i] = new TGraphErrors(nbins);
@@ -3104,7 +3829,7 @@ void ppRef2(const int savePlot = 0, const int saveHisto = 0)
   leg2->SetTextSize(0.04);
   leg2->AddEntry(hppRefPub, "Published STAR+PHENIX", "PL");
   leg2->Draw();
-  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/ppRef_Run12vs15vsPub.pdf",run_type,run_cfg_name.Data()));
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/%s/ppRef_Run12vs15vsPub.pdf",run_type.Data(),run_cfg_name.Data()));
 
   if(saveHisto)
     {

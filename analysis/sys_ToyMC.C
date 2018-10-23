@@ -1,41 +1,9 @@
-#include <cstring>
-#include "TStyle.h"
-#include "TROOT.h"
-#include "TDatime.h"
-#include "TRandom3.h"
-#include "TFile.h"
-#include "TCanvas.h"
-#include "TH1F.h"
-#include "TH1D.h"
-#include "TH2F.h"
-#include "TH3F.h"
-#include "TLorentzVector.h"
-#include "THnSparse.h"
-#include "TF1.h"
-#include "TPaveText.h"
-#include "TLine.h"
-#include "TMath.h"
-#include "TGraphErrors.h"
-#include "TGraphAsymmErrors.h"
-#include "TLegend.h"
+#include </Users/admin/Work/STAR/util/defs.h>
+#include "/Users/admin/Work/STAR/util/drawHistos.C"
 
-#include <cmath>
-using namespace std;
-
-#define YEAR 2014
-#if (YEAR==2014)
-const char *run_type = "Run14_AuAu200";
-#elif (YEAR==2013)
-char *run_type = "Run13_pp500";
-#elif (YEAR==2015)
-char *run_type = "Run15_pAu200";
-#elif (YEAR==2016)
-char *run_type = "Run16_AuAu200";
-#endif
-
-const double pi = 3.1415926;
+//******************* function definitions ************************
 const double muMass = 0.1057;
-const int year = YEAR;
+const int year = 2014;
 const int nPart = 4;
 const char *part_name[nPart]  = {"Jpsi","Ups1S","Ups2S","Ups3S"};
 const char *part_title[nPart] = {"Jpsi","Y(1S)","Y(2S)","Y(3S)"};
@@ -47,34 +15,20 @@ void plotSys(const char* type, const int savePlot = 0, const int saveHisto = 0, 
 void mtdTrigEff(const int saveHisto = 0);
 void mtdTrigEffLS(const int saveHisto = 0);
 void mtdRespEff(const int saveHisto = 0);
-void makeHisto(TString name, const double mass, const int nExpr = 1e4);
-void toyMC(const double mass, const int nExpr, const int debug = 0);
+void makeHisto(TString name, const double mass, const int nExpr = 1e4, const int nHistos = 3);
+void toyMC(const double mass, const int nExpr, const int nHistos = 3, const int debug = 0);
 
 TLorentzVector myBoost(TLorentzVector parent, TLorentzVector daughter);
 TLorentzVector twoBodyDecay(TLorentzVector parent, double dmass);
 
-void ScaleHistoTitle(const TH1 *h, 
-                     const Double_t xTitleSize = 28, const Double_t xTitleOffset = 0.9, const Double_t xLabelSize = 20,
-                     const Double_t yTitleSize = 28, const Double_t yTitleOffset = 0.9, const Double_t yLabelSize = 20,
-                     const Int_t font = 42);
-TPaveText *GetTitleText(TString title, const Float_t size = 0.04, const Int_t font = 62);
-TPaveText *GetPaveText(double xl, double xh, double yl, double yh, double size = 0.04, const Int_t font = 42);
-TLine *GetLine(double xl, double yl, double xh, double yh, Color_t color=2, Width_t width=2, Style_t style=2);
-void SetPadMargin(TVirtualPad *pad, const Double_t bottomMargin = 0.12, const Double_t leftMargin = 0.12, const Double_t rightMargin = 0.05, const Double_t topMargin = 0.10);
-TCanvas *draw1D(TH1 *h, TString hTitle = "",Bool_t setLog = kFALSE, Bool_t drawP = kTRUE, const Float_t size = 0.04, const TString drawOpt = "", const Int_t titleFont = 62,
-		const Int_t wh = 800, const Int_t ww = 600);
-TCanvas *draw2D(TH2 *h, const TString hTitle = "" , const Float_t size = 0.04, const Bool_t logz = kTRUE, const char *drawOption = "colz");
-TCanvas *drawGraph(TGraph *h, const TString hTitle = "",Bool_t setLog = kFALSE, const Float_t size = 0.04, const char *drawOption = "AP", const Int_t font = 62);
-void offset_x_with_asym_error(TGraphAsymmErrors* g, Double_t xoff);
-
 TH2F *hTpcTrackRes;
 TH1F *hTrkResBin[400];
-TF1 *hMuonPtEff[3];
+TF1 *hMuonPtEff[5];
 TH1F *hMcJpsiPt;
 TH1F *hInJpsiPt;
 TH1F *hInJpsiCent;
-TH1F *hOutJpsiPt[3];
-TH1F *hOutJpsiCent[3];
+TH1F *hOutJpsiPt[5];
+TH1F *hOutJpsiCent[5];
 
 //================================================
 void sys_ToyMC()
@@ -133,11 +87,6 @@ void plotSys(const char* type, const int savePlot, const int saveHisto, const in
       sprintf(title_eff, "MTD matching efficiency");
     }
 
-  // const char* name_lumi = "";
-  // const char* title_lumi = "";
-  // const char* name_eff  = "DtofEff46";
-  // const char* title_eff = "#Deltatof cut efficiency";
-
   const char *sys_name[3] = {"", "_Sysup", "_Sysdown"};
   TH1F *hEffVsPt[nPart][3];
   TH1F *hEffVsCent[nPart][3];
@@ -148,18 +97,18 @@ void plotSys(const char* type, const int savePlot, const int saveHisto, const in
   TFile *fin = 0x0;
   if(strcmp(type,"MtdTrigEff")==0)
     {
-      if(saveHisto) fin = TFile::Open(Form("Rootfiles/%s.Sys.MtdTrigEff.root",run_type),"update");
-      else          fin = TFile::Open(Form("Rootfiles/%s.Sys.MtdTrigEff.root",run_type),"read");
+      if(saveHisto) fin = TFile::Open(Form("Rootfiles/%s.Sys.MtdTrigEff.root",run_type.Data()),"update");
+      else          fin = TFile::Open(Form("Rootfiles/%s.Sys.MtdTrigEff.root",run_type.Data()),"read");
     }
   if(strcmp(type,"Dtof")==0)
     {
-      if(saveHisto) fin = TFile::Open(Form("Rootfiles/%s.DtofEff.root",run_type),"update");
-      else          fin = TFile::Open(Form("Rootfiles/%s.DtofEff.root",run_type),"read");
+      if(saveHisto) fin = TFile::Open(Form("Rootfiles/%s.DtofEff.root",run_type.Data()),"update");
+      else          fin = TFile::Open(Form("Rootfiles/%s.DtofEff.root",run_type.Data()),"read");
     }
   if(strcmp(type,"MtdMthEff")==0)
     {
-      if(saveHisto) fin = TFile::Open(Form("Rootfiles/%s.Sys.MtdMthEff.root",run_type),"update");
-      else          fin = TFile::Open(Form("Rootfiles/%s.Sys.MtdMthEff.root",run_type),"read");
+      if(saveHisto) fin = TFile::Open(Form("Rootfiles/%s.Sys.MtdMthEff.root",run_type.Data()),"update");
+      else          fin = TFile::Open(Form("Rootfiles/%s.Sys.MtdMthEff.root",run_type.Data()),"read");
     }
 
   for(int i=0; i<nPart; i++)
@@ -168,7 +117,7 @@ void plotSys(const char* type, const int savePlot, const int saveHisto, const in
 	{
 	  if(strcmp(type,"MtdTrigEff")==0)
 	    {
-	      hEffVsPt[i][s] = (TH1F*)fin->Get(Form("%s_%sEffVsPt_%s%s",run_type,part_name[i],name_eff,sys_name[s]));
+	      hEffVsPt[i][s] = (TH1F*)fin->Get(Form("%s_%sEffVsPt_%s%s",run_type.Data(),part_name[i],name_eff,sys_name[s]));
 	    }
 	  if(strcmp(type,"Dtof")==0)
 	    {
@@ -187,7 +136,7 @@ void plotSys(const char* type, const int savePlot, const int saveHisto, const in
 	    }
 	}
       int nBins = hEffVsPt[i][0]->GetNbinsX();
-      hEffSysVsPt[i] = (TH1F*)hEffVsPt[i][0]->Clone(Form("%s_%sEffVsPt_Sys_%s",run_type,part_name[i],name_eff));
+      hEffSysVsPt[i] = (TH1F*)hEffVsPt[i][0]->Clone(Form("%s_%sEffVsPt_Sys_%s",run_type.Data(),part_name[i],name_eff));
       hEffSysVsPt[i]->Reset();
       for(int bin=1; bin<=nBins; bin++)
 	{
@@ -202,7 +151,7 @@ void plotSys(const char* type, const int savePlot, const int saveHisto, const in
 	{
 	  if(strcmp(type,"MtdTrigEff")==0)
 	    {
-	      hEffVsCent[i][s] = (TH1F*)fin->Get(Form("%s_%sEffVsCent_%s%s",run_type,part_name[i],name_eff,sys_name[s]));
+	      hEffVsCent[i][s] = (TH1F*)fin->Get(Form("%s_%sEffVsCent_%s%s",run_type.Data(),part_name[i],name_eff,sys_name[s]));
 	    }
 	  if(strcmp(type,"Dtof")==0)
 	    {
@@ -220,7 +169,7 @@ void plotSys(const char* type, const int savePlot, const int saveHisto, const in
 	    }
 	}
       nBins = hEffVsCent[i][0]->GetNbinsX();
-      hEffSysVsCent[i] = (TH1F*)hEffVsCent[i][0]->Clone(Form("%s_%sEffVsCent_Sys_%s",run_type,part_name[i],name_eff));
+      hEffSysVsCent[i] = (TH1F*)hEffVsCent[i][0]->Clone(Form("%s_%sEffVsCent_Sys_%s",run_type.Data(),part_name[i],name_eff));
       hEffSysVsCent[i]->Reset();
       for(int bin=1; bin<=nBins; bin++)
 	{
@@ -256,22 +205,22 @@ void plotSys(const char* type, const int savePlot, const int saveHisto, const in
       t1->Draw();
       if(savePlot) 
 	{
-	  sprintf(outName, "~/Work/STAR/analysis/Plots/%s/ana_%s/Sys.%s_%sVsPt.pdf",run_type,type,part_name[i],name_eff);
+	  sprintf(outName, "~/Work/STAR/analysis/Plots/%s/ana_%s/Sys.%s_%sVsPt.pdf",run_type.Data(),type,part_name[i],name_eff);
 	  c1[i]->SaveAs(outName);
 	}
       if(saveAN && i<2) 
 	{
 	  if(strcmp(type,"Dtof")==0) 
 	    {
-	      sprintf(outName, "~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch5_%sDtofEffSys.pdf",part_name[i]);
+	      sprintf(outName, "~/Dropbox/STAR_Quarkonium/Run14_Jpsi/Analysis_note/Figures/Ch5_%sDtofEffSys.pdf",part_name[i]);
 	    }
 	  if(strcmp(type,"MtdTrigEff")==0) 
 	    {
-	      sprintf(outName, "~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch5_%sMtdTrigEffSys.pdf",part_name[i]);
+	      sprintf(outName, "~/Dropbox/STAR_Quarkonium/Run14_Jpsi/Analysis_note/Figures/Ch5_%sMtdTrigEffSys.pdf",part_name[i]);
 	    }
 	  if(strcmp(type,"MtdMthEff")==0) 
 	    {
-	      sprintf(outName, "~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch5_%sMtdMthEffSys.pdf",part_name[i]);
+	      sprintf(outName, "~/Dropbox/STAR_Quarkonium/Run14_Jpsi/Analysis_note/Figures/Ch5_%sMtdMthEffSys.pdf",part_name[i]);
 	    }
 	  c1[i]->SaveAs(outName);
 	}
@@ -293,7 +242,7 @@ void plotSys(const char* type, const int savePlot, const int saveHisto, const in
       t1->Draw();
       if(savePlot) 
 	{
-	  sprintf(outName, "~/Work/STAR/analysis/Plots/%s/ana_%s/Sys.%s_%sVsCent.pdf",run_type,type,part_name[i],name_eff);
+	  sprintf(outName, "~/Work/STAR/analysis/Plots/%s/ana_%s/Sys.%s_%sVsCent.pdf",run_type.Data(),type,part_name[i],name_eff);
 	  c2[i]->SaveAs(outName);
 	}
     }
@@ -322,7 +271,7 @@ void anaSys(const char* type, const int saveHisto)
     }
 
   // single muon efficiency
-  // TFile *fMuonEff = TFile::Open(Form("Rootfiles/%s.JpsiMuon.root",run_type),"read");
+  // TFile *fMuonEff = TFile::Open(Form("Rootfiles/%s.JpsiMuon.root",run_type.Data()),"read");
   // hMuonPtEff[0] = (TF1*)fMuonEff->Get("DataJpsiMuon_DtofEff46_BinCount_FitFunc");
   // hMuonPtEff[1] = (TF1*)fMuonEff->Get("DataJpsiMuon_DtofEff46_BinCount_FitFunc_Sysup");
   // hMuonPtEff[2] = (TF1*)fMuonEff->Get("DataJpsiMuon_DtofEff46_BinCount_FitFunc_Sysdown");
@@ -330,11 +279,11 @@ void anaSys(const char* type, const int saveHisto)
   TFile *fdata = 0x0;
   if(strcmp(type,"MtdTrigEff")==0)
     {
-      if(saveHisto) fdata = TFile::Open(Form("Rootfiles/%s.Sys.MtdTrigEff.root",run_type),"update");
-      else          fdata = TFile::Open(Form("Rootfiles/%s.Sys.MtdTrigEff.root",run_type),"read");
-      hMuonPtEff[0] = (TF1*)fdata->Get(Form("%s_Muon_TacDiffEff",run_type));
-      hMuonPtEff[1] = (TF1*)fdata->Get(Form("%s_Muon_TacDiffEff_Sysup",run_type));
-      hMuonPtEff[2] = (TF1*)fdata->Get(Form("%s_Muon_TacDiffEff_Sysdown",run_type));
+      if(saveHisto) fdata = TFile::Open(Form("Rootfiles/%s.Sys.MtdTrigEff.root",run_type.Data()),"update");
+      else          fdata = TFile::Open(Form("Rootfiles/%s.Sys.MtdTrigEff.root",run_type.Data()),"read");
+      hMuonPtEff[0] = (TF1*)fdata->Get(Form("%s_Muon_TacDiffEff",run_type.Data()));
+      hMuonPtEff[1] = (TF1*)fdata->Get(Form("%s_Muon_TacDiffEff_Sysup",run_type.Data()));
+      hMuonPtEff[2] = (TF1*)fdata->Get(Form("%s_Muon_TacDiffEff_Sysdown",run_type.Data()));
     }
   else if(strcmp(type,"Dtof")==0)
     {
@@ -343,8 +292,8 @@ void anaSys(const char* type, const int saveHisto)
 	{
 	  dtofCut = 1.0;
 	}
-      if(saveHisto) fdata = TFile::Open(Form("Rootfiles/%s.DtofEff.root",run_type),"update");
-      else          fdata = TFile::Open(Form("Rootfiles/%s.DtofEff.root",run_type),"read");
+      if(saveHisto) fdata = TFile::Open(Form("Rootfiles/%s.DtofEff.root",run_type.Data()),"update");
+      else          fdata = TFile::Open(Form("Rootfiles/%s.DtofEff.root",run_type.Data()),"read");
       if(year==2014) hMuonPtEff[0] = (TF1*)fdata->Get(Form("TagAndProbe_Muon_Dtof%2.2fEff_FitFunc",dtofCut));
       if(year==2015) hMuonPtEff[0] = (TF1*)fdata->Get(Form("TagAndProbe_Muon_Dtof%2.2fEff_Syscenter",dtofCut));
       hMuonPtEff[1] = (TF1*)fdata->Get(Form("TagAndProbe_Muon_Dtof%2.2fEff_Sysup",dtofCut));
@@ -352,8 +301,8 @@ void anaSys(const char* type, const int saveHisto)
     }
   else if(strcmp(type,"MtdMthEff")==0)
     {
-      if(saveHisto) fdata = TFile::Open(Form("Rootfiles/%s.Sys.MtdMthEff.root",run_type),"update");
-      else          fdata = TFile::Open(Form("Rootfiles/%s.Sys.MtdMthEff.root",run_type),"read");
+      if(saveHisto) fdata = TFile::Open(Form("Rootfiles/%s.Sys.MtdMthEff.root",run_type.Data()),"update");
+      else          fdata = TFile::Open(Form("Rootfiles/%s.Sys.MtdMthEff.root",run_type.Data()),"read");
       hMuonPtEff[0] = (TF1*)fdata->Get("funcTrkPtBtmBlEff_Type0");
       hMuonPtEff[0]->SetName("Muon_MtdMthEff");
       hMuonPtEff[1] = (TF1*)fdata->Get("funcTrkPtBtmBlEff_Type1");
@@ -363,7 +312,7 @@ void anaSys(const char* type, const int saveHisto)
     }
   printf("[i] Process %s\n",fdata->GetName());
 
-  for(int i=0; i<4; i++)
+  for(int i=0; i<nPart; i++)
     {
       makeHisto(part_name[i],part_mass[i],1e8);
       
@@ -392,15 +341,15 @@ void mtdTrigEff(const int saveHisto)
     }
 
   TFile *fdata = 0x0;
-  if(saveHisto) fdata = TFile::Open(Form("Rootfiles/%s.Sys.MtdTrigEff.root",run_type),"update");
-  else          fdata = TFile::Open(Form("Rootfiles/%s.Sys.MtdTrigEff.root",run_type),"read");
-  hMuonPtEff[0] = (TF1*)fdata->Get(Form("%s_Muon_TacDiffEff",run_type));
+  if(saveHisto) fdata = TFile::Open(Form("Rootfiles/%s.Sys.MtdTrigEff.root",run_type.Data()),"update");
+  else          fdata = TFile::Open(Form("Rootfiles/%s.Sys.MtdTrigEff.root",run_type.Data()),"read");
+  hMuonPtEff[0] = (TF1*)fdata->Get(Form("%s_Muon_TacDiffEff",run_type.Data()));
 
-  TFile *fEff = TFile::Open(Form("Rootfiles/%s.MtdTrigEff.root",run_type),"read");
-  hMuonPtEff[1] = (TF1*)fEff->Get(Form("%s_gTacDiffEffFinalFit_BinCount_prod_Run15_pp200",run_type));
-  hMuonPtEff[2] = (TF1*)fEff->Get(Form("%s_gTacDiffEffFinalFit_BinCount_prod_low_Run15_pp200",run_type));
-  hMuonPtEff[1]->SetName(Form("%s_Muon_TacDiffEff_prod",run_type));
-  hMuonPtEff[2]->SetName(Form("%s_Muon_TacDiffEff_prod_low",run_type));
+  TFile *fEff = TFile::Open(Form("Rootfiles/%s.MtdTrigEff.root",run_type.Data()),"read");
+  hMuonPtEff[1] = (TF1*)fEff->Get(Form("%s_gTacDiffEffFinalFit_BinCount_prod_Run15_pp200",run_type.Data()));
+  hMuonPtEff[2] = (TF1*)fEff->Get(Form("%s_gTacDiffEffFinalFit_BinCount_prod_low_Run15_pp200",run_type.Data()));
+  hMuonPtEff[1]->SetName(Form("%s_Muon_TacDiffEff_prod",run_type.Data()));
+  hMuonPtEff[2]->SetName(Form("%s_Muon_TacDiffEff_prod_low",run_type.Data()));
 
   for(int e=0; e<3; e++)
     {
@@ -430,37 +379,33 @@ void mtdTrigEffLS(const int saveHisto)
   // track momentum resolution
   TFile *fRes = TFile::Open(Form("Rootfiles/Run14_AuAu200.TrkEff.root"),"read");
   hTpcTrackRes = (TH2F*)fRes->Get("PrimTrkRes_vs_TruePt_cent0080");
-  int nHistos = hTpcTrackRes->GetNbinsX();
-  for(int i=0; i<nHistos; i++)
+  for(int i=0; i<hTpcTrackRes->GetNbinsX(); i++)
     {
       hTrkResBin[i] = (TH1F*)hTpcTrackRes->ProjectionY(Form("hTrkRes_Bin%d",i+1),i+1,i+1);
     }
 
-  TFile *fdata = TFile::Open(Form("Rootfiles/%s.Sys.MtdTrigEff.root",run_type),"read");
-  hMuonPtEff[0] = (TF1*)fdata->Get(Form("%s_Muon_TacDiffEff",run_type));
+  const int nHistos = 4;
+  const int mode = 2;
 
   TFile *fEff = 0x0;
-  if(saveHisto) fEff = TFile::Open(Form("Rootfiles/%s.StudyLumiDep.root",run_type),"update");
-  else          fEff = TFile::Open(Form("Rootfiles/%s.StudyLumiDep.root",run_type),"read");
+  if(saveHisto) fEff = TFile::Open(Form("Rootfiles/%s.StudyTrigEff.root",run_type.Data()),"update");
+  else          fEff = TFile::Open(Form("Rootfiles/%s.StudyTrigEff.root",run_type.Data()),"read");
 
-  hMuonPtEff[1] = (TF1*)fEff->Get(Form("%s_gTacDiffEff_LS_prod_mid_func",run_type));
-  hMuonPtEff[2] = (TF1*)fEff->Get(Form("%s_gTacDiffEff_LS_prod_high_func",run_type));
-  hMuonPtEff[1]->SetName(Form("%s_Muon_TacDiffEff_prod_mid",run_type));
-  hMuonPtEff[2]->SetName(Form("%s_Muon_TacDiffEff_prod_high",run_type));
-
-  for(int e=0; e<3; e++)
+  const char* lumiName[nHistos] = {"prod", "prod_low", "prod_mid", "prod_high"};
+  for(int e=0; e<4; e++)
     {
-      hMuonPtEff[e]->SetName(Form("%s_TrigStudy",hMuonPtEff[e]->GetName()));
+      hMuonPtEff[e] = (TF1*)fEff->Get(Form("%s_gTacDiffEff_LS_%s_func_M%d",run_type.Data(),lumiName[e],mode));
+      hMuonPtEff[e]->SetName(Form("%s_MtdTrig_Muon_%s_M%d",run_type.Data(),lumiName[e],mode));
     }
 
   for(int i=0; i<1; i++)
     {
-      makeHisto(part_name[i],part_mass[i],1e7);
+      makeHisto(part_name[i],part_mass[i],1e7, nHistos);
       
       if(saveHisto)
 	{
 	  fEff->cd();
-	  for(int e=0; e<3; e++)
+	  for(int e=0; e<nHistos; e++)
 	    {
 	      hOutJpsiPt[e]->Write("",TObject::kOverwrite);
 	      hOutJpsiCent[e]->Write("",TObject::kOverwrite);
@@ -481,7 +426,7 @@ void mtdRespEff(const int saveHisto)
       hTrkResBin[i] = (TH1F*)hTpcTrackRes->ProjectionY(Form("hTrkRes_Bin%d",i+1),i+1,i+1);
     }
 
-  TFile *fdata = TFile::Open(Form("Rootfiles/%s.MtdRespEff.root",run_type),"update");
+  TFile *fdata = TFile::Open(Form("Rootfiles/%s.MtdRespEff.root",run_type.Data()),"update");
   hMuonPtEff[0] = (TF1*)fdata->Get("Cosmic_FitRespEff_Template");
   hMuonPtEff[1] = (TF1*)fdata->Get("Cosmic_RespEff_Btm_6300_fit");
   hMuonPtEff[2] = (TF1*)fdata->Get("Cosmic_RespEff_Btm_6400_fit");
@@ -512,7 +457,7 @@ void mtdRespEff(const int saveHisto)
 }
 
 //================================================
-void makeHisto(TString name, const double mass, const int nExpr)
+void makeHisto(TString name, const double mass, const int nExpr, const int nHistos)
 {
   int nbins_tmp = 0;
   double xbins_tmp[10] = {0};
@@ -599,7 +544,7 @@ void makeHisto(TString name, const double mass, const int nExpr)
   hInJpsiPt->Sumw2();
   hInJpsiCent = new TH1F(Form("hInPartCent_%s",name.Data()), "", 2, 0, 2);
   hInJpsiCent->Sumw2();
-  for(int i=0; i<3; i++)
+  for(int i=0; i<nHistos; i++)
     {
       hName =  hMuonPtEff[i]->GetName();
       hName.ReplaceAll("Muon",Form("%sEffVsPt",name.Data()));
@@ -610,10 +555,10 @@ void makeHisto(TString name, const double mass, const int nExpr)
       hOutJpsiCent[i] = new TH1F(hName.Data(), "", 2, 0, 2);
       hOutJpsiCent[i]->Sumw2();
     }
-  toyMC(mass, nExpr);
+  toyMC(mass, nExpr, nHistos);
 
   TCanvas *c = 0x0;
-  for(int e=0; e<3; e++)
+  for(int e=0; e<nHistos; e++)
     {
       hOutJpsiPt[e]->Divide(hInJpsiPt);
       hOutJpsiPt[e]->SetMarkerStyle(21);
@@ -622,10 +567,10 @@ void makeHisto(TString name, const double mass, const int nExpr)
       hOutJpsiPt[e]->GetYaxis()->SetRangeUser(0.4,1);
     }
   c = draw1D(hOutJpsiPt[0],"");
-  hOutJpsiPt[1]->Draw("sames");
-  hOutJpsiPt[2]->Draw("sames");
+  for(int e=1; e<nHistos; e++)
+    hOutJpsiPt[e]->Draw("sames");
 
-  for(int e=0; e<3; e++)
+  for(int e=0; e<nHistos; e++)
     {
       hOutJpsiCent[e]->Divide(hInJpsiCent);
       hOutJpsiCent[e]->SetMarkerStyle(21);
@@ -634,12 +579,12 @@ void makeHisto(TString name, const double mass, const int nExpr)
       hOutJpsiCent[e]->GetYaxis()->SetRangeUser(0.4,1);
     }
   c = draw1D(hOutJpsiCent[0],"");
-  hOutJpsiCent[1]->Draw("sames");
-  hOutJpsiCent[2]->Draw("sames");
+  for(int e=1; e<nHistos; e++)
+    hOutJpsiCent[e]->Draw("sames");
 }
 
 //================================================
-void toyMC(const double mass, const int nExpr, const int debug)
+void toyMC(const double mass, const int nExpr, const int nHistos, const int debug)
 {
   double pt1_cut = 1.5;
   double pt2_cut = 1.3;
@@ -697,7 +642,7 @@ void toyMC(const double mass, const int nExpr, const int debug)
       if(mc_pt>5) hInJpsiCent->Fill(1.5,weight);
 
       // single muon efficiency
-      for(int e=0; e<3; e++)
+      for(int e=0; e<nHistos; e++)
 	{
 	  double eff1 = hMuonPtEff[e]->Eval(rc_pt1);
 	  double eff2 = hMuonPtEff[e]->Eval(rc_pt2);
@@ -733,138 +678,5 @@ TLorentzVector twoBodyDecay(TLorentzVector parent, double dmass)
   double py = p*sqrt(1.-costheta*costheta)*sin(phi);
   TLorentzVector daughter(px,py,pz,e);
   return myBoost(parent,daughter);
-}
-
-
-//-----------------------------------------
-void ScaleHistoTitle(const TH1 *h, 
-                     const Double_t xTitleSize, const Double_t xTitleOffset, const Double_t xLabelSize,
-                     const Double_t yTitleSize, const Double_t yTitleOffset, const Double_t yLabelSize,
-                     const Int_t font)
-{
-  if(!h) return;
-  h->GetXaxis()->SetTitleFont(font);
-  h->GetXaxis()->SetLabelFont(font);
-  h->GetYaxis()->SetTitleFont(font);
-  h->GetYaxis()->SetLabelFont(font);
-
-  h->GetXaxis()->SetTitleSize(xTitleSize);
-  h->GetXaxis()->SetTitleOffset(xTitleOffset);
-  h->GetXaxis()->SetLabelSize(xLabelSize);
-  h->GetYaxis()->SetTitleSize(yTitleSize);
-  h->GetYaxis()->SetTitleOffset(yTitleOffset);
-  h->GetYaxis()->SetLabelSize(yLabelSize);
-}
-
-//-----------------------------------------
-TCanvas *draw1D(TH1 *h, TString hTitle, Bool_t setLog, Bool_t drawP, const Float_t size, const TString drawOpt, const Int_t titleFont,
-		const Int_t wh, const Int_t ww)
-{
-  TCanvas *c = new TCanvas(h->GetName(),h->GetName(),wh,ww);
-  if(setLog) gPad->SetLogy();
-  if(hTitle.Length()>0) h->SetTitle(hTitle);
-  TPaveText *t1 = GetTitleText(h->GetTitle(),size,titleFont);
-  h->SetTitle("");
-  if(drawOpt.Length()>0)
-    h->DrawCopy(drawOpt.Data());
-  else
-    {
-      if(drawP)
-	h->DrawCopy("PE");
-      else
-	h->DrawCopy("HIST");
-    }
-  t1->Draw();
-  return c;
-}
-
-//-----------------------------------------
-TCanvas *draw2D(TH2 *h, const TString hTitle, const Float_t size, const Bool_t logz, const char *drawOption)
-{
-  TCanvas *c = new TCanvas(h->GetName(),h->GetName(),800,600);
-  if(hTitle.Length()>0)
-    h->SetTitle(hTitle);
-  if(logz) gPad->SetLogz();
-  TPaveText *t1 = GetTitleText(h->GetTitle(),size);
-  h->SetTitle("");
-  h->DrawCopy(drawOption);
-  t1->Draw();
-  return c;
-}
-
-//-----------------------------------------
-TCanvas *drawGraph(TGraph *h, const TString hTitle,Bool_t setLog, const Float_t size, const char *drawOption, const Int_t font)
-{
-  TCanvas *c = new TCanvas(h->GetName(),h->GetName(),800,600);
-  if(setLog)
-    gPad->SetLogy();
-  if(hTitle.Length()>0)
-    h->SetTitle(hTitle);
-  TPaveText *t1 = GetTitleText(h->GetHistogram()->GetTitle(),size,font);
-  h->SetTitle("");
-  h->Draw(drawOption);
-  t1->Draw("sames");
-  return c;
-}
-
-//--------------------------------------------
-void offset_x_with_asym_error(TGraphAsymmErrors* g, Double_t xoff)
-{
-  Int_t npoints = g->GetN();
-  Double_t* x = g->GetX();
-  Double_t* y = g->GetY();
-  Double_t* exl = g->GetEXlow();
-  Double_t* exh = g->GetEXhigh();
-  Double_t* eyl = g->GetEYlow();
-  Double_t* eyh = g->GetEYhigh();
-
-  for (Int_t j=0; j<npoints; j++)
-    {
-      g->SetPoint(j, x[j] + xoff, y[j]);
-      g->SetPointError(j, exl[j], exh[j], eyl[j], eyh[j]);
-    }
-}
-
-//-----------------------------------------
-TPaveText *GetTitleText(TString title, const Float_t size, const Int_t font)
-{
-  TPaveText* t1=new TPaveText(0.3530151,0.8968531,0.6532663,0.9965035,"brNDC");
-  t1->SetFillStyle(0);
-  t1->SetBorderSize(0);
-  t1->AddText(0.,0.,title.Data());
-  t1->SetTextSize(size);
-  t1->SetTextFont(font);
-  return t1;
-}
-
-//-----------------------------------------
-TPaveText *GetPaveText(double xl, double xh, double yl, double yh, double size, const Int_t font)
-{
-  TPaveText* t1=new TPaveText(xl,yl,xh,yh,"brNDC");
-  t1->SetFillStyle(0);
-  t1->SetBorderSize(0);
-  t1->SetTextSize(size);
-  t1->SetTextFont(font);
-  return t1;
-}
-
-//--------------------------------------------
-TLine *GetLine(double xl, double yl, double xh, double yh, Color_t color, Width_t width, Style_t style)
-{
-  TLine *line = new TLine(xl,yl,xh,yh);
-  line->SetLineColor(color);
-  line->SetLineWidth(width);
-  line->SetLineStyle(style);
-  return line;
-}
-
-//-----------------------------------------
-void SetPadMargin(TVirtualPad *pad, const Double_t bottomMargin, const Double_t leftMargin, const Double_t rightMargin, const Double_t topMargin)
-{
-  if(!pad) return;
-  pad->SetLeftMargin(leftMargin);
-  pad->SetBottomMargin(bottomMargin);
-  pad->SetRightMargin(rightMargin);
-  pad->SetTopMargin(topMargin);
 }
 

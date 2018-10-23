@@ -1,16 +1,15 @@
-{
+#include "/Users/admin/Work/STAR/util/defs.h"
+
+//R__ADD_INCLUDE_PATH(/Users/admin/Work/STAR/util)
+//#include "drawHistos.h"
+
+void rootlogon(){
   gROOT->SetStyle("Plain");
   gStyle->SetPalette(1);
-  //gStyle->SetOptStat(0);
-  const char *dir = "~/Work/ALICE/Utility";
-  gROOT->LoadMacro(Form("%s/definitions.C",dir));
-  gROOT->LoadMacro(Form("%s/drawHistos.C",dir));
-  gROOT->LoadMacro(Form("%s/sysCompare.C",dir));
-  gROOT->LoadMacro(Form("%s/Utility.C",dir));
-  gROOT->LoadMacro(Form("%s/HistUtility.C",dir));
-  gROOT->LoadMacro(Form("%s/projectToPtSlice.C",dir));
-  gROOT->LoadMacro("~/Work/STAR/util/defs.h");
+  const TString dir = "/Users/admin/Work/STAR/util";
 
-  //TString path = "~/Work/ALICE/Utility/drawHistos_C.so";
-  //int res = gSystem->Load(path.Data());
+#if defined(__CINT__)
+  gROOT->LoadMacro(Form("%s/drawHistos.C",dir.Data()));
+  gROOT->LoadMacro(Form("%s/HistUtility.C",dir.Data()));
+#endif
 } 

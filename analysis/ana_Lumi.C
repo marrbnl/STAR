@@ -1,3 +1,4 @@
+#include <map>
 const int year = YEAR;
 TFile *f;
 
@@ -16,7 +17,8 @@ void ana_Lumi()
   //mergeHisto();
 
   //Lumi2013();
-  Lumi2014();
+  //Lumi2014();
+  eqMbEvt();
   //Lumi2015();
   //pAuCent();
   //Nevents();
@@ -25,7 +27,7 @@ void ana_Lumi()
 //================================================
 void pAuCent(const int savePlot = 0)
 {
-  run_type = "Run15_pAu200";
+  run_type.Data() = "Run15_pAu200";
   f = TFile::Open("Rootfiles/Run15_pAu200.Centrality.root", "read");
 
   TH1F *hEff = (TH1F*)f->Get("hEffi_1");
@@ -48,7 +50,7 @@ void pAuCent(const int savePlot = 0)
   leg->AddEntry(hEff,"HIJING","P");
   leg->AddEntry(funcEff,"Fit: p0*e^{-p1*(x-p2)}","L");
   leg->Draw();
-  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/VPDMB_VpdEffFit.pdf",run_type));
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/VPDMB_VpdEffFit.pdf",run_type.Data()));
 
   TH1F *hNPrimTrk = (TH1F*)f->Get("NGoodPrimaryTracks_8");
   hNPrimTrk->SetXTitle("N_{trk}");
@@ -76,7 +78,7 @@ void pAuCent(const int savePlot = 0)
   leg->AddEntry(hNPrimTrk,"Raw","L");
   leg->AddEntry(hPrimTrkWeight,"VPD eff. weighted","L");
   leg->Draw();
-  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/VPDMB_VpdEffCorr.pdf",run_type));
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/VPDMB_VpdEffCorr.pdf",run_type.Data()));
 
   if(0)
     {
@@ -161,7 +163,7 @@ void Nevents(const char *icent = "6080")
   for(int j=1; j<5; j++)
     {
       ifstream fruns;
-      fruns.open(Form("Rootfiles/Luminosity/%s/AuAu_200_production%s_2014.list",run_type,trgSetupName[j-1]));
+      fruns.open(Form("Rootfiles/Luminosity/%s/AuAu_200_production%s_2014.list",run_type.Data(),trgSetupName[j-1]));
       int runnumber;
       while(!fruns.eof())
 	{
@@ -206,7 +208,7 @@ void Lumi2013(const int savePlot = 0, const int saveHisto = 0)
   TH1F *hBbcTpcVz = (TH1F*)hn->Projection(4);
   hBbcTpcVz->SetName("hBbcTpcVz");
   c = draw1D(hBbcTpcVz,"BBCMB: distribution of TPC vz with Ranking>0;vz_{TPC} (cm)",false,false);
-  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/BBCMB_TpcVz_PosRank.pdf",run_type));
+  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/BBCMB_TpcVz_PosRank.pdf",run_type.Data()));
 
   TH1F *hGoodBbc = (TH1F*)hn->Projection(0);
   hGoodBbc->SetName("hGoodBbc");
@@ -223,7 +225,7 @@ void Lumi2013(const int savePlot = 0, const int saveHisto = 0)
   c = draw1D(hGoodBbcVpd,"Efficiency of VPDMB trigger;RunId;(BBC&PosRank&VPD)/(BBC&PosRank)",false,true);
   func1->SetLineColor(2);
   func1->Draw("sames");
-  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/BBCMB_VpdEff.pdf",run_type));
+  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/BBCMB_VpdEff.pdf",run_type.Data()));
   
   hn->GetAxis(1)->SetRange(0,-1);
   hn->GetAxis(2)->SetRange(0,-1);
@@ -252,7 +254,7 @@ void Lumi2013(const int savePlot = 0, const int saveHisto = 0)
 
   for(int i=0; i<3; i++)
     {
-      hTpcVpdDz[i]->SetLineColor(color[i]);
+      hTpcVpdDz[i]->SetLineColor(gColor[i]);
     }
   c = draw1D(hTpcVpdDz[0],"VPDMB: distribution of vz difference between TPC and VPD;vz_{TPC} - vz_{VPD} (cm)",true,false);
   hTpcVpdDz[1]->Draw("samesHIST");
@@ -265,7 +267,7 @@ void Lumi2013(const int savePlot = 0, const int saveHisto = 0)
   leg->AddEntry(hTpcVpdDz[1],"+Ranking > 0","L");
   leg->AddEntry(hTpcVpdDz[2],"+|vz_{TPC}| < 50 cm","L");
   leg->Draw();
-  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/VPDMB_TpcVpdDz.pdf",run_type));
+  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/VPDMB_TpcVpdDz.pdf",run_type.Data()));
 
   hn->GetAxis(5)->SetRangeUser(-5,5);
   TH1F *hVpdAcc = (TH1F*)hn->Projection(0);
@@ -278,13 +280,13 @@ void Lumi2013(const int savePlot = 0, const int saveHisto = 0)
   hVpdFrac->Divide(hVpdAll);
   hVpdFrac->SetMarkerStyle(21);
   c = draw1D(hVpdFrac,"Fraction of VPDMB events within vertxing cuts;RunId;fraction");
-  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/VPDMB_VtxCutEff.pdf",run_type));
+  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/VPDMB_VtxCutEff.pdf",run_type.Data()));
   
 
   // Get equivalent # of MB events
   TFile *fin = 0;
-  if(!saveHisto) fin = TFile::Open(Form("Rootfiles/%s.Luminosity.root",run_type),"read");
-  else           fin = TFile::Open(Form("Rootfiles/%s.Luminosity.root",run_type),"update");
+  if(!saveHisto) fin = TFile::Open(Form("Rootfiles/%s.Luminosity.root",run_type.Data()),"read");
+  else           fin = TFile::Open(Form("Rootfiles/%s.Luminosity.root",run_type.Data()),"update");
   TH1F *hNeventMtd = (TH1F*)fin->Get("hNevents_MTD-dimuon");
   TH1F *hPrescaleMtd = (TH1F*)fin->Get("hPreScale_MTD-dimuon");
   TH1F *hLivetimeMtd = (TH1F*)fin->Get("hLiveTime_MTD-dimuon");
@@ -348,6 +350,172 @@ void Lumi2013(const int savePlot = 0, const int saveHisto = 0)
 }
 
 //================================================
+void eqMbEvt(const int savePlot = 0, const int saveHisto = 0)
+{
+  TFile *ftree[2];
+  TFile *fstudy[2];
+  
+  ftree[0] = TFile::Open("output/Run14_AuAu200.MB.JpsiTree.root", "read");
+  ftree[1] = TFile::Open("output/Run14_AuAu200.JpsiTree.root", "read");
+
+  fstudy[0] = TFile::Open("output/Run14_AuAu200.MB.Study.root", "read");
+  fstudy[1] = TFile::Open("output/Run14_AuAu200.Study.root", "read");
+
+  // event statistics
+  const char* trig_name[2] = {"mb", "di_mu"};
+  TH2F *hMtdQaCent[2];
+  TH2F *hMtdQaCentDm[2];
+  TH2F *hMtdQaCentEqMb[2];
+  for(int i=0; i<2; i++)
+    {
+      hMtdQaCent[i] = (TH2F*)fstudy[i]->Get(Form("mhMtdQaCent_%s",trig_name[i]));
+      hMtdQaCentDm[i] = (TH2F*)fstudy[i]->Get(Form("mhMtdQaCentDm_%s",trig_name[i]));
+      hMtdQaCentEqMb[i] = (TH2F*)fstudy[i]->Get(Form("mhMtdQaCentEqMb_%s",trig_name[i]));
+    }
+
+  const int gNcent = nCentBins_npart[0];
+  double nEqMbForDmInMb[gNTrgSetup][gNcent];
+  for(int k=1; k<gNTrgSetup; k++)
+    {
+      TH1F *htmp = (TH1F*)hMtdQaCentEqMb[0]->ProjectionY("",k,k);
+      for(int i=0; i<gNcent; i++)
+	{
+	  nEqMbForDmInMb[k][i] = htmp->Integral(centBins_low_npart[gNcent-i-1],centBins_high_npart[gNcent-i-1]);
+	}
+    }
+
+  double nDmEvtInMb[gNTrgSetup];
+  for(int k=1; k<gNTrgSetup; k++)
+    {
+      TH1F *htmp = (TH1F*)hMtdQaCentDm[0]->ProjectionY("",k,k);
+      nDmEvtInMb[k] = htmp->Integral(1, 16);
+    }
+
+
+  double nDmEvtInDm[gNTrgSetup];
+  for(int k=1; k<gNTrgSetup; k++)
+    {
+      TH1F *htmp = (TH1F*)hMtdQaCentDm[1]->ProjectionY("",k,k);
+      nDmEvtInDm[k] = htmp->Integral(1, 16);
+    }
+
+  double nDmEvtInMbDm[gNTrgSetup];
+  for(int k=0; k<gNTrgSetup; k++)
+    {
+      nDmEvtInMbDm[k] = 0;
+    }
+
+  int runId[2], evtId[2], trigSetup[2], centrality[2];
+  TTree *jpsiTree[2];
+  for(int i=0; i<2; i++)
+    {
+      jpsiTree[i] = (TTree*)ftree[i]->Get("mOutJpsiTree");
+      jpsiTree[i]->SetName(Form("%s_%s",jpsiTree[i]->GetName(),trig_name[i]));
+
+      jpsiTree[i]->SetBranchAddress("runId", &runId[i]);
+      jpsiTree[i]->SetBranchAddress("evtId", &evtId[i]);
+      jpsiTree[i]->SetBranchAddress("trigSetup", &trigSetup[i]);
+      jpsiTree[i]->SetBranchAddress("centrality", &centrality[i]);
+    }
+  const int nMbEvts = jpsiTree[0]->GetEntries();
+  const int nDmEvts = jpsiTree[1]->GetEntries();
+  cout << nMbEvts << "  " << nDmEvts << endl;
+
+  // build a map for accepted event Id
+  jpsiTree[1]->Draw("runId >> hRunId(94000, 15074000, 15168000)", "", "");
+  map<int,int> runIndex;
+  int counter = 0;
+  for(int bin=1; bin<=94000; bin++)
+    {
+      if(hRunId->GetBinContent(bin)<=0) continue;
+      runIndex[15074000+bin-1] = counter;
+      counter++;
+    }
+
+  int evtIds[3000][250];
+  int evtCounter[3000];
+  for(int i=0; i<3000; i++) evtCounter[i] = 0;
+  for(int e=0; e<nDmEvts; e++)
+    {
+      jpsiTree[1]->GetEntry(e);
+      evtIds[runIndex[runId[1]]][evtCounter[runIndex[runId[1]]]] = evtId[1];
+      evtCounter[runIndex[runId[1]]]++;
+    }
+
+  for(int e=0; e<nMbEvts; e++)
+    {
+      jpsiTree[0]->GetEntry(e);
+      if(runId[0]<15077036) continue;
+
+      bool isEvtInDm = false;
+      int index = runIndex[runId[0]];
+      for(int j=0; j<evtCounter[index]; j++)
+	{
+	  if(evtId[0]==evtIds[index][j])
+	    {
+	      isEvtInDm = true;
+	      break;
+	    }
+	}
+
+      if(!isEvtInDm) continue;
+      nDmEvtInMbDm[trigSetup[0]+1]++;
+    }
+
+  TH1F *hEqMbEvt[gNTrgSetup];
+  hEqMbEvt[0] = new TH1F(Form("hEqMbEvt_ScaleMbData%s",gTrgSetupTitle[0]),"Equivalent number of MB events",gNcent,0,gNcent);
+  for(int i=0; i<gNcent; i++)
+    {
+      hEqMbEvt[0]->GetXaxis()->SetBinLabel(i+1, Form("%s%%",cent_Name_npart[gNcent-i-1]));
+    }
+  for(int k=1; k<gNTrgSetup; k++)
+    {
+      hEqMbEvt[k] = new TH1F(Form("hEqMbEvt_ScaleMbData%s",gTrgSetupTitle[k]),"Equivalent number of MB events",gNcent,0,gNcent);
+      double eqMb = 0;
+      for(int i=0; i<gNcent; i++)
+	{
+	  int bin = i+1;
+	  hEqMbEvt[k]->GetXaxis()->SetBinLabel(bin, Form("%s%%",cent_Name_npart[gNcent-i-1]));
+	  hEqMbEvt[k]->SetBinContent(bin, nEqMbForDmInMb[k][i]*nDmEvtInDm[k]/nDmEvtInMbDm[k]);
+	  hEqMbEvt[k]->SetBinError(bin, sqrt(nDmEvtInMbDm[k])/nDmEvtInMbDm[k]*hEqMbEvt[k]->GetBinContent(bin));
+	  eqMb += nEqMbForDmInMb[k][i];
+	}
+      printf("[i] %s: dm = %1.0f, eq. mb = %1.0f, RF = %4.3f\n",hEqMbEvt[k]->GetName(),nDmEvtInDm[k],hEqMbEvt[k]->Integral(1,8),nDmEvtInMbDm[k]/nDmEvtInMb[k]);
+      hEqMbEvt[0]->Add(hEqMbEvt[k]);
+    }
+
+  TLegend *leg = new TLegend(0.15, 0.75, 0.75, 0.88);
+  leg->SetBorderSize(0);
+  leg->SetFillColor(0);
+  leg->SetTextSize(0.04);
+  leg->SetNColumns(3);
+  for(int k=0; k<gNTrgSetup; k++)
+    {
+      hEqMbEvt[k]->SetMarkerStyle(20+k);
+      hEqMbEvt[k]->SetMarkerColor(gColor[k]);
+      hEqMbEvt[k]->SetLineColor(gColor[k]);
+      hEqMbEvt[k]->GetYaxis()->SetRangeUser(1e8, 1e11);
+      hEqMbEvt[k]->GetXaxis()->SetLabelSize(0.045);
+      if(k==0) c = draw1D(hEqMbEvt[k],Form("%s: Equivalent number of MB events", run_type.Data()));
+      else hEqMbEvt[k]->Draw("samesPE");
+      leg->AddEntry(hEqMbEvt[k],gLegNameTrg[k].Data(),"PL");
+    }
+  c->cd();
+  gPad->SetLogy();
+  leg->Draw();
+  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/MB_EqMbEvt.pdf",run_type.Data()));
+
+  if(saveHisto)
+    {
+      TFile *fout = TFile::Open(Form("Rootfiles/%s.Luminosity.root",run_type.Data()),"update");
+	for(int k=0; k<gNTrgSetup; k++)
+	  {
+	    hEqMbEvt[k]->Write("",TObject::kOverwrite);
+	}
+    }
+}
+
+//================================================
 void Lumi2014(const int savePlot = 0, const int saveHisto = 0)
 {
   TList *list = new TList;
@@ -374,7 +542,7 @@ void Lumi2014(const int savePlot = 0, const int saveHisto = 0)
   TFile *fMtd = TFile::Open(Form("./output/Run14_AuAu200.jpsi.root"),"read");
   TH2F *hCentWeight = (TH2F*)fMtd->Get("mhCentWeight_di_mu");
   c = draw2D(hCentWeight,"Event weights vs. multiplicity");
-  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/EventWeight.pdf",run_type));
+  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/EventWeight.pdf",run_type.Data()));
   if(gSaveAN)   c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch1_EventWeight.pdf"));
 
   /// vertex finding efficiency
@@ -409,7 +577,7 @@ void Lumi2014(const int savePlot = 0, const int saveHisto = 0)
       hMtdVtxEffLumi[i]->Reset();
 
       ifstream fruns;
-      fruns.open(Form("Rootfiles/Luminosity/%s/AuAu_200_%s_2014.list",run_type,trgSetupName[i]));
+      fruns.open(Form("Rootfiles/Luminosity/%s/AuAu_200_%s_2014.list",run_type.Data(),trgSetupName[i]));
       int runnumber;
       while(!fruns.eof())
 	{
@@ -421,12 +589,13 @@ void Lumi2014(const int savePlot = 0, const int saveHisto = 0)
       list->Add(hMtdVtxEffLumi[i]);
     }
   c = drawHistos(list,"MtdVtxEffLumi",Form("Dimuon: vertex cut efficiency (centrality integrated)"),kFALSE,0,30,kTRUE,0.5,1.1,kFALSE,kTRUE,legName2,kTRUE,"trgsetupname",0.3,0.5,0.16,0.36,true);
-  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/Dimuon_VtxCutEffLumi.pdf",run_type));
+  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/Dimuon_VtxCutEffLumi.pdf",run_type.Data()));
   list->Clear();
 
   // VPD-ZDC-novtx-mon
   TFile *fMB = TFile::Open(Form("./Rootfiles/Run14_AuAu200.Luminosity.root"),"read");
  
+  /*
   // centrality
   TH1F *hMbCent[2];
   hMbCent[0] = (TH1F*)fMB->Get("Cent_all");
@@ -444,7 +613,7 @@ void Lumi2014(const int savePlot = 0, const int saveHisto = 0)
 	}
     }
   c = drawHistos(list,"MbCent","VPD-ZDC-novtx-mon: distribution of centrality bins;cent",true,0,16,true,0,1.2*hMbCent[1]->GetMaximum(),kFALSE,kTRUE,legName3,kTRUE,"",0.5,0.7,0.2,0.35,false);
-  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/VpdZdcNoVtx_CentWeight.pdf",run_type));
+  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/VpdZdcNoVtx_CentWeight.pdf",run_type.Data()));
   if(gSaveAN)   c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch1_Centrality.pdf"));
   list->Clear();
 
@@ -452,12 +621,13 @@ void Lumi2014(const int savePlot = 0, const int saveHisto = 0)
   for(int i=0; i<4; i++)
     {
       hMbCentLumi[i] = (TH1F*)fMB->Get(Form("Cent_%s_w",setupName[i]));
-      hMbCentLumi[i]->Scale(1./hMbCentLumi[i]->Integral()*16);
+      hMbCentLumi[i]->Rebin(2);
+      hMbCentLumi[i]->Scale(1./hMbCentLumi[i]->Integral()*8);
       hMbCentLumi[i]->SetLineWidth(2);
       list->Add(hMbCentLumi[i]);
     }
   c = drawHistos(list,"MbCentLumi","VPD-ZDC-novtx-mon: distribution of centrality bins;cent",true,0,16,kTRUE,0.5,1.2,kFALSE,kTRUE,legName2,kTRUE,"trgsetupname",0.3,0.5,0.16,0.36,false);
-  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/VpdZdcNoVtx_CentVsLumi.pdf",run_type));
+  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/VpdZdcNoVtx_CentVsLumi.pdf",run_type.Data()));
   list->Clear();
 
   // Vertex distribution
@@ -473,7 +643,7 @@ void Lumi2014(const int savePlot = 0, const int saveHisto = 0)
   line->Draw();
   line = GetLine(max_vz,0,max_vz,0.8*hTpcVz[3]->GetMaximum());
   line->Draw();
-  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/VpdZdcNoVtx_TpcVz.pdf",run_type));
+  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/VpdZdcNoVtx_TpcVz.pdf",run_type.Data()));
   list->Clear();
 
   TH1F *hTpcVr[4];
@@ -486,7 +656,7 @@ void Lumi2014(const int savePlot = 0, const int saveHisto = 0)
   c = drawHistos(list,"TpcVr","VPD-ZDC-novtx-mon: TPC vr distribution (0-80%);vr_{TPC} (cm)",false,0,30,true,0.00001,1000,true,kTRUE,legName2,kTRUE,"0-80%",0.18,0.38,0.68,0.88,false);
   line = GetLine(max_vr,0,max_vr,0.8*hTpcVr[3]->GetMaximum());
   line->Draw();
-  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/VpdZdcNoVtx_TpcVr.pdf",run_type));
+  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/VpdZdcNoVtx_TpcVr.pdf",run_type.Data()));
   list->Clear();
 
   TH1F *hTpcVpdDz[4];
@@ -501,7 +671,7 @@ void Lumi2014(const int savePlot = 0, const int saveHisto = 0)
   line->Draw();
   line = GetLine(max_dz,0,max_dz,0.8*hTpcVpdDz[3]->GetMaximum());
   line->Draw();
-  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/VpdZdcNoVtx_TpcVpdDz.pdf",run_type));
+  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/VpdZdcNoVtx_TpcVpdDz.pdf",run_type.Data()));
   list->Clear();
 
   // vertex cut efficiency
@@ -548,8 +718,8 @@ void Lumi2014(const int savePlot = 0, const int saveHisto = 0)
       for(int j=0; j<3; j++)
 	{
 	  hVtxEff[i][j]->SetMarkerStyle(20);
-	  hVtxEff[i][j]->SetMarkerColor(color[j]);
-	  hVtxEff[i][j]->SetLineColor(color[j]);
+	  hVtxEff[i][j]->SetMarkerColor(gColor[j]);
+	  hVtxEff[i][j]->SetLineColor(gColor[j]);
 	  hVtxEff[i][j]->GetYaxis()->SetRangeUser(0.5,1.1);
 	  hVtxEff[i][j]->SetTitle("");
 	  if(j==0) hVtxEff[i][j]->Draw();
@@ -570,7 +740,7 @@ void Lumi2014(const int savePlot = 0, const int saveHisto = 0)
 	  leg->Draw();
 	}
     }
-  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/VpdZdcNoVtx_VtxCutEff.pdf",run_type));
+  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/VpdZdcNoVtx_VtxCutEff.pdf",run_type.Data()));
   if(gSaveAN)   c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch1_VtxCutEff.png"));
 
   // different luminosity
@@ -583,7 +753,7 @@ void Lumi2014(const int savePlot = 0, const int saveHisto = 0)
 	  hVtxEffLumi[j][i]->Reset();
 	}
       ifstream fruns;
-      fruns.open(Form("Rootfiles/Luminosity/%s/AuAu_200_%s_2014.list",run_type,trgSetupName[i]));
+      fruns.open(Form("Rootfiles/Luminosity/%s/AuAu_200_%s_2014.list",run_type.Data(),trgSetupName[i]));
       int runnumber;
       while(!fruns.eof())
 	{
@@ -604,8 +774,8 @@ void Lumi2014(const int savePlot = 0, const int saveHisto = 0)
       for(int i=0; i<4; i++)
 	{
 	  hVtxEffLumi[j][i]->SetMarkerStyle(20);
-	  hVtxEffLumi[j][i]->SetMarkerColor(color[i]);
-	  hVtxEffLumi[j][i]->SetLineColor(color[i]);
+	  hVtxEffLumi[j][i]->SetMarkerColor(gColor[i]);
+	  hVtxEffLumi[j][i]->SetLineColor(gColor[i]);
 	  hVtxEffLumi[j][i]->GetYaxis()->SetRangeUser(0.3,1.1);
 	  hVtxEffLumi[j][i]->SetTitle("");
 	  if(i==0) hVtxEffLumi[j][i]->Draw();
@@ -629,7 +799,7 @@ void Lumi2014(const int savePlot = 0, const int saveHisto = 0)
 	  leg->Draw();
 	}
     }
-  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/VpdZdcNoVtx_VtxCutEffLumi.pdf",run_type));
+  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/VpdZdcNoVtx_VtxCutEffLumi.pdf",run_type.Data()));
 
   // rejection factor during production
   const int nRuns = 38;
@@ -659,7 +829,7 @@ void Lumi2014(const int savePlot = 0, const int saveHisto = 0)
       hRFLumi[i]->Reset();
 
       ifstream fruns;
-      fruns.open(Form("Rootfiles/Luminosity/%s/AuAu_200_%s_2014.list",run_type,trgSetupName[i]));
+      fruns.open(Form("Rootfiles/Luminosity/%s/AuAu_200_%s_2014.list",run_type.Data(),trgSetupName[i]));
       int runnumber;
       while(!fruns.eof())
 	{
@@ -702,7 +872,7 @@ void Lumi2014(const int savePlot = 0, const int saveHisto = 0)
       list->Add(hRFLumi[i]);
     }
   c = drawHistos(list,"MtdRFLumi",Form("Dimuon: fraction of events accepted during two-pass reconstruction"),kFALSE,0,30,kTRUE,0.35,0.55,kFALSE,kTRUE,legName2,kTRUE,"trgsetupname",0.3,0.5,0.16,0.36,true);
-  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/Dimuon_RejectFactorLumi.pdf",run_type));
+  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/Dimuon_RejectFactorLumi.pdf",run_type.Data()));
   if(gSaveAN)   c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch1_RejectFactor.pdf"));
   list->Clear();
 
@@ -747,8 +917,10 @@ void Lumi2014(const int savePlot = 0, const int saveHisto = 0)
 	}
     }
   printf("+++ %d runs (%4.2fM) are missing +++\n\n",nRF,nRFevts/1e6);
+  */
   
   // get equivalent # of MB events
+
   /// Raw # of events
   TH1F *hNEventsRawAll[5];
   TH1F *hNEventsRaw[nCentBins][5];
@@ -758,7 +930,54 @@ void Lumi2014(const int savePlot = 0, const int saveHisto = 0)
   for(int j=0; j<4; j++)
     {
       hNEventsRawAll[j+1] = (TH1F*)fMB->Get(Form("NEvents_%s",setupName[j]));
+      int nRuns = 0;
+      for(int bin=1; bin<=hNEventsRawAll[j+1]->GetNbinsX(); bin++)
+	{
+	  if(hNEventsRawAll[j+1]->GetBinContent(bin)>0) nRuns ++;
+	}
     }
+
+
+  // MuDst vs. daq
+  TFile *fout = TFile::Open(Form("Rootfiles/%s.Luminosity.root",run_type.Data()),"update");
+  TH1F *hMbEvtRecord = (TH1F*)fout->Get("hEqMbEvt_VPD-ZDC-novtx-mon");
+  TH1F *hMbEvtRatio[5];
+
+  for(int j=0; j<5; j++)
+    {
+      hMbEvtRatio[j] = (TH1F*)hNEventsRawAll[j]->Clone(Form("hMbEvtRatio_%d",j));
+      hMbEvtRatio[j]->Reset("AC");
+      for(int bin=1; bin<=hNEventsRawAll[j]->GetNbinsX(); bin++)
+	{
+	  double nMuDst = hNEventsRawAll[j]->GetBinContent(bin);
+	  if(nMuDst<=0) continue; 
+	  double nDaq = hMbEvtRecord->GetBinContent(hMbEvtRecord->FindBin(hNEventsRawAll[j]->GetBinCenter(bin)));
+	  if(j>0 && j<4 && (nDaq<=0 || nMuDst > nDaq || nMuDst/nDaq < 0.96))
+	    {
+	      //printf("[i] run = %1.0f, nMuDst = %1.0f, nDaq = %1.0f\n",hNEventsRawAll[j]->GetBinCenter(bin),nMuDst,nDaq);
+	      printf("%1.0f ",hNEventsRawAll[j]->GetBinCenter(bin));
+	    }
+	  if(nDaq<=0) continue;
+	  hMbEvtRatio[j]->SetBinContent(bin, nMuDst/nDaq);
+	  hMbEvtRatio[j]->SetBinError(bin, sqrt(nMuDst)/nDaq);
+	}
+    }
+
+  TCanvas *c = new TCanvas("cMb_MuDstVsDaq","cMb_MuDstVsDaq",1100,700);
+  c->Divide(2,2);
+  for(int j=1; j<5; j++)
+    {
+      c->cd(j);
+      hMbEvtRatio[j]->SetMarkerStyle(20);
+      hMbEvtRatio[j]->SetMarkerColor(gColor[j]);
+      hMbEvtRatio[j]->SetLineColor(gColor[j]);
+      hMbEvtRatio[j]->Draw();
+    }
+  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/MB_MuDstVsDaq.pdf",run_type.Data()));
+  
+
+
+  return;
   for(int i=0; i<nCentBins; i++)
     {
      hNEventsRaw[i][0] = (TH1F*)fMB->Get(Form("NEvents_cent%s_all",cent_Title[i]));
@@ -769,7 +988,7 @@ void Lumi2014(const int savePlot = 0, const int saveHisto = 0)
        }
     }
 
-  TFile *fout = TFile::Open(Form("Rootfiles/%s.Luminosity.root",run_type),"update");
+ 
   TH1F *hEqMbEvt = (TH1F*)fout->Get("hEqMbEvt_dimuon");
   TH1F *hEqMbEvtVtxCutWeight[nCentBins];
   for(int i=0; i<nCentBins; i++)
@@ -838,7 +1057,7 @@ void Lumi2014(const int savePlot = 0, const int saveHisto = 0)
 	  t1->Draw();
 	}
     }
-  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/MB_EvtFractionWithVtxCutCent.pdf",run_type));
+  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/MB_EvtFractionWithVtxCutCent.pdf",run_type.Data()));
   if(gSaveAN)   c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch1_FitVtxEff.pdf"));
 
   // check vertex efficiency
@@ -895,7 +1114,7 @@ void Lumi2014(const int savePlot = 0, const int saveHisto = 0)
       list->Add(hEqMbEvtVtxCutWeight[i]);
     }
   c = drawHistos(list,"MtdEqMbEvt",Form("Dimuon: equivalent MB events after vertex cuts with event weights"),kFALSE,0,30,false,0.35,0.55,kFALSE,kTRUE,legName4,kTRUE,"Centrality",0.3,0.5,0.68,0.86,true);
-  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/Dimuon_EquMbEvtVtxCutWeight.pdf",run_type));
+  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/Dimuon_EquMbEvtVtxCutWeight.pdf",run_type.Data()));
   list->Clear();
 
 
@@ -914,39 +1133,39 @@ void Lumi2014(const int savePlot = 0, const int saveHisto = 0)
 //================================================
 void Lumi2015(const int savePlot = 0, const int saveHisto = 0)
 {
-  const char *run_type = "Run15_pAu200";
+  const char *run_type.Data() = "Run15_pAu200";
   const char *trigName = "VPDMBnovtx";
-  f = TFile::Open(Form("./output/%s.MB.root",run_type),"read");
+  f = TFile::Open(Form("./output/%s.MB.root",run_type.Data()),"read");
   cout << f->GetName() << endl;
 
   // luminosity distributions
   TProfile *hBbcRate = (TProfile*)f->Get("hBbcRate");
   hBbcRate->SetMarkerStyle(24);
-  c = draw1D(hBbcRate,Form("%s: BBC rate vs. runId;runId",run_type));
-  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/%s_BBCrate.pdf",run_type,trigName));
+  c = draw1D(hBbcRate,Form("%s: BBC rate vs. runId;runId",run_type.Data()));
+  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/%s_BBCrate.pdf",run_type.Data(),trigName));
 
   TProfile *hZdcRate = (TProfile*)f->Get("hZdcRate");
   hZdcRate->SetMarkerStyle(24);
-  c = draw1D(hZdcRate,Form("%s: ZDC rate vs. runId;runId",run_type));
-  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/%s_ZDCrate.pdf",run_type,trigName));
+  c = draw1D(hZdcRate,Form("%s: ZDC rate vs. runId;runId",run_type.Data()));
+  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/%s_ZDCrate.pdf",run_type.Data(),trigName));
 
-  TH2F *hBbcVsZdc = new TH2F("hBbcVsZdc",Form("%s: ZDC rate vs. BBC rate;BBC (kHz);ZDC (kHz)",run_type),300,0,3e3,450,0,45);
+  TH2F *hBbcVsZdc = new TH2F("hBbcVsZdc",Form("%s: ZDC rate vs. BBC rate;BBC (kHz);ZDC (kHz)",run_type.Data()),300,0,3e3,450,0,45);
   for(int bin=1; bin<=hBbcRate->GetNbinsX(); bin++)
     {
       if(hBbcRate->GetBinContent(bin)<=0) continue;
       hBbcVsZdc->Fill(hBbcRate->GetBinContent(bin)/1e3,hZdcRate->GetBinContent(bin)/1e3);
     }
   c = draw2D(hBbcVsZdc);
-  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/%s_ZDCvsBBC.pdf",run_type,trigName));
+  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/%s_ZDCvsBBC.pdf",run_type.Data(),trigName));
 
   // vertex distributions
   TH1F* hTpcVz = (TH1F*)f->Get("hTpcVz");
-  c = draw1D(hTpcVz,Form("%s: TPC vertex z distribution;vz_{TPC} (cm)",run_type),false,false);
-  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/%s_TpcVz.pdf",run_type,trigName));
+  c = draw1D(hTpcVz,Form("%s: TPC vertex z distribution;vz_{TPC} (cm)",run_type.Data()),false,false);
+  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/%s_TpcVz.pdf",run_type.Data(),trigName));
 
   TH1F* hVzDiff = (TH1F*)f->Get("hVzDiff");
-  c = draw1D(hVzDiff,Form("%s: TPC-VPD vertex z distribution;vz_{TPC}-vz_{VPD} (cm)",run_type),false,false);
-  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/%s_VzDiff.pdf",run_type,trigName));
+  c = draw1D(hVzDiff,Form("%s: TPC-VPD vertex z distribution;vz_{TPC}-vz_{VPD} (cm)",run_type.Data()),false,false);
+  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/%s_VzDiff.pdf",run_type.Data(),trigName));
 
   const int nTrigId = 6;
   const int trigId[nTrigId] = {470004, 470014, 480004, 490004, 500004, 510004};
@@ -963,9 +1182,9 @@ void Lumi2015(const int savePlot = 0, const int saveHisto = 0)
       legName[list->GetEntries()-1] = Form("Trigger Id: %d",trigId[i]);
       if(hTpcVzTrigId[i]->GetMaximum()>max) max = hTpcVzTrigId[i]->GetMaximum();
     }
-  c = drawHistos(list,Form("%s_TpcVzTrigId",run_type),Form("%s: TPC vertex z distribution",run_type),false,0,10,true,0,1.3*max,kFALSE,kTRUE,legName,kTRUE,run_type,0.15,0.3,0.6,0.85,kTRUE);
+  c = drawHistos(list,Form("%s_TpcVzTrigId",run_type.Data()),Form("%s: TPC vertex z distribution",run_type.Data()),false,0,10,true,0,1.3*max,kFALSE,kTRUE,legName,kTRUE,run_type.Data(),0.15,0.3,0.6,0.85,kTRUE);
   list->Clear();
-  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/%s_TpcVzTrigId.pdf",run_type,trigName));
+  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/%s_TpcVzTrigId.pdf",run_type.Data(),trigName));
 
   const int nRanking = 2;
   TH1F *hTpcVzRank[nRanking];
@@ -983,9 +1202,9 @@ void Lumi2015(const int savePlot = 0, const int saveHisto = 0)
     {
       legName1[i] = Form("%s: %4.1f%%",rank_name[i],nEvents[i]/(nEvents[0]+nEvents[1])*100);
     }
-  c = drawHistos(list,Form("%s_TpcVzRanking",run_type),Form("%s: TPC vertex z distribution;vz_{TPC} (cm)",run_type),false,0,10,false,0,1,kFALSE,kTRUE,legName1,kTRUE,"|vz_{TPC}| < 100 cm",0.13,0.3,0.65,0.85,kTRUE);
+  c = drawHistos(list,Form("%s_TpcVzRanking",run_type.Data()),Form("%s: TPC vertex z distribution;vz_{TPC} (cm)",run_type.Data()),false,0,10,false,0,1,kFALSE,kTRUE,legName1,kTRUE,"|vz_{TPC}| < 100 cm",0.13,0.3,0.65,0.85,kTRUE);
   list->Clear();
-  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/%s_TpcVzRank.pdf",run_type,trigName));
+  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/%s_TpcVzRank.pdf",run_type.Data(),trigName));
 
   TH1F *hVzDiffRank[nRanking];
   TH2F *hDiffVzVsRanking = (TH2F*)f->Get("hDiffVzVsRanking");
@@ -999,9 +1218,9 @@ void Lumi2015(const int savePlot = 0, const int saveHisto = 0)
     {
       legName1[i] = Form("%s: %4.1f%%",rank_name[i],nEvents[i]/(nEvents[0]+nEvents[1])*100);
     }
-  c = drawHistos(list,Form("%s_VzDiffRanking",run_type),Form("%s: TPC-VPD vertex z distribution;vz_{TPC}-vz_{VPD} (cm)",run_type),false,0,10,false,0,1,true,kTRUE,legName1,kTRUE,"|vz_{TPC}-vz_{VPD}| < 6 cm",0.13,0.3,0.65,0.85,kTRUE);
+  c = drawHistos(list,Form("%s_VzDiffRanking",run_type.Data()),Form("%s: TPC-VPD vertex z distribution;vz_{TPC}-vz_{VPD} (cm)",run_type.Data()),false,0,10,false,0,1,true,kTRUE,legName1,kTRUE,"|vz_{TPC}-vz_{VPD}| < 6 cm",0.13,0.3,0.65,0.85,kTRUE);
   list->Clear();
-  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/%s_VzDiffRank.pdf",run_type,trigName));
+  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/%s_VzDiffRank.pdf",run_type.Data(),trigName));
 
   // Tpc vs Vpd vz
   TH2F *hTpcVsVpdVz[4];
@@ -1016,17 +1235,17 @@ void Lumi2015(const int savePlot = 0, const int saveHisto = 0)
       list->Add(htmp);
       legName2[i] = htitle[i];
     }
-  c = drawHistos(list,Form("%s_CompTpcVz",run_type),Form("%s: TPC vertex z distribution;vz_{TPC} (cm)",run_type),false,0,10,false,0,1,false,kTRUE,legName2,kTRUE,"",0.13,0.3,0.65,0.85,kTRUE);
+  c = drawHistos(list,Form("%s_CompTpcVz",run_type.Data()),Form("%s: TPC vertex z distribution;vz_{TPC} (cm)",run_type.Data()),false,0,10,false,0,1,false,kTRUE,legName2,kTRUE,"",0.13,0.3,0.65,0.85,kTRUE);
   list->Clear();
-  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/%s_CompTpcVz.pdf",run_type,trigName));
+  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/%s_CompTpcVz.pdf",run_type.Data(),trigName));
 
-  c = draw2D(hTpcVsVpdVz[0],Form("%s: vz_{TPC} vs. vz_{VPD} (%s);vz_{VPD} (cm); vz_{TPC} (cm)",run_type,htitle[0]));
-  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/%s_TpcVsVpdVz%s.png",run_type,trigName,hname[0]));
+  c = draw2D(hTpcVsVpdVz[0],Form("%s: vz_{TPC} vs. vz_{VPD} (%s);vz_{VPD} (cm); vz_{TPC} (cm)",run_type.Data(),htitle[0]));
+  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/%s_TpcVsVpdVz%s.png",run_type.Data(),trigName,hname[0]));
 
   TH1F *hTpcVzBad = (TH1F*)hTpcVsVpdVz[0]->ProjectionY("hTpcVzBad",1,100);
   hTpcVzBad->GetXaxis()->SetRangeUser(-5,5);
-  c = draw1D(hTpcVzBad,Form("%s: TPC vertex z distribution (vz_{VPD} < -900 cm);vz_{TPC} (cm)",run_type));
-  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/%s_TpcVzBad.pdf",run_type,trigName));
+  c = draw1D(hTpcVzBad,Form("%s: TPC vertex z distribution (vz_{VPD} < -900 cm);vz_{TPC} (cm)",run_type.Data()));
+  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/%s_TpcVzBad.pdf",run_type.Data(),trigName));
 
   // Obtain vertex cut efficiency for VPDMB
   TH1F* hNeventAll    = (TH1F*)f->Get("hNeventAll");
@@ -1038,25 +1257,25 @@ void Lumi2015(const int savePlot = 0, const int saveHisto = 0)
   TH1F *hTpcVzEff = (TH1F*)hNeventTpcVz->Clone("hTpcVzEff");
   hTpcVzEff->Divide(hNeventAll);
   hTpcVzEff->SetMarkerStyle(20);
-  c = draw1D(hTpcVzEff,Form("%s: efficiency of TPC vz cut;RunId",run_type));
-  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/%s_TpcVzEff.pdf",run_type,trigName));
+  c = draw1D(hTpcVzEff,Form("%s: efficiency of TPC vz cut;RunId",run_type.Data()));
+  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/%s_TpcVzEff.pdf",run_type.Data(),trigName));
 
   TH1F *hVzDiffEff = (TH1F*)hNeventVzDiff->Clone("hVzDiffEff");
   hVzDiffEff->Divide(hNeventAll);
   hVzDiffEff->SetMarkerStyle(20);
-  c = draw1D(hVzDiffEff,Form("%s: efficiency of vertex vz cut;RunId",run_type));
-  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/%s_VzDiffEff.pdf",run_type,trigName));
+  c = draw1D(hVzDiffEff,Form("%s: efficiency of vertex vz cut;RunId",run_type.Data()));
+  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/%s_VzDiffEff.pdf",run_type.Data(),trigName));
 
   TH1F *hVzDzRankEff = (TH1F*)hNeventVzDzRank->Clone("hVzDzRankEff");
   hVzDzRankEff->Divide(hNeventAll);
   hVzDzRankEff->SetMarkerStyle(20);
-  c = draw1D(hVzDzRankEff,Form("%s: efficiency of good vertex;RunId",run_type));
-  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/%s_VzDzRankEff.pdf",run_type,trigName));
+  c = draw1D(hVzDzRankEff,Form("%s: efficiency of good vertex;RunId",run_type.Data()));
+  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/%s_VzDzRankEff.pdf",run_type.Data(),trigName));
 
   TH1F *hFinalEff = hVzDzRankEff;
   //TH1F *hFinalEff = hVzDiffEff;
 
-  TH2F *hVtxEffVsBbcRate = new TH2F("hVtxEffVsBbcRate",Form("%s: vertex cut efficiency vs. BBC rate;BBC (kHz);Efficiency",run_type),300,0,3e3,100,0,1);
+  TH2F *hVtxEffVsBbcRate = new TH2F("hVtxEffVsBbcRate",Form("%s: vertex cut efficiency vs. BBC rate;BBC (kHz);Efficiency",run_type.Data()),300,0,3e3,100,0,1);
   for(int bin=1; bin<=hBbcRate->GetNbinsX(); bin++)
     {
       if(hBbcRate->GetBinContent(bin)<=0) continue;
@@ -1064,9 +1283,9 @@ void Lumi2015(const int savePlot = 0, const int saveHisto = 0)
       hVtxEffVsBbcRate->Fill(hBbcRate->GetBinContent(bin)/1e3,hFinalEff->GetBinContent(bin));
     }
   c = draw2D(hVtxEffVsBbcRate);
-  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/%s_VzDiffEffVsBBC.pdf",run_type,trigName));
+  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/%s_VzDiffEffVsBBC.pdf",run_type.Data(),trigName));
   TF1 *funcEff = new TF1("funcEff","pol2",200,2800);
-  if(run_type=="Run15_pp200")
+  if(run_type.Data()=="Run15_pp200")
     {
       TProfile *hpro = (TProfile*)hVtxEffVsBbcRate->ProfileX();
       hpro->SetMarkerStyle(24);
@@ -1076,19 +1295,19 @@ void Lumi2015(const int savePlot = 0, const int saveHisto = 0)
       funcEff->SetLineStyle(2);
       c->cd();
       funcEff->Draw("sames");
-      if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/%s_VzDiffEffVsBBCFit.pdf",run_type,trigName));
+      if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/%s_VzDiffEffVsBBCFit.pdf",run_type.Data(),trigName));
     }
 
   // # of MTD events analyzed
   TFile *fdata = TFile::Open("Rootfiles/Run15DimuonStatisitcs.root","read");
   TH1F *hdata = 0x0;
   TProfile* hBbcData = 0x0;
-  if(run_type=="Run15_pp200")
+  if(run_type.Data()=="Run15_pp200")
     {
       hdata = (TH1F*)fdata->Get("mhRunStat_Run15pp200");
       hBbcData = (TProfile*)fdata->Get("mhRunBbcRate_Run15pp200");
     }
-  if(run_type=="Run15_pAu200") 
+  if(run_type.Data()=="Run15_pAu200") 
     {
       hdata = (TH1F*)fdata->Get("mhRunStat_Run15pAu200");
       hBbcData = (TProfile*)fdata->Get("mhRunBbcRate_Run15pAu200");
@@ -1096,8 +1315,8 @@ void Lumi2015(const int savePlot = 0, const int saveHisto = 0)
 
   // Get equivalent # of MB events
   TFile *fin = 0;
-  if(!saveHisto) fin = TFile::Open(Form("Rootfiles/%s.Luminosity.root",run_type),"read");
-  else           fin = TFile::Open(Form("Rootfiles/%s.Luminosity.root",run_type),"update");
+  if(!saveHisto) fin = TFile::Open(Form("Rootfiles/%s.Luminosity.root",run_type.Data()),"read");
+  else           fin = TFile::Open(Form("Rootfiles/%s.Luminosity.root",run_type.Data()),"update");
   TH1F *hNeventMtd = (TH1F*)fin->Get("hNevents_dimuon");
   TH1F *hPrescaleMtd = (TH1F*)fin->Get("hPreScale_dimuon");
   TH1F *hLivetimeMtd = (TH1F*)fin->Get("hLiveTime_dimuon");
@@ -1148,7 +1367,7 @@ void Lumi2015(const int savePlot = 0, const int saveHisto = 0)
 }
 
 //================================================
-void makeHistoLumi(const int savePlot = 1, const int saveHisto = 1)
+void makeHistoLumi(const int savePlot = 0, const int saveHisto = 0)
 {
   //const char *trigName = "VPD-ZDC-novtx-mon";
   //const char *trigName = "VPDMB-novtx";
@@ -1162,8 +1381,8 @@ void makeHistoLumi(const int savePlot = 1, const int saveHisto = 1)
 
 
   ifstream flumi, fnevt;
-  flumi.open(Form("Rootfiles/Luminosity/%s/lum_perrun_%s.txt",run_type,trigName));
-  fnevt.open(Form("Rootfiles/Luminosity/%s/nev_perday_unix_%s.txt",run_type,trigName));
+  flumi.open(Form("Rootfiles/Luminosity/%s/lum_perrun_%s.txt",run_type.Data(),trigName));
+  fnevt.open(Form("Rootfiles/Luminosity/%s/nev_perday_unix_%s.txt",run_type.Data(),trigName));
   char lumi[512], nevt[512];
   int nevt_old = 0;
   int nevt_new = 0;
@@ -1178,7 +1397,8 @@ void makeHistoLumi(const int savePlot = 1, const int saveHisto = 1)
       string snevt = nevt;
       if(slumi.length()<=0) break;
       int counter = 0;
-      int run, nmbevts, starttime;
+      int run, starttime;
+      double nmbevts;
       double prescale, livetime;
       while(slumi.find(" ")!=string::npos)
 	{
@@ -1186,7 +1406,7 @@ void makeHistoLumi(const int savePlot = 1, const int saveHisto = 1)
 	  slumi.erase(0,slumi.find(" ")+1);
 	  if(counter==0) run = atoi(sub.c_str());
 	  if(counter==1) starttime = atoi(sub.c_str());
-	  if(counter==4) nmbevts   = floor(atof(sub.c_str())*crosssection+0.5);
+	  if(counter==4) nmbevts = atof(sub.c_str())*crosssection;
 	  if(counter==5) prescale = atof(sub.c_str());
 	  if(counter==6) livetime = atof(sub.c_str());
 	  counter++;
@@ -1233,37 +1453,37 @@ void makeHistoLumi(const int savePlot = 1, const int saveHisto = 1)
   c = draw1D(hPreScale);
   if(savePlot)
     {
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/%s_prescale.pdf",run_type,trigName));
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/%s_prescale.png",run_type,trigName));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/%s_prescale.pdf",run_type.Data(),trigName));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/%s_prescale.png",run_type.Data(),trigName));
     }
 
   hLiveTime->SetMarkerStyle(21);
   c = draw1D(hLiveTime);
   if(savePlot)
     {
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/%s_livetime.pdf",run_type,trigName));
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/%s_livetime.png",run_type,trigName));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/%s_livetime.pdf",run_type.Data(),trigName));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/%s_livetime.png",run_type.Data(),trigName));
     }
 
   hNevents->SetMarkerStyle(21);
   c = draw1D(hNevents);
   if(savePlot)
     {
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/%s_nevents.pdf",run_type,trigName));
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/%s_nevents.png",run_type,trigName));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/%s_nevents.pdf",run_type.Data(),trigName));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/%s_nevents.png",run_type.Data(),trigName));
     }
 
   hEqMbEvt->SetMarkerStyle(21);
   c = draw1D(hEqMbEvt);
   if(savePlot)
     {
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/%s_EqMbEvt.pdf",run_type,trigName));
-      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/%s_EqMbEvt.png",run_type,trigName));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/%s_EqMbEvt.pdf",run_type.Data(),trigName));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Lumi/%s_EqMbEvt.png",run_type.Data(),trigName));
     }
 
   if(saveHisto)
     {
-      TFile *fout = TFile::Open(Form("Rootfiles/%s.Luminosity.root",run_type),"update");
+      TFile *fout = TFile::Open(Form("Rootfiles/%s.Luminosity.root",run_type.Data()),"update");
       hPreScale->Write("",TObject::kOverwrite);
       hLiveTime->Write("",TObject::kOverwrite);
       hNevents->Write("",TObject::kOverwrite);
@@ -1319,6 +1539,11 @@ void makeHistoData(const int savePlot = 1, const int saveHisto = 1)
     {
       hNEvents[0][i] = (TH1F*)hn[i]->Projection(0);
       hNEvents[0][i]->SetName(Form("NEvents_%s%s",setupName[0],wName[i]));
+      int nRuns = 0;
+      for(int ibin=1; ibin<=hNEvents[0][i]->GetNbinsX(); ibin++)
+	{
+	  if(hNEvents[0][i]->GetBinContent(ibin)>0) nRuns++;
+	}
 
       for(int j=0; j<nCentBins; j++)
 	{
@@ -1371,6 +1596,7 @@ void makeHistoData(const int savePlot = 1, const int saveHisto = 1)
 
 	}
     }
+  return;
 
 
   for(int k=0; k<4; k++)
@@ -1416,7 +1642,7 @@ void makeHistoData(const int savePlot = 1, const int saveHisto = 1)
   for(int k=0; k<4; k++)
     {
       ifstream fruns;
-      fruns.open(Form("Rootfiles/Luminosity/%s/AuAu_200_%s_2014.list",run_type,trgSetupName[k]));
+      fruns.open(Form("Rootfiles/Luminosity/%s/AuAu_200_%s_2014.list",run_type.Data(),trgSetupName[k]));
       int runnumber;
       while(!fruns.eof())
 	{
@@ -1465,7 +1691,7 @@ void makeHistoData(const int savePlot = 1, const int saveHisto = 1)
 
   if(saveHisto)
     {
-      TFile *fout = TFile::Open(Form("Rootfiles/%s.Luminosity%s.root",run_type,lumiType),"update");
+      TFile *fout = TFile::Open(Form("Rootfiles/%s.Luminosity%s.root",run_type.Data(),lumiType),"update");
       for(int k=0; k<5; k++)
 	{
 	  for(int i=0; i<2; i++)
@@ -1528,8 +1754,8 @@ void mergeHisto(const int saveHisto = 1)
   TH1F *hCent[5][2];
 
   TFile *f[2];
-  f[0] = TFile::Open(Form("Rootfiles/%s.Luminosity.prod_low.root",run_type),"read");
-  f[1] = TFile::Open(Form("Rootfiles/%s.Luminosity.prod_high.root",run_type),"read");
+  f[0] = TFile::Open(Form("Rootfiles/%s.Luminosity.prod_low.root",run_type.Data()),"read");
+  f[1] = TFile::Open(Form("Rootfiles/%s.Luminosity.prod_high.root",run_type.Data()),"read");
   TFile *fCurr = 0x0;
   for(int k=0; k<4; k++)
     {
@@ -1585,7 +1811,7 @@ void mergeHisto(const int saveHisto = 1)
 
   if(saveHisto)
     {
-      TFile *fout = TFile::Open(Form("Rootfiles/%s.Luminosity.root",run_type),"recreate");
+      TFile *fout = TFile::Open(Form("Rootfiles/%s.Luminosity.root",run_type.Data()),"recreate");
       for(int k=0; k<5; k++)
 	{
 	  for(int i=0; i<2; i++)

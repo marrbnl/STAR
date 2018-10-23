@@ -14,8 +14,8 @@ void ana_MtdTrigEff()
 
   //getTrigEff();
   //anaTrigEff();
-  sysTrigEff();
-  //trigElecEff();
+  //sysTrigEff();
+  trigElecEff();
   //studyRefData();
  
   //compareTacDiff();
@@ -2023,7 +2023,7 @@ void lumiDepend(const int savePlot = 0)
 }
 
 //================================================
-void trigElecEff(const int savePlot = 1, const int saveHisto = 1)
+void trigElecEff(const int savePlot = 0, const int saveHisto = 0)
 {
   if(year==2013)
     {
@@ -2032,6 +2032,7 @@ void trigElecEff(const int savePlot = 1, const int saveHisto = 1)
   else if(year==2014)
     {
       f = TFile::Open("output/Run14_AuAu200.MB.TrigElecEff.root","read");
+      //f = TFile::Open("output/Run14_AuAu200.MB.Study.root","read");
     }
   else if(year==2016)
     {
@@ -2094,10 +2095,10 @@ void trigElecEff(const int savePlot = 1, const int saveHisto = 1)
 	}
       legName1[i] = Form("#Deltatof < %2.2f ns",dtof_cut[i]);
     }
-  TCanvas *c = drawHistos(list,"MuonPtEff_Dtof",Form("%s: trigger electronics efficiency;p_{T} (GeV/c)",run_type),true,0,10,true,0.8,1.05,kFALSE,true,legName1,true,"",0.4,0.65,0.2,0.45,kTRUE);
+  TCanvas *c = drawHistos(list,"MuonPtEff_Dtof",Form("%s: trigger electronics efficiency;p_{T} (GeV/c)",run_type.Data()),true,0,10,true,0.8,1.05,kFALSE,true,legName1,true,"",0.4,0.65,0.2,0.45,kTRUE);
   list->Clear();
-  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdTrigEff/MtdTrigElecEff_CompareDtof.pdf",run_type));
-  if(gSaveAN && year==2014) c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_EffTrigElec_vs_PID.pdf"));
+  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdTrigEff/MtdTrigElecEff_CompareDtof.pdf",run_type.Data()));
+  if(gSaveAN && year==2014) c->SaveAs(Form("~/Dropbox/STAR_Quarkonium/Run14_Jpsi/Analysis_note/Figures/Ch4_EffTrigElec_vs_PID.pdf"));
  
   // Efficiency vs. centrality
   // use dtof < 1 ns cut
@@ -2143,15 +2144,15 @@ void trigElecEff(const int savePlot = 1, const int saveHisto = 1)
 	}
       legName2[i] = Form("%s%%",cent_Name[i]);
     }
-  TCanvas *c = drawHistos(list,"MuonPtEff_Cent",Form("%s: trigger electronics efficiency;p_{T} (GeV/c)",run_type),true,0,10,true,0.8,1.05,kFALSE,true,legName2,true,"",0.4,0.65,0.2,0.45,kTRUE);
+  TCanvas *c = drawHistos(list,"MuonPtEff_Cent",Form("%s: trigger electronics efficiency;p_{T} (GeV/c)",run_type.Data()),true,0,10,true,0.8,1.05,kFALSE,true,legName2,true,"",0.4,0.65,0.2,0.45,kTRUE);
   list->Clear();
-  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdTrigEff/MtdTrigElecEff_CompareCent.pdf",run_type));
-  if(gSaveAN) c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_EffTrigElec_vs_cent.pdf"));
+  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdTrigEff/MtdTrigElecEff_CompareCent.pdf",run_type.Data()));
+  if(gSaveAN) c->SaveAs(Form("~/Dropbox/STAR_Quarkonium/Run14_Jpsi/Analysis_note/Figures/Ch4_EffTrigElec_vs_cent.pdf"));
 
   // Efficiency vs. TPC vz
   // use dtof < 1 ns cut and 0-80%
   hnTrigEff->GetAxis(3)->SetRangeUser(-3,1);
-  if(year>2013) hnTrigEff->GetAxis(5)->SetRange(3,16);
+  if(year>2013) hnTrigEff->GetAxis(5)->SetRange(1,16);
   const int nTpcVz = 6;
   const double tpcvz_cut[7] = {-100,-30,-5,0,5,30,100};
   TH1F *hMuonPtTpcVz[nTpcVz][3];
@@ -2193,10 +2194,10 @@ void trigElecEff(const int savePlot = 1, const int saveHisto = 1)
 	}
       legName3[i] = Form("%1.0f < v_{z} < %1.0f cm",tpcvz_cut[i],tpcvz_cut[i+1]);
     }
-  TCanvas *c = drawHistos(list,"MuonPtEff_TpcVz",Form("%s: trigger electronics efficiency;p_{T} (GeV/c)",run_type),true,0,10,true,0.8,1.05,kFALSE,true,legName3,true,"",0.4,0.65,0.2,0.45,kTRUE);
+  TCanvas *c = drawHistos(list,"MuonPtEff_TpcVz",Form("%s: trigger electronics efficiency;p_{T} (GeV/c)",run_type.Data()),true,0,10,true,0.8,1.05,kFALSE,true,legName3,true,"",0.4,0.65,0.2,0.45,kTRUE);
   list->Clear();
-  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdTrigEff/MtdTrigElecEff_CompareTpcVz.pdf",run_type));
-  if(gSaveAN) c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_EffTrigElec_vs_vz.pdf"));
+  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdTrigEff/MtdTrigElecEff_CompareTpcVz.pdf",run_type.Data()));
+  if(gSaveAN) c->SaveAs(Form("~/Dropbox/STAR_Quarkonium/Run14_Jpsi/Analysis_note/Figures/Ch4_EffTrigElec_vs_vz.pdf"));
 
   if(year==2016)
     {
@@ -2222,15 +2223,15 @@ void trigElecEff(const int savePlot = 1, const int saveHisto = 1)
       hMuonEffVsVz->SetMarkerStyle(20);
       hMuonEffVsVz->SetMarkerSize(1.5);
       hMuonEffVsVz->GetYaxis()->SetRangeUser(0.8, 1.05);
-      c = draw1D(hMuonEffVsVz, Form("%s: trigger electronics efficiency (p_{T} > %1.0f GeV/c);v_{z} (cm)",run_type,pt_cut));
-      if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdTrigEff/MtdTrigElecEff_VsTpcVz.pdf",run_type));
+      c = draw1D(hMuonEffVsVz, Form("%s: trigger electronics efficiency (p_{T} > %1.0f GeV/c);v_{z} (cm)",run_type.Data(),pt_cut));
+      if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdTrigEff/MtdTrigElecEff_VsTpcVz.pdf",run_type.Data()));
     }
 
   // Final efficiency: dtof < 1 ns, 0-80%, |tpcVz| < 100 cm
   TH1F *hTrigElecEff = 0x0;
   if(year==2013 || year==2014)
     {
-      hTrigElecEff = (TH1F*)hMuonEffCent[0][2]->Clone(Form("%s_TrigElecEff",run_type));
+      hTrigElecEff = (TH1F*)hMuonEffCent[0][2]->Clone(Form("%s_TrigElecEff",run_type.Data()));
     }
   else if(year==2016)
     {
@@ -2248,10 +2249,10 @@ void trigElecEff(const int savePlot = 1, const int saveHisto = 1)
       TF1 *funcVz = new TF1("funcVz","gaus(0)+gaus(3)+gaus(6)",-100,100);
       funcVz->SetParameters(4e7, 0, 20, 1.5e7, -75, 20, 1e7, 75, 20);
       hVz->Fit(funcVz,"IR0");
-      c = draw1D(hVz, Form("%s: TPC v_{z} distribution for dimuon events;v_{z} (cm)",run_type));
+      c = draw1D(hVz, Form("%s: TPC v_{z} distribution for dimuon events;v_{z} (cm)",run_type.Data()));
       funcVz->SetLineColor(2);
       funcVz->Draw("sames");
-      if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdTrigEff/TpcVz.pdf",run_type));
+      if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdTrigEff/TpcVz.pdf",run_type.Data()));
 
       TH1F *hMuonPtAll = (TH1F*)hMuonPtVsVzAll->ProjectionY("hMuonPtAll");
       hMuonPtAll->Reset("AC");
@@ -2270,7 +2271,7 @@ void trigElecEff(const int savePlot = 1, const int saveHisto = 1)
       hMuonPtAcc = (TH1F*)hMuonPtAcc->Rebin(nbins,Form("%s_rebin",hMuonPtAcc->GetName()),xbins);
       hMuonPtAll = (TH1F*)hMuonPtAll->Rebin(nbins,Form("%s_rebin",hMuonPtAll->GetName()),xbins);
       hMuonPtAcc->Divide(hMuonPtAll);
-      hTrigElecEff = (TH1F*)hMuonPtAcc->Clone(Form("%s_TrigElecEff",run_type));
+      hTrigElecEff = (TH1F*)hMuonPtAcc->Clone(Form("%s_TrigElecEff",run_type.Data()));
       hnTrigEff->GetAxis(1)->SetRange(0,-1);
       hnTrigEff->GetAxis(2)->SetRange(0,-1);
     }
@@ -2294,7 +2295,7 @@ void trigElecEff(const int savePlot = 1, const int saveHisto = 1)
     }
   hTrigElecEff->GetXaxis()->SetRangeUser(1, 10);
   hTrigElecEff->GetYaxis()->SetRangeUser(0.85,1.1);
-  c = draw1D(hTrigElecEff,Form("%s: trigger electronics efficiency;p_{T} (GeV/c)",run_type));
+  c = draw1D(hTrigElecEff,Form("%s: trigger electronics efficiency;p_{T} (GeV/c)",run_type.Data()));
   hFitError->SetFillStyle(3001);
   hFitError->SetFillColor(kBlue);
   hFitError->SetLineWidth(0);
@@ -2303,12 +2304,12 @@ void trigElecEff(const int savePlot = 1, const int saveHisto = 1)
   func->SetLineColor(2);
   func->SetLineStyle(2);
   func->Draw("sames");
-  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdTrigEff/MtdTrigElecEff_Fit.pdf",run_type));
-  if(gSaveAN) c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_EffTrigElecFit.pdf"));
+  if(savePlot)  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdTrigEff/MtdTrigElecEff_Fit.pdf",run_type.Data()));
+  if(gSaveAN) c->SaveAs(Form("~/Dropbox/STAR_Quarkonium/Run14_Jpsi/Analysis_note/Figures/Ch4_EffTrigElecFit.pdf"));
   
   if(saveHisto)
     {
-      TFile *fout = TFile::Open(Form("Rootfiles/%s.MtdTrigEff.root",run_type),"update");
+      TFile *fout = TFile::Open(Form("Rootfiles/%s.MtdTrigEff.root",run_type.Data()),"update");
       hTrigElecEff->Write("",TObject::kOverwrite);
       func->Write("",TObject::kOverwrite);
       hFitError->Write("",TObject::kOverwrite);
@@ -2385,8 +2386,8 @@ void extrapolation(const int savePlot = 0, const int saveHisto = 0)
   
       if(savePlot)
 	{
-	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/MuonTrigEff_CentBins%s.pdf",run_type,gTrgSetupName[i+1]));
-	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/MuonTrigEff_CentBins%s.png",run_type,gTrgSetupName[i+1]));
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/MuonTrigEff_CentBins%s.pdf",run_type.Data(),gTrgSetupName[i+1]));
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/MuonTrigEff_CentBins%s.png",run_type.Data(),gTrgSetupName[i+1]));
 	}
     }
 
@@ -2410,8 +2411,8 @@ void extrapolation(const int savePlot = 0, const int saveHisto = 0)
       c = drawHistos(list,Form("MuonTrigEff_CentBins%s",gTrgSetupName[i+1]),Form("Single muon trigger efficiency (%s);p_{T} (GeV/c);Efficiency",trgSetupName[i]),kTRUE,1.2,10,kTRUE,0.5,1.0,kFALSE,kTRUE,legName,kTRUE,"",0.4,0.6,0.3,0.55,kTRUE);
       if(savePlot)
 	{
-	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/MuonTrigEffCombined_CentBins%s.pdf",run_type,gTrgSetupName[i+1]));
-	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/MuonTrigEffCombined_CentBins%s.png",run_type,gTrgSetupName[i+1]));
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/MuonTrigEffCombined_CentBins%s.pdf",run_type.Data(),gTrgSetupName[i+1]));
+	  c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiEff/MuonTrigEffCombined_CentBins%s.png",run_type.Data(),gTrgSetupName[i+1]));
 	}
       list->Clear();
     }

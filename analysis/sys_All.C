@@ -25,8 +25,8 @@ void sys_All()
 void mergeSystematics(int savePlot = 1, int saveHisto = 1)
 {
   TFile *fout = 0x0;
-  if(saveHisto) fout = TFile::Open(Form("Rootfiles/%s.Sys.JpsiXsec.root",run_type),"update");
-  else          fout = TFile::Open(Form("Rootfiles/%s.Sys.JpsiXsec.root",run_type),"read");
+  if(saveHisto) fout = TFile::Open(Form("Rootfiles/%s.Sys.JpsiXsec.root",run_type.Data()),"update");
+  else          fout = TFile::Open(Form("Rootfiles/%s.Sys.JpsiXsec.root",run_type.Data()),"read");
 
   TList *list = new TList;
   TH1F *hJpsiSysVsPt[nCentBins_pt][nSys+1];
@@ -91,13 +91,13 @@ void mergeSystematics(int savePlot = 1, int saveHisto = 1)
       printf("[i] %s: sys = %2.2f for pT = %2.1f\n",legName[s].Data(),hJpsiSysVsPt[0][s]->GetBinContent(1)*100,hJpsiSysVsPt[0][s]->GetBinCenter(1));
       printf("[i] %s: sys = %2.2f for pT = %2.1f\n",legName[s].Data(),hJpsiSysVsPt[0][s]->GetBinContent(6)*100,hJpsiSysVsPt[0][s]->GetBinCenter(6));
     }
-  TPaveText *t1 = GetTitleText(Form("%s: systematic uncertainty of J/psi vs. p_{T} (%s%%)",run_type,cent_Name_pt[0]),0.04);
+  TPaveText *t1 = GetTitleText(Form("%s: systematic uncertainty of J/psi vs. p_{T} (%s%%)",run_type.Data(),cent_Name_pt[0]),0.04);
   t1->Draw();
   for(int i=0; i<2; i++)
     {
       leg1[i]->Draw();
     }
-  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiXsec/JpsiSysVsPt_0080.pdf",run_type));
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiXsec/JpsiSysVsPt_0080.pdf",run_type.Data()));
   if(gSaveAN)
     {
       c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch5_TotSysVsPt_cent0080.pdf"));
@@ -118,13 +118,13 @@ void mergeSystematics(int savePlot = 1, int saveHisto = 1)
 	  if(s==0) hJpsiSysVsCent[i][s]->DrawCopy();
 	  else     hJpsiSysVsCent[i][s]->DrawCopy("sames");
 	}
-      t1 = GetTitleText(Form("%s: systematic uncertainty of J/psi (%s)",run_type,pt_Title_npart[i]),0.04);
+      t1 = GetTitleText(Form("%s: systematic uncertainty of J/psi (%s)",run_type.Data(),pt_Title_npart[i]),0.04);
       t1->Draw();
       for(int j=0; j<2; j++)
 	{
 	  leg1[j]->Draw();
 	}
-      if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiXsec/JpsiSysVsCent_Pt%s.pdf",run_type,pt_Name_npart[i]));
+      if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiXsec/JpsiSysVsCent_Pt%s.pdf",run_type.Data(),pt_Name_npart[i]));
       if(gSaveAN)
 	{
 	  c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch5_TotSysVsCent_Pt%1.0f.pdf",ptBins_low_npart[i]));
@@ -155,10 +155,10 @@ void mergeSystematics(int savePlot = 1, int saveHisto = 1)
       else     hJpsiSysVsPt[i][0]->DrawCopy("sames");
       leg->AddEntry(hJpsiSysVsPt[i][0],Form("%s%%",cent_Name_pt[i]),"L");
     }
-  t1 = GetTitleText(Form("%s: total systematic uncertainty of J/psi vs. p_{T}",run_type),0.04);
+  t1 = GetTitleText(Form("%s: total systematic uncertainty of J/psi vs. p_{T}",run_type.Data()),0.04);
   t1->Draw();
   leg->Draw();
-  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiXsec/JpsiSysVsPt_CompCent.pdf",run_type));
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_JpsiXsec/JpsiSysVsPt_CompCent.pdf",run_type.Data()));
   if(gSaveAN)
     {
       c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch5_TotSysVsPt_CompCent.pdf"));
@@ -207,7 +207,7 @@ void collectSys(int saveHisto = 1)
     }
 
   // signal extraction
-  TFile *fSigExt = TFile::Open(Form("Rootfiles/%s.Sys.JpsiYield.root",run_type),"read");
+  TFile *fSigExt = TFile::Open(Form("Rootfiles/%s.Sys.JpsiYield.root",run_type.Data()),"read");
   for(int i=0; i<nCentBins_pt; i++)
     {
       hJpsiSysVsPt[i][0] = (TH1F*)fSigExt->Get(Form("Sys_signalExt_%s",cent_Title_pt[i]));
@@ -226,7 +226,7 @@ void collectSys(int saveHisto = 1)
     }
 
   // TpcTracking
-  TFile *fTpc = TFile::Open(Form("Rootfiles/%s.Sys.TpcTracking.root",run_type),"read");
+  TFile *fTpc = TFile::Open(Form("Rootfiles/%s.Sys.TpcTracking.root",run_type.Data()),"read");
   for(int i=0; i<nCentBins_pt; i++)
     {
       hJpsiSysVsPt[i][1] = (TH1F*)fTpc->Get(Form("FinalSys_TpcTrackingVsPt_cent%s",cent_Title_pt[i]));
@@ -245,11 +245,11 @@ void collectSys(int saveHisto = 1)
     }
 
   // MuonPid
-  TFile *fDtof = TFile::Open(Form("Rootfiles/%s.DtofEff.root",run_type),"read");
+  TFile *fDtof = TFile::Open(Form("Rootfiles/%s.DtofEff.root",run_type.Data()),"read");
   TH1F *hDtofSysVsPt   = (TH1F*)fDtof->Get("Run14_AuAu200_JpsiEffVsPt_Sys_Dtof0.75Eff");
   TH1F *hDtofSysVsCent = (TH1F*)fDtof->Get("Run14_AuAu200_JpsiEffVsCent_Sys_Dtof0.75Eff");
 
-  TFile *fPid = TFile::Open(Form("Rootfiles/%s.Sys.MuonPid.root",run_type),"read");
+  TFile *fPid = TFile::Open(Form("Rootfiles/%s.Sys.MuonPid.root",run_type.Data()),"read");
   for(int i=0; i<nCentBins_pt; i++)
     {
       hJpsiSysVsPt[i][2] = (TH1F*)fPid->Get(Form("FinalSys_MuonPidVsPt_cent%s",cent_Title_pt[i]));
@@ -272,7 +272,7 @@ void collectSys(int saveHisto = 1)
     }
 
   // MtdTrigEff
-  TFile *fTrigEff = TFile::Open(Form("Rootfiles/%s.Sys.MtdTrigEff.root",run_type),"read");
+  TFile *fTrigEff = TFile::Open(Form("Rootfiles/%s.Sys.MtdTrigEff.root",run_type.Data()),"read");
   TH1F *hTrigEffSysVsPt   = (TH1F*)fTrigEff->Get("Run14_AuAu200_JpsiEffVsPt_Sys_TacDiffEff");
   TH1F *hTrigEffSysVsCent = (TH1F*)fTrigEff->Get("Run14_AuAu200_JpsiEffVsCent_Sys_TacDiffEff");
   for(int i=0; i<nCentBins_pt; i++)
@@ -293,7 +293,7 @@ void collectSys(int saveHisto = 1)
     }
 
   // RespEff
-  TFile *fRespEff = TFile::Open(Form("Rootfiles/%s.Sys.MtdRespEff.root",run_type),"read");
+  TFile *fRespEff = TFile::Open(Form("Rootfiles/%s.Sys.MtdRespEff.root",run_type.Data()),"read");
   TH1F *hRespEffSysVsPt   = (TH1F*)fRespEff->Get("Jpsi_hMtdRespEffSysAll");
   TH1F *hRespEffSysVsCent = (TH1F*)fRespEff->Get("Jpsi_Npart_hMtdRespEffSysAll");
   for(int i=0; i<nCentBins_pt; i++)
@@ -317,7 +317,7 @@ void collectSys(int saveHisto = 1)
 
   if(saveHisto)
     {
-      TFile *fout = TFile::Open(Form("Rootfiles/%s.Sys.JpsiXsec.root",run_type),"recreate");
+      TFile *fout = TFile::Open(Form("Rootfiles/%s.Sys.JpsiXsec.root",run_type.Data()),"recreate");
       for(int s=0; s<nSys; s++)
 	{
 	  for(int i=0; i<nCentBins_pt; i++)

@@ -13,10 +13,10 @@ void ana_MtdRespEff()
   //ana_cosmicRay();
   //ana_embed();
   //embedVsCosmic();
-  //systematics();
+  systematics();
 
 
-  compHV();
+  //compHV();
   //cosmic_QA();
 }
 
@@ -98,7 +98,7 @@ void cosmic_QA(const int savePlot = 0)
 	  TPaveText *t1 = GetTitleText(Form("BL = %d, Mod = %d",bl,mod),0.06);
 	  t1->Draw();
 	}
-      if(savePlot) cEff[bl-1]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/Cosmic_QA_RespEffVsDay_BL%d.pdf",run_type,bl));
+      if(savePlot) cEff[bl-1]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/Cosmic_QA_RespEffVsDay_BL%d.pdf",run_type.Data(),bl));
     }
 
   for(int i=0; i<nDays; i++)
@@ -207,11 +207,11 @@ void compHV(const int savePlot = 1, const int saveHisto = 1)
       funcMtdRespEff[i]->Draw("sames");
     }
   if(savePlot)
-    c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/Cosmic_CompHV.pdf",run_type));
+    c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/Cosmic_CompHV.pdf",run_type.Data()));
 
   if(saveHisto)
     {
-      TFile *fout = TFile::Open(Form("Rootfiles/%s.MtdRespEff.root",run_type),"update");
+      TFile *fout = TFile::Open(Form("Rootfiles/%s.MtdRespEff.root",run_type.Data()),"update");
       hMtdRespEff[0]->Write("Cosmic_RespEff_Btm_6300",TObject::kOverwrite);
       funcMtdRespEff[0]->Write("Cosmic_RespEff_Btm_6300_fit",TObject::kOverwrite);
       hMtdRespEff[1]->Write("Cosmic_RespEff_Btm_6400",TObject::kOverwrite);
@@ -220,7 +220,7 @@ void compHV(const int savePlot = 1, const int saveHisto = 1)
 }
 
 //================================================
-void systematics(const int savePlot = 1, const int saveHisto = 1)
+void systematics(const int savePlot = 0, const int saveHisto = 0)
 {
   // const char* part_name = "Ups1S";
   // const char* part_title = "Y(1S)";
@@ -262,8 +262,8 @@ void systematics(const int savePlot = 1, const int saveHisto = 1)
 
   // open the corresponding files
   TFile *fdata = 0x0;
-  if(saveHisto) fdata = TFile::Open(Form("Rootfiles/%s.Sys.MtdRespEff.root",run_type),"update");
-  else          fdata = TFile::Open(Form("Rootfiles/%s.Sys.MtdRespEff.root",run_type),"read");
+  if(saveHisto) fdata = TFile::Open(Form("Rootfiles/%s.Sys.MtdRespEff.root",run_type.Data()),"update");
+  else          fdata = TFile::Open(Form("Rootfiles/%s.Sys.MtdRespEff.root",run_type.Data()),"read");
 
   TH1F *hSysMtdRespEff[2][4];
   for(int i=0; i<2; i++)
@@ -272,11 +272,11 @@ void systematics(const int savePlot = 1, const int saveHisto = 1)
 	{
 	  if(i==0)
 	    {
-	      hSysMtdRespEff[i][j] = new TH1F(Form("%s_hMtdRespEffSys%d",part_name,j+1),Form("%s: uncertainty of MTD response efficiency for %s;p_{T} (GeV/c)",run_type,part_title),nPtBins,xPtBins);
+	      hSysMtdRespEff[i][j] = new TH1F(Form("%s_hMtdRespEffSys%d",part_name,j+1),Form("%s: uncertainty of MTD response efficiency for %s;p_{T} (GeV/c)",run_type.Data(),part_title),nPtBins,xPtBins);
 	    }
 	  else
 	    {
-	      hSysMtdRespEff[i][j] = new TH1F(Form("%s_Npart_hMtdRespEffSys%d",part_name,j+1),Form("%s: uncertainty of MTD response efficiency for %s;p_{T} (GeV/c)",run_type,part_title),2,0,2);
+	      hSysMtdRespEff[i][j] = new TH1F(Form("%s_Npart_hMtdRespEffSys%d",part_name,j+1),Form("%s: uncertainty of MTD response efficiency for %s;p_{T} (GeV/c)",run_type.Data(),part_title),2,0,2);
 	      hSysMtdRespEff[i][j]->GetXaxis()->SetBinLabel(1, "p_{T} > 0 GeV/c");
 	      hSysMtdRespEff[i][j]->GetXaxis()->SetBinLabel(2, "p_{T} > 5 GeV/c");
 	    }
@@ -347,7 +347,7 @@ void systematics(const int savePlot = 1, const int saveHisto = 1)
 	  t1->Draw();
 	}
     }
-  if(savePlot) cFit->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/ToyMC_%s_FitSpread_Sys1.pdf",run_type,part_name));
+  if(savePlot) cFit->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/ToyMC_%s_FitSpread_Sys1.pdf",run_type.Data(),part_name));
 
   // Uncertainty II: template
   for(int i=0; i<nPtBins+2; i++)
@@ -376,9 +376,9 @@ void systematics(const int savePlot = 1, const int saveHisto = 1)
     }
 
   // Uncertainty III: matching efficiency
-  TFile *fMth = TFile::Open(Form("Rootfiles/%s.Sys.MtdMthEff.root",run_type),"read");
-  hSysMtdRespEff[0][2] = (TH1F*)fMth->Get(Form("%s_JpsiEffVsPt_Sys_MtdMthEff",run_type));
-  hSysMtdRespEff[1][2] = (TH1F*)fMth->Get(Form("%s_JpsiEffVsCent_Sys_MtdMthEff",run_type));
+  TFile *fMth = TFile::Open(Form("Rootfiles/%s.Sys.MtdMthEff.root",run_type.Data()),"read");
+  hSysMtdRespEff[0][2] = (TH1F*)fMth->Get(Form("%s_JpsiEffVsPt_Sys_MtdMthEff",run_type.Data()));
+  hSysMtdRespEff[1][2] = (TH1F*)fMth->Get(Form("%s_JpsiEffVsCent_Sys_MtdMthEff",run_type.Data()));
 
   // Combine the uncertainties
   const char *legName[4] = {"Resp. eff: fit error","Resp. eff: template","Mth. eff: cosmic vs. embed (2014)","All"};
@@ -403,7 +403,7 @@ void systematics(const int savePlot = 1, const int saveHisto = 1)
 	  hSysMtdRespEff[i][3]->SetXTitle("");
 	  hSysMtdRespEff[i][3]->GetXaxis()->SetLabelSize(0.06);
 	}
-      c = draw1D(hSysMtdRespEff[i][3],Form("%s: %s uncertainty due to MTD matching efficiency",run_type,part_title));
+      c = draw1D(hSysMtdRespEff[i][3],Form("%s: %s uncertainty due to MTD matching efficiency",run_type.Data(),part_title));
       TLegend *leg = new TLegend(0.4,0.7,0.6,0.85);
       leg->SetBorderSize(0);
       leg->SetFillColor(0);
@@ -412,8 +412,8 @@ void systematics(const int savePlot = 1, const int saveHisto = 1)
       for(int j=0; j<3; j++)
 	{
 	  hSysMtdRespEff[i][j]->SetMarkerStyle(24);
-	  hSysMtdRespEff[i][j]->SetMarkerColor(color[j+1]);
-	  hSysMtdRespEff[i][j]->SetLineColor(color[j+1]);
+	  hSysMtdRespEff[i][j]->SetMarkerColor(gColor[j+1]);
+	  hSysMtdRespEff[i][j]->SetLineColor(gColor[j+1]);
 	  TGraphErrors *gr = new TGraphErrors(hSysMtdRespEff[i][j]);
 	  if(i==0) offset_x(gr,0.15+j*0.15);
 	  else     offset_x(gr,0.05+j*0.05);
@@ -423,8 +423,8 @@ void systematics(const int savePlot = 1, const int saveHisto = 1)
       leg->Draw();
       if(savePlot)
 	{
-	  if(i==0) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/%s_MtdRespEffSysVsPt.pdf",run_type,part_name));
-	  if(i==1) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/%s_MtdRespEffSysVsCent.pdf",run_type,part_name));
+	  if(i==0) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/%s_MtdRespEffSysVsPt.pdf",run_type.Data(),part_name));
+	  if(i==1) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/%s_MtdRespEffSysVsCent.pdf",run_type.Data(),part_name));
 	}
       if(gSaveAN)
 	{
@@ -451,7 +451,7 @@ void systematics(const int savePlot = 1, const int saveHisto = 1)
 void embedVsCosmic(const int savePlot = 1)
 {
   // embed vs. cosmic ray
-  TFile *fin = TFile::Open(Form("Rootfiles/%s.MtdRespEff.root",run_type),"read");
+  TFile *fin = TFile::Open(Form("Rootfiles/%s.MtdRespEff.root",run_type.Data()),"read");
 
   TF1  *funcEmbed[30][5];
   TF1  *funcData[30][5];
@@ -518,7 +518,7 @@ void embedVsCosmic(const int savePlot = 1)
     }
   leg->Draw();
 
-  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/Cosmic_RespEff_toEmbed.pdf",run_type));
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/Cosmic_RespEff_toEmbed.pdf",run_type.Data()));
   if(gSaveAN)
     {
       c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_EffResp_EmbOverCosmic.pdf"));
@@ -536,7 +536,7 @@ void embedVsCosmic(const int savePlot = 1)
   TString legName[2] = {"Embedding","Cosmic"};
   if(year==2013) c = drawHistos(list,"CompRespEff",Form("Run%d: MTD response efficiency;module;Resp. Eff",year-2000),kFALSE,-100,100,kTRUE,0,1.1,kFALSE,kTRUE,legName,kTRUE,"",0.45,0.55,0.2,0.3);
   else           c = drawHistos(list,"CompRespEff",Form("Run%d: MTD response efficiency;module;Resp. Eff",year-2000),kFALSE,-100,100,kTRUE,0.4,1.1,kFALSE,kTRUE,legName,kTRUE,"",0.15,0.25,0.2,0.3);
-  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/Cosmic_RespEffHighPt_VsEmbed.pdf",run_type));
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/Cosmic_RespEffHighPt_VsEmbed.pdf",run_type.Data()));
   if(gSaveAN)
     {
       c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_EffResp_EmbVsCosmic.pdf"));
@@ -547,7 +547,7 @@ void embedVsCosmic(const int savePlot = 1)
 void ana_embed(const int savePlot = 0, const int saveHisto = 0)
 {
   // fit response efficiency in embedding
-  TFile *femb = TFile::Open(Form("output/%s.Embed.Jpsi.root",run_type),"read");
+  TFile *femb = TFile::Open(Form("output/%s.Embed.Jpsi.root",run_type.Data()),"read");
   TH2F *hProjTrack = (TH2F*)femb->Get("mhProjTrack");
   hProjTrack->Sumw2();
   TH2F *hMthTrack = (TH2F*)femb->Get("mhMatchTrack");
@@ -603,7 +603,7 @@ void ana_embed(const int savePlot = 0, const int saveHisto = 0)
     {
       for(int i=0; i<6; i++)
 	{
-	  cEff[i]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/Embed_RespEff_BL%d-%d.pdf",run_type, i*5+1, i*5+5));
+	  cEff[i]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/Embed_RespEff_BL%d-%d.pdf",run_type.Data(), i*5+1, i*5+5));
 	}
     }
   if(gSaveAN)
@@ -618,11 +618,11 @@ void ana_embed(const int savePlot = 0, const int saveHisto = 0)
   hRespEffScaleHighPt->GetYaxis()->SetRangeUser(0,1.2);
   c = draw1D(hRespEffScaleHighPt);
   if(savePlot)
-   c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/Embed_RespEffVsMod_HighPt.pdf",run_type));
+   c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/Embed_RespEffVsMod_HighPt.pdf",run_type.Data()));
 
   if(saveHisto)
     {
-      TFile *fout = TFile::Open(Form("Rootfiles/%s.MtdRespEff.root",run_type),"update");
+      TFile *fout = TFile::Open(Form("Rootfiles/%s.MtdRespEff.root",run_type.Data()),"update");
       for(int i=0; i<30; i++)
 	{
 	  for(int j=0; j<5; j++)
@@ -645,19 +645,19 @@ void ana_cosmicRay(const int savePlot = 0, const int saveHisto = 0)
     {
       TH2F *hProjTrkPtVsBL = (TH2F*)fin->Get("mhProjTrkPtVsBL");
       TCanvas *c = draw2D(hProjTrkPtVsBL,Form("Run%d_cosmic: p_{T} of tracks projected to center of MTD module",year-2000));
-      if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/Cosmic_ProjTrkPtVsgMod.pdf",run_type));
+      if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/Cosmic_ProjTrkPtVsgMod.pdf",run_type.Data()));
       TH2F *hMthTrkPtVsBL  = (TH2F*)fin->Get("mhMthTrkPtVsBL");
       c = draw2D(hMthTrkPtVsBL,Form("Run%d_cosmic: p_{T} of tracks matched to hits in each MTD module",year-2000));
-      if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/Cosmic_MatchTrkPtVsgMod.pdf",run_type));
+      if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/Cosmic_MatchTrkPtVsgMod.pdf",run_type.Data()));
     }
 
   //==============================================
   // get the template using the bottome backlegs
   //==============================================
-  //const int nbins = 16; // Pt bins for efficiency
-  //const double xbins[]={0.0,1.0,1.2,1.4,1.6,1.8,2.0,2.5,3.0,3.5,4.0,5.0,6.0,8.0,10.0,15.0,20.};
-  const int nbins = 19; // Pt bins for efficiency
-  const double xbins[]={0.0,1.0,1.1,1.2,1.3,1.4,1.5,1.6,1.8,2.0,2.5,3.0,3.5,4.0,5.0,6.0,8.0,10.0,15.0,20.};
+  const int nbins = 16; // Pt bins for efficiency
+  const double xbins[]={0.0,1.0,1.2,1.4,1.6,1.8,2.0,2.5,3.0,3.5,4.0,5.0,6.0,8.0,10.0,15.0,20.};
+  // const int nbins = 19; // Pt bins for efficiency
+  // const double xbins[]={0.0,1.0,1.1,1.2,1.3,1.4,1.5,1.6,1.8,2.0,2.5,3.0,3.5,4.0,5.0,6.0,8.0,10.0,15.0,20.};
   TH1F *hRespEffTemp;
   TF1 *funcRespEffTemp;
   TH1F *h1tmp = 0x0;
@@ -696,7 +696,7 @@ void ana_cosmicRay(const int savePlot = 0, const int saveHisto = 0)
   leg->AddEntry(hRespEffTemp,"Cosmic ray data","P");
   leg->AddEntry(funcRespEffTemp,"Fit to cosmic","L");
   leg->Draw();
-  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/Cosmic_RespEffTemplateFit.pdf",run_type));
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/Cosmic_RespEffTemplateFit.pdf",run_type.Data()));
   if(gSaveAN)
     {
       c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_EffResp_TemplateFit.pdf"));
@@ -934,8 +934,8 @@ void ana_cosmicRay(const int savePlot = 0, const int saveHisto = 0)
 	}
       if(savePlot)
 	{
-	  cBL[i]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/Cosmic_RespEff_BL%d.pdf",run_type,bl));
-	  cBL[i]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/Cosmic_RespEff_BL%d.png",run_type,bl));
+	  cBL[i]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/Cosmic_RespEff_BL%d.pdf",run_type.Data(),bl));
+	  cBL[i]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/Cosmic_RespEff_BL%d.png",run_type.Data(),bl));
 	}
       if(gSaveAN && (bl==1||bl==17))
 	{
@@ -950,7 +950,7 @@ void ana_cosmicRay(const int savePlot = 0, const int saveHisto = 0)
   TF1 *funcRespEffVsMod = new TF1("Cosmic_FitRespEffVsMod","[0]",1,150);
   hRespEffScaleHighPt->Fit(funcRespEffVsMod,"R0");
   if(savePlot)
-   c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/Cosmic_RespEffVsMod_HighPt.pdf",run_type,bl));
+   c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_MtdRespEff/Cosmic_RespEffVsMod_HighPt.pdf",run_type.Data(),bl));
 
   if(year==2014)
     {
@@ -973,7 +973,7 @@ void ana_cosmicRay(const int savePlot = 0, const int saveHisto = 0)
 
   if(saveHisto)
     {
-      TFile *fout = TFile::Open(Form("Rootfiles/%s.MtdRespEff.root",run_type), "update");
+      TFile *fout = TFile::Open(Form("Rootfiles/%s.MtdRespEff.root",run_type.Data()), "update");
       hRespEffTemp->Write("",TObject::kOverwrite);
       funcRespEffTemp->Write("",TObject::kOverwrite);
       for(int i=0; i<nBL; i++)

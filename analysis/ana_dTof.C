@@ -12,14 +12,64 @@ void ana_Dtof()
   gStyle->SetStatH(0.2);
   
   //scanDtofCut();
-  TagAndProbe();
+  //TagAndProbe();
+  DtofLumi();
   //JpsiMuon();
+}
+
+//================================================
+void DtofLumi(const int savePlot = 0)
+{
+  f = TFile::Open(Form("Output/%s.TaP.root",run_type.Data()),"read");
+  THnSparseF *hnDtof = (THnSparseF*)f->Get("mhTapDtofInfo_di_mu");
+  const int nPtCuts = 3;
+  const double ptCuts[nPtCuts+1] = {1.3, 2, 3, 5};
+  TH1F *hDtof[nCentBins_pt][nPtCuts][gNTrgSetup];
+  for(int i=0; i<nCentBins_pt; i++)
+    {
+      hnDtof->GetAxis(2)->SetRange(centBins_low_pt[i], centBins_high_pt[i]);
+      for(int p=0; p<nPtCuts; p++)
+	{
+	  hnDtof->GetAxis(0)->SetRangeUser(ptCuts[p], ptCuts[p+1]);
+	  for(int k=0; k<gNTrgSetup; k++)
+	    {
+	      if(k>0) hnDtof->GetAxis(3)->SetRange(k,k);
+	      hDtof[i][p][k] = (TH1F*)hnDtof->Projection(1);
+	      hDtof[i][p][k]->SetName(Form("hDtof_Pt%d_cent%s%s",p,cent_Title_pt[i],gTrgSetupName[k]));
+	      hDtof[i][p][k]->Sumw2();
+	      hDtof[i][p][k]->Rebin(2);
+	      hDtof[i][p][k]->Scale(1./hDtof[i][p][k]->GetEntries());
+	      hDtof[i][p][k]->SetMarkerStyle(20+k);
+	      hDtof[i][p][k]->SetMarkerColor(gColor[k]);
+	      hDtof[i][p][k]->SetLineColor(gColor[k]);
+	      hnDtof->GetAxis(3)->SetRange(0,-1);
+	    }
+	  hnDtof->GetAxis(0)->SetRange(0,-1);
+	}
+      hnDtof->GetAxis(2)->SetRange(0,-1);
+    }
+
+  for(int i=0; i<nCentBins_pt; i++)
+    {
+      TCanvas *c = new TCanvas(Form("cDtof_cent%s",cent_Title_pt[i]), Form("cDtof_cent%s",cent_Title_pt[i]), 1100, 700);
+      c->Divide(2,2);
+      for(int p=0; p<nPtCuts; p++)
+	{
+	  c->cd(p+1);
+	  gPad->SetLogy();
+	  for(int k=1; k<gNTrgSetup; k++)
+	    {
+	      if(k==1) hDtof[i][p][k]->Draw();
+	      else     hDtof[i][p][k]->Draw("sames");
+	    }
+	}
+    }
 }
 
 
 
 //================================================
-void TagAndProbe(const int savePlot = 1, const int saveHisto = 1)
+void TagAndProbe(const int savePlot = 0, const int saveHisto = 0)
 {
   const int year = 2014;
   const char* run_type = "Run14_AuAu200";
@@ -42,11 +92,11 @@ void TagAndProbe(const int savePlot = 1, const int saveHisto = 1)
 
   if(year==2014)
     {
-      f = TFile::Open(Form("Output/%s.TaP.root",run_type),"read");
+      f = TFile::Open(Form("Output/%s.TaP.root",run_type.Data()),"read");
     }
   else
     {
-      f = TFile::Open(Form("Output/%s.jpsi.root",run_type),"read");
+      f = TFile::Open(Form("Output/%s.jpsi.root",run_type.Data()),"read");
     }
   THnSparseF *hnDtof = (THnSparseF*)f->Get("mhTaP_dtof_di_mu");
   // apply nSigmaPi, dz and dy cuts on probed muon
@@ -141,6 +191,18 @@ void TagAndProbe(const int savePlot = 1, const int saveHisto = 1)
 		  funcInvMass[i][j]->SetParameter(5, 2e4);
 		  funcInvMass[i][j]->SetParameter(6, 5e3);
 		}
+	      if(j==1)
+		{
+		  funcInvMass[i][j]->SetParameter(0, 1000);
+		  funcInvMass[i][j]->SetParameter(2, 0.045);
+		  funcInvMass[i][j]->SetParameter(3, -2e6);
+		  funcInvMass[i][j]->SetParameter(4, 2e6);
+		  funcInvMass[i][j]->SetParameter(5, -6e5);
+		  funcInvMass[i][j]->SetParameter(6, 6e4);
+		}
+	      //if(j==1) funcInvMass[i][j]->FixParameter(2, 0.0424);
+	      if(j==2) funcInvMass[i][j]->FixParameter(2, 0.0298);
+	      //funcInvMass[i][j]->SetParLimits(2, 0.03, 0.07);
 	    }
 	  if(year==2015) 
 	    {
@@ -206,6 +268,7 @@ void TagAndProbe(const int savePlot = 1, const int saveHisto = 1)
   TCanvas *c = drawHistos(list,"JpsiCounts",Form("%s: # of Jpsi vs. muon p_{T};p_{T}^{#mu} (GeV/c);counts",run_type),kFALSE,0,30,kFALSE,0.5,1.1,kTRUE,kTRUE,hTitle,kTRUE,"",0.5,0.7,0.6,0.85,true);
   if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Dtof/TagAndProbe_JpsiCounts.pdf",run_type));
   if(gSaveAN)  c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_DtofEff_JpsiCounts.pdf"));
+
 
   //==============================================
   // extract efficiency
@@ -415,7 +478,6 @@ void TagAndProbe(const int savePlot = 1, const int saveHisto = 1)
     {
       hplot->GetYaxis()->SetRangeUser(0.9, 1.02);
       c = draw1D(hplot,Form("%s: efficiency for |#Deltatof| < %2.0f ns cut",run_type,dtofCut));
-      //c = draw1D(hplot,Form("%s: efficiency for muon PID cuts",run_type));
     }
   gPad->SetGrid(0,1);
   gDtofEff->SetMarkerStyle(21);
@@ -524,7 +586,7 @@ void JpsiMuon(const Int_t savePlot = 1, const int saveHisto = 1)
   leg->SetBorderSize(0);
   leg->SetFillColor(0);
   leg->SetTextSize(0.06);
-  leg->SetHeader(run_type);
+  leg->SetHeader(run_type.Data());
   for(int bin=1; bin<=nbinsJpsi; bin++)
     {
       int start_bin = hInvMassVsPtUL->GetXaxis()->FindBin(xbinsJpsi[bin-1]+1e-4);
@@ -579,7 +641,7 @@ void JpsiMuon(const Int_t savePlot = 1, const int saveHisto = 1)
   c->cd(6);
   leg->Draw();
   if(savePlot)
-    c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Dtof/JpsiMuon_Dtof_InvMassLSvsUL.pdf",run_type));
+    c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Dtof/JpsiMuon_Dtof_InvMassLSvsUL.pdf",run_type.Data()));
 
   //==============================================
   // single muon UL vs LS
@@ -619,7 +681,7 @@ void JpsiMuon(const Int_t savePlot = 1, const int saveHisto = 1)
   hScaleFactor->GetYaxis()->SetRangeUser(0.95,1.15);
   c = draw1D(hScaleFactor);
   if(savePlot)
-    c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Dtof/JpsiMuon_Dtof_ScaleFactor.pdf",run_type));
+    c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Dtof/JpsiMuon_Dtof_ScaleFactor.pdf",run_type.Data()));
 
 
   TH2F *hDataUL = (TH2F*)fdata->Get("mhJpsiMuon_Dtof_UL_di_mu");
@@ -651,11 +713,11 @@ void JpsiMuon(const Int_t savePlot = 1, const int saveHisto = 1)
       int start_bin = hDataUL->GetXaxis()->FindBin(xbins[bin-1]+1e-4);
       int end_bin   = hDataUL->GetXaxis()->FindBin(xbins[bin]-1e-4);
 
-      hUL[bin-1] = (TH1F*)hDataUL->ProjectionY(Form("%s_DataMtdVpdTacDiff_UL_bin%d",run_type,bin),start_bin,end_bin);
+      hUL[bin-1] = (TH1F*)hDataUL->ProjectionY(Form("%s_DataMtdVpdTacDiff_UL_bin%d",run_type.Data(),bin),start_bin,end_bin);
       hUL[bin-1]->SetMarkerStyle(20);
       hUL[bin-1]->SetMarkerStyle(20);
 
-      hLS[bin-1] = (TH1F*)hDataLS->ProjectionY(Form("%s_DataMtdVpdTacDiff_LS_bin%d",run_type,bin),start_bin,end_bin);
+      hLS[bin-1] = (TH1F*)hDataLS->ProjectionY(Form("%s_DataMtdVpdTacDiff_LS_bin%d",run_type.Data(),bin),start_bin,end_bin);
       hLS[bin-1]->SetMarkerStyle(24);
       hLS[bin-1]->SetMarkerColor(2);
       hLS[bin-1]->SetLineColor(2);
@@ -687,19 +749,19 @@ void JpsiMuon(const Int_t savePlot = 1, const int saveHisto = 1)
   leg->SetBorderSize(0);
   leg->SetFillColor(0);
   leg->SetTextSize(0.05);
-  leg->SetHeader(run_type);
+  leg->SetHeader(run_type.Data());
   leg->AddEntry(hUL[0],"Unlike-sign","PL");
   leg->AddEntry(hLS[0],"Like-sign","PL");
   leg->Draw();
-  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Dtof/JpsiMuon_Dtof_MuonULvsLS.pdf",run_type));
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Dtof/JpsiMuon_Dtof_MuonULvsLS.pdf",run_type.Data()));
 
   //==============================================
   // Fit data distributions
   //==============================================
   TF1 *funcFitData[nbins];
   TFitResultPtr ptr[nbins];
-  TH1F *hFitDataMean = new TH1F(Form("DataJpsiMuon_Dtof_FitMean"),Form("%s: mean of #Deltatof;p_{T} (GeV/c)",run_type),nbins,xbins);
-  TH1F *hFitDataSigma = new TH1F(Form("DataJpsiMuon_Dtof_FitSigma"),Form("%s: sigma of #Deltatof;p_{T} (GeV/c)",run_type),nbins,xbins);
+  TH1F *hFitDataMean = new TH1F(Form("DataJpsiMuon_Dtof_FitMean"),Form("%s: mean of #Deltatof;p_{T} (GeV/c)",run_type.Data()),nbins,xbins);
+  TH1F *hFitDataSigma = new TH1F(Form("DataJpsiMuon_Dtof_FitSigma"),Form("%s: sigma of #Deltatof;p_{T} (GeV/c)",run_type.Data()),nbins,xbins);
   c = new TCanvas(Form("Fit_Dtof"),Form("Fit_Dtof"),1100,700);
   c->Divide(3,2);
   for(int bin=1; bin<=nbins; bin++)
@@ -728,17 +790,17 @@ void JpsiMuon(const Int_t savePlot = 1, const int saveHisto = 1)
       TPaveText *t1 = GetTitleText(Form("J/#psi #mu: %1.1f < p_{T} < %1.1f",xbins[bin-1],xbins[bin]),0.06);
       t1->Draw();
     }
-  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Dtof/JpsiMuon_Dtof_Fit.pdf",run_type));
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Dtof/JpsiMuon_Dtof_Fit.pdf",run_type.Data()));
 
   hFitDataMean->SetMarkerStyle(21);
   hFitDataMean->GetYaxis()->SetRangeUser(-1,1);
   c = draw1D(hFitDataMean,"Mean of #Deltatof distribution for J/#psi muons;p_{T} (GeV/c);Mean");
-  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Dtof/JpsiMuon_Dtof_FitMean.pdf",run_type));
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Dtof/JpsiMuon_Dtof_FitMean.pdf",run_type.Data()));
 
   hFitDataSigma->SetMarkerStyle(21);
   hFitDataSigma->GetYaxis()->SetRangeUser(0,1);
   c = draw1D(hFitDataSigma,"Width of #Deltatof distribution for J/#psi muons;p_{T} (GeV/c);#sigma");
-  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Dtof/JpsiMuon_Dtof_FitSigma.pdf",run_type));
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Dtof/JpsiMuon_Dtof_FitSigma.pdf",run_type.Data()));
 
 
   //==============================================
@@ -813,7 +875,7 @@ void JpsiMuon(const Int_t savePlot = 1, const int saveHisto = 1)
       t1->Draw();
       printf("[i] Check the mean for bin %d: %4.2f =? %4.2f\n",bin, hMatch->GetBinContent(bin), funcRndm->GetParameter(1));
       hMatch->SetBinError(bin, hRndmDis->GetRMS());
-      if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Dtof/JpsiMuon_DtofEff%2.2f_RndmBin%d.pdf",run_type,dtof_cut_max,bin));
+      if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Dtof/JpsiMuon_DtofEff%2.2f_RndmBin%d.pdf",run_type.Data(),dtof_cut_max,bin));
     }
   
   TGraphAsymmErrors *gCountDataEff = new TGraphAsymmErrors(hMatch2, hBase,"cl=0.683 b(1,1) mode");
@@ -900,12 +962,12 @@ void JpsiMuon(const Int_t savePlot = 1, const int saveHisto = 1)
   leg->SetBorderSize(0);
   leg->SetFillColor(0);
   leg->SetTextSize(0.04);
-  leg->SetHeader(run_type);
+  leg->SetHeader(run_type.Data());
   leg->AddEntry(gFitDataEff,Form("Data: fitting"),"p");
   leg->AddEntry(gplot,Form("Data: bin counting"),"p");
   leg->AddEntry(funcEff,"Fit to bin counting","L");
   leg->Draw();
-  if(savePlot) cEff->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Dtof/JpsiMuon_DtofEff%2.2f_FitVsCount.pdf",run_type,dtof_cut_max));
+  if(savePlot) cEff->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Dtof/JpsiMuon_DtofEff%2.2f_FitVsCount.pdf",run_type.Data(),dtof_cut_max));
 
   //==============================================
   // systematic uncertainty
@@ -955,7 +1017,7 @@ void JpsiMuon(const Int_t savePlot = 1, const int saveHisto = 1)
   leg->SetBorderSize(0);
   leg->SetFillColor(0);
   leg->SetTextSize(0.04);
-  leg->SetHeader(Form("%s",run_type));
+  leg->SetHeader(Form("%s",run_type.Data()));
 
   for(int l=0; l<nbins_rndm; l++)
     {
@@ -1022,12 +1084,12 @@ void JpsiMuon(const Int_t savePlot = 1, const int saveHisto = 1)
     }
   cFit->cd(12);
   TPaveText *t1 = GetPaveText(0.3,0.4,0.3,0.6,0.08);
-  t1->AddText(run_type);
+  t1->AddText(run_type.Data());
   t1->Draw();
-  if(savePlot) cFit->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Dtof/JpsiMuon_DtofEff%2.2f_RndmFit.pdf",run_type,dtof_cut_max));
+  if(savePlot) cFit->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Dtof/JpsiMuon_DtofEff%2.2f_RndmFit.pdf",run_type.Data(),dtof_cut_max));
   c->cd();
   leg->Draw();
-  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Dtof/JpsiMuon_DtofEff%2.2f_RndmCurve.pdf",run_type,dtof_cut_max));
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Dtof/JpsiMuon_DtofEff%2.2f_RndmCurve.pdf",run_type.Data(),dtof_cut_max));
   for(int t=0; t<3; t++)
     {
       gLimits[t]->SetMarkerStyle(20);
@@ -1047,7 +1109,7 @@ void JpsiMuon(const Int_t savePlot = 1, const int saveHisto = 1)
   leg->AddEntry(gLimits[1],"Lower limit","PL");
   leg->AddEntry(gLimits[2],"Upper limit","PL");
   leg->Draw();
-  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Dtof/JpsiMuon_DtofEff%2.2f_RndmLimits.pdf",run_type,dtof_cut_max));
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Dtof/JpsiMuon_DtofEff%2.2f_RndmLimits.pdf",run_type.Data(),dtof_cut_max));
 
   int npoints = gCountDataEff->GetN();
   TGraphErrors *gSys[2];
@@ -1096,7 +1158,7 @@ void JpsiMuon(const Int_t savePlot = 1, const int saveHisto = 1)
   leg->AddEntry(gSys[0], "Source 1", "PE");
   leg->AddEntry(gSys[1], "Source 2", "PE");  
   leg->Draw();
-  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Dtof/JpsiMuon_DtofEff%2.2f_Sys.pdf",run_type,dtof_cut_max));
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Dtof/JpsiMuon_DtofEff%2.2f_Sys.pdf",run_type.Data(),dtof_cut_max));
 
   // combine the systematic uncertainty
   const char *sys_name[2] = {"down", "up"};
@@ -1147,7 +1209,7 @@ void JpsiMuon(const Int_t savePlot = 1, const int saveHisto = 1)
   leg->SetTextSize(0.04);
   leg->AddEntry(funcEffSys[0], "Systematic uncertainty", "L");
   leg->Draw();
-  if(savePlot) cEff->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Dtof/JpsiMuon_DtofEff%2.2f_FitVsCountWithSys.pdf",run_type,dtof_cut_max));
+  if(savePlot) cEff->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Dtof/JpsiMuon_DtofEff%2.2f_FitVsCountWithSys.pdf",run_type.Data(),dtof_cut_max));
   
 
   //==============================================
@@ -1155,7 +1217,7 @@ void JpsiMuon(const Int_t savePlot = 1, const int saveHisto = 1)
   //==============================================
   if(saveHisto)
     {
-      TFile *fout = TFile::Open(Form("Rootfiles/%s.DtofEff.root",run_type),"update");
+      TFile *fout = TFile::Open(Form("Rootfiles/%s.DtofEff.root",run_type.Data()),"update");
       // for(int bin=1; bin<=nbins; bin++)
       // 	{
       // 	  hMuonFineBin[bin-1]->Write("",TObject::kOverwrite);
@@ -1316,7 +1378,7 @@ void scanDtofCut(const int savePlot = 0)
       func->Draw("sames");
       hBestDtofCut[0]->SetBinContent(i, func->GetMaximumX(0,1));
       hBestDtofCut[0]->SetBinError(i, 1e-4);
-      if(savePlot)  cBinCount[i]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Dtof/JpsiSig_DtofScan_BinCount_PtBin%d.pdf",run_type,i));
+      if(savePlot)  cBinCount[i]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Dtof/JpsiSig_DtofScan_BinCount_PtBin%d.pdf",run_type.Data(),i));
     }
 
   // fitting method
@@ -1377,7 +1439,7 @@ void scanDtofCut(const int savePlot = 0)
       func->Draw("sames");
       hBestDtofCut[1]->SetBinContent(i, func->GetMaximumX(0,1));
       hBestDtofCut[1]->SetBinError(i, 1e-4);
-      if(savePlot)  cFit[i]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Dtof/JpsiSig_DtofScan_Fit_PtBin%d.pdf",run_type,i));
+      if(savePlot)  cFit[i]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Dtof/JpsiSig_DtofScan_Fit_PtBin%d.pdf",run_type.Data(),i));
     }
 
   // compare different scan parameters
@@ -1403,10 +1465,10 @@ void scanDtofCut(const int savePlot = 0)
 	  if(i<nPtBins/2) leg1->AddEntry(htmp,Form("%1.0f < p_{T} < %1.0f GeV/c",ptBins_low[i],ptBins_high[i]),"P");
 	  else            leg2->AddEntry(htmp,Form("%1.0f < p_{T} < %1.0f GeV/c",ptBins_low[i],ptBins_high[i]),"P");
 	}
-      c = drawHistos(list,Form("JpsiSigVsPt_%s",method[k]),Form("%s: significance of J/#psi signal (%s);#Deltatof (ns);Significance",run_type,method_title[k]),false,0,100,true,0,39,kFALSE,false,0x0,false,"",0.5,0.65,0.65,0.8,kTRUE,0.04,0.04,false,1,false);
+      c = drawHistos(list,Form("JpsiSigVsPt_%s",method[k]),Form("%s: significance of J/#psi signal (%s);#Deltatof (ns);Significance",run_type.Data(),method_title[k]),false,0,100,true,0,39,kFALSE,false,0x0,false,"",0.5,0.65,0.65,0.8,kTRUE,0.04,0.04,false,1,false);
       leg1->Draw();
       leg2->Draw();
-      if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Dtof/JpsiSigVsDtof_PtBins_%s.pdf",run_type,method[k]));
+      if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Dtof/JpsiSigVsDtof_PtBins_%s.pdf",run_type.Data(),method[k]));
 
       list->Clear();
       for(int i=0; i<nPtBins; i++)
@@ -1415,9 +1477,9 @@ void scanDtofCut(const int savePlot = 0)
 	  hJpsiErrVsDtof[i][k]->SetMarkerSize(1.3);
 	  list->Add(hJpsiErrVsDtof[i][k]);
 	}
-      c = drawHistos(list,Form("JpsiErrVsPt_%s",method[k]),Form("%s: statistical error of J/#psi signal (%s);#Deltatof (ns);Stat. Err. (%%)",run_type,method_title[k]),false,0,100,true,0,39,kFALSE,false,0x0,false,"",0.5,0.65,0.65,0.8,kTRUE,0.04,0.04,false,1,false);
+      c = drawHistos(list,Form("JpsiErrVsPt_%s",method[k]),Form("%s: statistical error of J/#psi signal (%s);#Deltatof (ns);Stat. Err. (%%)",run_type.Data(),method_title[k]),false,0,100,true,0,39,kFALSE,false,0x0,false,"",0.5,0.65,0.65,0.8,kTRUE,0.04,0.04,false,1,false);
       leg1->Draw();
       leg2->Draw();
-      if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Dtof/JpsiErrVsDtof_PtBins_%s.pdf",run_type,method[k]));
+      if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_Dtof/JpsiErrVsDtof_PtBins_%s.pdf",run_type.Data(),method[k]));
     } 
 }

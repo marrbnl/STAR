@@ -1,8 +1,5 @@
 TFile *f;
-const char *run_config = "QA.";
-const Bool_t iPico = 1;
-const int year = 2014;
-TString run_cfg_name;
+const int year = YEAR;
 
 
 //================================================
@@ -13,22 +10,156 @@ void ana_PartialTracking()
 
   if(year==2013)
     {
-      run_type = "Run13_pp500";
-      if(iPico) fileName = Form("Pico.Run13.pp500.jpsi.%sroot",run_config);
-      else      fileName = Form("Run13.pp500.jpsi.%sroot",run_config);
     }
   else if(year==2014)
     {
-      run_type = "Run14_AuAu200";
-      if(iPico) fileName = Form("Pico.Run14.AuAu200.jpsi.%sroot",run_config);
-      else      fileName = Form("Run14.AuAu200.jpsi.%sroot",run_config);
+      fileName = Form("Run14_AuAu200.Study.PartialTrk.root");
     }
 
   f = TFile::Open(Form("./output/%s",fileName.Data()),"read");
 
-  run_cfg_name = run_config;
+  pairEff();
+  //efficiency();
+}
 
-  efficiency();
+//================================================
+void pairEff(const Int_t savePlot = 0)
+{
+  TFile *fstudy = TFile::Open("output/Run14_AuAu200.Study.PartialTrk.root", "read");
+  TH3F *hStat = (TH3F*)fstudy->Get("mhEvtCountParTrk_di_mu");
+  TH1F *hReject = (TH1F*)hStat->ProjectionZ("hReject", 1, 4, 1, 16);
+  c = draw1D(hReject);
+  TH1F *hCentAll[gNTrgSetup];
+  TH1F *hCentAcc[gNTrgSetup];
+  for(int k=0; k<gNTrgSetup; k++)
+    {
+      if(k==0)
+	{
+	  hCentAll[k] = (TH1F*)hStat->ProjectionY(Form("hCentAll%s",gTrgSetupTitle[k]),1,4,1,3);
+	  hCentAcc[k] = (TH1F*)hStat->ProjectionY(Form("hCentAcc%s",gTrgSetupTitle[k]),1,4,3,3);
+	}
+      else
+	{
+	  hCentAll[k] = (TH1F*)hStat->ProjectionY(Form("hCentAll%s",gTrgSetupTitle[k]),k,k,1,3);
+	  hCentAcc[k] = (TH1F*)hStat->ProjectionY(Form("hCentAcc%s",gTrgSetupTitle[k]),k,k,3,3);
+	}
+      hCentAcc[k]->Sumw2();
+      hCentAcc[k]->Divide(hCentAll[k]);
+    }
+  TCanvas *cCent = new TCanvas("cCent", "cCent", 800, 600);
+  TLegend *leg = new TLegend(0.15,0.65,0.35,0.85);
+  leg->SetBorderSize(0);
+  leg->SetFillColor(0);
+  leg->SetTextSize(0.04);
+  for(int k=0; k<gNTrgSetup; k++)
+    {
+      hCentAcc[k]->SetTitle(";centrality;");
+      hCentAcc[k]->SetMarkerStyle(20+k);
+      hCentAcc[k]->SetMarkerColor(gColor[k]);
+      hCentAcc[k]->SetLineColor(gColor[k]);
+      if(k==0) hCentAcc[k]->Draw("PE");
+      else     hCentAcc[k]->Draw("samesPE");
+      leg->AddEntry(hCentAcc[k], gLegNameTrg[k].Data(), "PL");
+    }
+  TPaveText *t1 = GetTitleText("Retention fraction");
+  t1->Draw();
+  leg->Draw();
+
+  // pair efficiency  
+  const int nHistos = 2;
+  const char* histoName[nHistos] = {"TrigMth", "TrigMuon"};
+  TH1F *hPairPtAll[nHistos][gNTrgSetup];
+  TH1F *hPairPtAcc[nHistos][gNTrgSetup];
+  TH1F *hPairPtEff[nHistos][gNTrgSetup];
+  THnSparseF *hnInvMass = (THnSparseF*)fstudy->Get("mhInvMassParTrkEff_di_mu");
+  hnInvMass->GetAxis(0)->SetRange(1, 1);  // like-sign
+  hnInvMass->GetAxis(1)->SetRangeUser(3.0, 3.2); // pair mass
+  hnInvMass->GetAxis(3)->SetRange(1, 16); // centrality
+  hnInvMass->GetAxis(7)->SetRange(2, 2); // fire trigger
+  for(int i=0; i<nHistos; i++)
+    {
+      if(i==1) hnInvMass->GetAxis(6)->SetRange(2, 2);
+      for(int k=0; k<gNTrgSetup; k++)
+	{
+	  if(k>0) hnInvMass->GetAxis(4)->SetRange(k, k);
+	  hPairPtAll[i][k] = (TH1F*)hnInvMass->Projection(2);
+	  hPairPtAll[i][k]->Sumw2();
+	  hPairPtAll[i][k]->Rebin(2);
+	  hPairPtAll[i][k]->SetName(Form("hPairPtAll_%s%s",histoName[i],gTrgSetupTitle[k]));
+      
+	  hnInvMass->GetAxis(5)->SetRange(3, 3);
+	  hPairPtAcc[i][k] = (TH1F*)hnInvMass->Projection(2);
+	  hPairPtAcc[i][k]->Sumw2();
+	  hPairPtAcc[i][k]->Rebin(2);
+	  hPairPtAcc[i][k]->SetName(Form("hPairPtAcc_%s%s",histoName[i],gTrgSetupTitle[k]));
+	  hnInvMass->GetAxis(5)->SetRange(0, -1);
+	  hnInvMass->GetAxis(4)->SetRange(0, -1);
+      
+	  hPairPtEff[i][k] = (TH1F*)hPairPtAcc[i][k]->Clone(Form("hPairPtEff_%s%s",histoName[i],gTrgSetupTitle[k]));
+	  hPairPtEff[i][k]->Divide(hPairPtAll[i][k]);
+	}
+    }
+    // show the efficiency
+  const char* histoTitle[nHistos] = {"pair of matched tracks that fire trigger", 
+				     "pair of muon candidates that fire trigger"};
+  TCanvas *cEff[nHistos];
+  TF1 *funcEffRatio[nHistos][gNTrgSetup];
+  for(int i=0; i<nHistos; i++)
+    {
+      cEff[i] = new TCanvas(Form("cEff_%s",histoName[i]), Form("cEff_%s",histoName[i]), 1100, 500);
+      cEff[i]->Divide(2,1);
+
+      cEff[i]->cd(1);
+      TLegend *leg = new TLegend(0.15,0.65,0.35,0.85);
+      leg->SetBorderSize(0);
+      leg->SetFillColor(0);
+      leg->SetTextSize(0.04);
+      for(int k=0; k<gNTrgSetup; k++)
+	{
+	  hPairPtEff[i][k]->SetTitle(";p_{T} (GeV/c);");
+	  hPairPtEff[i][k]->SetMarkerStyle(20+k);
+	  hPairPtEff[i][k]->SetMarkerColor(gColor[k]);
+	  hPairPtEff[i][k]->SetLineColor(gColor[k]);
+	  if(i==0) hPairPtEff[i][k]->GetYaxis()->SetRangeUser(0.8,1.2);
+	  if(i==1) hPairPtEff[i][k]->GetYaxis()->SetRangeUser(0.8, 1.2);
+
+	  if(k==0) hPairPtEff[i][k]->Draw("PE");
+	  else     hPairPtEff[i][k]->Draw("samesPE");
+	  leg->AddEntry(hPairPtEff[i][k], gLegNameTrg[k].Data(), "PL");
+	}
+      TPaveText *t1 = GetTitleText(Form("%s",histoTitle[i]));
+      t1->Draw();
+      leg->Draw();
+
+      cEff[i]->cd(2);
+      leg = new TLegend(0.15,0.15,0.8,0.25);
+      leg->SetBorderSize(0);
+      leg->SetFillColor(0);
+      leg->SetTextSize(0.04);
+      leg->SetNColumns(2);
+      for(int k=1; k<gNTrgSetup; k++)
+	{
+	  TH1F *hRatio = (TH1F*)hPairPtEff[i][k]->Clone(Form("%s_ratio",hPairPtEff[i][k]->GetName()));
+	  hRatio->Divide(hPairPtEff[i][0]);
+	  funcEffRatio[i][k] = new TF1(Form("func%sEffRatio%s",histoName[i],gTrgSetupTitle[k]), "pol0", 1, 10);
+	  hRatio->Fit(funcEffRatio[i][k],"0RQ");
+	  hRatio->SetTitle(";p_{T} (GeV/c);Ratio to inclusive");
+	  hRatio->GetYaxis()->SetRangeUser(0.8,1.2);
+	  if(k==1) hRatio->Draw("PE");
+	  else     hRatio->Draw("samesPE");
+	  leg->AddEntry(hRatio, Form("%4.3f +/- %4.3f",funcEffRatio[i][k]->GetParameter(0),funcEffRatio[i][k]->GetParError(0)), "PL");
+	  funcEffRatio[i][k]->SetLineColor(gColor[k]);
+	  funcEffRatio[i][k]->SetLineStyle(2);
+	  funcEffRatio[i][k]->Draw("sames");
+	}
+      t1 = GetTitleText(Form("Ratio to inclusive sample"));
+      t1->Draw();
+      leg->Draw();
+      if(savePlot)
+	cEff[i]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_lumiDep/TrigEff_ParTrkEff_%s.pdf",run_type.Data(),histoName[i]));
+    }
+  //KEY: TH3F	mhEvtCountParTrk_di_mu;1	TrigSetup vs. centrality vs. ShouldHaveReject
+  //KEY: THnSparseT<TArrayF>	mhInvMassParTrkEff_di_mu;1	Type vs. M_{#mu#mu} vs. p_{T,#mumu} vs. centrality vs. trigSetup vs. RejectEvent vs. isMuon vs. isTrig
 }
 
 //================================================

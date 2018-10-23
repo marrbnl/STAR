@@ -11,12 +11,12 @@ void check_Vtx()
   gStyle->SetStatH(0.2);
 
   //makeMbVz();
-  anaMbVz();
+  //anaMbVz();
   
   //makeDmVz();
   //anaDmVz();
 
-  //JpsiEffVsVz();
+  JpsiEffVsVz();
   //compDmMb();
   //prod_mid();
 }
@@ -67,13 +67,13 @@ void prod_mid(const int mode = 1, const int savePlot = 0)
 	}
       for(int i=0; i<5; i++)
 	{
-	  if(savePlot) cDay[i]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_lumiDep/Vtx_TpcVz_prod_mid_%d.pdf",run_type,i));
+	  if(savePlot) cDay[i]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_lumiDep/Vtx_TpcVz_prod_mid_%d.pdf",run_type.Data(),i));
 	}
     }
 }
 
 //================================================
-void JpsiEffVsVz(const int savePlot = 0)
+void JpsiEffVsVz(const int savePlot = 1)
 {
   const double jpsi_rapidity = 0.5;
   const int nEffType = 4;
@@ -105,8 +105,70 @@ void JpsiEffVsVz(const int savePlot = 0)
       hJpsiEffVsTpcVz[i]->Divide(hJpsiPtVsTpcVz[0]);
       c = draw2D(hJpsiEffVsTpcVz[i],Form("Run14_AuAu200: J/psi efficiency vs. vertex z (%s, |#eta| < 0.5, 0-80%%);vz_{TPC} (cm);Efficiency",trkEffTitle[i+1]),0.04,false);
       gPad->SetRightMargin(0.13);
-      if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_lumiDep/Vtx_JpsiEffVsTpcVz_%s.pdf",run_type,trkEffTitle[i+1]));
+      if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_lumiDep/Vtx_JpsiEffVsTpcVz_%s.pdf",run_type.Data(),trkEffTitle[i+1]));
     }
+  
+  // compare Jpsi efficiency: 100 cm vs. 30 cm
+  TH1F *hJpsiPtInVz[nEffType][3];
+  TH1F *hJpsiEffInVz[3];
+  const double vzCut[3] = {5, 30, 100};
+  for(int i=0; i<nEffType; i++)
+    {
+      for(int j=0; j<3; j++)
+	{
+	  int low_bin = hJpsiPtVsTpcVz[i]->GetXaxis()->FindBin(-1*vzCut[j]);
+	  int high_bin = hJpsiPtVsTpcVz[i]->GetXaxis()->FindBin(vzCut[j]);
+	  hJpsiPtInVz[i][j] = (TH1F*)hJpsiPtVsTpcVz[i]->ProjectionY(Form("hJpsiPtInVz%d_%s",j,trkEffType[i]),low_bin,high_bin);
+	  hJpsiPtInVz[i][j]->Rebin(4);
+	  if(i==nEffType-1) 
+	    {
+	      hJpsiEffInVz[j] = (TH1F*)hJpsiPtInVz[i][j]->Clone(Form("hJpsiEffInVz%d_%s",j,trkEffType[i]));
+	      hJpsiEffInVz[j]->Divide(hJpsiPtInVz[0][j]);
+	    }
+	}
+    }
+  TCanvas *c = new TCanvas("cJpsiEffInVz", "cJpsiEffInVz", 1100, 500);
+  c->Divide(2,1);
+  leg = new TLegend(0.2,0.6,0.4,0.85);
+  leg->SetBorderSize(0);
+  leg->SetFillColor(0);
+  leg->SetTextSize(0.04);
+  leg->SetHeader(run_type.Data());
+  c->cd(1);
+  for(int j=0; j<3; j++)
+    {
+      hJpsiEffInVz[j]->SetMarkerStyle(20+j);
+      hJpsiEffInVz[j]->SetMarkerColor(gColor[j]);
+      hJpsiEffInVz[j]->SetLineColor(gColor[j]);
+      hJpsiEffInVz[j]->GetXaxis()->SetRangeUser(0,15);
+      hJpsiEffInVz[j]->SetTitle("");
+      if(j==0) hJpsiEffInVz[j]->Draw();
+      else     hJpsiEffInVz[j]->Draw("sames");
+      leg->AddEntry(hJpsiEffInVz[j],Form("|v_{z}| < %1.0f cm",vzCut[j]), "P");
+    }
+  TPaveText *t1 = GetTitleText("Total J/psi efficiency",0.045);
+  t1->Draw();
+  leg->Draw();
+  c->cd(2);
+  leg = new TLegend(0.4,0.15,0.6,0.35);
+  leg->SetBorderSize(0);
+  leg->SetFillColor(0);
+  leg->SetTextSize(0.04);
+  TH1F *hJpsiEffInVzRatio[2];
+  for(int j=0; j<2; j++)
+    {
+      hJpsiEffInVzRatio[j] = (TH1F*)hJpsiEffInVz[j]->Clone(Form("hJpsiEffInVzRatio_Vz%d",j));
+      hJpsiEffInVzRatio[j]->Divide(hJpsiEffInVz[2]);
+      hJpsiEffInVzRatio[j]->GetYaxis()->SetRangeUser(0.9,1.1);
+      if(j==0) hJpsiEffInVzRatio[j]->Draw();
+      else hJpsiEffInVzRatio[j]->Draw("sames");
+      leg->AddEntry(hJpsiEffInVzRatio[j],Form("(|v_{z}|<%1.0f cm)/(|v_{z}|<%1.0f cm)",vzCut[j],vzCut[2]), "P");
+    }
+  t1 = GetTitleText("Raito of total J/psi efficiency",0.045);
+  t1->Draw();
+  leg->Draw();
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_lumiDep/Vtx_JpsiEffTotal_30vs100.pdf",run_type.Data()));
+  return;
 
   // calculate inclusive J/psi efficiency vs. Vz using true J/psi 
   TFile *fWeight = TFile::Open("Rootfiles/models.root","read");
@@ -147,7 +209,7 @@ void JpsiEffVsVz(const int savePlot = 0)
       if(i==1) hJpsiEffInTpcVz[i]->GetYaxis()->SetRangeUser(0.003, 0.012);
       if(i==2) hJpsiEffInTpcVz[i]->GetYaxis()->SetRangeUser(0, 0.005);
       c = draw1D(hJpsiEffInTpcVz[i], Form("Run14_AuAu200: J/psi efficiency (%s, p_{T} > 0, |#eta| < 0.5, 0-80%%);vz_{TPC} (cm);Efficiency",trkEffTitle[i+1]));
-      if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_lumiDep/Vtx_JpsiEffInTpcVz_%s.pdf",run_type,trkEffTitle[i+1]));
+      if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_lumiDep/Vtx_JpsiEffInTpcVz_%s.pdf",run_type.Data(),trkEffTitle[i+1]));
     }
 
   // calculate efficiency for different vz distribution
@@ -184,10 +246,10 @@ void JpsiEffVsVz(const int savePlot = 0)
   for(int k=0; k<5; k++)
     {
       list->Add(hVtxDis[k][gDataType]);
-      legName[k] = Form("%s%s",run_type,gTrgSetupTitle[k]);
+      legName[k] = Form("%s%s",run_type.Data(),gTrgSetupTitle[k]);
     }
   c = drawHistos(list,Form("TpcVz_%s",dataName[gDataType]),Form("%s: TPC v_{z} distribution;v_{z} [cm]",dataName[gDataType]),false,0,0.35,true,0,0.018,false,kTRUE,legName,kTRUE,"",0.15,0.3,0.68,0.88,true);
-  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_lumiDep/Vtx_TpcVzComp_%s.pdf",run_type,dataName[gDataType]));
+  if(savePlot) c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_lumiDep/Vtx_TpcVzComp_%s.pdf",run_type.Data(),dataName[gDataType]));
 
   double jpsiEff[gNTrgSetup], jpsiEff_err[gNTrgSetup];
   for(int k=0; k<gNTrgSetup; k++)
@@ -210,7 +272,7 @@ void JpsiEffVsVz(const int savePlot = 0)
 	}
       cout << total << endl;
       jpsiEff_err[k] = sqrt(jpsiEff_err[k]);
-      printf("[i] Vertex dependent efficiency for %s%s: %4.4f +/- %4.4f %%\n",run_type,gTrgSetupTitle[k],jpsiEff[k]*100,jpsiEff_err[k]*100);
+      printf("[i] Vertex dependent efficiency for %s%s: %4.4f +/- %4.4f %%\n",run_type.Data(),gTrgSetupTitle[k],jpsiEff[k]*100,jpsiEff_err[k]*100);
     }
 
 }
@@ -273,8 +335,8 @@ void compDmMb(const int savePlot = 0)
 	    {
 	      TH1F *hplot = (TH1F*)hVtxDis[k][j][d]->Clone(Form("%s_clone",hVtxDis[k][j][d]->GetName()));
 	      hplot->SetMarkerStyle(20+2*d);
-	      hplot->SetMarkerColor(color[d]);
-	      hplot->SetLineColor(color[d]);
+	      hplot->SetMarkerColor(gColor[d]);
+	      hplot->SetLineColor(gColor[d]);
 	      hplot->SetMarkerSize(1.0);
 	      hplot->SetTitle("");
 	      if(j==0) 
@@ -290,12 +352,12 @@ void compDmMb(const int savePlot = 0)
 	      else     hplot->DrawCopy("samesP");
 	      if(k==0) leg->AddEntry(hplot, legNameData[d].Data(), "P");
 	    }
-	  TPaveText *t1 = GetTitleText(Form("%s%s (0-80%%)",run_type,gTrgSetupTitle[k+1]), 0.055);
+	  TPaveText *t1 = GetTitleText(Form("%s%s (0-80%%)",run_type.Data(),gTrgSetupTitle[k+1]), 0.055);
 	  t1->Draw();
 	}
       cData[j]->cd(1);
       leg->Draw();
-      if(savePlot) cData[j]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_lumiDep/Vtx_%sVsData.pdf",run_type,histoName[j]));
+      if(savePlot) cData[j]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_lumiDep/Vtx_%sVsData.pdf",run_type.Data(),histoName[j]));
     } 
 }
 
@@ -346,8 +408,8 @@ void anaDmVz(const int savePlot = 0)
 	    {
 	      if(hVtxDis[k][j][r]->Integral()>0) hVtxDis[k][j][r]->Scale(1./hVtxDis[k][j][r]->Integral());
 	      hVtxDis[k][j][r]->SetMarkerStyle(20+k);
-	      hVtxDis[k][j][r]->SetMarkerColor(color[k]);
-	      hVtxDis[k][j][r]->SetLineColor(color[k]);
+	      hVtxDis[k][j][r]->SetMarkerColor(gColor[k]);
+	      hVtxDis[k][j][r]->SetLineColor(gColor[k]);
 	      if(j==0) 
 		{
 		  hVtxDis[k][j][r]->GetYaxis()->SetRangeUser(1e-5, 0.02);
@@ -379,14 +441,14 @@ void anaDmVz(const int savePlot = 0)
 		  leg->AddEntry(hVtxDis[k][j][r], Form("%s: f = %4.1f%%",gTrgSetupTitle[k+1], eff*100), "P");
 		}
 	    }
-	  TPaveText *t1 = GetTitleText(Form("%s MB trigger (%s)",run_type,runRangeName[r]),0.05);
+	  TPaveText *t1 = GetTitleText(Form("%s MB trigger (%s)",run_type.Data(),runRangeName[r]),0.05);
 	  t1->Draw();
 	  leg->Draw();
 	}
 
      for(int i=0; i<2; i++)
 	{
-	  if(savePlot) cVtx[j][i]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_lumiDep/Vtx_DM_%sDis_run%d.pdf",run_type,histoName[j],i));
+	  if(savePlot) cVtx[j][i]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_lumiDep/Vtx_DM_%sDis_run%d.pdf",run_type.Data(),histoName[j],i));
 	}
     }
 }
@@ -516,7 +578,7 @@ void anaMbVz(const int savePlot = 0)
       if(j<2) gPad->SetLogy();
       for(int k=1; k<gNTrgSetup; k++)
 	{
-	  hVtxDisInRefMult[k][j][0]->SetLineColor(color[k-1]);
+	  hVtxDisInRefMult[k][j][0]->SetLineColor(gColor[k-1]);
 	  if(k==1) hVtxDisInRefMult[k][j][0]->DrawCopy("HIST");
 	  else     hVtxDisInRefMult[k][j][0]->DrawCopy("samesHIST");
 	}
@@ -559,8 +621,8 @@ void anaMbVz(const int savePlot = 0)
 	{
 	  hCutEff[k][j]->SetMarkerSize(1.5);
 	  hCutEff[k][j]->SetMarkerStyle(19+k+k/4);
-	  hCutEff[k][j]->SetMarkerColor(color[k-1]);
-	  hCutEff[k][j]->SetLineColor(color[k-1]);
+	  hCutEff[k][j]->SetMarkerColor(gColor[k-1]);
+	  hCutEff[k][j]->SetLineColor(gColor[k-1]);
 	  hCutEff[k][j]->GetYaxis()->SetRangeUser(0,1);
 	  if(k==1) hCutEff[k][j]->Draw("P");
 	  else     hCutEff[k][j]->Draw("samesP");
@@ -604,8 +666,8 @@ void anaMbVz(const int savePlot = 0)
 	    {
 	      if(hVtxDis[k][j][r]->Integral()>0) hVtxDis[k][j][r]->Scale(1./hVtxDis[k][j][r]->Integral());
 	      hVtxDis[k][j][r]->SetMarkerStyle(20+k);
-	      hVtxDis[k][j][r]->SetMarkerColor(color[k]);
-	      hVtxDis[k][j][r]->SetLineColor(color[k]);
+	      hVtxDis[k][j][r]->SetMarkerColor(gColor[k]);
+	      hVtxDis[k][j][r]->SetLineColor(gColor[k]);
 	      if(j==0) 
 		{
 		  hVtxDis[k][j][r]->GetXaxis()->SetRangeUser(0, 700);
@@ -665,14 +727,14 @@ void anaMbVz(const int savePlot = 0)
 		  leg->AddEntry(hVtxDis[k][j][r], Form("%s: f = %4.1f%%",gTrgSetupTitle[k+1], eff*100), "P");
 		}
 	    }
-	  TPaveText *t1 = GetTitleText(Form("%s MB trigger (%s)",run_type,runRangeName[r]),0.05);
+	  TPaveText *t1 = GetTitleText(Form("%s MB trigger (%s)",run_type.Data(),runRangeName[r]),0.05);
 	  t1->Draw();
 	  leg->Draw();
 	}
 
      for(int i=0; i<2; i++)
 	{
-	  if(savePlot) cVtx[j][i]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_lumiDep/Vtx_MB_%sDis_run%d.pdf",run_type,histoName[j],i));
+	  if(savePlot) cVtx[j][i]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_lumiDep/Vtx_MB_%sDis_run%d.pdf",run_type.Data(),histoName[j],i));
 	}
     }
 }

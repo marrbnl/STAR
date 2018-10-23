@@ -5,6 +5,7 @@ void make_input()
   //Run13pp500();
   Run14AuAu200();
   //Run14AuAu200_2();
+  //prescale();
   //Run16AuAu200();
 }
 
@@ -84,7 +85,7 @@ void Run16AuAu200(const int saveHisto = 1)
 }
 
 //================================================
-void Run14AuAu200(const int savePlot = 1, const int saveHisto = 1)
+void Run14AuAu200(const int savePlot = 0, const int saveHisto = 0)
 {
   TFile *fData = TFile::Open("output/Run14_AuAu200.jpsi.root","read");
   TFile *fEmb = TFile::Open(Form("./output/Run14_AuAu200.Embed.Jpsi.root"),"read");
@@ -117,6 +118,7 @@ void Run14AuAu200(const int savePlot = 1, const int saveHisto = 1)
   if(gSaveAN)  c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch1_TpcVz_EmbedOverData.pdf"));
 
   // TPC acceptance loss
+  /*
   const int nHistos = 2;
   const char *name[nHistos] = {"McMuon","DataPion"};
   const char *title[nHistos] = {"recontructed MC track in embedding","pion candidates in data"};
@@ -226,7 +228,136 @@ void Run14AuAu200(const int savePlot = 1, const int saveHisto = 1)
       cPhi[1]->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_CompTrkPhi_PosEta.pdf"));
       c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_TpcAccCorr.pdf"));
     }
+  */
 
+
+  const int nHistos = 2;
+  const char *name[nHistos] = {"McMuon","DataTrk"};
+  const char *title[nHistos] = {"recontructed MC track in embedding","charged tracks in data"};
+  THnSparseF *hnTrk[nHistos];
+  hnTrk[0] = (THnSparseF*)fEmb->Get("hTrkEtaPhi_MCreco_di_mu");
+
+  TFile *fmb = TFile::Open(Form("output/Run14_AuAu200.MB.P15ic.Study.TpcTracking.root"), "read");
+  hnTrk[1] = (THnSparseF*)fmb->Get("mhnTrkEtaPhi_mb");
+  hnTrk[1]->GetAxis(3)->SetRange(15,16); // centrality
+  hnTrk[1]->GetAxis(6)->SetRangeUser(20,40); // Zdc
+  hnTrk[1]->GetAxis(7)->SetRange(1,1); // DCA < 1 cm
+  hnTrk[1]->GetAxis(8)->SetRangeUser(-1*30, 30); // vz
+
+  TH3F *hTrkPtEtaPhi[nHistos];
+  for(int j=0; j<nHistos; j++)
+    {
+      hTrkPtEtaPhi[j] = (TH3F*)hnTrk[j]->Projection(0,1,2);
+      if(j==0) hTrkPtEtaPhi[j]->Rebin3D(1, 1, 10);
+      if(j==1) hTrkPtEtaPhi[j]->Rebin3D(1, 1, 1);
+      hTrkPtEtaPhi[j]->SetName(Form("hTrkPtEtaPhi_%d",j));
+    }
+
+  // === eta vs phi
+  TH2F *hTrkEtaPhi[nHistos];
+  for(int j=0; j<nHistos; j++)
+    {
+      hTrkEtaPhi[j] = (TH2F*)hTrkPtEtaPhi[j]->Project3D("zy");
+      hTrkEtaPhi[j]->SetName(Form("hTrkEtaPhi_%d",j));
+      hTrkEtaPhi[j]->SetTitle(";#eta;#varphi");
+      c = draw2D(hTrkEtaPhi[j], Form("#varphi vs #eta of %s",title[j]), 0.04, false);
+      if(savePlot)  
+	c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbTrkEff/TrkPhivsEta_%s.pdf",run_type,name[j]));
+    }
+
+  const double eta_cuts[3] = {-0.5,0.2,0.5};
+  const double pt_cuts[6] = {1.0,1.5,2.0,3.0,5.0,20.0};
+  TH1F *hTrkPhi[2][nHistos][5];
+  TCanvas *cPhi[2];
+  for(int i=0; i<2; i++)
+    {
+      cPhi[i] = new TCanvas(Form("track_phi_%d",i),Form("track_phi_%d",i),1000,600);
+      cPhi[i]->Divide(3,2);
+      TLegend *leg = new TLegend(0.1,0.6,0.7,0.83);
+      leg->SetBorderSize(0);
+      leg->SetFillColor(0);
+      leg->SetTextSize(0.05);
+      leg->SetHeader(Form("%1.1f < #eta < %1.1f",eta_cuts[i], eta_cuts[i+1]));
+      for(int j=0; j<nHistos; j++)
+	{
+	  int low_eta_bin = hTrkPtEtaPhi[j]->GetYaxis()->FindBin(eta_cuts[i]+1e-4);
+	  int high_eta_bin = hTrkPtEtaPhi[j]->GetYaxis()->FindBin(eta_cuts[i+1]-1e-4);
+	  for(int k=0; k<5; k++)
+	    {
+	      int low_pt_bin = hTrkPtEtaPhi[j]->GetXaxis()->FindBin(pt_cuts[k]+1e-4);
+	      int high_pt_bin = hTrkPtEtaPhi[j]->GetXaxis()->FindBin(pt_cuts[k+1]-1e-4);
+	      hTrkPhi[i][j][k] = (TH1F*)hTrkPtEtaPhi[j]->ProjectionZ(Form("hTrkPhi_%s_%d_%d",name[j],i,k),low_pt_bin,high_pt_bin,low_eta_bin,high_eta_bin);
+	      hTrkPhi[i][j][k]->SetMarkerStyle(21);
+	      hTrkPhi[i][j][k]->SetMarkerColor(2-j);
+	      hTrkPhi[i][j][k]->SetLineColor(2-j);
+	      //hTrkPhi[i][j][k]->Rebin(10);
+	      hTrkPhi[i][j][k]->Scale(1./hTrkPhi[i][j][k]->Integral(1,hTrkPhi[i][j][k]->FindBin(5)));
+	      hTrkPhi[i][j][k]->GetYaxis()->SetRangeUser(0,0.045);
+	      hTrkPhi[i][j][k]->SetTitle(";#varphi");
+	      cPhi[i]->cd(k+1);
+	      if(j==0) 
+		{
+		  hTrkPhi[i][j][k]->Draw("P");
+		  t = GetTitleText(Form("#varphi distribution (%1.1f < p_{T} < %1.1f)",pt_cuts[k],pt_cuts[k+1]),0.05);
+		  t->Draw();
+		}
+	      else     hTrkPhi[i][j][k]->Draw("samesHIST");
+	      if(k==0)
+		{
+		  if(j==0) leg->AddEntry(hTrkPhi[i][j][k],"Reco MC #mu tracks","PE");
+		  if(j==1) leg->AddEntry(hTrkPhi[i][j][k],"#pi candidates in data","L");
+		}
+	      hnTrk[j]->GetAxis(0)->SetRange(0,-1);
+	    }
+	  hnTrk[j]->GetAxis(1)->SetRange(0,-1);
+	}
+      cPhi[i]->cd(6);
+      leg->Draw();
+    }
+
+  TH2F *hTpcCorr = new TH2F("hTpcCorr","Correction factor of TPC inefficiency for #eta < 0.2;p_{T} (GeV/c);#varphi",5,pt_cuts,36,0,2*pi);
+  TH1F *hTrkPhiCorr[5];
+  for(int k=0; k<5; k++)
+    {
+      hTrkPhiCorr[k] = (TH1F*)hTrkPhi[0][0][k]->Clone(Form("%s_corr",hTrkPhi[0][0][k]->GetName()));
+      for(int bin=1; bin<=hTrkPhiCorr[k]->GetNbinsX(); bin++)
+	{
+	  if(bin<=31 || bin==36) hTpcCorr->SetBinContent(k+1,bin,1);
+	  else
+	    {
+	      double eff = hTrkPhi[0][1][k]->GetBinContent(bin)/hTrkPhi[0][0][k]->GetBinContent(bin);
+	      hTrkPhiCorr[k]->SetBinContent(bin,hTrkPhiCorr[k]->GetBinContent(bin)*eff);
+	      hTpcCorr->SetBinContent(k+1,bin,eff);
+	      if(k==4) hTpcCorr->SetBinContent(k+1,bin,hTpcCorr->GetBinContent(4,bin));
+	      printf("[i] bin %d has eff = %4.2f%%\n",bin,hTpcCorr->GetBinContent(k+1,bin)*100);
+	    }
+	}
+      cPhi[0]->cd(k+1);
+      hTrkPhiCorr[k]->SetMarkerStyle(25);
+      hTrkPhiCorr[k]->SetMarkerColor(4);
+      hTrkPhiCorr[k]->Draw("samesP");
+    }
+  TLegend *leg = new TLegend(0.1,0.5,0.7,0.6);
+  leg->SetBorderSize(0);
+  leg->SetFillColor(0);
+  leg->SetTextSize(0.05);
+  leg->AddEntry(hTrkPhiCorr[0], "Reco MC #mu tracks after correction","P");
+  cPhi[0]->cd(6);
+  leg->Draw();
+  c = draw2D(hTpcCorr,"",0.04,false);
+  if(savePlot)  
+    {
+      cPhi[0]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbTrkEff/CompTrkPhi_NegEta.pdf",run_type));
+      cPhi[1]->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbTrkEff/CompTrkPhi_PosEta.pdf",run_type));
+      c->SaveAs(Form("~/Work/STAR/analysis/Plots/%s/ana_EmbTrkEff/TpcAccCorrFactor.pdf",run_type));
+    }
+  if(gSaveAN)   
+    {
+      cPhi[0]->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_CompTrkPhi_NegEta.pdf"));
+      cPhi[1]->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_CompTrkPhi_PosEta.pdf"));
+      c->SaveAs(Form("~/Dropbox/STAR\ Quarkonium/Run14_Jpsi/Analysis\ note/Figures/Ch4_TpcAccCorr.pdf"));
+    }
+  return;
 
   // input Jpsi shape
   TH1F *hInPutJpsiPt[4];
@@ -338,6 +469,19 @@ void Run14AuAu200(const int savePlot = 1, const int saveHisto = 1)
 	}
       hTpcCorr->Write("",TObject::kOverwrite);
     } 
+}
+
+
+//================================================
+void prescale()
+{
+  TFile *fLumi = TFile::Open("Rootfiles/Run14_AuAu200.Luminosity.root","read");
+  TH1F *hPSmb = (TH1F*)fLumi->Get("hPreScale_VPD-ZDC-novtx-mon");
+  TH1F *hPSdimuon = (TH1F*)fLumi->Get("hPreScale_dimuon");
+
+  TFile *fout =  TFile::Open("Rootfiles/Run14_AuAu200.Input.root","update");
+  hPSdimuon->Write("",TObject::kOverwrite);
+  hPSmb->Write("",TObject::kOverwrite);
 }
 
 
